@@ -1,0 +1,18 @@
+image: registry.sensetime.com/zoetrope/python:3.8
+
+stages:
+    - linting
+
+before_script:
+  - echo $PATH
+  - gcc --version
+  - python --version
+  - pip --version
+
+linting:
+  stage: linting
+  script:
+    - pip install flake8 yapf isort==4.3.21
+    - flake8 .
+    - isort -rc --check-only --diff mmhuamn3d/ tools/ tests/
+    - yapf -r -d mmhuman3d/ tools/ tests/ configs/
