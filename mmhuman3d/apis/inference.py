@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from mmcv.parallel import collate, scatter
 from mmcv.runner import load_checkpoint
+
 from mmhuman3d.datasets.pipelines import Compose
 from mmhuman3d.models import build_classifier
 

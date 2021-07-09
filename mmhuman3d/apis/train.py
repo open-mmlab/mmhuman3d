@@ -7,6 +7,7 @@ from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import (DistSamplerSeedHook, Fp16OptimizerHook,
                          build_optimizer, build_runner)
 from mmcv.runner.hooks import DistEvalHook, EvalHook
+
 from mmhuman3d.core import DistOptimizerHook
 from mmhuman3d.datasets import build_dataloader, build_dataset
 from mmhuman3d.utils import get_root_logger

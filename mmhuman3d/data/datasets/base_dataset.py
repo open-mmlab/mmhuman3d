@@ -3,10 +3,10 @@ from abc import ABCMeta, abstractmethod
 
 import mmcv
 import numpy as np
-from mmhuman3d.core.evaluation import precision_recall_f1, support
-from mmhuman3d.models.losses import accuracy
 from torch.utils.data import Dataset
 
+from mmhuman3d.core.evaluation import precision_recall_f1, support
+from mmhuman3d.models.losses import accuracy
 from .pipelines import Compose
 
 
