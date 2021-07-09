@@ -1,18 +1,34 @@
-image: registry.sensetime.com/zoetrope/python:3.8
+image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-devel
 
 stages:
     - linting
+    - test
 
 before_script:
   - echo $PATH
   - gcc --version
   - python --version
   - pip --version
+  - nvcc --version
+  - nvidia-smi
+  - python -c "import torch; print(torch.__version__)"
 
 linting:
   stage: linting
   script:
     - pip install flake8 yapf isort==4.3.21
     - flake8 .
-    - isort -rc --check-only --diff mmhuamn3d/ tools/ tests/
+    - isort -rc --check-only --diff mmhuman3d/ tools/ tests/
     - yapf -r -d mmhuman3d/ tools/ tests/ configs/
+
+test:
+  stage: test
+  script:
+    - echo "Start building..."
+    - pip install opencv-python-headless
+    - pip install -e .
+    - python -c "import mmhuman3d; print(mmhuman3d.__version__)"
+    - echo "Start testing..."
+    - pip install pytest coverage
+    - coverage run --source mmhuman3d -m pytest tests/
+    - coverage report -m
