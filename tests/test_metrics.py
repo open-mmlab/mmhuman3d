@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from mmhuman3d.core import mAP
+from mmhuman3d.core.evaluation.mean_ap import mAP
 
 
 def test_mAP():
