@@ -8,6 +8,7 @@ from mmhuman3d.core.conventions.joints_mapping import (
     h36m,
     mmpose,
     mpi_inf_3dhp,
+    mpii,
     pw3d,
     smpl,
     smplx,
@@ -19,8 +20,10 @@ JOINTS_FACTORY = {
     'smpl': smpl.SMPL_JOINTS,
     'mmpose': mmpose.MMPOSE_JOINTS,
     'mpi_inf_3dhp': mpi_inf_3dhp.MPI_INF_3DHP_JOINTS,
+    'mpi_inf_3dhp_test': mpi_inf_3dhp.MPI_INF_3DHP_TEST_JOINTS,
     'h36m': h36m.H36M_JOINTS,
-    'pw3d': pw3d.PW3D_JOINTS
+    'pw3d': pw3d.PW3D_JOINTS,
+    'mpii': mpii.MPII_JOINTS
 }
 
 
