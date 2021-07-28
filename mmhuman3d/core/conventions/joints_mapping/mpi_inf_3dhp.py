@@ -28,3 +28,23 @@ MPI_INF_3DHP_JOINTS = [
     'right_foot',
     'right_toe'
 ]
+
+MPI_INF_3DHP_TEST_JOINTS = [
+    'headtop',
+    'neck',
+    'right_shoulder',
+    'right_elbow',
+    'right_wrist',
+    'left_shoulder',
+    'left_elbow',
+    'left_wrist',
+    'right_hip',
+    'right_knee',
+    'right_ankle',
+    'left_hip',
+    'left_knee',
+    'left_ankle',
+    'pelvis',
+    'Spine (H36M)',  # close to spine2
+    'head'
+]
