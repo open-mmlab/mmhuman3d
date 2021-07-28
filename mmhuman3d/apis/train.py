@@ -4,8 +4,12 @@ import warnings
 import numpy as np
 import torch
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import (DistSamplerSeedHook, Fp16OptimizerHook,
-                         build_optimizer, build_runner)
+from mmcv.runner import (
+    DistSamplerSeedHook,
+    Fp16OptimizerHook,
+    build_optimizer,
+    build_runner,
+)
 from mmcv.runner.hooks import DistEvalHook, EvalHook
 
 from mmhuman3d.core import DistOptimizerHook

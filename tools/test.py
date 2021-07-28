@@ -7,8 +7,12 @@ import numpy as np
 import torch
 from mmcv import DictAction
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import (get_dist_info, init_dist, load_checkpoint,
-                         wrap_fp16_model)
+from mmcv.runner import (
+    get_dist_info,
+    init_dist,
+    load_checkpoint,
+    wrap_fp16_model,
+)
 
 from mmhuman3d.apis import multi_gpu_test, single_gpu_test
 from mmhuman3d.datasets import build_dataloader, build_dataset
