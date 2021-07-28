@@ -3,7 +3,9 @@ import pytest
 import torch
 
 from mmhuman3d.core.conventions.joints_mapping.kp_mapping import (
-    JOINTS_FACTORY, convert_kps)
+    JOINTS_FACTORY,
+    convert_kps,
+)
 
 
 def test_conventions():

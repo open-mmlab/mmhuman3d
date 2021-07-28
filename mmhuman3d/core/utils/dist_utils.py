@@ -2,8 +2,11 @@ from collections import OrderedDict
 
 import torch.distributed as dist
 from mmcv.runner import OptimizerHook
-from torch._utils import (_flatten_dense_tensors, _take_tensors,
-                          _unflatten_dense_tensors)
+from torch._utils import (
+    _flatten_dense_tensors,
+    _take_tensors,
+    _unflatten_dense_tensors,
+)
 
 
 def _allreduce_coalesced(tensors, world_size, bucket_size_mb=-1):

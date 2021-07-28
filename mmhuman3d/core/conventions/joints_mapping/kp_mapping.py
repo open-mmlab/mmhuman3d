@@ -3,9 +3,15 @@ from typing import Tuple, Union
 import numpy as np
 import torch
 
-from mmhuman3d.core.conventions.joints_mapping import (coco, h36m, mmpose,
-                                                       mpi_inf_3dhp, pw3d,
-                                                       smpl, smplx)
+from mmhuman3d.core.conventions.joints_mapping import (
+    coco,
+    h36m,
+    mmpose,
+    mpi_inf_3dhp,
+    pw3d,
+    smpl,
+    smplx,
+)
 
 JOINTS_FACTORY = {
     'coco': coco.COCO_JOINTS,
