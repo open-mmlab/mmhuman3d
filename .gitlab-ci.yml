@@ -1,4 +1,4 @@
-image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-devel
+image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-devel-ffmpeg4
 
 stages:
     - linting
@@ -12,6 +12,7 @@ before_script:
   - nvcc --version
   - nvidia-smi
   - python -c "import torch; print(torch.__version__)"
+  - ffmpeg -version
 
 linting:
   stage: linting
