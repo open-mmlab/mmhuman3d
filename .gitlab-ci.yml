@@ -1,4 +1,4 @@
-image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-devel-ffmpeg4
+image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-devel-ffmpeg4-smpl
 
 stages:
     - linting
@@ -30,6 +30,7 @@ test:
     - pip install -e .
     - python -c "import mmhuman3d; print(mmhuman3d.__version__)"
     - echo "Start testing..."
+    - cp -r /workspace/data/body_models ./body_models
     - pip install pytest coverage
     - coverage run --source mmhuman3d -m pytest tests/
     - coverage report -m
