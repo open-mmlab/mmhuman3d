@@ -55,5 +55,5 @@ def search_limbs(
                 limbs_palette[k] = np.random.randint(
                     0, high=255, size=(len(limbs_target[k]), 3))
             else:
-                limbs_palette[k] = np.array(limbs_target[k])
+                limbs_palette[k] = np.array(limbs_palette[k])
     return limbs_target, limbs_palette
