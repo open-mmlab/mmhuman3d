@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List, NoReturn, Optional, Tuple, Union
+from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -34,7 +34,8 @@ def plot_kp2d_frame(kp2d_person: np.ndarray,
                 Defaults to False.
         with_number (optional): whether need to draw index numbers.
                 Defaults to False.
-        font_size (optional): the font size of the index. Defaults to 0.5.
+        font_size (optional): the font size of the index.
+                Defaults to 0.5.
 
     Returns:
         np.ndarray: cv2 image of shape (H * W * 3).
@@ -133,7 +134,7 @@ def render_kp2d_to_video(
     fps: Union[float, int] = 30,
     draw_bbox: bool = False,
     with_number: bool = False,
-    pop: Optional[Union[tuple, list]] = [],
+    pop_parts: Iterable[str] = [],
 ) -> NoReturn:
     """Render 2d keypoints to a video.
 
@@ -161,19 +162,21 @@ def render_kp2d_to_video(
                 Defaults to False.
         with_number (bool, optional): whether draw index number.
                 Defaults to False.
-        pop (Optional[Union[tuple, list]], optional): the parts do not need
-                to visualize. Defaults to [].
+        pop_parts (Iterable[str], optional): [description]. Defaults to [].
 
     Raises:
-        FileNotFoundError: check input frame paths.
         FileNotFoundError: check output video path.
+        FileNotFoundError: check input frame paths.
 
     Returns:
         NoReturn.
     """
-    if not (Path(output_path).parent.is_dir()
-            and Path(output_path).suffix.lower() in ['.mp4']):
-        raise FileNotFoundError('Wrong output path')
+    if not Path(output_path).parent.is_dir():
+        raise FileNotFoundError(
+            f'The output folder does not exist: {Path(output_path).parent}')
+    if not Path(output_path).suffix.lower() in ['.mp4']:
+        raise FileNotFoundError(
+            f'The output file should be .mp4: {output_path}')
     if kp2d.ndim == 3:
         kp2d = kp2d[:, np.newaxis]
     assert kp2d.ndim == 4
@@ -182,7 +185,8 @@ def render_kp2d_to_video(
         for frame_path in frame_list:
             if not (Path(frame_path).is_file()
                     and Path(frame_path).suffix.lower() in ['.png']):
-                raise FileNotFoundError('Wrong input images path')
+                raise FileNotFoundError(
+                    f'The frame should be .png: {frame_path}')
 
     temp_folder = os.path.join('.',
                                os.path.basename(output_path) + '_temp_images')
@@ -196,9 +200,10 @@ def render_kp2d_to_video(
             data_source=data_source, mask=mask)
     num_frame = min(len(frame_list), num_frame)
     end = (min(num_frame, end) + num_frame) % num_frame
-    for part_name in pop:
+    kp2d = kp2d[start:end + 1]
+    for part_name in pop_parts:
         limbs_target.pop(part_name)
-    for frame_index in range(num_frame)[start:end + 1]:
+    for frame_index in range(kp2d.shape[0]):
         kp2d_frame = kp2d[frame_index]
         if kp2d_frame.ndim == 2:
             kp2d_frame = kp2d_frame[np.newaxis]

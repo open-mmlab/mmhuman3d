@@ -60,7 +60,7 @@ def test_vis_kp2d():
             output_path='/tmp/1.mp4',
             frame_list=['/tmp/%06d.png' % 1,
                         '/tmp/%06d.png' % 2],
-            pop=['rubbish'])
+            pop_parts=['rubbish'])
 
     # wrong data_source
     kp2d = np.random.randint(low=0, high=255, size=(10, 17, 3), dtype=np.uint8)
