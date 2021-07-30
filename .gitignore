@@ -126,3 +126,6 @@ work_dirs/
 *.npz
 *.npy
 *.pickle
+
+# git
+*.orig

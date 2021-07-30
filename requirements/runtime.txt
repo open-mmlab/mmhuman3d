@@ -2,3 +2,6 @@ matplotlib
 numpy
 mmcv==1.3.9
 ffmpeg-python
+smplx
+scipy
+chumpy
