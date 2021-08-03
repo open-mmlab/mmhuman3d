@@ -1,4 +1,4 @@
-H36M_JOINTS = [
+H36M_KEYPOINTS = [
     'pelvis',
     'left_hip',
     'left_knee',

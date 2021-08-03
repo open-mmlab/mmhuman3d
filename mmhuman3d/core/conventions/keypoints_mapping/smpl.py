@@ -1,4 +1,4 @@
-SMPL_JOINTS = [
+SMPL_KEYPOINTS = [
     'pelvis',
     'left_hip',
     'right_hip',

@@ -123,7 +123,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
 
     def render_kp3d_to_video(
         self,
-        joints_np: np.ndarray,
+        keypoints_np: np.ndarray,
         export_path: str,
         sign: Iterable[int] = (1, 1, 1),
         axis: str = 'xzy',
@@ -134,7 +134,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
         """Render 3d keypoints to a video.
 
         Args:
-            joints_np (np.ndarray): shape of input array should be
+            keypoints_np (np.ndarray): shape of input array should be
                     (f * n * J * 3).
             export_path (str): output video path.
             sign (Iterable[int], optional): direction of the aixs.
@@ -160,31 +160,32 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
             Path(export_path).parent,
             Path(export_path).name + "_temp")
         self.frames_dir_path = temp_dir
-        joints_np = _set_new_pose(joints_np, sign, axis)
+        keypoints_np = _set_new_pose(keypoints_np, sign, axis)
         if not self.if_frame_updated:
             if not os.path.exists(temp_dir) or\
                     not os.path.isdir(temp_dir):
                 os.makedirs(temp_dir)
             if self.cam_vector_list is None:
-                self._get_camera_vector_list(frame_number=joints_np.shape[0])
-            assert len(self.cam_vector_list) == joints_np.shape[0]
+                self._get_camera_vector_list(
+                    frame_number=keypoints_np.shape[0])
+            assert len(self.cam_vector_list) == keypoints_np.shape[0]
             if visual_range is None:
-                visual_range = self._get_visual_range(joints_np)
+                visual_range = self._get_visual_range(keypoints_np)
             else:
                 visual_range = np.asarray(visual_range)
                 if len(visual_range.shape) == 1:
                     one_dim_visual_range = np.expand_dims(visual_range, 0)
                     visual_range = one_dim_visual_range.repeat(3, axis=0)
-            self._export_frames(joints_np, temp_dir, resolution, visual_range,
-                                self.cam_vector_list)
+            self._export_frames(keypoints_np, temp_dir, resolution,
+                                visual_range, self.cam_vector_list)
             self.if_frame_updated = True
         images_to_video(
             temp_dir, export_path, img_format="frame_%06d.png", fps=fps)
 
-    def _export_frames(self, joints_np, temp_dir, resolution, visual_range,
+    def _export_frames(self, keypoints_np, temp_dir, resolution, visual_range,
                        cam_vector_list):
-        for frame_index in range(joints_np.shape[0]):
-            joints_frame = joints_np[frame_index]
+        for frame_index in range(keypoints_np.shape[0]):
+            keypoints_frame = keypoints_np[frame_index]
             cam_ele, cam_hor = cam_vector_list[frame_index]
             fig, ax = \
                 self._draw_scene(visual_range=visual_range, axis_len=0.5,
@@ -192,8 +193,8 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                                  cam_hori_angle=cam_hor)
             #  draw limbs
 
-            num_person = joints_frame.shape[0]
-            for joints_person in joints_frame:
+            num_person = keypoints_frame.shape[0]
+            for keypoints_person in keypoints_frame:
                 if num_person >= 2:
                     self.limbs_palette = np.random.randint(
                         0, high=255, size=(1, 3), dtype=np.uint8)
@@ -212,8 +213,8 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
 
                         ax = _plot_line_on_fig(
                             ax,
-                            joints_person[limb[0]],
-                            joints_person[limb[1]],
+                            keypoints_person[limb[0]],
+                            keypoints_person[limb[1]],
                             color=np.array(color[limb_index]) / 255.0,
                             linewidth=linewidth)
                 scatter_points_index = list(
@@ -221,9 +222,9 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                         np.array(self.limbs_connection['body']).reshape(
                             -1).tolist()))
                 ax.scatter(
-                    joints_person[scatter_points_index, 0],
-                    joints_person[scatter_points_index, 1],
-                    joints_person[scatter_points_index, 2],
+                    keypoints_person[scatter_points_index, 0],
+                    keypoints_person[scatter_points_index, 1],
+                    keypoints_person[scatter_points_index, 2],
                     c=np.array([0, 0, 0]).reshape(1, -1),
                     s=10,
                     marker='o')

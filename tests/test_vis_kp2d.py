@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pytest
 
-from mmhuman3d.core.conventions.joints_mapping.kp_mapping import convert_kps
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.visualization.ffmpeg_utils import (
     array_to_images,
     video_to_array,
@@ -123,7 +123,7 @@ def test_vis_kp2d():
 
     # visualize single frame
     kp2d = np.random.randint(low=0, high=255, size=(1, 17, 2), dtype=np.uint8)
-    kp2d, mask = convert_kps(joints=kp2d, src='coco', dst='mmpose')
+    kp2d, mask = convert_kps(keypoints=kp2d, src='coco', dst='mmpose')
     limbs_target, limbs_palette = search_limbs(data_source='mmpose', mask=mask)
     image_array = np.random.randint(
         low=0, high=255, size=(512, 512, 3), dtype=np.uint8)

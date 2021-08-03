@@ -1,4 +1,4 @@
-MPII_JOINTS = [
+MPII_KEYPOINTS = [
     'right_ankle',
     'right_knee',
     'right_hip',
