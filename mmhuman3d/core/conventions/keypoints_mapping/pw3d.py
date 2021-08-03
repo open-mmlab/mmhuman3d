@@ -1,4 +1,4 @@
-PW3D_JOINTS = [
+PW3D_KEYPOINTS = [
     'nose',
     'neck',
     'right_shoulder',

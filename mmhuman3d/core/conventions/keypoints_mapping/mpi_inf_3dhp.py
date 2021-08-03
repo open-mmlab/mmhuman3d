@@ -1,4 +1,4 @@
-MPI_INF_3DHP_JOINTS = [
+MPI_INF_3DHP_KEYPOINTS = [
     'spine_3',
     'spine_4',
     'spine_2',
@@ -29,7 +29,7 @@ MPI_INF_3DHP_JOINTS = [
     'right_toe'
 ]
 
-MPI_INF_3DHP_TEST_JOINTS = [
+MPI_INF_3DHP_TEST_KEYPOINTS = [
     'headtop',
     'neck',
     'right_shoulder',

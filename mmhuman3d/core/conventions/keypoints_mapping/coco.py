@@ -1,4 +1,4 @@
-COCO_JOINTS = [
+COCO_KEYPOINTS = [
     'nose',
     'left_eye',
     'right_eye',

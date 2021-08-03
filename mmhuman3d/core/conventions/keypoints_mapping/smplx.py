@@ -1,4 +1,4 @@
-SMPLX_JOINTS = [
+SMPLX_KEYPOINTS = [
     'pelvis',
     'left_hip',
     'right_hip',
@@ -247,8 +247,8 @@ SMPLX_LIMBS = {
 SMPLX_LIMBS_INDEX = {}
 for k in SMPLX_LIMBS:
     SMPLX_LIMBS_INDEX[k] = [[
-        SMPLX_JOINTS.index(limb[0]),
-        SMPLX_JOINTS.index(limb[1])
+        SMPLX_KEYPOINTS.index(limb[0]),
+        SMPLX_KEYPOINTS.index(limb[1])
     ] for limb in SMPLX_LIMBS[k]]
 
 SMPLX_PALETTE = {

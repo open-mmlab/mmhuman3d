@@ -5,7 +5,7 @@ from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 import cv2
 import numpy as np
 
-from mmhuman3d.core.conventions.joints_mapping.smplx import (
+from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
     SMPLX_LIMBS_INDEX,
     SMPLX_PALETTE,
 )
