@@ -39,10 +39,9 @@ class LoadImageFromFile(object):
             self.file_client = mmcv.FileClient(**self.file_client_args)
 
         if results['img_prefix'] is not None:
-            filename = osp.join(results['img_prefix'],
-                                results['img_info']['filename'])
+            filename = osp.join(results['img_prefix'], results['image_path'])
         else:
-            filename = results['img_info']['filename']
+            filename = results['image_path']
 
         img_bytes = self.file_client.get(filename)
         img = mmcv.imfrombytes(img_bytes, flag=self.color_type)
@@ -50,7 +49,7 @@ class LoadImageFromFile(object):
             img = img.astype(np.float32)
 
         results['filename'] = filename
-        results['ori_filename'] = results['img_info']['filename']
+        results['ori_filename'] = results['image_path']
         results['img'] = img
         results['img_shape'] = img.shape
         results['ori_shape'] = img.shape
