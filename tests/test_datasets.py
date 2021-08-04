@@ -27,7 +27,7 @@ def check_dataset(dataset):
         assert data['smplx_jaw_pose'].shape == (3, )
         assert isinstance(data['has_smplx'], float)
 
-        assert data['mask'].shape == (144, 1)
+        assert data['mask'].shape == (144, )
 
 
 def test_datasets():
@@ -46,7 +46,3 @@ def test_datasets():
     dataset = build_dataset(cfg)
 
     check_dataset(dataset)
-
-
-if __name__ == "__main__":
-    test_datasets()

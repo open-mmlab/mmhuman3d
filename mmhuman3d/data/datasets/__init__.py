@@ -5,7 +5,7 @@ from .dataset_wrappers import (
     ConcatDataset,
     RepeatDataset,
 )
-from .image_dataset import BaseHumanImageDataset
+from .human_image_dataset import BaseHumanImageDataset
 from .pipelines import Compose
 from .samplers import DistributedSampler
 
