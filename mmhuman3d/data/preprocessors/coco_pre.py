@@ -4,7 +4,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.core.conventions.joints_mapping.kp_mapping import convert_kps
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 
 
 def coco_extract(dataset_path, out_path):

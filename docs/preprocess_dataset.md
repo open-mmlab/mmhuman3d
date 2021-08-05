@@ -46,7 +46,7 @@ ${ROOT_PATH}
 ### Generate dataset files
 After preparing the data, then simply run this command:
 ```
-python tools/preprocessors/preprocess.py \
+python tools/preprocess.py \
 --datasets all \
 --root_path $YOUR_ROOT_PATH \
 --output_path $YOUR_OUTPUT_PATH

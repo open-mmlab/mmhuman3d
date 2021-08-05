@@ -1,11 +1,11 @@
 import argparse
 import os
 
-from coco_pre import coco_extract
-from h36m_pre import h36m_extract
-from mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
-from mpii_pre import mpii_extract
-from pw3d_pre import pw3d_extract
+from mmhuman3d.data.preprocessors.coco_pre import coco_extract
+from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
+from mmhuman3d.data.preprocessors.mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
+from mmhuman3d.data.preprocessors.mpii_pre import mpii_extract
+from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
 
 
 def parse_args():
