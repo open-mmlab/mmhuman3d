@@ -7,7 +7,7 @@ import numpy as np
 from spacepy import pycdf
 from tqdm import tqdm
 
-from mmhuman3d.core.conventions.joints_mapping.kp_mapping import convert_kps
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 
 
 def _bbox_expand(bbox_xyxy, scale_factor):
