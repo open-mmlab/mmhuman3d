@@ -2,9 +2,53 @@ import os
 
 import numpy as np
 
+from mmhuman3d.data.preprocessors.coco_pre import coco_extract
+from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
+from mmhuman3d.data.preprocessors.mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
+from mmhuman3d.data.preprocessors.mpii_pre import mpii_extract
+from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
+
+
+def test_preprocess():
+    root_path = '/workspace/data/dataset_sample'
+    os.makedirs('/tmp/preprocessed_npzs', exist_ok=True)
+    output_path = '/tmp/preprocessed_npzs'
+
+    PW3D_ROOT = os.path.join(root_path, '3DPW')
+    pw3d_extract(PW3D_ROOT, output_path, mode='train')
+    pw3d_extract(PW3D_ROOT, output_path, mode='test')
+
+    assert os.path.exists('/tmp/preprocessed_npzs/' + '3dpw_test.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + '3dpw_train.npz')
+
+    H36M_ROOT = os.path.join(root_path, 'h36m')
+    h36m_extract(H36M_ROOT, output_path, mode='train', protocol=1)
+    h36m_extract(H36M_ROOT, output_path, mode='valid', protocol=1)
+    h36m_extract(H36M_ROOT, output_path, mode='valid', protocol=2)
+
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'h36m_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'h36m_valid_protocol1.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'h36m_valid_protocol2.npz')
+
+    COCO_ROOT = os.path.join(root_path, 'coco')
+    coco_extract(COCO_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'coco_2014_train.npz')
+
+    MPI_INF_3DHP_ROOT = os.path.join(root_path, 'mpi_inf_3dhp')
+    mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'train')
+    mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'test')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'mpi_inf_3dhp_test.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'mpi_inf_3dhp_train.npz')
+
+    MPII_ROOT = os.path.join(root_path, 'mpii')
+    mpii_extract(MPII_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'mpii_train.npz')
+
 
 def test_preprocessed_npz():
-    npz_folder = './tests/data/preprocessed_datasets'
+    npz_folder = '/tmp/preprocessed_npzs'
     assert os.path.exists(npz_folder)
     all_keys = [
         'image_path', 'bbox_xywh', 'config', 'keypoints2d', 'keypoints3d',
@@ -13,7 +57,9 @@ def test_preprocessed_npz():
 
     for npf in os.listdir(npz_folder):
         npfile = np.load(os.path.join(npz_folder, npf), allow_pickle=True)
-        N = 1
+        assert 'image_path' in npfile
+        N = npfile['image_path'].shape[0]
+
         for k in npfile.files:
             assert (k in all_keys)
             assert isinstance(npfile[k], np.ndarray)
@@ -21,7 +67,6 @@ def test_preprocessed_npz():
             # check shape of every attributes
             if k == 'image_path':
                 assert isinstance(npfile[k][0], np.str_)
-                assert npfile[k].shape == (N, )
             elif k == 'bbox_xywh':
                 assert npfile[k].shape == (N, 4)
 

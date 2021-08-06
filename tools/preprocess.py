@@ -41,8 +41,8 @@ def main():
     root_path = args.root_path
     output_path = args.output_path
 
-    if args.datasets == 'all':
-        args.datasets = ['coco', '3dpw', 'mpii', 'h36m']
+    if args.datasets == ['all']:
+        args.datasets = ['coco', '3dpw', 'mpii', 'h36m', 'mpi_inf_3dhp']
 
     if 'coco' in args.datasets:
         print('******')

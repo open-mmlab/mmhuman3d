@@ -1,10 +1,10 @@
 import glob
 import os
 
+import cdflib
 import cv2
 import h5py
 import numpy as np
-from spacepy import pycdf
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
@@ -72,10 +72,10 @@ def h36m_extract(dataset_path,
 
             # 2D pose file
             pose2d_file = os.path.join(pose2d_path, seq_name)
-            poses_2d = pycdf.CDF(pose2d_file)['Pose'][0]
+            poses_2d = cdflib.CDF(pose2d_file)['Pose'][0]
 
             # 3D pose file
-            poses_3d = pycdf.CDF(seq_i)['Pose'][0]
+            poses_3d = cdflib.CDF(seq_i)['Pose'][0]
 
             # bbox file
             bbox_file = os.path.join(bbox_path, seq_name.replace('cdf', 'mat'))
