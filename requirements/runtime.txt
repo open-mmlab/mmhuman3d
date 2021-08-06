@@ -5,3 +5,7 @@ ffmpeg-python
 smplx
 scipy
 chumpy
+h5py
+tqdm
+opencv-python
+cdflib
