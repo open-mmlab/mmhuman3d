@@ -6,26 +6,25 @@ import pytest
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.visualization.ffmpeg_utils import (
     array_to_images,
+    images_to_array,
     video_to_array,
 )
 from mmhuman3d.core.visualization.keypoint_utils import search_limbs
 from mmhuman3d.core.visualization.visualize_keypoints2d import (
     plot_kp2d_frame,
-    render_kp2d_to_video,
+    visualize_kp2d,
 )
-
-osj = os.path.join
 
 
 def test_vis_kp2d():
     image_array = np.random.randint(
         low=0, high=255, size=(2, 512, 512, 3), dtype=np.uint8)
-    array_to_images(image_array, '/tmp')
+    array_to_images(image_array, '/tmp', img_format='%06d.png')
 
     # wrong input shape
     kp2d = np.random.randint(low=0, high=255, size=(133, 2), dtype=np.uint8)
     with pytest.raises(AssertionError):
-        render_kp2d_to_video(
+        visualize_kp2d(
             kp2d,
             output_path='/tmp/1.mp4',
             frame_list=['/tmp/%06d.png' % 1,
@@ -36,7 +35,7 @@ def test_vis_kp2d():
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 133, 2), dtype=np.uint8)
     with pytest.raises(FileNotFoundError):
-        render_kp2d_to_video(
+        visualize_kp2d(
             kp2d,
             output_path='/tmp/1.mp4',
             frame_list=['/tmp/1.png', '/tmp/2.png'])
@@ -45,7 +44,7 @@ def test_vis_kp2d():
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 133, 2), dtype=np.uint8)
     with pytest.raises(FileNotFoundError):
-        render_kp2d_to_video(
+        visualize_kp2d(
             kp2d,
             output_path='/123/1.mp4',
             frame_list=['/tmp/%06d.png' % 1,
@@ -55,7 +54,7 @@ def test_vis_kp2d():
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 133, 2), dtype=np.uint8)
     with pytest.raises(KeyError):
-        render_kp2d_to_video(
+        visualize_kp2d(
             kp2d,
             output_path='/tmp/1.mp4',
             frame_list=['/tmp/%06d.png' % 1,
@@ -65,7 +64,7 @@ def test_vis_kp2d():
     # wrong data_source
     kp2d = np.random.randint(low=0, high=255, size=(10, 17, 3), dtype=np.uint8)
     with pytest.raises(IndexError):
-        render_kp2d_to_video(
+        visualize_kp2d(
             kp2d,
             output_path='/tmp/1.mp4',
             frame_list=['/tmp/%06d.png' % 1,
@@ -75,7 +74,7 @@ def test_vis_kp2d():
 
     # test shape
     kp2d = np.random.randint(low=0, high=16, size=(10, 133, 2), dtype=np.uint8)
-    render_kp2d_to_video(
+    visualize_kp2d(
         kp2d,
         output_path='/tmp/1.mp4',
         frame_list=['/tmp/%06d.png' % 1,
@@ -86,7 +85,7 @@ def test_vis_kp2d():
     # test multi-person shape
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 2, 133, 2), dtype=np.uint8)
-    render_kp2d_to_video(
+    visualize_kp2d(
         kp2d,
         output_path='/tmp/1.mp4',
         frame_list=['/tmp/%06d.png' % 1,
@@ -97,7 +96,7 @@ def test_vis_kp2d():
     # test shape with confidence
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 133, 3), dtype=np.uint8)
-    render_kp2d_to_video(
+    visualize_kp2d(
         kp2d,
         output_path='/tmp/1.mp4',
         frame_list=['/tmp/%06d.png' % 1,
@@ -153,3 +152,31 @@ def test_vis_kp2d():
             draw_bbox=True,
             with_number=True,
             font_size=0.5)
+
+    # test output folder
+    output_folder = '/tmp/1/'
+    kp2d = np.random.randint(low=0, high=16, size=(10, 133, 2), dtype=np.uint8)
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+    visualize_kp2d(
+        kp2d,
+        output_path=output_folder,
+        frame_list=['/tmp/%06d.png' % 1,
+                    '/tmp/%06d.png' % 2],
+    )
+    assert images_to_array(output_folder).shape
+
+    # test output folder same as input folder
+    output_folder = '/tmp/1/'
+    kp2d = np.random.randint(low=0, high=16, size=(10, 133, 2), dtype=np.uint8)
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+    with pytest.raises(FileExistsError):
+        visualize_kp2d(
+            kp2d,
+            output_path=output_folder,
+            frame_list=[
+                os.path.join(output_folder, '%06d.png' % 1),
+                os.path.join(output_folder, '%06d.png' % 2)
+            ],
+        )
