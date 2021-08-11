@@ -10,7 +10,7 @@ from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
     SMPLX_PALETTE,
 )
 from mmhuman3d.core.visualization.ffmpeg_utils import images_to_video
-from .keypoint_utils import search_limbs
+from .keypoint_utils import get_different_colors, search_limbs
 
 
 def plot_kp2d_frame(kp2d_person: np.ndarray,
@@ -58,11 +58,7 @@ def plot_kp2d_frame(kp2d_person: np.ndarray,
         if isinstance(palette, dict) and part_name == 'body':
             thickness = 2
             radius = 3
-            color = np.random.randint(
-                0,
-                high=255,
-                size=(len(scatter_points_index), 3),
-                dtype=np.uint8)
+            color = get_different_colors(len(scatter_points_index))
         else:
             thickness = 2
             radius = 2
@@ -133,6 +129,7 @@ def visualize_kp2d(
     start: int = 0,
     end: int = -1,
     force: bool = False,
+    with_file_name: bool = False,
     resolution: Optional[Union[Tuple[int, int], list]] = None,
     fps: Union[float, int] = 30,
     draw_bbox: bool = False,
@@ -152,14 +149,17 @@ def visualize_kp2d(
                 this option is for free skeletons like BVH file.
                 Defaults to None.
         palette (Iterable, optional): specified palette, three int represents
-                (B, G, R). Should be tuple of list.
+                (B, G, R). Should be tuple or list.
                 Defaults to None.
         data_source (str, optional): data source type. Defaults to 'mmpose'.
         mask (Optional[Union[list, np.ndarray]], optional):
                 mask to mask out the incorrect points. Defaults to None.
         start (int, optional): start frame index. Defaults to 0.
         end (int, optional): end frame index. Defaults to -1.
-        force (bool, optional): [description]. Defaults to False.
+        force (bool, optional): whether replace the origin frames.
+                Defaults to False.
+        with_file_name (bool, optional): whether write origin frame name on
+                the images. Defaults to False.
         resolution (Optional[Union[Tuple[int, int], list]], optional):
                 (width, height) of the output video
                 will be the same size as the original images if not specified.
@@ -169,7 +169,8 @@ def visualize_kp2d(
                 Defaults to False.
         with_number (bool, optional): whether draw index number.
                 Defaults to False.
-        pop_parts (Iterable[str], optional): [description]. Defaults to [].
+        pop_parts (Iterable[str], optional): The body part names you do not
+                want to visualize. Defaults to [].
 
     Raises:
         FileNotFoundError: check output video path.
@@ -208,8 +209,7 @@ def visualize_kp2d(
     if limbs is not None:
         limbs_target, limbs_palette = {
             'body': limbs.tolist() if isinstance(limbs, np.ndarray) else limbs
-        }, np.random.randint(
-            0, high=255, size=(1, 3), dtype=np.uint8)
+        }, get_different_colors(len(limbs))
     else:
         limbs_target, limbs_palette = search_limbs(
             data_source=data_source, mask=mask)
@@ -236,8 +236,7 @@ def visualize_kp2d(
             kp2d_frame *= np.array([[w_scale, h_scale]])
         for person_index in range(num_person):
             if num_person >= 2:
-                limbs_palette = np.random.randint(
-                    0, high=255, size=(1, 3), dtype=np.uint8)
+                limbs_palette = get_different_colors(1)
             image_array = plot_kp2d_frame(
                 kp2d_frame[person_index],
                 image_array,
@@ -247,6 +246,12 @@ def visualize_kp2d(
                 with_number=with_number,
                 font_size=0.5)
         if output_pathinfo.suffix.lower() in ['.mp4']:
+            if with_file_name:
+                h, w, _ = image_array.shape
+                cv2.putText(
+                    image_array, str(Path(frame_list[frame_index]).name),
+                    (w // 2, h // 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5 * h / 500,
+                    np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
             cv2.imwrite(
                 os.path.join(temp_folder, '%06d.png' % frame_index),
                 image_array)
@@ -256,6 +261,13 @@ def visualize_kp2d(
                 raise FileExistsError(
                     f'{temp_folder} exists (set --force to overwrite).')
             else:
+                if with_file_name:
+                    h, w, _ = image_array.shape
+                    cv2.putText(
+                        image_array, str(Path(frame_list[frame_index]).name),
+                        (w // 2, h // 10), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5 * h / 500,
+                        np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
                 cv2.imwrite(
                     os.path.join(temp_folder,
                                  Path(frame_list[frame_index]).name),

@@ -4,7 +4,7 @@ from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 import numpy as np
 
 from mmhuman3d.core.visualization.renderer import matplotlib3d_renderer
-from .keypoint_utils import search_limbs
+from .keypoint_utils import get_different_colors, search_limbs
 
 
 def _norm_pose(pose_numpy: np.ndarray, min_value: Union[float, int],
@@ -27,6 +27,7 @@ def _norm_pose(pose_numpy: np.ndarray, min_value: Union[float, int],
 def render_kp3d_to_video(kp3d: np.ndarray,
                          output_path: str,
                          limbs: Optional[Union[np.ndarray, List[int]]] = None,
+                         palette: Optional[Iterable[int]] = None,
                          data_source: str = 'mmpose',
                          mask: Optional[Union[list, tuple, np.ndarray]] = None,
                          start: int = 0,
@@ -34,6 +35,7 @@ def render_kp3d_to_video(kp3d: np.ndarray,
                          resolution: Union[list, Tuple[int,
                                                        int]] = (1280, 1280),
                          fps: Union[float, int] = 30,
+                         frame_names: Optional[Union[List[str], str]] = None,
                          orbit_speed: Union[float, int] = 0.5,
                          value_range: Union[Tuple[int, int],
                                             list] = (-100, 100),
@@ -49,6 +51,9 @@ def render_kp3d_to_video(kp3d: np.ndarray,
                 if not specified, the limbs will be searched by search_limbs,
                 this option is for free skeletons like BVH file.
                 Defaults to None.
+        palette (Iterable, optional): specified palette, three int represents
+                (B, G, R). Should be tuple or list.
+                Defaults to None.
         data_source (str, optional): data source type. Defaults to 'mmpose'.
         mask (Optional[Union[list, tuple, np.ndarray]], optional):
                 mask to mask out the incorrect points. Defaults to None.
@@ -59,11 +64,16 @@ def render_kp3d_to_video(kp3d: np.ndarray,
                 will be the same size as the original images if not specified.
                 Defaults to None.
         fps (Union[float, int], optional): fps. Defaults to 30.
+        frame_names (Optional[Union[List[str], str]], optional): List(should be
+                the same as frame numbers) or single string or string format
+                (like 'frame%06d')for frame title, no title if None.
+                Defaults to None.
         orbit_speed (Union[float, int], optional): orbit speed of camera.
                 Defaults to 0.5.
         value_range (Union[Tuple[int, int], list], optional):
                 range of axis value. Defaults to (-100, 100).
-        pop_parts (Iterable[str], optional): [description]. Defaults to [].
+        pop_parts (Iterable[str], optional): The body part names you do not
+                want to visualize. Defaults to [].
     Raises:
         TypeError: check the type of input keypoints.
         FileNotFoundError: check the output video path.
@@ -103,17 +113,25 @@ def render_kp3d_to_video(kp3d: np.ndarray,
     renderer = matplotlib3d_renderer.Axes3dJointsRenderer()
     renderer.init_camera(cam_hori_speed=orbit_speed, cam_elev_speed=0.2)
     if limbs is not None:
-        limbs_palette, limbs_target = np.random.randint(
-            0, high=255, size=(1, 3), dtype=np.uint8), {
-                'body':
-                limbs.tolist() if isinstance(limbs, np.ndarray) else limbs
-            }
+        limbs_palette, limbs_target = get_different_colors(1), {
+            'body': limbs.tolist() if isinstance(limbs, np.ndarray) else limbs
+        }
     else:
         limbs_target, limbs_palette = search_limbs(
             data_source=data_source, mask=mask)
+    if palette:
+        limbs_palette = np.array(palette, dtype=np.uint8)[None]
     for part_name in pop_parts:
         limbs_target.pop(part_name)
     renderer.set_connections(limbs_target, limbs_palette)
+    if isinstance(frame_names, str):
+        if '%' in frame_names:
+            frame_names = [
+                frame_names % index
+                for index in range(len(input_pose_np.shape[0]))
+            ]
+        else:
+            frame_names = [frame_names] * input_pose_np.shape[0]
     renderer.render_kp3d_to_video(
         input_pose_np,
         output_path,
@@ -121,4 +139,5 @@ def render_kp3d_to_video(kp3d: np.ndarray,
         axis='xzy',
         fps=fps,
         resolution=resolution,
-        visual_range=value_range)
+        visual_range=value_range,
+        frame_names=frame_names)

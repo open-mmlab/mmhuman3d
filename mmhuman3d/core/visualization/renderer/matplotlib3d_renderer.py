@@ -2,7 +2,7 @@ import io
 import os
 import shutil
 from pathlib import Path
-from typing import Iterable, NoReturn, Union
+from typing import Iterable, List, NoReturn, Optional, Union
 
 import cv2
 import numpy as np
@@ -129,7 +129,8 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
         axis: str = 'xzy',
         fps: Union[float, int] = 30,
         resolution: Iterable[int] = (720, 720),
-        visual_range: Iterable[int] = (-100, 100)
+        visual_range: Iterable[int] = (-100, 100),
+        frame_names: Optional[List[str]] = None,
     ) -> NoReturn:
         """Render 3d keypoints to a video.
 
@@ -148,7 +149,8 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     Defaults to (720, 720).
             visual_range (Iterable[int], optional): range of axis value.
                     Defaults to (-100, 100).
-
+            frame_names (Optional[List[str]], optional):  List of string
+                    for frame title, no title if None. Defaults to None.
         Returns:
             NoReturn.
         """
@@ -177,13 +179,14 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     one_dim_visual_range = np.expand_dims(visual_range, 0)
                     visual_range = one_dim_visual_range.repeat(3, axis=0)
             self._export_frames(keypoints_np, temp_dir, resolution,
-                                visual_range, self.cam_vector_list)
+                                visual_range, self.cam_vector_list,
+                                frame_names)
             self.if_frame_updated = True
         images_to_video(
             temp_dir, export_path, img_format="frame_%06d.png", fps=fps)
 
     def _export_frames(self, keypoints_np, temp_dir, resolution, visual_range,
-                       cam_vector_list):
+                       cam_vector_list, frame_names):
         for frame_index in range(keypoints_np.shape[0]):
             keypoints_frame = keypoints_np[frame_index]
             cam_ele, cam_hor = cam_vector_list[frame_index]
@@ -231,6 +234,12 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
             plt.close("all")
             rgb_mat = _get_cv2mat_from_buf(fig)
             resized_mat = cv2.resize(rgb_mat, resolution)
+            if frame_names is not None:
+                cv2.putText(
+                    resized_mat, str(frame_names[frame_index]),
+                    (resolution[0] // 10, resolution[1] // 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5 * resolution[0] / 500,
+                    np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
             frame_path = os.path.join(temp_dir, "frame_%06d.png" % frame_index)
             cv2.imwrite(frame_path, resized_mat)
 
