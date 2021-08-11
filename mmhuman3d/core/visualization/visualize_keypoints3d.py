@@ -24,23 +24,23 @@ def _norm_pose(pose_numpy: np.ndarray, min_value: Union[float, int],
     return pose_np_normalized
 
 
-def render_kp3d_to_video(kp3d: np.ndarray,
-                         output_path: str,
-                         limbs: Optional[Union[np.ndarray, List[int]]] = None,
-                         palette: Optional[Iterable[int]] = None,
-                         data_source: str = 'mmpose',
-                         mask: Optional[Union[list, tuple, np.ndarray]] = None,
-                         start: int = 0,
-                         end: int = -1,
-                         resolution: Union[list, Tuple[int,
-                                                       int]] = (1280, 1280),
-                         fps: Union[float, int] = 30,
-                         frame_names: Optional[Union[List[str], str]] = None,
-                         orbit_speed: Union[float, int] = 0.5,
-                         value_range: Union[Tuple[int, int],
-                                            list] = (-100, 100),
-                         pop_parts: Iterable[str] = []) -> NoReturn:
-    """Render 3d keypoints to a video with matplotlib. Support multi person
+def visualize_kp3d(
+    kp3d: np.ndarray,
+    output_path: str,
+    limbs: Optional[Union[np.ndarray, List[int]]] = None,
+    palette: Optional[Iterable[int]] = None,
+    data_source: str = 'mmpose',
+    mask: Optional[Union[list, tuple, np.ndarray]] = None,
+    start: int = 0,
+    end: int = -1,
+    resolution: Union[list, Tuple[int, int]] = (1280, 1280),
+    fps: Union[float, int] = 30,
+    frame_names: Optional[Union[List[str], str]] = None,
+    orbit_speed: Union[float, int] = 0.5,
+    value_range: Union[Tuple[int, int], list] = (-100, 100),
+    pop_parts: Iterable[str] = ()
+) -> NoReturn:
+    """Visualize 3d keypoints to a video with matplotlib. Support multi person
                 and specified limb connections.
 
     Args:
@@ -73,7 +73,7 @@ def render_kp3d_to_video(kp3d: np.ndarray,
         value_range (Union[Tuple[int, int], list], optional):
                 range of axis value. Defaults to (-100, 100).
         pop_parts (Iterable[str], optional): The body part names you do not
-                want to visualize. Defaults to [].
+                want to visualize. Defaults to ().
     Raises:
         TypeError: check the type of input keypoints.
         FileNotFoundError: check the output video path.
@@ -84,6 +84,7 @@ def render_kp3d_to_video(kp3d: np.ndarray,
     if not isinstance(kp3d, np.ndarray):
         raise TypeError('Input should be numpy.ndarray.')
     if kp3d.shape[-1] == 2:
+
         kp3d = np.concatenate([kp3d, np.zeros_like(kp3d)[..., 0:1]], axis=-1)
     elif kp3d.shape[-1] >= 4:
         kp3d = kp3d[..., :3]
@@ -113,13 +114,13 @@ def render_kp3d_to_video(kp3d: np.ndarray,
     renderer = matplotlib3d_renderer.Axes3dJointsRenderer()
     renderer.init_camera(cam_hori_speed=orbit_speed, cam_elev_speed=0.2)
     if limbs is not None:
-        limbs_palette, limbs_target = get_different_colors(1), {
+        limbs_target, limbs_palette = {
             'body': limbs.tolist() if isinstance(limbs, np.ndarray) else limbs
-        }
+        }, get_different_colors(len(limbs))
     else:
         limbs_target, limbs_palette = search_limbs(
             data_source=data_source, mask=mask)
-    if palette:
+    if palette is not None:
         limbs_palette = np.array(palette, dtype=np.uint8)[None]
     for part_name in pop_parts:
         limbs_target.pop(part_name)
