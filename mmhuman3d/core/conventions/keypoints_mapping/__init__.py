@@ -27,23 +27,29 @@ KEYPOINTS_FACTORY = {
 }
 
 
-def convert_kps(keypoints: Union[np.ndarray, torch.Tensor], src: str,
-                dst: str) -> Tuple[np.ndarray, np.ndarray]:
+def convert_kps(
+    keypoints: Union[np.ndarray, torch.Tensor],
+    src: str,
+    dst: str,
+    keypoints_factory: dict = KEYPOINTS_FACTORY,
+) -> Tuple[np.ndarray, np.ndarray]:
     """[summary]
 
     Args:
         keypoints (np.ndarray): [input keypoints array, could be
                 (f * n * J * 3/2) or (f * J * 3/2)]
-        src (str): [source data type from KEYPOINTS_FACTORY]
-        dst (str): [destination data type from KEYPOINTS_FACTORY]
+        src (str): [source data type from keypoints_factory]
+        dst (str): [destination data type from keypoints_factory]
+        keypoints_factory (dict, optional): A class to store the attributes.
+                Defaults to keypoints_factory.
     Returns:
-        [Tuple(np.ndarray, np.ndarray)]: [out_keypoints, mask ]
+        [Tuple(np.ndarray, np.ndarray)]: [out_keypoints, mask]
     """
     assert keypoints.ndim in [3, 4]
     if src == dst:
         return keypoints, np.ones((keypoints.shape[-2]))
-    src_names = KEYPOINTS_FACTORY[src.lower()]
-    dst_names = KEYPOINTS_FACTORY[dst.lower()]
+    src_names = keypoints_factory[src.lower()]
+    dst_names = keypoints_factory[dst.lower()]
     original_shape = keypoints.shape[:-2]
     keypoints = keypoints.reshape(-1, len(src_names), keypoints.shape[-1])
     out_keypoints = np.zeros(

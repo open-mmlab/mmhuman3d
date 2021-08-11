@@ -5,7 +5,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.visualization import visualize_keypoints3d
 from mmhuman3d.core.visualization.ffmpeg_utils import video_to_array
 
-render_kp3d_to_video = visualize_keypoints3d.render_kp3d_to_video
+visualize_kp3d = visualize_keypoints3d.visualize_kp3d
 
 
 def test_vis_kp3d():
@@ -13,7 +13,7 @@ def test_vis_kp3d():
     with pytest.raises(AssertionError):
         keypoints = np.random.randint(
             low=0, high=255, size=(133, 3), dtype=np.uint8)
-        render_kp3d_to_video(
+        visualize_kp3d(
             keypoints,
             '/tmp/tmp.mp4',
             mask=None,
@@ -23,7 +23,7 @@ def test_vis_kp3d():
     with pytest.raises(AssertionError):
         keypoints = np.random.randint(
             low=0, high=255, size=(30, 133, 1), dtype=np.uint8)
-        render_kp3d_to_video(
+        visualize_kp3d(
             keypoints,
             '/tmp/tmp.mp4',
             mask=None,
@@ -34,7 +34,7 @@ def test_vis_kp3d():
     with pytest.raises(KeyError):
         keypoints = np.random.randint(
             low=0, high=255, size=(30, 133, 3), dtype=np.uint8)
-        render_kp3d_to_video(
+        visualize_kp3d(
             keypoints,
             '/tmp/tmp.mp4',
             mask=None,
@@ -47,7 +47,7 @@ def test_vis_kp3d():
     with pytest.raises(FileNotFoundError):
         keypoints = np.random.randint(
             low=0, high=255, size=(1, 133, 3), dtype=np.uint8)
-        render_kp3d_to_video(
+        visualize_kp3d(
             keypoints,
             '/123/tmp.mp4',
             mask=None,
@@ -57,7 +57,7 @@ def test_vis_kp3d():
     with pytest.raises(FileNotFoundError):
         keypoints = np.random.randint(
             low=0, high=255, size=(1, 133, 3), dtype=np.uint8)
-        render_kp3d_to_video(
+        visualize_kp3d(
             keypoints,
             '/tmp/tmp.mov',
             mask=None,
@@ -67,7 +67,7 @@ def test_vis_kp3d():
 
     keypoints = np.random.randint(
         low=0, high=255, size=(30, 1, 133, 3), dtype=np.uint8)
-    render_kp3d_to_video(
+    visualize_kp3d(
         keypoints,
         '/tmp/tmp.mp4',
         mask=None,
@@ -78,7 +78,7 @@ def test_vis_kp3d():
 
     keypoints = np.random.randint(
         low=0, high=255, size=(30, 133, 3), dtype=np.uint8)
-    render_kp3d_to_video(
+    visualize_kp3d(
         keypoints,
         '/tmp/tmp.mp4',
         mask=None,
@@ -89,7 +89,7 @@ def test_vis_kp3d():
 
     keypoints = np.random.randint(
         low=0, high=255, size=(30, 2, 133, 3), dtype=np.uint8)
-    render_kp3d_to_video(
+    visualize_kp3d(
         keypoints,
         '/tmp/tmp.mp4',
         mask=None,
@@ -100,7 +100,7 @@ def test_vis_kp3d():
 
     keypoints = np.random.randint(
         low=0, high=255, size=(30, 1, 133, 4), dtype=np.uint8)
-    render_kp3d_to_video(
+    visualize_kp3d(
         keypoints,
         '/tmp/tmp.mp4',
         mask=None,
@@ -114,7 +114,7 @@ def test_vis_kp3d():
     keypoints, mask = convert_kps(
         keypoints=keypoints, src='coco', dst='mmpose')
     assert keypoints.shape == (30, 1, 133, 3)
-    render_kp3d_to_video(
+    visualize_kp3d(
         keypoints,
         '/tmp/tmp.mp4',
         mask=mask,
