@@ -105,7 +105,6 @@ venv.bak/
 .mypy_cache/
 
 # custom
-data
 .vscode
 .idea
 *.pkl
@@ -127,5 +126,7 @@ work_dirs/
 *.npy
 *.pickle
 
+# MacOS
+*DS_Store*
 # git
 *.orig

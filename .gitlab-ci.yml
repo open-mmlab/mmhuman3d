@@ -27,6 +27,9 @@ test:
   script:
     - echo "Start building..."
     - pip install opencv-python-headless
+    - pip install h5py tqdm
+    - conda install -c conda-forge xorg-libx11
+    - pip install vedo numpy scipy 
     - pip install -e .
     - python -c "import mmhuman3d; print(mmhuman3d.__version__)"
     - echo "Start testing..."
