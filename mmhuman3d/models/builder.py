@@ -7,7 +7,7 @@ BACKBONES = MODELS
 NECKS = MODELS
 HEADS = MODELS
 LOSSES = MODELS
-CLASSIFIERS = MODELS
+FRAMEWORKS = MODELS
 
 
 def build_backbone(cfg):
@@ -30,5 +30,6 @@ def build_loss(cfg):
     return LOSSES.build(cfg)
 
 
-def build_classifier(cfg):
-    return CLASSIFIERS.build(cfg)
+def build_framework(cfg):
+    """Build framework."""
+    return FRAMEWORKS.build(cfg)
