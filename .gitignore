@@ -105,12 +105,16 @@ venv.bak/
 .mypy_cache/
 
 # custom
+data
+!mmhuman3d/data
+!tests/data
 .vscode
 .idea
 *.pkl
 *.pkl.json
 *.log.json
 work_dirs/
+logs/
 
 # Pytorch
 *.pth

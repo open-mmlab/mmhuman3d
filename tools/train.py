@@ -11,8 +11,8 @@ from mmcv.runner import get_dist_info, init_dist
 
 from mmhuman3d import __version__
 from mmhuman3d.apis import set_random_seed, train_model
-from mmhuman3d.datasets import build_dataset
-from mmhuman3d.models import build_classifier
+from mmhuman3d.data.datasets import build_dataset
+from mmhuman3d.models import build_framework
 from mmhuman3d.utils import collect_env, get_root_logger
 
 
@@ -125,7 +125,7 @@ def main():
     cfg.seed = args.seed
     meta['seed'] = args.seed
 
-    model = build_classifier(cfg.model)
+    model = build_framework(cfg.model)
     model.init_weights()
 
     datasets = [build_dataset(cfg.data.train)]
@@ -137,9 +137,7 @@ def main():
         # save mmhuman3d version, config file content and class names in
         # checkpoints as meta data
         cfg.checkpoint_config.meta = dict(
-            mmhuman3d_version=__version__,
-            config=cfg.pretty_text,
-            CLASSES=datasets[0].CLASSES)
+            mmhuman3d_version=__version__, config=cfg.pretty_text)
     # add an attribute for visualization convenience
     train_model(
         model,

@@ -1,16 +1,15 @@
-import matplotlib.pyplot as plt
 import mmcv
 import numpy as np
 import torch
 from mmcv.parallel import collate, scatter
 from mmcv.runner import load_checkpoint
 
-from mmhuman3d.datasets.pipelines import Compose
-from mmhuman3d.models import build_classifier
+from mmhuman3d.data.datasets.pipelines import Compose
+from mmhuman3d.models import build_framework
 
 
 def init_model(config, checkpoint=None, device='cuda:0', options=None):
-    """Initialize a classifier from config file.
+    """Initialize a framework from config file.
 
     Args:
         config (str or :obj:`mmcv.Config`): Config file path or the config
@@ -20,7 +19,7 @@ def init_model(config, checkpoint=None, device='cuda:0', options=None):
         options (dict): Options to override some settings in the used config.
 
     Returns:
-        nn.Module: The constructed classifier.
+        nn.Module: The constructed framework.
     """
     if isinstance(config, str):
         config = mmcv.Config.fromfile(config)
@@ -30,7 +29,7 @@ def init_model(config, checkpoint=None, device='cuda:0', options=None):
     if options is not None:
         config.merge_from_dict(options)
     config.model.pretrained = None
-    model = build_classifier(config.model)
+    model = build_framework(config.model)
     if checkpoint is not None:
         map_loc = 'cpu' if device == 'cpu' else None
         checkpoint = load_checkpoint(model, checkpoint, map_location=map_loc)
@@ -39,7 +38,7 @@ def init_model(config, checkpoint=None, device='cuda:0', options=None):
         else:
             raise NotImplementedError
             # import warnings
-            # from mmhuman3d.datasets import ImageNet
+            # from mmhuman3d.data.datasets import ImageNet
             # warnings.simplefilter('once')
             # warnings.warn('Class names are not saved in the checkpoint\'s '
             #               'meta data, use imagenet by default.')
@@ -51,14 +50,14 @@ def init_model(config, checkpoint=None, device='cuda:0', options=None):
 
 
 def inference_model(model, img):
-    """Inference image(s) with the classifier.
+    """Inference image(s) with the framework.
 
     Args:
-        model (nn.Module): The loaded classifier.
+        model (nn.Module): The loaded framework.
         img (str/ndarray): The image filename or loaded image.
 
     Returns:
-        result (dict): The classification results that contains
+        result (dict): The estimation results that contains
             `class_name`, `pred_label` and `pred_score`.
     """
     cfg = model.cfg
@@ -87,20 +86,3 @@ def inference_model(model, img):
         result = {'pred_label': pred_label, 'pred_score': float(pred_score)}
     result['pred_class'] = model.CLASSES[result['pred_label']]
     return result
-
-
-def show_result_pyplot(model, img, result, fig_size=(15, 10)):
-    """Visualize the classification results on the image.
-
-    Args:
-        model (nn.Module): The loaded classifier.
-        img (str or np.ndarray): Image filename or loaded image.
-        result (list): The classification result.
-        fig_size (tuple): Figure size of the pyplot figure.
-    """
-    if hasattr(model, 'module'):
-        model = model.module
-    img = model.show_result(img, result, show=False)
-    plt.figure(figsize=fig_size)
-    plt.imshow(mmcv.bgr2rgb(img))
-    plt.show()
