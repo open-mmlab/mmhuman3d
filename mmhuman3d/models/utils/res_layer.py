@@ -5,6 +5,7 @@ from torch import nn as nn
 
 class ResLayer(Sequential):
     """ResLayer to build ResNet style backbone.
+
     Args:
         block (nn.Module): block used to build ResLayer.
         inplanes (int): inplanes of block.
@@ -105,6 +106,7 @@ class ResLayer(Sequential):
 class SimplifiedBasicBlock(BaseModule):
     """Simplified version of original basic residual block. This is used in
     `SCNet <https://arxiv.org/abs/2012.10150>`_.
+
     - Norm layer is now optional
     - Last ReLU in forward function is removed
     """

@@ -114,7 +114,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
         self.cam_vector_list = None
         self.if_connection_setup = False
         self.if_frame_updated = False
-        self.frames_dir_path = ""
+        self.frames_dir_path = ''
 
     def set_connections(self, limbs_connection, limbs_palette):
         self.limbs_connection = limbs_connection
@@ -138,7 +138,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
             keypoints_np (np.ndarray): shape of input array should be
                     (f * n * J * 3).
             export_path (str): output video path.
-            sign (Iterable[int], optional): direction of the aixs.
+            sign (Iterable[int], optional): direction of the axis.
                     Defaults to (1, 1, 1).
             axis (str, optional): axis convention.
                     Defaults to 'xzy'.
@@ -160,7 +160,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
             raise FileNotFoundError('Wrong output video path.')
         temp_dir = os.path.join(
             Path(export_path).parent,
-            Path(export_path).name + "_temp")
+            Path(export_path).name + '_temp')
         self.frames_dir_path = temp_dir
         keypoints_np = _set_new_pose(keypoints_np, sign, axis)
         if not self.if_frame_updated:
@@ -183,7 +183,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                                 frame_names)
             self.if_frame_updated = True
         images_to_video(
-            temp_dir, export_path, img_format="frame_%06d.png", fps=fps)
+            temp_dir, export_path, img_format='frame_%06d.png', fps=fps)
 
     def _export_frames(self, keypoints_np, temp_dir, resolution, visual_range,
                        cam_vector_list, frame_names):
@@ -231,7 +231,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     c=np.array([0, 0, 0]).reshape(1, -1),
                     s=10,
                     marker='o')
-            plt.close("all")
+            plt.close('all')
             rgb_mat = _get_cv2mat_from_buf(fig)
             resized_mat = cv2.resize(rgb_mat, resolution)
             if frame_names is not None:
@@ -240,7 +240,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     (resolution[0] // 10, resolution[1] // 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5 * resolution[0] / 500,
                     np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
-            frame_path = os.path.join(temp_dir, "frame_%06d.png" % frame_index)
+            frame_path = os.path.join(temp_dir, 'frame_%06d.png' % frame_index)
             cv2.imwrite(frame_path, resized_mat)
 
     def __del__(self):
@@ -258,7 +258,7 @@ def _set_new_pose(pose_np, sign, axis):
         pose_np[..., dim_index] = \
             sign[dim_index] * pose_np[..., dim_index]
     pose_rearrange_axis_result = pose_np.copy()
-    target_axis = ["x", "y", "z"]
+    target_axis = ['x', 'y', 'z']
     for axis_index, axis_name in enumerate(target_axis):
         src_axis_index = axis.index(axis_name)
         pose_rearrange_axis_result[..., axis_index] = \
@@ -281,7 +281,7 @@ def _plot_line_on_fig(ax,
 
 def _get_cv2mat_from_buf(fig, dpi=180):
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=dpi)
+    fig.savefig(buf, format='png', dpi=dpi)
     buf.seek(0)
     img_arr = np.frombuffer(buf.getvalue(), dtype=np.uint8)
     buf.close()

@@ -14,7 +14,7 @@ def run_locally():
 def run_visualize_chessboard_kinects_rgb(argv):
     chessboard_test_file_path = \
         os.path.join(
-            "tests", "data", "mocap",
+            'tests', 'data', 'mocap',
             'calibration_chessboard_05_28_18_05_19.json'
         )
     # interactive is set to False for pytest, use GUI with interactive=True
@@ -25,5 +25,5 @@ def run_visualize_chessboard_kinects_rgb(argv):
 # smc file too large, not uploaded and tested in gitlab
 def run_visualize_smc_rgb(argv):
     smc_test_file_path = \
-        "/Users/gaoyang/Downloads/FTP/zoehuman/p666_a666.smc"
+        '/Users/gaoyang/Downloads/FTP/zoehuman/p666_a666.smc'
     visualize_smc_kinects_rgb(smc_path=smc_test_file_path, interactive=True)

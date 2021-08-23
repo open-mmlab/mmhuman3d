@@ -110,6 +110,7 @@ class Bottleneck(BaseModule):
                  plugins=None,
                  init_cfg=None):
         """Bottleneck block for ResNet.
+
         If style is "pytorch", the stride-two layer is the 3x3 conv layer, if
         it is "caffe", the stride-two layer is the first 1x1 conv layer.
         """
@@ -216,6 +217,7 @@ class Bottleneck(BaseModule):
 
     def make_block_plugins(self, in_channels, plugins):
         """make plugins for block.
+
         Args:
             in_channels (int): Input channels of plugin.
             plugins (list[dict]): List of plugins cfg to build.

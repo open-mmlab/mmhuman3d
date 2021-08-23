@@ -41,7 +41,7 @@ def visualize_kp3d(
     pop_parts: Iterable[str] = ()
 ) -> NoReturn:
     """Visualize 3d keypoints to a video with matplotlib. Support multi person
-                and specified limb connections.
+    and specified limb connections.
 
     Args:
         kp3d (np.ndarray): shape could be (f * J * 4/3/2) or

@@ -131,7 +131,7 @@ class ClassBalancedDataset(object):
             for cat_id in cat_ids:
                 category_freq[cat_id] += 1
         for k, v in category_freq.items():
-            assert v > 0, f'caterogy {k} does not contain any images'
+            assert v > 0, f'category {k} does not contain any images'
             category_freq[k] = v / num_images
 
         # 2. For each category c, compute the category-level repeat factor:

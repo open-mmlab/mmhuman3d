@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import shutil
 import string
@@ -257,8 +256,8 @@ def images_to_array(input_folder: str,
         '4',
         '-i',
         f'{input_folder}/{img_format}',
-        "-f",
-        "rawvideo",
+        '-f',
+        'rawvideo',
         '-pix_fmt',
         'bgr24',  # bgr24 for matching OpenCV
         '-s',
@@ -313,17 +312,14 @@ class vid_info(object):
         self.video_stream = video_stream
 
     def __getitem__(self, key: str):
-        """
-            Key ([str]): range in ['index', 'codec_name', 'codec_long_name',
-            'profile', 'codec_type', 'codec_time_base', 'codec_tag_string',
-            'codec_tag', 'width', 'height', 'coded_width', 'coded_height',
-            'has_b_frames', 'pix_fmt', 'level', 'chroma_location', 'refs',
-            'is_avc', 'nal_length_size', 'r_frame_rate', 'avg_frame_rate',
-            'time_base', 'start_pts', 'start_time', 'duration_ts',
-            'duration', 'bit_rate', 'bits_per_raw_sample', 'nb_frames',
-            'disposition', 'tags']
-
-        """
+        """Key ([str]): range in ['index', 'codec_name', 'codec_long_name',
+        'profile', 'codec_type', 'codec_time_base', 'codec_tag_string',
+        'codec_tag', 'width', 'height', 'coded_width', 'coded_height',
+        'has_b_frames', 'pix_fmt', 'level', 'chroma_location', 'refs',
+        'is_avc', 'nal_length_size', 'r_frame_rate', 'avg_frame_rate',
+        'time_base', 'start_pts', 'start_time', 'duration_ts', 'duration',
+        'bit_rate', 'bits_per_raw_sample', 'nb_frames', 'disposition',
+        'tags']"""
         return self.video_stream[key]
 
 
@@ -492,8 +488,8 @@ def images_to_gif(
     fps: int = 15,
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
 ) -> NoReturn:
-    """Convert series of images to a video, similar to images_to_video,
-        but provide more suitable parameters.
+    """Convert series of images to a video, similar to images_to_video, but
+    provide more suitable parameters.
 
     Args:
         input_folder (str): input image folder.
@@ -559,7 +555,7 @@ def gif_to_video(
         fps (int, optional): fps. Defaults to 30.
         remove_raw_file (bool, optional): whether remove original input file.
                 Defaults to False.
-        down_sampl_scale (Union[int, float], optional): down sample scale.
+        down_sample_scale (Union[int, float], optional): down sample scale.
                 Defaults to 1.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
                 optional): (width, height) of output. Defaults to None.
@@ -746,7 +742,7 @@ def spatial_concat_video(input_path_list: List[str],
             (index, width, height, index))
 
     scale_command = ' '.join(scale_command)
-    pad_command = "[v%d]pad=%d:%d[%s];" % (0, width * array[1] + padding *
+    pad_command = '[v%d]pad=%d:%d[%s];' % (0, width * array[1] + padding *
                                            (array[1] - 1),
                                            height * array[0] + padding *
                                            (array[0] - 1), lowercase[0])
@@ -758,14 +754,14 @@ def spatial_concat_video(input_path_list: List[str],
             pad_width = index % array[0] * (width + padding)
             pad_height = index // array[0] * (height + padding)
 
-        pad_command += "[%s][v%d]overlay=%d:%d" % (lowercase[index - 1], index,
+        pad_command += '[%s][v%d]overlay=%d:%d' % (lowercase[index - 1], index,
                                                    pad_width, pad_height)
         if index != len(input_path_list) - 1:
-            pad_command += "[%s];" % lowercase[index]
+            pad_command += '[%s];' % lowercase[index]
 
     command += [
         '-filter_complex',
-        "%s%s" % (scale_command, pad_command), '-loglevel', 'error', '-y',
+        '%s%s' % (scale_command, pad_command), '-loglevel', 'error', '-y',
         output_path
     ]
     print(f'Running \"{" ".join(command)}\"')
@@ -836,8 +832,8 @@ def temporal_concat_video(input_path_list: List[str],
                                                            float]]] = (512,
                                                                        512),
                           remove_raw_files: bool = False) -> NoReturn:
-    """Concat no matter videos or gifs into a temporal sequence,
-        and save as a new video or gif file.
+    """Concat no matter videos or gifs into a temporal sequence, and save as a
+    new video or gif file.
 
     Args:
         input_path_list (List[str]): list of input video paths.
@@ -877,7 +873,7 @@ def temporal_concat_video(input_path_list: List[str],
     scale_command = ''.join(scale_command)
     command += [
         '-filter_complex',
-        "%s%sconcat=n=%d:v=1:a=0[v]" %
+        '%s%sconcat=n=%d:v=1:a=0[v]' %
         (scale_command, concat_command, len(input_path_list)), '-loglevel',
         'error', '-map', '[v]', '-c:v', 'libx264', '-y', output_path
     ]

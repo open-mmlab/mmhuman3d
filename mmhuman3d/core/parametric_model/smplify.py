@@ -27,47 +27,47 @@ default_camera = {}
 def unify_joint_mappings_smpl(dataset='smpl'):
     """Unify different joint definitions to SMPL.
 
-        Output unified defination (use SMPL):
-            [
-            # smpl joints
-            'pelvis',           #0
-            'left_hip',         #1
-            'right_hip',        #2
-            'spine1',           #3
-            'left_knee',        #4
-            'right_knee',       #5
-            'spine2',           #6
-            'left_ankle',       #7
-            'right_ankle',      #8
-            'spine3',           #9
-            'left_foot',        #10
-            'right_foot',       #11
-            'neck',             #12
-            'left_collar',      #13
-            'right_collar',     #14
-            'head',             #15
-            'left_shoulder',    #16
-            'right_shoulder',   #17
-            'left_elbow',       #18
-            'right_elbow',      #19
-            'left_wrist',       #20
-            'right_wrist',      #21
-            'left_hand',        #22
-            'right_hand',       #23
-            # additional keypoints
-            'nose',             #24
-            'left eye'          #25
-            'right eye'         #26
-            'left ear'          #27
-            'right ear'         #28
-        ]
+    Output unified definition (use SMPL):
+        [
+        # smpl joints
+        'pelvis',           #0
+        'left_hip',         #1
+        'right_hip',        #2
+        'spine1',           #3
+        'left_knee',        #4
+        'right_knee',       #5
+        'spine2',           #6
+        'left_ankle',       #7
+        'right_ankle',      #8
+        'spine3',           #9
+        'left_foot',        #10
+        'right_foot',       #11
+        'neck',             #12
+        'left_collar',      #13
+        'right_collar',     #14
+        'head',             #15
+        'left_shoulder',    #16
+        'right_shoulder',   #17
+        'left_elbow',       #18
+        'right_elbow',      #19
+        'left_wrist',       #20
+        'right_wrist',      #21
+        'left_hand',        #22
+        'right_hand',       #23
+        # additional keypoints
+        'nose',             #24
+        'left eye'          #25
+        'right eye'         #26
+        'left ear'          #27
+        'right ear'         #28
+    ]
 
-        Args:
-          dataset: `smpl` and `gta`.
-        Returns:
-          a list of indexs that maps the joints to a SMPL convention.
-          -1 denotes the joint is missing.
-        """
+    Args:
+      dataset: `smpl` and `gta`.
+    Returns:
+      a list of indexes that maps the joints to a SMPL convention.
+      -1 denotes the joint is missing.
+    """
     if dataset == 'smpl':
         return np.array([*range(0, 29)], dtype=np.int32)
     elif dataset == 'gta':
@@ -113,7 +113,7 @@ def unify_joint_mappings_smpl(dataset='smpl'):
 def unify_joint_mappings(dataset='smplx'):
     """Unify different joint definitions to SMPL-X.
 
-    Output unified defination:
+    Output unified definition:
         [
         'pelvis',           #0
         'left_hip',         #1
@@ -265,7 +265,7 @@ def unify_joint_mappings(dataset='smplx'):
     Args:
       dataset: `smplx`, `smpl` and `gta`.
     Returns:
-      a list of indexs that maps the joints to a SMPL-X convention.
+      a list of indexes that maps the joints to a SMPL-X convention.
       -1 denotes the joint is missing.
     """
     if dataset == 'smplx':
@@ -742,9 +742,7 @@ def get_joint_names(dataset='smplx'):
 
 
 def gmof(x, sigma):
-    """
-    Geman-McClure error function
-    """
+    """Geman-McClure error function."""
     x_squared = x**2
     sigma_squared = sigma**2
     return (sigma_squared * x_squared) / (sigma_squared + x_squared)
@@ -763,9 +761,7 @@ def build_optimizer(opt_params, opt_config):
 
 
 def angle_prior(pose, spine=False):
-    """
-    Angle prior that penalizes unnatural bending of the knees and elbows
-    """
+    """Angle prior that penalizes unnatural bending of the knees and elbows."""
     # We subtract 3 because pose does not include the global rotation of
     # the model
     angle_loss = torch.exp(
@@ -782,7 +778,7 @@ def angle_prior(pose, spine=False):
 
 
 class SMPLify(object):
-    """ Re-implementation of SMPLify with extended features """
+    """Re-implementation of SMPLify with extended features."""
 
     def __init__(self,
                  body_model=None,
@@ -819,7 +815,7 @@ class SMPLify(object):
                  num_videos=None):
 
         assert keypoints_2d is not None or keypoints_3d is not None, \
-            'Neither of 2D nor 3D keypoints groud truth is provided.'
+            'Neither of 2D nor 3D keypoints ground truth is provided.'
         if batch_size is None:
             batch_size = keypoints_2d.shape[
                 0] if keypoints_2d is not None else keypoints_3d.shape[0]
@@ -1032,7 +1028,7 @@ class SMPLify(object):
 
 
 class SMPLifyX(SMPLify):
-    """ Re-implementation of SMPLify-X with extended features """
+    """Re-implementation of SMPLify-X with extended features."""
 
     def __init__(self,
                  body_model=None,
@@ -1076,7 +1072,7 @@ class SMPLifyX(SMPLify):
                  num_videos=None):
 
         assert keypoints_2d is not None or keypoints_3d is not None, \
-            'Neither of 2D nor 3D keypoints groud truth is provided.'
+            'Neither of 2D nor 3D keypoints ground truth is provided.'
         if batch_size is None:
             batch_size = keypoints_2d.shape[
                 0] if keypoints_2d is not None else keypoints_3d.shape[0]

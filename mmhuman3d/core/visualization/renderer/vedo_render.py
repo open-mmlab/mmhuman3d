@@ -6,8 +6,7 @@ from scipy.spatial.transform import Rotation as scipy_Rotation
 class VedoRenderer(object):
 
     def __init__(self, scale=0.03):
-        """Visualize cameras in an interactive scene
-        supported by vedo.
+        """Visualize cameras in an interactive scene supported by vedo.
 
         Args:
             scale (float, optional):
@@ -16,7 +15,7 @@ class VedoRenderer(object):
         self.scale = scale
         self.axis_list = self.__init_axis()
         self.camera_list = []
-        self.frames_dir_path = ""
+        self.frames_dir_path = ''
         self.y_reverse = False
 
     def __init_axis(self, axis_len=80):
@@ -30,15 +29,15 @@ class VedoRenderer(object):
         return ret_list
 
     def set_y_reverse(self):
-        """Set y reverse before add_camera if
-        it is needed. Vedo defines y+ as up direction.
-        When visualizing kinect cameras, y- is up,
-        call set_y_reverse in this situation to make
-        text in correct direction.
+        """Set y reverse before add_camera if it is needed.
+
+        Vedo defines y+ as up direction. When visualizing kinect cameras, y- is
+        up, call set_y_reverse in this situation to make text in correct
+        direction.
         """
         self.y_reverse = True
         self.y_reverse_rotation = \
-            scipy_Rotation.from_euler("z", 180, degrees=True)
+            scipy_Rotation.from_euler('z', 180, degrees=True)
 
     def add_camera(self, camera_parameter, arrow_len=30):
         """Add an camera to the scene.
@@ -55,8 +54,8 @@ class VedoRenderer(object):
             list:
                 A list of vedo items related to the input camera.
         """
-        rot_mat = np.asarray(camera_parameter.get_value("rotation_mat"))
-        translation = np.asarray(camera_parameter.get_value("translation"))
+        rot_mat = np.asarray(camera_parameter.get_value('rotation_mat'))
+        translation = np.asarray(camera_parameter.get_value('translation'))
         cam_center = -np.linalg.inv(rot_mat).dot(translation)
         arrow_end_origin = np.eye(3) * arrow_len * self.scale
         colors = ['r', 'g', 'b']  # r-x, g-y, b-z
