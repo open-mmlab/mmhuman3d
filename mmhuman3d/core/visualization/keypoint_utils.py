@@ -14,8 +14,8 @@ def search_limbs(
     data_source: str,
     mask: Optional[Union[np.ndarray, tuple,
                          list]] = None) -> Tuple[dict, dict]:
-    """Search the corresponding limbs following the basis smplx limbs.
-            The mask could mask out the incorrect keypoints.
+    """Search the corresponding limbs following the basis smplx limbs. The mask
+    could mask out the incorrect keypoints.
 
     Args:
         data_source (str): data source type.

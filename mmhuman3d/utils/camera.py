@@ -5,7 +5,7 @@ import numpy as np
 
 class CameraParameter:
 
-    def __init__(self, name="default", H=1080, W=1920):
+    def __init__(self, name='default', H=1080, W=1920):
         """
         Args:
             name (str, optional):
@@ -18,39 +18,38 @@ class CameraParameter:
         self.name = name
         self.parameters_dict = {}
         in_mat = __zero_mat_list__(3)
-        self.parameters_dict["in_mat"] = in_mat
+        self.parameters_dict['in_mat'] = in_mat
         for distort_name in __distort_coefficient_names__:
             self.parameters_dict[distort_name] = 0.0
-        self.parameters_dict["H"] = H
-        self.parameters_dict["W"] = W
+        self.parameters_dict['H'] = H
+        self.parameters_dict['W'] = W
         r_mat = __zero_mat_list__(3)
-        self.parameters_dict["rotation_mat"] = r_mat
+        self.parameters_dict['rotation_mat'] = r_mat
         t_list = [0.0, 0.0, 0.0]
-        self.parameters_dict["translation"] = t_list
+        self.parameters_dict['translation'] = t_list
 
     def reset_distort(self):
-        """Reset all distort coefficients to zero.
-        """
+        """Reset all distort coefficients to zero."""
         for distort_name in __distort_coefficient_names__:
             self.parameters_dict[distort_name] = 0.0
 
     def get_opencv_distort_mat(self):
-        """Get a numpy array of 8 distort coefficients,
-         which is the distCoeffs arg of cv2.undistort.
+        """Get a numpy array of 8 distort coefficients, which is the distCoeffs
+        arg of cv2.undistort.
 
         Returns:
             ndarray:
                 (k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6) of 8 elements.
         """
         dist_coeffs = [
-            self.getValue("k1"),
-            self.getValue("k2"),
-            self.getValue("p1"),
-            self.getValue("p2"),
-            self.getValue("k3"),
-            self.getValue("k4"),
-            self.getValue("k5"),
-            self.getValue("k6"),
+            self.getValue('k1'),
+            self.getValue('k2'),
+            self.getValue('p1'),
+            self.getValue('p2'),
+            self.getValue('k3'),
+            self.getValue('k4'),
+            self.getValue('k5'),
+            self.getValue('k6'),
         ]
         dist_coeffs = np.array(dist_coeffs)
         return dist_coeffs
@@ -142,12 +141,11 @@ class CameraParameter:
                 in one dict.
         """
         dump_dict = self.parameters_dict.copy()
-        dump_dict["name"] = self.name
+        dump_dict['name'] = self.name
         return dump_dict
 
     def load_from_smc(self, smc_reader, kinect_id):
-        """Load name and parameters from an SmcReader
-        instance.
+        """Load name and parameters from an SmcReader instance.
 
         Args:
             smc_reader (mocap.data_collection.smc_reader.SMCReader):
@@ -160,8 +158,8 @@ class CameraParameter:
             smc_reader.get_kinect_color_extrinsics(
                 kinect_id, homogeneous=False
             )
-        rot_np = extrinsics_dict["R"]
-        trans_np = extrinsics_dict["T"]
+        rot_np = extrinsics_dict['R']
+        trans_np = extrinsics_dict['T']
         intrinsics_np = \
             smc_reader.get_kinect_color_intrinsics(
                 kinect_id
@@ -173,11 +171,11 @@ class CameraParameter:
         rmatrix = np.linalg.inv(rot_np).reshape(3, 3)
         tvec = -np.dot(rmatrix, trans_np)
         self.name = name
-        self.set_mat_np("in_mat", intrinsics_np)
-        self.set_mat_np("rotation_mat", rmatrix)
-        self.set_value("translation", tvec.tolist())
-        self.set_value("H", resolution[1])
-        self.set_value("W", resolution[0])
+        self.set_mat_np('in_mat', intrinsics_np)
+        self.set_mat_np('rotation_mat', rmatrix)
+        self.set_value('translation', tvec.tolist())
+        self.set_value('H', resolution[1])
+        self.set_value('W', resolution[0])
 
     def load_from_dict(self, json_dict):
         """Load name and parameters from a dict.
@@ -187,17 +185,17 @@ class CameraParameter:
                 A dict comes from self.to_dict().
         """
         for key in json_dict.keys():
-            if key == "name":
+            if key == 'name':
                 self.name = json_dict[key]
-            elif key == "rotation":
-                self.parameters_dict["rotation_mat"] = np.array(
+            elif key == 'rotation':
+                self.parameters_dict['rotation_mat'] = np.array(
                     json_dict[key]).reshape(3, 3).tolist()
-            elif key == "translation":
+            elif key == 'translation':
                 self.parameters_dict[key] = np.array(json_dict[key]).reshape(
                     (3)).tolist()
             else:
                 self.parameters_dict[key] = json_dict[key]
-                if "_mat" in key:
+                if '_mat' in key:
                     self.parameters_dict[key] = np.array(
                         self.parameters_dict[key]).reshape(3, 3).tolist()
 
@@ -220,26 +218,26 @@ class CameraParameter:
 
 def __parse_chessboard_param__(chessboard_camera_param, name, inverse=True):
     camera_param_dict = {}
-    camera_param_dict["H"] = chessboard_camera_param["imgSize"][1]
-    camera_param_dict["W"] = chessboard_camera_param["imgSize"][0]
-    camera_param_dict["in_mat"] = chessboard_camera_param["K"]
-    camera_param_dict["k1"] = 0
-    camera_param_dict["k2"] = 0
-    camera_param_dict["k3"] = 0
-    camera_param_dict["k4"] = 0
-    camera_param_dict["k5"] = 0
-    camera_param_dict["p1"] = 0
-    camera_param_dict["p2"] = 0
-    camera_param_dict["name"] = name
-    camera_param_dict["rotation"] = chessboard_camera_param["R"]
-    camera_param_dict["translation"] = chessboard_camera_param["T"]
+    camera_param_dict['H'] = chessboard_camera_param['imgSize'][1]
+    camera_param_dict['W'] = chessboard_camera_param['imgSize'][0]
+    camera_param_dict['in_mat'] = chessboard_camera_param['K']
+    camera_param_dict['k1'] = 0
+    camera_param_dict['k2'] = 0
+    camera_param_dict['k3'] = 0
+    camera_param_dict['k4'] = 0
+    camera_param_dict['k5'] = 0
+    camera_param_dict['p1'] = 0
+    camera_param_dict['p2'] = 0
+    camera_param_dict['name'] = name
+    camera_param_dict['rotation'] = chessboard_camera_param['R']
+    camera_param_dict['translation'] = chessboard_camera_param['T']
     if inverse:
         rmatrix = np.linalg.inv(
-            np.array(camera_param_dict["rotation"]).reshape(3, 3))
-        camera_param_dict["rotation"] = rmatrix.tolist()
-        tmatrix = np.array(camera_param_dict["translation"]).reshape((3, 1))
+            np.array(camera_param_dict['rotation']).reshape(3, 3))
+        camera_param_dict['rotation'] = rmatrix.tolist()
+        tmatrix = np.array(camera_param_dict['translation']).reshape((3, 1))
         tvec = -np.dot(rmatrix, tmatrix)
-        camera_param_dict["translation"] = tvec.reshape((3)).tolist()
+        camera_param_dict['translation'] = tvec.reshape((3)).tolist()
     return camera_param_dict
 
 

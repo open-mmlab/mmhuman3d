@@ -22,6 +22,7 @@ class BaseImageEstimator(BaseModule, metaclass=ABCMeta):
 
     def _parse_losses(self, losses):
         """Parse the raw outputs (losses) of the network.
+
         Args:
             losses (dict): Raw output of the network, which usually contain
                 losses and other necessary infomation.
@@ -86,6 +87,7 @@ class BaseImageEstimator(BaseModule, metaclass=ABCMeta):
 
     def val_step(self, data, optimizer=None):
         """The iteration step during validation.
+
         This method shares the same signature as :func:`train_step`, but used
         during val epochs. Note that the evaluation after training epochs is
         not implemented with this method, but an evaluation hook.

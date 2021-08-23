@@ -13,23 +13,36 @@ before_script:
   - nvidia-smi
   - python -c "import torch; print(torch.__version__)"
   - ffmpeg -version
+  - export http_proxy=http://172.16.1.135:3128/
+  - export https_proxy=http://172.16.1.135:3128/
+  - export HTTP_PROXY=http://172.16.1.135:3128/
+  - export HTTPS_PROXY=http://172.16.1.135:3128/
 
 linting:
   stage: linting
   script:
-    - pip install flake8 yapf isort==4.3.21
-    - flake8 .
-    - isort -rc --check-only --diff mmhuman3d/ tools/ tests/
-    - yapf -r -d mmhuman3d/ tools/ tests/ configs/
+    - pip install interrogate
+    - apt update && apt install curl libyaml-dev git -y
+    - curl -L https://get.rvm.io | bash -s -- --autolibs=read-fail
+    - source /etc/profile.d/rvm.sh
+    - rvm autolibs disable
+    - rvm install 2.7.1
+    - pip install pre-commit
+    - pre-commit install
+    - pre-commit run --all-files --verbose
+    - echo "Docstring coverage results:"
+    - interrogate -vinmMI -f 50 mmhuman3d/
 
 test:
   stage: test
+  tags:
+    - gpu
   script:
     - echo "Start building..."
     - pip install opencv-python-headless
     - pip install h5py tqdm
     - conda install -c conda-forge xorg-libx11
-    - pip install vedo numpy scipy 
+    - pip install vedo numpy scipy
     - pip install -e .
     - python -c "import mmhuman3d; print(mmhuman3d.__version__)"
     - echo "Start testing..."

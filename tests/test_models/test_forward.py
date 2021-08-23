@@ -33,6 +33,7 @@ def _get_config_module(fname):
 
 def _get_framework_cfg(fname):
     """Grab configs necessary to create a framework.
+
     These are deep copied to allow for safe modification of parameters without
     influencing other tests.
     """
@@ -45,7 +46,7 @@ def test_hmr_forward():
     config_path = 'hmr/resnet50_hmr.py'
     model = _get_framework_cfg(config_path)
     model.backbone.init_cfg = None
-    model.head.smpl_mean_params = "tests/data/weights/smpl_mean_params.npz"
+    model.head.smpl_mean_params = 'tests/data/weights/smpl_mean_params.npz'
     model = build_framework(model)
     model.init_weights()
     input_shape = (1, 3, 224, 224)

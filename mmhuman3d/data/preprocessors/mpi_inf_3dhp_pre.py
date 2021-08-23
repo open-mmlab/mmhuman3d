@@ -33,7 +33,7 @@ def train_data(dataset_path, out_path, extract_img=False):
 
     counter = 0
 
-    for user_i in tqdm(user_list, desc='user lsit'):
+    for user_i in tqdm(user_list, desc='user list'):
         for seq_i in seq_list:
             seq_path = os.path.join(dataset_path, 'S' + str(user_i),
                                     'Seq' + str(seq_i))
