@@ -1,22 +1,22 @@
 exclude: .*/tests/data/
 repos:
-  - repo: https://gitlab.com/pycqa/flake8
+  - repo: https://gitlab.com/pycqa/flake8.git
     rev: 3.8.3
     hooks:
       - id: flake8
-  - repo: https://github.com/asottile/seed-isort-config
+  - repo: https://github.com/asottile/seed-isort-config.git
     rev: v2.2.0
     hooks:
       - id: seed-isort-config
-  - repo: https://github.com/timothycrosley/isort
+  - repo: https://github.com/timothycrosley/isort.git
     rev: 4.3.21
     hooks:
       - id: isort
-  - repo: https://github.com/pre-commit/mirrors-yapf
+  - repo: https://github.com/pre-commit/mirrors-yapf.git
     rev: v0.30.0
     hooks:
       - id: yapf
-  - repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks.git
     rev: v3.1.0
     hooks:
       - id: trailing-whitespace
@@ -31,12 +31,12 @@ repos:
         args: ["--remove"]
       - id: mixed-line-ending
         args: ["--fix=lf"]
-  - repo: https://github.com/jumanjihouse/pre-commit-hooks
+  - repo: https://github.com/jumanjihouse/pre-commit-hooks.git
     rev: 2.1.4
     hooks:
       - id: markdownlint
         args: [ "-r", "~MD002,~MD007,~MD013,~MD024,~MD029,~MD033,~MD034,~MD036" ]
-  - repo: https://github.com/myint/docformatter
+  - repo: https://github.com/myint/docformatter.git
     rev: v1.3.1
     hooks:
       - id: docformatter
