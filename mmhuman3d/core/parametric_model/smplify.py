@@ -1,744 +1,23 @@
 """ TODO
-1. save smplify stages config elsewhere
-2. merge smplify opt config with normal optimizers
-3. add camera
-4. add 2D loss support
-5. **use the convention tools**
-6. add GMM prior
-7. create GTA tools in zoehuman/
+1. use from losses.py for loss computation
+2. add camera
+3. add 2D loss support
+4. add GMM prior
 
 optional:
 1. optimize how to get batch_size and num_frames
 2. add default body model
-3. use from losses.py for loss computation
-4. add model inference for param init
-5. check if SMPL layer is better
+3. add model inference for param init
+4. check if SMPL layer is better
 """
 
-import numpy as np
 import torch
 from configs.smplify.smplify import smplify_opt_config, smplify_stages
 from configs.smplify.smplifyx import smplifyx_opt_config, smplifyx_stages
+from mmcv.runner import build_optimizer
 
 # TODO: placeholder
 default_camera = {}
-
-
-def unify_joint_mappings_smpl(dataset='smpl'):
-    """Unify different joint definitions to SMPL.
-
-    Output unified definition (use SMPL):
-        [
-        # smpl joints
-        'pelvis',           #0
-        'left_hip',         #1
-        'right_hip',        #2
-        'spine1',           #3
-        'left_knee',        #4
-        'right_knee',       #5
-        'spine2',           #6
-        'left_ankle',       #7
-        'right_ankle',      #8
-        'spine3',           #9
-        'left_foot',        #10
-        'right_foot',       #11
-        'neck',             #12
-        'left_collar',      #13
-        'right_collar',     #14
-        'head',             #15
-        'left_shoulder',    #16
-        'right_shoulder',   #17
-        'left_elbow',       #18
-        'right_elbow',      #19
-        'left_wrist',       #20
-        'right_wrist',      #21
-        'left_hand',        #22
-        'right_hand',       #23
-        # additional keypoints
-        'nose',             #24
-        'left eye'          #25
-        'right eye'         #26
-        'left ear'          #27
-        'right ear'         #28
-    ]
-
-    Args:
-      dataset: `smpl` and `gta`.
-    Returns:
-      a list of indexes that maps the joints to a SMPL convention.
-      -1 denotes the joint is missing.
-    """
-    if dataset == 'smpl':
-        return np.array([*range(0, 29)], dtype=np.int32)
-    elif dataset == 'gta':
-        return np.array([
-            14,  # 00 pelvis (SMPL)     - 14 spine3 (GTA)
-            19,  # 01 left hip          - 19 left hip
-            16,  # 02 right hip         - 16 right hip
-            13,  # 03 spine1            - 13 spine2
-            20,  # 04 left knee         - 20 left knee
-            17,  # 05 right knee        - 17 right knee
-            11,  # 06 spine2            - 11 spine0
-            21,  # 07 left ankle        - 21 left ankle
-            18,  # 08 right ankle       - 18 right ankle
-            -1,  # 09 spine3            - no match
-            24,  # 10 left foot         - 24 SKEL_L_Toe0
-            49,  # 11 right foot        - 49 SKEL_R_Toe0
-            2,  # 12 neck              - 02 neck
-            -1,  # 13 left clavicle     - no match, 07 left clavicle
-            # different convention
-            -1,  # 14 right clavicle    - no match, 03 right clavicle
-            # different convention
-            1,  # 15 head              - 01 head center
-            8,  # 16 left shoulder     - 08 left shoulder
-            4,  # 17 right shoulder    - 04 right shoulder
-            9,  # 18 left elbow        - 09 left elbow
-            5,  # 19 right elbow       - 05 right elbow
-            55,  # 20 left wrist        - 55 left wrist
-            6,  # 21 right wrist       - 06 right wrist
-            57,  # 22 left_hand         - 57 SKEL_L_Finger20
-            # (left middle finger root)
-            81,  # 23 right_hand        - 81 SKEL_R_Finger20
-            # (right middle finger root)
-            99,  # 24 nose              - 99 interpolated nose
-            60,  # 25 right eye         - 54 right eye
-            54,  # 26 left eye          - 60 left eye
-            -1,  # 27 right ear         - no match
-            -1,  # 28 left ear          - no match
-        ])
-    else:
-        raise ValueError(f'{dataset} is not supported')
-
-
-def unify_joint_mappings(dataset='smplx'):
-    """Unify different joint definitions to SMPL-X.
-
-    Output unified definition:
-        [
-        'pelvis',           #0
-        'left_hip',         #1
-        'right_hip',        #2
-        'spine1',           #3
-        'left_knee',        #4
-        'right_knee',       #5
-        'spine2',           #6
-        'left_ankle',       #7
-        'right_ankle',      #8
-        'spine3',           #9
-        'left_foot',        #10
-        'right_foot',       #11
-        'neck',             #12
-        'left_collar',      #13
-        'right_collar',     #14
-        'head',             #15
-        'left_shoulder',    #16
-        'right_shoulder',   #17
-        'left_elbow',       #18
-        'right_elbow',      #19
-        'left_wrist',       #20
-        'right_wrist',      #21
-        'jaw',              #22
-        'left_eye_smplhf',  #23
-        'right_eye_smplhf', #24
-        'left_index1',      #25
-        'left_index2',
-        'left_index3',
-        'left_middle1',
-        'left_middle2',
-        'left_middle3',
-        'left_pinky1',
-        'left_pinky2',
-        'left_pinky3',
-        'left_ring1',
-        'left_ring2',
-        'left_ring3',
-        'left_thumb1',
-        'left_thumb2',
-        'left_thumb3',
-        'right_index1',     #40
-        'right_index2',
-        'right_index3',
-        'right_middle1',
-        'right_middle2',
-        'right_middle3',
-        'right_pinky1',
-        'right_pinky2',
-        'right_pinky3',
-        'right_ring1',
-        'right_ring2',
-        'right_ring3',
-        'right_thumb1',
-        'right_thumb2',
-        'right_thumb3',
-        'nose',             #55
-        'right_eye',        #56
-        'left_eye',         #57
-        'right_ear',        #58
-        'left_ear',         #59
-        'left_big_toe',     #60
-        'left_small_toe',   #61
-        'left_heel',        #62
-        'right_big_toe',    #63
-        'right_small_toe',  #64
-        'right_heel',       #65
-        'left_thumb',
-        'left_index',
-        'left_middle',
-        'left_ring',
-        'left_pinky',
-        'right_thumb',
-        'right_index',
-        'right_middle',
-        'right_ring',
-        'right_pinky',
-        'right_eye_brow1',
-        'right_eye_brow2',
-        'right_eye_brow3',
-        'right_eye_brow4',
-        'right_eye_brow5',
-        'left_eye_brow5',
-        'left_eye_brow4',
-        'left_eye_brow3',
-        'left_eye_brow2',
-        'left_eye_brow1',
-        'nose1',
-        'nose2',
-        'nose3',
-        'nose4',
-        'right_nose_2',
-        'right_nose_1',
-        'nose_middle',
-        'left_nose_1',
-        'left_nose_2',
-        'right_eye1',
-        'right_eye2',
-        'right_eye3',
-        'right_eye4',
-        'right_eye5',
-        'right_eye6',
-        'left_eye4',
-        'left_eye3',
-        'left_eye2',
-        'left_eye1',
-        'left_eye6',
-        'left_eye5',
-        'right_mouth_1',
-        'right_mouth_2',
-        'right_mouth_3',
-        'mouth_top',
-        'left_mouth_3',
-        'left_mouth_2',
-        'left_mouth_1',
-        'left_mouth_5',  # 59 in OpenPose output
-        'left_mouth_4',  # 58 in OpenPose output
-        'mouth_bottom',
-        'right_mouth_4',
-        'right_mouth_5',
-        'right_lip_1',
-        'right_lip_2',
-        'lip_top',
-        'left_lip_2',
-        'left_lip_1',
-        'left_lip_3',
-        'lip_bottom',
-        'right_lip_3',
-        # Face contour
-        'right_contour_1',
-        'right_contour_2',
-        'right_contour_3',
-        'right_contour_4',
-        'right_contour_5',
-        'right_contour_6',
-        'right_contour_7',
-        'right_contour_8',
-        'contour_middle',
-        'left_contour_8',
-        'left_contour_7',
-        'left_contour_6',
-        'left_contour_5',
-        'left_contour_4',
-        'left_contour_3',
-        'left_contour_2',
-        'left_contour_1',
-    ]
-
-    Args:
-      dataset: `smplx`, `smpl` and `gta`.
-    Returns:
-      a list of indexes that maps the joints to a SMPL-X convention.
-      -1 denotes the joint is missing.
-    """
-    if dataset == 'smplx':
-        return np.array([*range(0, 127)], dtype=np.int32)
-    elif dataset == 'smpl':
-        return np.array([
-            *range(0, 22),
-            *[-1 for _ in range(3)],
-            22,
-            *[-1 for _ in range(14)],
-            23,
-            *[-1 for _ in range(86)],
-        ],
-                        dtype=np.int32)
-    elif dataset == 'gta':
-        # smplx - gta
-        # return np.array([
-        #     14,  # 00 pelvis - pelvis
-        #     19,  # 01 left hip - 19 left hip
-        #     16,  # 02 right hip - 16 right hip
-        #     13,  # 03 spine1 - spine2
-        #     20,  # 04 left knee - left knee
-        #     17,  # 05 right knee - right knee
-        #     11,  # 06 spine2 - spine0
-        #     21,  # 07 left ankle - left ankle
-        #     18,  # 08 right ankle - right ankle
-        #     -1,  # 09 spine3 - no match
-        #     24,  # 10 left foot - SKEL_L_Toe0
-        #     49,  # 11 right foot - SKEL_R_Toe0
-        #     2,   # 12 neck - neck
-        #     -1,   # 13 left clavicle - 07 left clavicle
-        #     -1,   # 14 right clavicle - 03 right clavicle
-        #     1,   # 15 head - head center
-        #     8,   # 16 left shoulder - left shoulder
-        #     4,   # 17 right shoulder - right shoulder
-        #     9,   # 18 left elbow - left elbow
-        #     5,   # 19 right elbow - right elbow
-        #     10,  # 20 left wrist - left wrist
-        #     6,   # 21 right wrist - right wrist
-        #     -1,  # 22 jaw - no match
-        #     *([-1] * 2),
-        #     56,  # 25 left_index1
-        #     32,  # 26 left_index2
-        #     33,  # 27 left_index3
-        #     57,  # 28 left_middle1,
-        #     34,  # 29 left_middle2,
-        #     35,  # 30 left_middle3,
-        #     59,  # 31 left_pinky1,
-        #     30,  # 32 left_pinky2,
-        #     31,  # 33 left_pinky3,
-        #     58,  # 34 left_ring1,
-        #     28,  # 35 left_ring2,
-        #     29,  # 36 left_ring3,
-        #     -1,  # 37 left_thumb1,
-        #     26,  # 38 left_thumb2,
-        #     27,  # 39 left_thumb3,
-        #     80,  # 40 right_index1,
-        #     93,  # 41 right_index2,
-        #     94,  # 42 right_index3,
-        #     81,  # 43 right_middle1,
-        #     95,  # 44 right_middle2,
-        #     96,  # 45 right_middle3,
-        #     83,  # 46 right_pinky1,
-        #     91,  # 47 right_pinky2,
-        #     92,  # 48 right_pinky3,
-        #     82,  # 49 right_ring1,
-        #     89,  # 50 right_ring2,
-        #     90,  # 51 right_ring3,
-        #     -1,  # 52 right_thumb1,
-        #     87,  # 53 right_thumb2,
-        #     88,  # 54 right_thumb3,
-        #     99,  # 55 nose - interpolated nose
-        #     60,  # 56 right eye - right eye
-        #     54,  # 57 left eye - left eye
-        #     -1,  # 58
-        #     -1,  # 59
-        #     -1,  # 60
-        #     -1,  # 61
-        #     -1,  # 62
-        #     -1,  # 63
-        #     -1,  # 64
-        #     -1,  # 65
-        #     -1,  # 66
-        #     -1,  # 67
-        #     -1,  # 68
-        #     -1,  # 69
-        #     -1,  # 70
-        #     -1,  # 71
-        #     -1,  # 72
-        #     -1,  # 73
-        #     -1,  # 74
-        #     -1,  # 75
-        #     *([-1] * 69)
-        # ])
-        return np.array([
-            14,  # 00 pelvis - pelvis
-            19,  # 01 left hip - 19 left hip
-            16,  # 02 right hip - 16 right hip
-            13,  # 03 spine1 - spine2
-            20,  # 04 left knee - left knee
-            17,  # 05 right knee - right knee
-            11,  # 06 spine2 - spine0
-            21,  # 07 left ankle - left ankle
-            18,  # 08 right ankle - right ankle
-            -1,  # 09 spine3 - no match
-            24,  # 10 left foot - SKEL_L_Toe0
-            49,  # 11 right foot - SKEL_R_Toe0
-            2,  # 12 neck - neck
-            -1,  # 13 left clavicle - 07 left clavicle
-            -1,  # 14 right clavicle - 03 right clavicle
-            1,  # 15 head - head center
-            8,  # 16 left shoulder - left shoulder
-            4,  # 17 right shoulder - right shoulder
-            9,  # 18 left elbow - left elbow
-            5,  # 19 right elbow - right elbow
-            55,  # 20 left wrist - left wrist
-            6,  # 21 right wrist - right wrist
-            -1,  # 22 jaw - no match
-            *([-1] * 2),
-            56,  # 25 left_index1
-            32,  # 26 left_index2
-            33,  # 27 left_index3
-            57,  # 28 left_middle1,
-            34,  # 29 left_middle2,
-            35,  # 30 left_middle3,
-            59,  # 31 left_pinky1,
-            30,  # 32 left_pinky2,
-            31,  # 33 left_pinky3,
-            58,  # 34 left_ring1,
-            28,  # 35 left_ring2,
-            29,  # 36 left_ring3,
-            -1,  # 37 left_thumb1,
-            26,  # 38 left_thumb2,
-            27,  # 39 left_thumb3,
-            80,  # 40 right_index1,
-            93,  # 41 right_index2,
-            94,  # 42 right_index3,
-            81,  # 43 right_middle1,
-            95,  # 44 right_middle2,
-            96,  # 45 right_middle3,
-            83,  # 46 right_pinky1,
-            91,  # 47 right_pinky2,
-            92,  # 48 right_pinky3,
-            82,  # 49 right_ring1,
-            89,  # 50 right_ring2,
-            90,  # 51 right_ring3,
-            -1,  # 52 right_thumb1,
-            87,  # 53 right_thumb2,
-            88,  # 54 right_thumb3,
-            99,  # 55 nose - interpolated nose
-            60,  # 56 right eye - right eye
-            54,  # 57 left eye - left eye
-            -1,  # 58
-            -1,  # 59
-            -1,  # 60
-            -1,  # 61
-            -1,  # 62
-            -1,  # 63
-            -1,  # 64
-            -1,  # 65
-            -1,  # 66
-            -1,  # 67
-            -1,  # 68
-            -1,  # 69
-            -1,  # 70
-            -1,  # 71
-            -1,  # 72
-            -1,  # 73
-            -1,  # 74
-            -1,  # 75
-            *([-1] * 51)
-        ])
-    else:
-        raise ValueError(f'{dataset} is not supported')
-
-
-def valid_mask(dataset):
-    joint_mapping = unify_joint_mappings(dataset)
-    mask = np.ones_like(joint_mapping)
-    mask[joint_mapping == -1] = 0.
-    return mask
-
-
-def valid_mask_smpl(dataset):
-    joint_mapping = unify_joint_mappings_smpl(dataset)
-    mask = np.ones_like(joint_mapping)
-    mask[joint_mapping == -1] = 0.
-    return mask
-
-
-def get_joint_names(dataset='smplx'):
-    if dataset == 'smplx':
-        return [
-            'pelvis',
-            'left_hip',
-            'right_hip',
-            'spine1',
-            'left_knee',
-            'right_knee',
-            'spine2',
-            'left_ankle',
-            'right_ankle',
-            'spine3',
-            'left_foot',
-            'right_foot',
-            'neck',
-            'left_collar',
-            'right_collar',
-            'head',
-            'left_shoulder',
-            'right_shoulder',
-            'left_elbow',
-            'right_elbow',
-            'left_wrist',
-            'right_wrist',
-            'jaw',
-            'left_eye_smplhf',
-            'right_eye_smplhf',
-            'left_index1',
-            'left_index2',
-            'left_index3',
-            'left_middle1',
-            'left_middle2',
-            'left_middle3',
-            'left_pinky1',
-            'left_pinky2',
-            'left_pinky3',
-            'left_ring1',
-            'left_ring2',
-            'left_ring3',
-            'left_thumb1',
-            'left_thumb2',
-            'left_thumb3',
-            'right_index1',
-            'right_index2',
-            'right_index3',
-            'right_middle1',
-            'right_middle2',
-            'right_middle3',
-            'right_pinky1',
-            'right_pinky2',
-            'right_pinky3',
-            'right_ring1',
-            'right_ring2',
-            'right_ring3',
-            'right_thumb1',
-            'right_thumb2',
-            'right_thumb3',
-            'nose',
-            'right_eye',
-            'left_eye',
-            'right_ear',
-            'left_ear',
-            'left_big_toe',
-            'left_small_toe',
-            'left_heel',
-            'right_big_toe',
-            'right_small_toe',
-            'right_heel',
-            'left_thumb',
-            'left_index',
-            'left_middle',
-            'left_ring',
-            'left_pinky',
-            'right_thumb',
-            'right_index',
-            'right_middle',
-            'right_ring',
-            'right_pinky',
-            'right_eye_brow1',
-            'right_eye_brow2',
-            'right_eye_brow3',
-            'right_eye_brow4',
-            'right_eye_brow5',
-            'left_eye_brow5',
-            'left_eye_brow4',
-            'left_eye_brow3',
-            'left_eye_brow2',
-            'left_eye_brow1',
-            'nose1',
-            'nose2',
-            'nose3',
-            'nose4',
-            'right_nose_2',
-            'right_nose_1',
-            'nose_middle',
-            'left_nose_1',
-            'left_nose_2',
-            'right_eye1',
-            'right_eye2',
-            'right_eye3',
-            'right_eye4',
-            'right_eye5',
-            'right_eye6',
-            'left_eye4',
-            'left_eye3',
-            'left_eye2',
-            'left_eye1',
-            'left_eye6',
-            'left_eye5',
-            'right_mouth_1',
-            'right_mouth_2',
-            'right_mouth_3',
-            'mouth_top',
-            'left_mouth_3',
-            'left_mouth_2',
-            'left_mouth_1',
-            'left_mouth_5',  # 59 in OpenPose output
-            'left_mouth_4',  # 58 in OpenPose output
-            'mouth_bottom',
-            'right_mouth_4',
-            'right_mouth_5',
-            'right_lip_1',
-            'right_lip_2',
-            'lip_top',
-            'left_lip_2',
-            'left_lip_1',
-            'left_lip_3',
-            'lip_bottom',
-            'right_lip_3',
-            # Face contour
-            'right_contour_1',
-            'right_contour_2',
-            'right_contour_3',
-            'right_contour_4',
-            'right_contour_5',
-            'right_contour_6',
-            'right_contour_7',
-            'right_contour_8',
-            'contour_middle',
-            'left_contour_8',
-            'left_contour_7',
-            'left_contour_6',
-            'left_contour_5',
-            'left_contour_4',
-            'left_contour_3',
-            'left_contour_2',
-            'left_contour_1',
-        ]
-
-    if dataset == 'smpl':
-        return [
-            'hips',  # 0
-            'leftUpLeg',  # 1
-            'rightUpLeg',  # 2
-            'spine',  # 3
-            'leftLeg',  # 4
-            'rightLeg',  # 5
-            'spine1',  # 6
-            'leftFoot',  # 7
-            'rightFoot',  # 8
-            'spine2',  # 9
-            'leftToeBase',  # 10
-            'rightToeBase',  # 11
-            'neck',  # 12
-            'leftShoulder',  # 13
-            'rightShoulder',  # 14
-            'head',  # 15
-            'leftArm',  # 16
-            'rightArm',  # 17
-            'leftForeArm',  # 18
-            'rightForeArm',  # 19
-            'leftHand',  # 20
-            'rightHand',  # 21
-            'leftHandIndex1',  # 22
-            'rightHandIndex1',  # 23
-        ]
-    elif dataset == 'gta':
-        return [
-            'head_top',  # 00, extrapolate neck-head_center
-            'head_center',  # 01
-            'neck',  # 02
-            'right_clavicle',  # 03
-            'right_shoulder',  # 04
-            'right_elbow',  # 05
-            'right_wrist',  # 06
-            'left_clavicle',  # 07
-            'left_shoulder',  # 08
-            'left_elbow',  # 09
-            'left_wrist',  # 10
-            'spine0',  # 11
-            'spine1',  # 12
-            'spine2',  # 13
-            'spine3',  # 14
-            'spine4',  # 15
-            'right_hip',  # 16
-            'right_knee',  # 17
-            'right_ankle',  # 18
-            'left_hip',  # 19
-            'left_knee',  # 20
-            'left_ankle',  # 21
-            'SKEL_ROOT',  # 22
-            'FB_R_Brow_Out_000',  # 23
-            'SKEL_L_Toe0',  # 24
-            'MH_R_Elbow',  # 25
-            'SKEL_L_Finger01',  # 26
-            'SKEL_L_Finger02',  # 27
-            'SKEL_L_Finger31',  # 28
-            'SKEL_L_Finger32',  # 29
-            'SKEL_L_Finger41',  # 30
-            'SKEL_L_Finger42',  # 31
-            'SKEL_L_Finger11',  # 32
-            'SKEL_L_Finger12',  # 33
-            'SKEL_L_Finger21',  # 34
-            'SKEL_L_Finger22',  # 35
-            'RB_L_ArmRoll',  # 36
-            'IK_R_Hand',  # 37
-            'RB_R_ThighRoll',  # 38
-            'FB_R_Lip_Corner_000',  # 39
-            'SKEL_Pelvis',  # 40
-            'IK_Head',  # 41
-            'MH_R_Knee',  # 42
-            'FB_LowerLipRoot_000',  # 43
-            'FB_R_Lip_Top_000',  # 44
-            'FB_R_CheekBone_000',  # 45
-            'FB_UpperLipRoot_000',  # 46
-            'FB_L_Lip_Top_000',  # 47
-            'FB_LowerLip_000',  # 48
-            'SKEL_R_Toe0',  # 49
-            'FB_L_CheekBone_000',  # 50
-            'MH_L_Elbow',  # 51
-            'RB_L_ThighRoll',  # 52
-            'PH_R_Foot',  # 53
-            'FB_L_Eye_000',  # 54
-            'SKEL_L_Finger00',  # 55
-            'SKEL_L_Finger10',  # 56
-            'SKEL_L_Finger20',  # 57
-            'SKEL_L_Finger30',  # 58
-            'SKEL_L_Finger40',  # 59
-            'FB_R_Eye_000',  # 60
-            'PH_R_Hand',  # 61
-            'FB_L_Lip_Corner_000',  # 62
-            'IK_R_Foot',  # 63
-            'RB_Neck_1',  # 64
-            'IK_L_Hand',  # 65
-            'RB_R_ArmRoll',  # 66
-            'FB_Brow_Centre_000',  # 67
-            'FB_R_Lid_Upper_000',  # 68
-            'RB_R_ForeArmRoll',  # 69
-            'FB_L_Lid_Upper_000',  # 70
-            'MH_L_Knee',  # 71
-            'FB_Jaw_000',  # 72
-            'FB_L_Lip_Bot_000',  # 73
-            'FB_Tongue_000',  # 74
-            'FB_R_Lip_Bot_000',  # 75
-            'IK_Root',  # 76
-            'PH_L_Foot',  # 77
-            'FB_L_Brow_Out_000',  # 78
-            'SKEL_R_Finger00',  # 79
-            'SKEL_R_Finger10',  # 80
-            'SKEL_R_Finger20',  # 81
-            'SKEL_R_Finger30',  # 82
-            'SKEL_R_Finger40',  # 83
-            'PH_L_Hand',  # 84
-            'RB_L_ForeArmRoll',  # 85
-            'FB_UpperLip_000',  # 86
-            'SKEL_R_Finger01',  # 87
-            'SKEL_R_Finger02',  # 88
-            'SKEL_R_Finger31',  # 89
-            'SKEL_R_Finger32',  # 90
-            'SKEL_R_Finger41',  # 91
-            'SKEL_R_Finger42',  # 92
-            'SKEL_R_Finger11',  # 93
-            'SKEL_R_Finger12',  # 94
-            'SKEL_R_Finger21',  # 95
-            'SKEL_R_Finger22',  # 96
-            'FACIAL_facialRoot',  # 97
-            'IK_L_Foot',  # 98
-            'interpolated_nose'  # 99, interpolate
-            # FB_R_CheekBone_000-FB_L_CheekBone_000
-        ]
-    else:
-        raise ValueError(f'{dataset} is not supported')
 
 
 def gmof(x, sigma):
@@ -748,16 +27,30 @@ def gmof(x, sigma):
     return (sigma_squared * x_squared) / (sigma_squared + x_squared)
 
 
-def build_optimizer(opt_params, opt_config):
-    optimizer_type = opt_config.pop('type')
+class OptimizableParameters():
+    """Collects parameters for optimization."""
 
-    if optimizer_type == 'lbfgs':
-        optimizer = torch.optim.LBFGS(opt_params, **opt_config)
-    else:
-        raise NotImplementedError
+    def __init__(self):
+        self.opt_params = []
 
-    opt_config['type'] = optimizer_type
-    return optimizer
+    def set_param(self, fit_param, param):
+        """Set require_grads and collect parameters for optimization.
+
+        :param fit_param: (bool) True if optimizable parameters
+        :param param: (torch.Tenosr) parameters
+        """
+        if fit_param:
+            param.require_grads = True
+            self.opt_params.append(param)
+        else:
+            param.require_grads = False
+
+    def parameters(self):
+        """Returns parameters.
+
+        Compatible with mmcv's build_parameters()
+        """
+        return self.opt_params
 
 
 def angle_prior(pose, spine=False):
@@ -815,7 +108,7 @@ class SMPLify(object):
                  num_videos=None):
 
         assert keypoints_2d is not None or keypoints_3d is not None, \
-            'Neither of 2D nor 3D keypoints ground truth is provided.'
+            'Neither of 2D nor 3D keypoints groud truth is provided.'
         if batch_size is None:
             batch_size = keypoints_2d.shape[
                 0] if keypoints_2d is not None else keypoints_3d.shape[0]
@@ -899,13 +192,13 @@ class SMPLify(object):
                         angle_prior_weight=1.0,
                         num_iter=1):
 
-        opt_param = []
-        self._set_param(fit_global_orient, global_orient, opt_param)
-        self._set_param(fit_transl, transl, opt_param)
-        self._set_param(fit_body_pose, body_pose, opt_param)
-        self._set_param(fit_betas, betas, opt_param)
+        parameters = OptimizableParameters()
+        parameters.set_param(fit_global_orient, global_orient)
+        parameters.set_param(fit_transl, transl)
+        parameters.set_param(fit_body_pose, body_pose)
+        parameters.set_param(fit_betas, betas)
 
-        optimizer = build_optimizer(opt_param, self.opt_config)
+        optimizer = build_optimizer(parameters, self.opt_config)
 
         for iter_idx in range(num_iter):
 
@@ -923,9 +216,6 @@ class SMPLify(object):
                     transl=transl)
 
                 model_joints = smpl_output.joints
-
-                mapping_target = unify_joint_mappings_smpl(dataset='smpl')
-                model_joints = model_joints[:, mapping_target, :]
 
                 loss_dict = self._compute_loss(
                     model_joints,
@@ -1072,7 +362,7 @@ class SMPLifyX(SMPLify):
                  num_videos=None):
 
         assert keypoints_2d is not None or keypoints_3d is not None, \
-            'Neither of 2D nor 3D keypoints ground truth is provided.'
+            'Neither of 2D nor 3D keypoints groud truth is provided.'
         if batch_size is None:
             batch_size = keypoints_2d.shape[
                 0] if keypoints_2d is not None else keypoints_3d.shape[0]
@@ -1178,19 +468,19 @@ class SMPLifyX(SMPLify):
                         angle_prior_weight=1.0,
                         num_iter=1):
 
-        opt_param = []
-        self._set_param(fit_global_orient, global_orient, opt_param)
-        self._set_param(fit_transl, transl, opt_param)
-        self._set_param(fit_body_pose, body_pose, opt_param)
-        self._set_param(fit_betas, betas, opt_param)
-        self._set_param(fit_left_hand_pose, left_hand_pose, opt_param)
-        self._set_param(fit_right_hand_pose, right_hand_pose, opt_param)
-        self._set_param(fit_expression, expression, opt_param)
-        self._set_param(fit_jaw_pose, jaw_pose, opt_param)
-        self._set_param(fit_leye_pose, leye_pose, opt_param)
-        self._set_param(fit_reye_pose, reye_pose, opt_param)
+        parameters = OptimizableParameters()
+        parameters.set_param(fit_global_orient, global_orient)
+        parameters.set_param(fit_transl, transl)
+        parameters.set_param(fit_body_pose, body_pose)
+        parameters.set_param(fit_betas, betas)
+        parameters.set_param(fit_left_hand_pose, left_hand_pose)
+        parameters.set_param(fit_right_hand_pose, right_hand_pose)
+        parameters.set_param(fit_expression, expression)
+        parameters.set_param(fit_jaw_pose, jaw_pose)
+        parameters.set_param(fit_leye_pose, leye_pose)
+        parameters.set_param(fit_reye_pose, reye_pose)
 
-        optimizer = build_optimizer(opt_param, self.opt_config)
+        optimizer = build_optimizer(parameters, self.opt_config)
 
         for iter_idx in range(num_iter):
 
@@ -1214,9 +504,6 @@ class SMPLifyX(SMPLify):
                     reye_pose=reye_pose)
 
                 model_joints = output.joints
-
-                mapping_target = unify_joint_mappings(dataset='smplx')
-                model_joints = model_joints[:, mapping_target, :]
 
                 loss_dict = self._compute_loss(
                     model_joints,

@@ -8,7 +8,7 @@ smplify_stages = {
 }
 
 smplify_opt_config = {
-    'type': 'lbfgs',
+    'type': 'LBFGS',
     'max_iter': 20,
     'lr': 1e-2,
     'line_search_fn': 'strong_wolfe'
