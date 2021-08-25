@@ -2,12 +2,7 @@ import numpy as np
 import smplx
 import torch
 
-from mmhuman3d.core.parametric_model.smplify import (
-    SMPLify,
-    SMPLifyX,
-    unify_joint_mappings,
-    unify_joint_mappings_smpl,
-)
+from mmhuman3d.core.parametric_model.smplify import SMPLify, SMPLifyX
 
 body_model_load_dir = 'body_models'
 batch_size = 1
@@ -30,15 +25,12 @@ def test_smpl():
 
     # Generate keypoints
     output = smpl_body_model()
-    keypoints_3d = output.joints
-    mapping_target = unify_joint_mappings_smpl(dataset='smpl')
-    keypoints_3d = keypoints_3d[:, mapping_target, :]
+    keypoints_3d = output.joints.detach().to(device=device)
     keypoints_conf_3d = torch.ones((*keypoints_3d.shape[:2], 1), device=device)
 
     # Run SMPLify
     smplify_output = smplify_gta(
-        keypoints_3d=keypoints_3d[:, :, :3].detach().to(device=device),
-        keypoints_conf_3d=keypoints_conf_3d)
+        keypoints_3d=keypoints_3d, keypoints_conf_3d=keypoints_conf_3d)
 
     for k, v in smplify_output.items():
         if isinstance(v, torch.Tensor):
@@ -63,15 +55,12 @@ def test_smplx():
 
     # Generate keypoints
     output = smpl_body_model()
-    keypoints_3d = output.joints
-    mapping_target = unify_joint_mappings(dataset='smplx')
-    keypoints_3d = keypoints_3d[:, mapping_target, :]
+    keypoints_3d = output.joints.detach().to(device=device)
     keypoints_conf_3d = torch.ones((*keypoints_3d.shape[:2], 1), device=device)
 
     # Run SMPLify-X
     smplifyx_output = smplifyx_gta(
-        keypoints_3d=keypoints_3d[:, :, :3].detach().to(device=device),
-        keypoints_conf_3d=keypoints_conf_3d)
+        keypoints_3d=keypoints_3d, keypoints_conf_3d=keypoints_conf_3d)
 
     for k, v in smplifyx_output.items():
         if isinstance(v, torch.Tensor):
