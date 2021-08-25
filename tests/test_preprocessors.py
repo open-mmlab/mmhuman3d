@@ -10,7 +10,7 @@ from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
 
 
 def test_preprocess():
-    root_path = '/workspace/data/dataset_sample'
+    root_path = 'tests/data/dataset_sample'
     os.makedirs('/tmp/preprocessed_npzs', exist_ok=True)
     output_path = '/tmp/preprocessed_npzs'
 

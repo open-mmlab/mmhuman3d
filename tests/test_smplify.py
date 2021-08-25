@@ -26,9 +26,7 @@ def test_smpl():
     )
 
     smplify_gta = SMPLify(
-        body_model=smpl_body_model,
-        use_one_betas_per_video=True,
-    )
+        body_model=smpl_body_model, use_one_betas_per_video=True, num_epochs=2)
 
     # Generate keypoints
     output = smpl_body_model()
@@ -61,9 +59,7 @@ def test_smplx():
     )
 
     smplifyx_gta = SMPLifyX(
-        body_model=smpl_body_model,
-        use_one_betas_per_video=True,
-    )
+        body_model=smpl_body_model, use_one_betas_per_video=True, num_epochs=2)
 
     # Generate keypoints
     output = smpl_body_model()
