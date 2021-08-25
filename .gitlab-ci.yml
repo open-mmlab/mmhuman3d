@@ -1,4 +1,4 @@
-image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-devel-ffmpeg4-smpl
+image: registry.sensetime.com/zoetrope/pytorch:1.7.0-cuda11.0-cudnn8-ffmpeg4-pytorch3d-mmcv
 
 stages:
     - linting
@@ -21,13 +21,13 @@ before_script:
 linting:
   stage: linting
   script:
-    - pip install interrogate
-    - apt update && apt install curl libyaml-dev git -y
+    - apt install curl libyaml-dev git -y
     - curl -L https://get.rvm.io | bash -s -- --autolibs=read-fail
     - source /etc/profile.d/rvm.sh
     - rvm autolibs disable
-    - rvm install 2.7.1
     - pip install pre-commit
+    - pre-commit install
+    - pre-commit run --all-files --verbose
     - pre-commit install
     - pre-commit run --all-files --verbose
     - echo "Docstring coverage results:"
@@ -39,14 +39,19 @@ test:
     - gpu
   script:
     - echo "Start building..."
-    - pip install opencv-python-headless
-    - pip install h5py tqdm
-    - conda install -c conda-forge xorg-libx11
-    - pip install vedo numpy scipy
     - pip install -e .
     - python -c "import mmhuman3d; print(mmhuman3d.__version__)"
+    - unset http_proxy
+    - unset https_proxy
+    - unset HTTP_PROXY
+    - unset HTTPS_PROXY
+    - mkdir mmhuman3d_download
+    - cd mmhuman3d_download
+    - wget -q http://10.4.8.2:28080/mmhuman3d.tar
+    - tar -xvf mmhuman3d.tar
+    - cd ..
+    - cp -r mmhuman3d_download/mmhuman3d/* ./
+    - rm -rf mmhuman3d_download
     - echo "Start testing..."
-    - cp -r /workspace/data/body_models ./body_models
-    - pip install pytest coverage
     - coverage run --source mmhuman3d -m pytest tests/
     - coverage report -m

@@ -393,7 +393,7 @@ def test_resnet_backbone():
 
     # Test ResNet50 with torchvision pretrained weight
     model = ResNet(
-        depth=50, norm_eval=True, pretrained='torchvision://resnet50')
+        depth=50, norm_eval=True, pretrained='weights/resnet50-0676ba61.pth')
     model.init_weights()
     model.train()
     assert check_norm_state(model.modules(), False)
