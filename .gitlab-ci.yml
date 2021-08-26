@@ -21,8 +21,6 @@ before_script:
 linting:
   stage: linting
   script:
-    - source /etc/profile.d/rvm.sh
-    - rvm autolibs disable
     - pre-commit install
     - pre-commit run --all-files --verbose
     - echo "Docstring coverage results:"
