@@ -21,13 +21,8 @@ before_script:
 linting:
   stage: linting
   script:
-    - apt install curl libyaml-dev git -y
-    - curl -L https://get.rvm.io | bash -s -- --autolibs=read-fail
     - source /etc/profile.d/rvm.sh
     - rvm autolibs disable
-    - pip install pre-commit
-    - pre-commit install
-    - pre-commit run --all-files --verbose
     - pre-commit install
     - pre-commit run --all-files --verbose
     - echo "Docstring coverage results:"
