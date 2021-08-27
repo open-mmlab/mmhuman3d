@@ -1,3 +1,4 @@
+import glob
 import os
 import shutil
 import string
@@ -241,14 +242,39 @@ def images_to_array(input_folder: str,
     Returns:
         np.ndarray: shape will be (f * h * w * 3).
     """
-    if not Path(input_folder).is_dir():
+    input_folderinfo = Path(input_folder)
+    if not input_folderinfo.is_dir():
         raise FileNotFoundError('Wrong input folder.')
+
     info = vid_info(f'{input_folder}/{img_format}' % 1)
     width, height = int(info['width']), int(info['height'])
     if resolution:
         width, height = resolution
     else:
         width, height = int(info['width']), int(info['height'])
+
+    temp_input_folder = None
+    if img_format is None:
+        file_list = []
+        temp_input_folder = os.path.join(input_folderinfo.parent,
+                                         input_folderinfo.name + '_temp')
+        os.makedirs(temp_input_folder, exist_ok=True)
+        pngs = glob.glob(os.path.join(input_folder, '*.png'))
+        if pngs:
+            ext = 'png'
+        file_list.extend(pngs)
+        jpgs = glob.glob(os.path.join(input_folder, '*.jpg'))
+        if jpgs:
+            ext = 'jpg'
+        file_list.extend(jpgs)
+        file_list.sort()
+        for index, file_name in enumerate(file_list):
+            shutil.copy(
+                file_name,
+                os.path.join(temp_input_folder, '%06d.%s' % (index + 1, ext)))
+        input_folder = temp_input_folder
+        img_format = '%06d.' + ext
+
     command = [
         'ffmpeg',
         '-y',
@@ -282,6 +308,8 @@ def images_to_array(input_folder: str,
     process.stdout.flush()
     process.stdout.close()
     process.wait()
+    if temp_input_folder is not None:
+        shutil.rmtree(temp_input_folder)
     return np.concatenate(array)
 
 
@@ -439,11 +467,35 @@ def images_to_video(
         NoReturn
     """
     output_pathinfo = Path(output_path)
-    if not Path(input_folder).is_dir():
+    input_folderinfo = Path(input_folder)
+    if not input_folderinfo.is_dir():
         raise FileNotFoundError('Wrong input folder.')
     if not ((output_pathinfo.suffix.lower() in ['.mp4'])
             and output_pathinfo.parent.is_dir()):
         raise FileNotFoundError('Wrong output path.')
+
+    temp_input_folder = None
+    if img_format is None:
+        file_list = []
+        temp_input_folder = os.path.join(input_folderinfo.parent,
+                                         input_folderinfo.name + '_temp')
+        os.makedirs(temp_input_folder, exist_ok=True)
+        pngs = glob.glob(os.path.join(input_folder, '*.png'))
+        if pngs:
+            ext = 'png'
+        file_list.extend(pngs)
+        jpgs = glob.glob(os.path.join(input_folder, '*.jpg'))
+        if jpgs:
+            ext = 'jpg'
+        file_list.extend(jpgs)
+        file_list.sort()
+        for index, file_name in enumerate(file_list):
+            shutil.copy(
+                file_name,
+                os.path.join(temp_input_folder, '%06d.%s' % (index + 1, ext)))
+        input_folder = temp_input_folder
+        img_format = '%06d.' + ext
+
     command = [
         'ffmpeg',
         '-y',
@@ -478,6 +530,8 @@ def images_to_video(
     subprocess.call(command)
     if remove_raw_file:
         shutil.rmtree(input_folder)
+    if temp_input_folder is not None:
+        shutil.rmtree(temp_input_folder)
 
 
 def images_to_gif(
@@ -510,11 +564,35 @@ def images_to_gif(
         NoReturn
     """
     output_pathinfo = Path(output_path)
-    if not Path(input_folder).is_dir():
+    input_folderinfo = Path(input_folder)
+    if not input_folderinfo.is_dir():
         raise FileNotFoundError('Wrong input folder.')
     if not ((output_pathinfo.suffix.lower() in ['.gif'])
             and output_pathinfo.parent.is_dir()):
         raise FileNotFoundError('Wrong output path.')
+
+    temp_input_folder = None
+    if img_format is None:
+        file_list = []
+        temp_input_folder = os.path.join(input_folderinfo.parent,
+                                         input_folderinfo.name + '_temp')
+        os.makedirs(temp_input_folder, exist_ok=True)
+        pngs = glob.glob(os.path.join(input_folder, '*.png'))
+        if pngs:
+            ext = 'png'
+        file_list.extend(pngs)
+        jpgs = glob.glob(os.path.join(input_folder, '*.jpg'))
+        if jpgs:
+            ext = 'jpg'
+        file_list.extend(jpgs)
+        file_list.sort()
+        for index, file_name in enumerate(file_list):
+            shutil.copy(
+                file_name,
+                os.path.join(temp_input_folder, '%06d.%s' % (index + 1, ext)))
+        input_folder = temp_input_folder
+        img_format = '%06d.' + ext
+
     command = [
         'ffmpeg',
         '-y',
@@ -538,6 +616,8 @@ def images_to_gif(
     subprocess.call(command)
     if remove_raw_file:
         shutil.rmtree(input_folder)
+    if temp_input_folder is not None:
+        shutil.rmtree(temp_input_folder)
 
 
 def gif_to_video(

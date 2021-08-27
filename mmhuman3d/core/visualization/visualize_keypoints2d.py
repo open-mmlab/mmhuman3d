@@ -9,7 +9,7 @@ from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
     SMPLX_LIMBS_INDEX,
     SMPLX_PALETTE,
 )
-from mmhuman3d.core.visualization.ffmpeg_utils import images_to_video
+from mmhuman3d.utils.ffmpeg_utils import images_to_video
 from .keypoint_utils import get_different_colors, search_limbs
 
 
@@ -196,9 +196,9 @@ def visualize_kp2d(
     if frame_list is not None:
         for frame_path in frame_list:
             if not (Path(frame_path).is_file()
-                    and Path(frame_path).suffix.lower() in ['.png']):
+                    and Path(frame_path).suffix.lower() in ['.png', '.jpg']):
                 raise FileNotFoundError(
-                    f'The frame should be .png: {frame_path}')
+                    f'The frame should be .png or .jpg: {frame_path}')
     if output_pathinfo.suffix.lower() in ['.mp4']:
         temp_folder = os.path.join(
             '.',

@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from mmhuman3d.core.visualization.ffmpeg_utils import images_to_video
+from mmhuman3d.utils.ffmpeg_utils import images_to_video
 
 
 class Axes3dBaseRenderer(object):
