@@ -4,15 +4,15 @@ import numpy as np
 import pytest
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.core.visualization.ffmpeg_utils import (
-    array_to_images,
-    images_to_array,
-    video_to_array,
-)
 from mmhuman3d.core.visualization.keypoint_utils import search_limbs
 from mmhuman3d.core.visualization.visualize_keypoints2d import (
     plot_kp2d_frame,
     visualize_kp2d,
+)
+from mmhuman3d.utils.ffmpeg_utils import (
+    array_to_images,
+    images_to_array,
+    video_to_array,
 )
 
 

@@ -24,7 +24,7 @@ linting:
     - pre-commit install
     - pre-commit run --all-files --verbose
     - echo "Docstring coverage results:"
-    - interrogate -vinmMI -f 50 mmhuman3d/
+    - interrogate -vinmMI -f 40 mmhuman3d/
 
 test:
   stage: test

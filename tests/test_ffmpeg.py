@@ -4,7 +4,7 @@ import os.path as osp
 import numpy as np
 import pytest
 
-from mmhuman3d.core.visualization.ffmpeg_utils import (
+from mmhuman3d.utils.ffmpeg_utils import (
     array_to_images,
     array_to_video,
     compress_video,

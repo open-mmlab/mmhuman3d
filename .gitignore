@@ -124,6 +124,7 @@ logs/
 *.mp4
 *.png
 *.gif
+*.jpg
 
 # Loaded/Saved data files
 *.npz
