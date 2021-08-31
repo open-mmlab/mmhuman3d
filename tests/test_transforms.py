@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmhuman3d.core.utils.transforms import (
+from mmhuman3d.utils.transforms import (
     aa_to_ee,
     aa_to_quat,
     aa_to_rot6d,

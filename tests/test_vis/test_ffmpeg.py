@@ -17,7 +17,7 @@ from mmhuman3d.utils.ffmpeg_utils import (
     spatial_crop_video,
     temporal_concat_video,
     temporal_crop_video,
-    vid_info,
+    vid_info_reader,
     video_to_array,
     video_to_gif,
     video_to_images,
@@ -77,7 +77,7 @@ def test_array_saver():
 
 
 def test_image_reader():
-    # images_to_array, video_to_array, vid_info
+    # images_to_array, video_to_array, vid_info_reader
     with pytest.raises(FileNotFoundError):
         _ = images_to_array(osp.join('/NoSuchDir', 'img_folder_reader'))
 
@@ -88,7 +88,7 @@ def test_image_reader():
         osp.join(root, 'input_video.mp4'), resolution=(300, 200))
     assert v.shape[1:] == (200, 300, 3)
 
-    vid = vid_info(osp.join(root, 'input_video.mp4'))
+    vid = vid_info_reader(osp.join(root, 'input_video.mp4'))
     for k in [
             'index', 'codec_name', 'codec_long_name', 'profile', 'codec_type',
             'codec_time_base', 'codec_tag_string', 'codec_tag', 'width',

@@ -1,10 +1,12 @@
+import warnings
 from pathlib import Path
 from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 
 import numpy as np
 
+from mmhuman3d.core.conventions.keypoints_mapping import KEYPOINTS_FACTORY
 from mmhuman3d.core.visualization.renderer import matplotlib3d_renderer
-from .keypoint_utils import get_different_colors, search_limbs
+from mmhuman3d.utils.keypoint_utils import get_different_colors, search_limbs
 
 
 def _norm_pose(pose_numpy: np.ndarray, min_value: Union[float, int],
@@ -55,6 +57,8 @@ def visualize_kp3d(
                 (B, G, R). Should be tuple or list.
                 Defaults to None.
         data_source (str, optional): data source type. Defaults to 'mmpose'.
+                choose in ['coco', 'smplx', 'smpl', 'mmpose', 'mpi_inf_3dhp',
+                'mpi_inf_3dhp_test', 'h36m', 'pw3d', 'mpii']
         mask (Optional[Union[list, tuple, np.ndarray]], optional):
                 mask to mask out the incorrect points. Defaults to None.
         start (int, optional): start frame index. Defaults to 0.
@@ -81,24 +85,47 @@ def visualize_kp3d(
     Returns:
         NoReturn.
     """
+    # check input shape
     if not isinstance(kp3d, np.ndarray):
-        raise TypeError('Input should be numpy.ndarray.')
+        raise TypeError(
+            f'Input type is {type(kp3d)}, which should be numpy.ndarray.')
+    kp3d = kp3d.copy()
     if kp3d.shape[-1] == 2:
-
         kp3d = np.concatenate([kp3d, np.zeros_like(kp3d)[..., 0:1]], axis=-1)
+        warnings.warn(
+            f'The input array is 2-Dimensional coordinates, will concatenate\
+                 zeros to the last axis. The new array shape: {kp3d.shape}')
     elif kp3d.shape[-1] >= 4:
         kp3d = kp3d[..., :3]
+        warnings.warn(
+            f'The input array has more than 3-Dimensional coordinates, will\
+                keep only the first 3-Dimensions of the last axis. The new\
+                    array shape: {kp3d.shape}')
     if kp3d.ndim == 3:
         kp3d = np.expand_dims(kp3d, 1)
     num_frames = kp3d.shape[0]
     assert kp3d.ndim == 4
     assert kp3d.shape[-1] == 3
+
+    # check data_source & mask
+    if data_source not in KEYPOINTS_FACTORY:
+        raise ValueError(f'Wrong data_source. Should choose in \
+                {list(KEYPOINTS_FACTORY.keys())}')
+    if mask is not None:
+        assert mask.shape == (
+            len(KEYPOINTS_FACTORY[data_source]),
+        ), f'mask length should fit with keypoints number \
+            {len(KEYPOINTS_FACTORY[data_source])}'
+
+    # check the output path
     if not Path(output_path).parent.is_dir():
         raise FileNotFoundError(
             f'The output folder does not exist: {Path(output_path).parent}')
     if not Path(output_path).suffix.lower() in ['.mp4']:
         raise FileNotFoundError(
             f'The output file should be .mp4: {output_path}')
+
+    # norm the coordinates
     if value_range is not None:
         # norm pose location to value_range (70% value range)
         mask_index = np.where(np.array(mask) > 0) if mask is not None else None
@@ -109,10 +136,11 @@ def visualize_kp3d(
     else:
         input_pose_np = kp3d
 
+    # slice the frames
     end = (min(end, num_frames) + num_frames) % num_frames
     input_pose_np = input_pose_np[start:end + 1]
-    renderer = matplotlib3d_renderer.Axes3dJointsRenderer()
-    renderer.init_camera(cam_hori_speed=orbit_speed, cam_elev_speed=0.2)
+
+    # determine the limb connections and palettes
     if limbs is not None:
         limbs_target, limbs_palette = {
             'body': limbs.tolist() if isinstance(limbs, np.ndarray) else limbs
@@ -124,6 +152,10 @@ def visualize_kp3d(
         limbs_palette = np.array(palette, dtype=np.uint8)[None]
     for part_name in pop_parts:
         limbs_target.pop(part_name)
+
+    # initialize renderer and start render
+    renderer = matplotlib3d_renderer.Axes3dJointsRenderer()
+    renderer.init_camera(cam_hori_speed=orbit_speed, cam_elev_speed=0.2)
     renderer.set_connections(limbs_target, limbs_palette)
     if isinstance(frame_names, str):
         if '%' in frame_names:
