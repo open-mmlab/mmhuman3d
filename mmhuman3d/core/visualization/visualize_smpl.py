@@ -12,7 +12,12 @@ from configs.render.smpl import RENDER_CONFIGS
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from mmhuman3d.core.utils.smpl_utils import (
+from mmhuman3d.core.visualization.renderer.torch3d_renderer import (
+    RenderDataset,
+    SMPLRenderer,
+)
+from mmhuman3d.utils.ffmpeg_utils import images_to_array, video_to_images
+from mmhuman3d.utils.smpl_utils import (
     get_body_model,
     get_mesh_info,
     smpl_dict2tensor,
@@ -20,11 +25,6 @@ from mmhuman3d.core.utils.smpl_utils import (
     smplx_dict2tensor,
     smplx_tensor2dict,
 )
-from mmhuman3d.core.visualization.renderer.torch3d_renderer import (
-    RenderDataset,
-    SMPLRenderer,
-)
-from mmhuman3d.utils.ffmpeg_utils import images_to_array, video_to_images
 
 
 def render_smpl(

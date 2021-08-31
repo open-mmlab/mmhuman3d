@@ -12,9 +12,9 @@ from mmcv.runner import (
 )
 from mmcv.runner.hooks import DistEvalHook, EvalHook
 
-from mmhuman3d.core.utils.dist_utils import DistOptimizerHook
 from mmhuman3d.data.datasets import build_dataloader, build_dataset
 from mmhuman3d.utils import get_root_logger
+from mmhuman3d.utils.dist_utils import DistOptimizerHook
 
 
 def set_random_seed(seed, deterministic=False):

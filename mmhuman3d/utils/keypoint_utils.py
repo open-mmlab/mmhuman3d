@@ -60,9 +60,9 @@ def search_limbs(
     return limbs_target, limbs_palette
 
 
-def get_different_colors(number_of_colors):
+def get_different_colors(number_of_colors, flag=0):
     nst0 = np.random.get_state()
-    np.random.seed(0)
+    np.random.seed(flag)
     colors = []
     for i in np.arange(0., 360., 360. / number_of_colors):
         hue = i / 360.

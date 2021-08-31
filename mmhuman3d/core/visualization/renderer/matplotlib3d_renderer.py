@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from mmhuman3d.utils.ffmpeg_utils import images_to_video
+from mmhuman3d.utils.keypoint_utils import get_different_colors
 
 
 class Axes3dBaseRenderer(object):
@@ -57,7 +58,7 @@ class Axes3dBaseRenderer(object):
         return self.cam_vector_list
 
     @staticmethod
-    def _get_visual_range(self, points: np.ndarray) -> np.ndarray:
+    def _get_visual_range(points: np.ndarray) -> np.ndarray:
         axis_num = points.shape[-1]
         axis_stat = np.zeros(shape=[axis_num, 4])
         for axis_index in range(axis_num):
@@ -195,19 +196,19 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                                  cam_elev_angle=cam_ele,
                                  cam_hori_angle=cam_hor)
             #  draw limbs
-
             num_person = keypoints_frame.shape[0]
-            for keypoints_person in keypoints_frame:
+            for person_index, keypoints_person in enumerate(keypoints_frame):
                 if num_person >= 2:
-                    self.limbs_palette = np.random.randint(
-                        0, high=255, size=(1, 3), dtype=np.uint8)
+                    self.limbs_palette = get_different_colors(
+                        num_person)[person_index].reshape(-1, 3)
                 for part_name, limbs in self.limbs_connection.items():
                     if part_name == 'body':
                         linewidth = 2
                     else:
                         linewidth = 1
                     if isinstance(self.limbs_palette, np.ndarray):
-                        color = self.limbs_palette.astype(np.int32)
+                        color = self.limbs_palette.astype(np.int32).reshape(
+                            -1, 3)
                     elif isinstance(self.limbs_palette, dict):
                         color = np.array(self.limbs_palette[part_name]).astype(
                             np.int32)

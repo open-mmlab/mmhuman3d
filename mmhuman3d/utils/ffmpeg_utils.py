@@ -1,4 +1,5 @@
 import glob
+import json
 import os
 import shutil
 import string
@@ -7,7 +8,6 @@ import sys
 from pathlib import Path
 from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 
-import ffmpeg
 import numpy as np
 
 
@@ -182,7 +182,7 @@ def video_to_array(
     if not (input_pathinfo.is_file()
             and input_pathinfo.suffix.lower() in ['.mp4', '.gif']):
         raise FileNotFoundError('Wrong input path.')
-    info = vid_info(input_path)
+    info = vid_info_reader(input_path)
     if resolution:
         width, height = resolution
     else:
@@ -246,7 +246,7 @@ def images_to_array(input_folder: str,
     if not input_folderinfo.is_dir():
         raise FileNotFoundError('Wrong input folder.')
 
-    info = vid_info(f'{input_folder}/{img_format}' % 1)
+    info = vid_info_reader(f'{input_folder}/{img_format}' % 1)
     width, height = int(info['width']), int(info['height'])
     if resolution:
         width, height = resolution
@@ -313,10 +313,11 @@ def images_to_array(input_folder: str,
     return np.concatenate(array)
 
 
-class vid_info(object):
+class vid_info_reader(object):
 
     def __init__(self, input_path) -> NoReturn:
-        """Get video info with ffmpeg-python.
+        """Get video information from video, mimiced from ffmpeg-python.
+        https://github.com/kkroening/ffmpeg-python.
 
         Args:
             vid_file ([str]): video file path.
@@ -331,7 +332,14 @@ class vid_info(object):
         if not (input_pathinfo.is_file() and input_pathinfo.suffix.lower()
                 in ['.mp4', '.gif', '.png', '.jpg']):
             raise FileNotFoundError('Wrong input path.')
-        probe = ffmpeg.probe(input_path)
+        cmd = [
+            'ffprobe', '-show_format', '-show_streams', '-of', 'json',
+            input_path
+        ]
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, _ = process.communicate()
+        probe = json.loads(out.decode('utf-8'))
         video_stream = next((stream for stream in probe['streams']
                              if stream['codec_type'] == 'video'), None)
         if video_stream is None:
@@ -380,7 +388,7 @@ def video_to_gif(
     if not (output_pathinfo.suffix.lower() in ['.gif']
             and output_pathinfo.parent.is_dir()):
         raise FileNotFoundError('Wrong output path.')
-    info = vid_info(input_path)
+    info = vid_info_reader(input_path)
     if resolution:
         width, height = resolution
     else:
@@ -511,8 +519,6 @@ def images_to_video(
         f'{fps}',
         '-c:v',
         'libx264',
-        '-r',
-        str(fps),
         '-pix_fmt',
         'yuv420p',
         '-an',
@@ -601,7 +607,7 @@ def images_to_gif(
         '-i',
         f'{input_folder}/{img_format}',
         '-r',
-        str(fps),
+        f'{fps}',
         '-loglevel',
         'error',
         '-v',
@@ -657,8 +663,8 @@ def gif_to_video(
         raise FileNotFoundError('Wrong output path.')
 
     command = [
-        'ffmpeg', '-i', input_path, '-r',
-        str(fps), '-loglevel', 'error', '-y', output_path, '-threads', '4'
+        'ffmpeg', '-i', input_path, '-r', f'{fps}', '-loglevel', 'error', '-y',
+        output_path, '-threads', '4'
     ]
     if resolution:
         width, height = resolution
@@ -884,7 +890,7 @@ def temporal_crop_video(
     if not ((output_pathinfo.suffix.lower() in ['.mp4', '.gif'])
             and output_pathinfo.parent.is_dir()):
         raise FileNotFoundError('Wrong output path.')
-    info = vid_info(input_path)
+    info = vid_info_reader(input_path)
     num_frames, time = int(info['nb_frames']), float(info['duration'])
     end = min(end, num_frames - 1)
     end = (num_frames + end) % num_frames
@@ -996,7 +1002,7 @@ def compress_video(input_path: str,
     if not ((output_pathinfo.suffix.lower() in ['.mp4', '.gif'])
             and output_pathinfo.parent.is_dir()):
         raise FileNotFoundError('Wrong output path.')
-    info = vid_info(input_path)
+    info = vid_info_reader(input_path)
 
     width = int(info['width'])
     height = int(info['height'])

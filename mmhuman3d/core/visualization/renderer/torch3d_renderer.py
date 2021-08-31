@@ -46,10 +46,10 @@ from mmhuman3d.core.conventions.segmentation.smplx import (
     SMPLX_SEGMENTATION_DICT,
     smplx_part_segmentation,
 )
-from mmhuman3d.core.utils.cameras import WeakPerspectiveCameras
-from mmhuman3d.core.utils.transforms import ee_to_rotmat
-from mmhuman3d.core.visualization.keypoint_utils import get_different_colors
+from mmhuman3d.utils.cameras import WeakPerspectiveCameras
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
+from mmhuman3d.utils.keypoint_utils import get_different_colors
+from mmhuman3d.utils.transforms import ee_to_rotmat
 
 
 class NoLightShader(nn.Module):

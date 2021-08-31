@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from mmcv.runner.base_module import BaseModule
 
-from mmhuman3d.core.utils.geometry import batch_rodrigues, rot6d_to_rotmat
+from mmhuman3d.utils.geometry import batch_rodrigues, rot6d_to_rotmat
 from ..builder import FRAMEWORKS, build_backbone, build_loss
 from .base_image_estimator import BaseImageEstimator
 
