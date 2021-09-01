@@ -40,7 +40,7 @@ test:
     - unset HTTPS_PROXY
     - mkdir mmhuman3d_download
     - cd mmhuman3d_download
-    - wget -q http://10.4.8.2:28080/mmhuman3d.tar
+    - wget -q http://10.4.11.59:18080/mmhuman3d.tar
     - tar -xvf mmhuman3d.tar
     - cd ..
     - cp -r mmhuman3d_download/mmhuman3d/* ./
