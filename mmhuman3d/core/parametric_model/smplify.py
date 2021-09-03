@@ -1,30 +1,37 @@
 """ TODO
-1. use from losses.py for loss computation
-2. add camera
-3. add 2D loss support
-4. add GMM prior
+1. add camera
+2. add 2D loss support
+3. add GMM prior (vpose, hand, expression)
+4. hyperparameter tuining: sigma for keypoints 3d
+5. different keypoint weight for different stages
+6. add support for 45 smpl joints (update tests also)
 
 optional:
-1. optimize how to get batch_size and num_frames
-2. add default body model
-3. add model inference for param init
-4. check if SMPL layer is better
+7. optimize how to get batch_size and num_frames
+8. add default body model
+9. add model inference for param init
+10. check if SMPL layer is better
+11. better num_videos handling
+12. step by step visualization
+13. _optimize_stage() inheritance
 """
 
 import torch
 from configs.smplify.smplify import smplify_opt_config, smplify_stages
-from configs.smplify.smplifyx import smplifyx_opt_config, smplifyx_stages
+from configs.smplify.smplifyx import (
+    joint_prior_loss_config,
+    keypoints_2d_loss_config,
+    keypoints_3d_loss_config,
+    shape_prior_loss_config,
+    smplifyx_opt_config,
+    smplifyx_stages,
+)
 from mmcv.runner import build_optimizer
+
+from mmhuman3d.models.builder import build_loss
 
 # TODO: placeholder
 default_camera = {}
-
-
-def gmof(x, sigma):
-    """Geman-McClure error function."""
-    x_squared = x**2
-    sigma_squared = sigma**2
-    return (sigma_squared * x_squared) / (sigma_squared + x_squared)
 
 
 class OptimizableParameters():
@@ -34,16 +41,16 @@ class OptimizableParameters():
         self.opt_params = []
 
     def set_param(self, fit_param, param):
-        """Set require_grads and collect parameters for optimization.
+        """Set requires_grad and collect parameters for optimization.
 
         :param fit_param: (bool) True if optimizable parameters
         :param param: (torch.Tenosr) parameters
         """
         if fit_param:
-            param.require_grads = True
+            param.requires_grad = True
             self.opt_params.append(param)
         else:
-            param.require_grads = False
+            param.requires_grad = False
 
     def parameters(self):
         """Returns parameters.
@@ -51,23 +58,6 @@ class OptimizableParameters():
         Compatible with mmcv's build_parameters()
         """
         return self.opt_params
-
-
-def angle_prior(pose, spine=False):
-    """Angle prior that penalizes unnatural bending of the knees and elbows."""
-    # We subtract 3 because pose does not include the global rotation of
-    # the model
-    angle_loss = torch.exp(
-        pose[:, [55 - 3, 58 - 3, 12 - 3, 15 - 3]] *
-        torch.tensor([1., -1., -1, -1.], device=pose.device))**2
-    if spine:  # limit rotation of 3 spines
-        spine_poses = pose[:, [
-            9 - 3, 10 - 3, 11 - 3, 18 - 3, 19 - 3, 20 - 3, 27 - 3, 28 - 3, 29 -
-            3
-        ]]
-        spine_loss = torch.exp(torch.abs(spine_poses))**2
-        angle_loss = torch.cat([angle_loss, spine_loss], axis=1)
-    return angle_loss
 
 
 class SMPLify(object):
@@ -82,6 +72,10 @@ class SMPLify(object):
                  camera=default_camera,
                  stage_config=smplify_stages,
                  opt_config=smplify_opt_config,
+                 keypoints_2d_loss_config=keypoints_2d_loss_config,
+                 keypoints_3d_loss_config=keypoints_3d_loss_config,
+                 shape_prior_loss_config=shape_prior_loss_config,
+                 joint_prior_loss_config=joint_prior_loss_config,
                  device=torch.device('cuda'),
                  verbose=False):
 
@@ -94,6 +88,10 @@ class SMPLify(object):
         self.camera = camera
         self.device = device
         self.body_model = body_model.to(self.device)
+        self.keypoints_2d_mse_loss = build_loss(keypoints_2d_loss_config)
+        self.keypoints_3d_mse_loss = build_loss(keypoints_3d_loss_config)
+        self.shape_prior_loss = build_loss(shape_prior_loss_config)
+        self.joint_prior_loss = build_loss(joint_prior_loss_config).to(device)
 
     def __call__(self,
                  keypoints_2d=None,
@@ -122,7 +120,6 @@ class SMPLify(object):
             else self.body_model.transl
         body_pose = init_body_pose if init_body_pose is not None \
             else self.body_model.body_pose
-
         if init_betas is not None:
             betas = init_betas
         elif self.use_one_betas_per_video:
@@ -154,10 +151,10 @@ class SMPLify(object):
 
     def _set_param(self, fit_param, param, opt_param):
         if fit_param:
-            param.require_grads = True
+            param.requires_grad = True
             opt_param.append(param)
         else:
-            param.require_grads = False
+            param.requires_grad = False
 
     def _expand_betas(self, pose, betas):
         batch_size = pose.shape[0]
@@ -165,11 +162,12 @@ class SMPLify(object):
         if batch_size == num_video:
             return betas
 
+        feat_dim = betas.shape[-1]
         video_size = batch_size // num_video
-        betas_ext = torch.zeros(
-            batch_size, betas.shape[-1], device=betas.device)
-        for i in range(num_video):
-            betas_ext[i * video_size:(i + 1) * video_size] = betas[i]
+        betas_ext = betas.\
+            view(num_video, 1, feat_dim).\
+            expand(num_video, video_size, feat_dim).\
+            view(batch_size, feat_dim)
 
         return betas_ext
 
@@ -184,12 +182,13 @@ class SMPLify(object):
                         fit_betas=True,
                         keypoints_2d=None,
                         keypoints_conf_2d=None,
-                        keypoints_2d_weight=1.0,
+                        keypoints_2d_weight=None,
                         keypoints_3d=None,
                         keypoints_conf_3d=None,
-                        keypoints_3d_weight=1.0,
-                        shape_prior_weight=1.0,
-                        angle_prior_weight=1.0,
+                        keypoints_3d_weight=None,
+                        shape_prior_weight=None,
+                        joint_prior_weight=None,
+                        joint_weights={},
                         num_iter=1):
 
         parameters = OptimizableParameters()
@@ -207,7 +206,7 @@ class SMPLify(object):
                 # init_body_pose)
 
                 optimizer.zero_grad()
-                betas_ext = self._arrange_betas(body_pose, betas)
+                betas_ext = self._expand_betas(body_pose, betas)
 
                 smpl_output = self.body_model(
                     global_orient=global_orient,
@@ -217,6 +216,9 @@ class SMPLify(object):
 
                 model_joints = smpl_output.joints
 
+                # TODO: add support for 45 smpl joints
+                model_joints = model_joints[:, :24, :]
+
                 loss_dict = self._compute_loss(
                     model_joints,
                     keypoints_2d=keypoints_2d,
@@ -225,8 +227,9 @@ class SMPLify(object):
                     keypoints_3d=keypoints_3d,
                     keypoints_conf_3d=keypoints_conf_3d,
                     keypoints_3d_weight=keypoints_3d_weight,
+                    joint_prior_weight=joint_prior_weight,
                     shape_prior_weight=shape_prior_weight,
-                    angle_prior_weight=angle_prior_weight,
+                    joint_weights=joint_weights,
                     body_pose=body_pose,
                     betas=betas_ext)
 
@@ -236,56 +239,90 @@ class SMPLify(object):
 
             optimizer.step(closure)
 
+    def _get_weight(self, body_weight=1.0, use_shoulder_hip_only=False):
+
+        weight = torch.ones([24]).to(self.device)
+
+        if use_shoulder_hip_only:
+            weight[[1, 2, 16, 17]] = weight[[1, 2, 16, 17]] + 1.0
+            weight = weight - 1.0
+            weight[[1, 2, 16, 17]] = weight[[1, 2, 16, 17]] * body_weight
+        else:
+            weight = weight * body_weight
+
+        return weight
+
     def _compute_loss(self,
                       model_joints,
                       keypoints_2d=None,
                       keypoints_conf_2d=None,
-                      keypoints_2d_weight=1.0,
                       keypoints_3d=None,
                       keypoints_conf_3d=None,
-                      keypoints_3d_weight=1.0,
-                      shape_prior_weight=1.0,
-                      angle_prior_weight=1.0,
+                      keypoints_2d_weight=None,
+                      keypoints_3d_weight=None,
+                      shape_prior_weight=None,
+                      joint_prior_weight=None,
+                      joint_weights={},
                       body_pose=None,
                       betas=None):
 
         total_loss = 0
 
+        weight = self._get_weight(**joint_weights)
+
         # 2D keypoint loss
         if keypoints_2d is not None:
             projected_joints = self.camera(model_joints)
-            reprojection_error = gmof(
-                projected_joints - keypoints_2d, sigma=100)
-            joints_weights = torch.ones_like(
-                keypoints_conf_2d) * keypoints_2d_weight
-            reprojection_weight = (joints_weights * keypoints_conf_2d)**2
-            reprojection_loss = reprojection_weight * reprojection_error.sum(
-                dim=-1)
-            total_loss = total_loss + reprojection_loss.sum(
-                dim=-1) * keypoints_2d_weight
+            # reprojection_error = gmof(
+            #     projected_joints - keypoints_2d, sigma=100)
+            # joints_weights = torch.ones_like(
+            #     keypoints_conf_2d) * keypoints_2d_weight
+            # reprojection_weight = (joints_weights * keypoints_conf_2d)**2
+            # reprojection_loss = reprojection_weight * reprojection_error.sum(
+            #     dim=-1)
+            # total_loss = total_loss + reprojection_loss.sum(
+            #     dim=-1) * keypoints_2d_weight
+            reprojection_loss = self.keypoints_2d_mse_loss(
+                pred=projected_joints,
+                target=keypoints_2d,
+                target_conf=keypoints_conf_2d,
+                weight=weight,
+                loss_weight_override=keypoints_2d_weight)
+            total_loss = total_loss + reprojection_loss
 
         # 3D keypoint loss
-        # TODO: proper sigma for keypoints3d
         if keypoints_3d is not None:
-            joint_diff_3d = gmof(model_joints - keypoints_3d, sigma=100)
-            joints_weights = torch.ones_like(
-                keypoints_conf_3d) * keypoints_3d_weight
-            joint_loss_3d_weight = (joints_weights * keypoints_conf_3d)**2
-            joint_loss_3d = joint_loss_3d_weight * joint_diff_3d.sum(dim=-1)
-            total_loss = total_loss + joint_loss_3d.sum(
-                dim=-1) * keypoints_3d_weight
+            # keypoints_3d_weight = 1.0 if keypoints_3d_weight is None
+            # else keypoints_3d_weight
+            # joint_diff_3d = gmof(model_joints - keypoints_3d, sigma=100)
+            # joints_weights = torch.ones_like(
+            #     keypoints_conf_3d) * keypoints_3d_weight
+            # joint_loss_3d_weight = (joints_weights * keypoints_conf_3d)**2
+            # joint_loss_3d = joint_loss_3d_weight * joint_diff_3d.sum(dim=-1)
+            # total_loss = total_loss + joint_loss_3d.sum(
+            #     dim=-1) * keypoints_3d_weight
+            # keypoints_3d_loss = joint_loss_3d.sum(dim=-1) *
+            # keypoints_3d_weight  # just to print
+            keypoints_3d_loss = self.keypoints_3d_mse_loss(
+                pred=model_joints,
+                target=keypoints_3d,
+                target_conf=keypoints_conf_3d,
+                weight=weight,
+                loss_weight_override=keypoints_3d_weight)
+            total_loss = total_loss + keypoints_3d_loss
 
         # Regularizer to prevent betas from taking large values
-        if betas is not None:
-            shape_prior_loss = (shape_prior_weight**2) * \
-                               (betas**2).sum(dim=-1)
-            total_loss = total_loss + shape_prior_loss
+        shape_prior_loss = self.shape_prior_loss(
+            betas=betas, loss_weight_override=shape_prior_weight)
+        total_loss = total_loss + shape_prior_loss
 
         # Angle prior for knees and elbows
-        # TODO: temp disable angle_prior_loss
-        # angle_prior_loss = (angle_prior_weight ** 2) * \
-        # angle_prior(body_pose, spine=True).sum(dim=-1)
-        # total_loss = total_loss + angle_prior_loss
+        # joint_prior_loss = (joint_prior_weight ** 2) * \
+        # joint_prior(body_pose, spine=True).sum(dim=-1)
+        # total_loss = total_loss + joint_prior_loss
+        joint_prior_loss = self.joint_prior_loss(
+            body_pose=body_pose, loss_weight_override=joint_prior_weight)
+        total_loss = total_loss + joint_prior_loss
 
         # Smooth body
         # TODO: temp disable body_pose_loss
@@ -300,21 +337,14 @@ class SMPLify(object):
         #      smooth_body_loss]
         # ).mean(dim=-1)
 
+        # batch_size = keypoints_3d.shape[0]
+        # print(f'3D Loss={keypoints_3d_loss.sum().item()/batch_size:.6f};',
+        #       f'Shape Loss={shape_prior_loss.item()/batch_size:.6f};',
+        #       f'joint_prior_loss={joint_prior_loss.item()/batch_size:.6f};')
+
         return {
             'total_loss': total_loss.sum(),
         }
-
-    def _arrange_betas(self, pose, betas):
-        batch_size = pose.shape[0]
-        num_video = betas.shape[0]
-
-        video_size = batch_size // num_video
-        betas_ext = torch.zeros(
-            batch_size, betas.shape[-1], device=betas.device)
-        for i in range(num_video):
-            betas_ext[i * video_size:(i + 1) * video_size] = betas[i]
-
-        return betas_ext
 
 
 class SMPLifyX(SMPLify):
@@ -329,6 +359,10 @@ class SMPLifyX(SMPLify):
                  camera=default_camera,
                  stage_config=smplifyx_stages,
                  opt_config=smplifyx_opt_config,
+                 keypoints_2d_loss_config=keypoints_2d_loss_config,
+                 keypoints_3d_loss_config=keypoints_3d_loss_config,
+                 shape_prior_loss_config=shape_prior_loss_config,
+                 joint_prior_loss_config=joint_prior_loss_config,
                  device=torch.device('cuda'),
                  verbose=False):
         super(SMPLifyX, self).__init__(
@@ -340,6 +374,10 @@ class SMPLifyX(SMPLify):
             camera=camera,
             stage_config=stage_config,
             opt_config=opt_config,
+            keypoints_2d_loss_config=keypoints_2d_loss_config,
+            keypoints_3d_loss_config=keypoints_3d_loss_config,
+            shape_prior_loss_config=shape_prior_loss_config,
+            joint_prior_loss_config=joint_prior_loss_config,
             device=device,
             verbose=verbose)
 
@@ -406,6 +444,7 @@ class SMPLifyX(SMPLify):
 
         for i in range(self.num_epochs):
             for stage_name, stage_config in self.stage_config.items():
+                # print(stage_name)
                 self._optimize_stage(
                     global_orient=global_orient,
                     transl=transl,
@@ -437,6 +476,31 @@ class SMPLifyX(SMPLify):
             'reye_pose': reye_pose
         }
 
+    def _get_weight(self,
+                    body_weight=1.0,
+                    use_shoulder_hip_only=False,
+                    hand_weight=1.0,
+                    face_weight=1.0):
+
+        weight = torch.ones([144]).to(self.device)
+
+        if use_shoulder_hip_only:
+            weight[[1, 2, 16, 17]] = weight[[1, 2, 16, 17]] + 1.0
+            weight = weight - 1.0
+            weight[[1, 2, 16, 17]] = weight[[1, 2, 16, 17]] * body_weight
+        else:
+            weight[:22] = weight[:22] * body_weight
+            weight[60:66] = weight[60:66] * body_weight
+
+        weight[25:54] = weight[25:54] * hand_weight
+        weight[66:76] = weight[66:76] * hand_weight
+
+        weight[22:25] = weight[22:25] * face_weight
+        weight[55:60] = weight[55:60] * face_weight
+        weight[76:] = weight[76:] * face_weight
+
+        return weight
+
     def _optimize_stage(self,
                         global_orient,
                         transl,
@@ -460,12 +524,13 @@ class SMPLifyX(SMPLify):
                         fit_reye_pose=True,
                         keypoints_2d=None,
                         keypoints_conf_2d=None,
-                        keypoints_2d_weight=1.0,
+                        keypoints_2d_weight=None,
                         keypoints_3d=None,
                         keypoints_conf_3d=None,
-                        keypoints_3d_weight=1.0,
-                        shape_prior_weight=1.0,
-                        angle_prior_weight=1.0,
+                        keypoints_3d_weight=None,
+                        joint_prior_weight=None,
+                        shape_prior_weight=None,
+                        joint_weights={},
                         num_iter=1):
 
         parameters = OptimizableParameters()
@@ -489,7 +554,7 @@ class SMPLifyX(SMPLify):
                 # init_body_pose)
 
                 optimizer.zero_grad()
-                betas_ext = self._arrange_betas(body_pose, betas)
+                betas_ext = self._expand_betas(body_pose, betas)
 
                 output = self.body_model(
                     global_orient=global_orient,
@@ -513,8 +578,9 @@ class SMPLifyX(SMPLify):
                     keypoints_3d=keypoints_3d,
                     keypoints_conf_3d=keypoints_conf_3d,
                     keypoints_3d_weight=keypoints_3d_weight,
+                    joint_prior_weight=joint_prior_weight,
                     shape_prior_weight=shape_prior_weight,
-                    angle_prior_weight=angle_prior_weight,
+                    joint_weights=joint_weights,
                     body_pose=body_pose,
                     betas=betas_ext)
 
