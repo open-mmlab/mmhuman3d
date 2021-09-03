@@ -25,8 +25,10 @@ def test_smpl():
 
     # Generate keypoints
     output = smpl_body_model()
-    keypoints_3d = output.joints.detach().to(device=device)
-    keypoints_conf_3d = torch.ones((*keypoints_3d.shape[:2], 1), device=device)
+    model_joints = output.joints[:, :24, :]
+
+    keypoints_3d = model_joints.detach().to(device=device)
+    keypoints_conf_3d = torch.ones((keypoints_3d.shape[1]), device=device)
 
     # Run SMPLify
     smplify_output = smplify_gta(
@@ -46,6 +48,7 @@ def test_smplx():
         body_model_load_dir,
         model_type='smplx',
         gender='neutral',
+        use_face_contour=True,  # 127 -> 144
         num_betas=10,
         batch_size=batch_size,
     )
@@ -56,7 +59,7 @@ def test_smplx():
     # Generate keypoints
     output = smpl_body_model()
     keypoints_3d = output.joints.detach().to(device=device)
-    keypoints_conf_3d = torch.ones((*keypoints_3d.shape[:2], 1), device=device)
+    keypoints_conf_3d = torch.ones((keypoints_3d.shape[1]), device=device)
 
     # Run SMPLify-X
     smplifyx_output = smplifyx_gta(
