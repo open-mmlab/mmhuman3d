@@ -5,6 +5,7 @@ from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 import numpy as np
 
 from mmhuman3d.core.conventions.keypoints_mapping import KEYPOINTS_FACTORY
+from mmhuman3d.core.conventions.keypoints_mapping.smplx import SMPLX_PALETTE
 from mmhuman3d.core.visualization.renderer import matplotlib3d_renderer
 from mmhuman3d.utils.keypoint_utils import get_different_colors, search_limbs
 
@@ -77,7 +78,8 @@ def visualize_kp3d(
         value_range (Union[Tuple[int, int], list], optional):
                 range of axis value. Defaults to (-100, 100).
         pop_parts (Iterable[str], optional): The body part names you do not
-                want to visualize. Defaults to ().
+                want to visualize. Choose in ['left_eye','right_eye', 'nose',
+                'mouth', 'face', 'left_hand', 'right_hand']Defaults to [].
     Raises:
         TypeError: check the type of input keypoints.
         FileNotFoundError: check the output video path.
@@ -150,8 +152,15 @@ def visualize_kp3d(
             data_source=data_source, mask=mask)
     if palette is not None:
         limbs_palette = np.array(palette, dtype=np.uint8)[None]
+
+    # check and pop the pop_parts
+    assert set(pop_parts).issubset(SMPLX_PALETTE.keys(
+    )), f'wrong part_names in pop_parts, could only choose in\
+        {set(SMPLX_PALETTE.keys())}'
+
     for part_name in pop_parts:
-        limbs_target.pop(part_name)
+        if part_name in limbs_target:
+            limbs_target.pop(part_name)
 
     # initialize renderer and start render
     renderer = matplotlib3d_renderer.Axes3dJointsRenderer()
