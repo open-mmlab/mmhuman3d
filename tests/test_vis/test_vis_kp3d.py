@@ -31,7 +31,7 @@ def test_vis_kp3d():
             resolution=(512, 512),
             data_source='mmpose')
 
-    with pytest.raises(KeyError):
+    with pytest.raises(AssertionError):
         keypoints = np.random.randint(
             low=0, high=255, size=(30, 133, 3), dtype=np.uint8)
         visualize_kp3d(

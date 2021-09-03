@@ -53,7 +53,7 @@ def test_vis_kp2d():
     # wrong pop parts
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 133, 2), dtype=np.uint8)
-    with pytest.raises(KeyError):
+    with pytest.raises(AssertionError):
         visualize_kp2d(
             kp2d,
             output_path='/tmp/1.mp4',

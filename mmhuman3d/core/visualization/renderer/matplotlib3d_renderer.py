@@ -7,6 +7,7 @@ from typing import Iterable, List, NoReturn, Optional, Union
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
 
 from mmhuman3d.utils.ffmpeg_utils import images_to_video
@@ -232,6 +233,30 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     c=np.array([0, 0, 0]).reshape(1, -1),
                     s=10,
                     marker='o')
+            if num_person >= 2:
+                ax.w_xaxis.set_ticklabels([])
+                ax.w_yaxis.set_ticklabels([])
+                ax.w_zaxis.set_ticklabels([])
+                labels = []
+                custom_lines = []
+                for person_index in range(num_person):
+                    color = get_different_colors(
+                        num_person)[person_index].reshape(1, 3) / 255.0
+                    custom_lines.append(
+                        Line2D([0], [0],
+                               linestyle='-',
+                               color=color[0],
+                               lw=2,
+                               marker='',
+                               markeredgecolor='k',
+                               markeredgewidth=.1,
+                               markersize=20))
+                    labels.append(f'person_{person_index + 1}')
+                ax.legend(
+                    handles=custom_lines,
+                    labels=labels,
+                    loc='upper left',
+                )
             plt.close('all')
             rgb_mat = _get_cv2mat_from_buf(fig)
             resized_mat = cv2.resize(rgb_mat, resolution)
@@ -241,6 +266,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     (resolution[0] // 10, resolution[1] // 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5 * resolution[0] / 500,
                     np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
+
             frame_path = os.path.join(temp_dir, 'frame_%06d.png' % frame_index)
             cv2.imwrite(frame_path, resized_mat)
 

@@ -182,7 +182,9 @@ def visualize_kp2d(
         with_number (bool, optional): whether draw index number.
                 Defaults to False.
         pop_parts (Iterable[str], optional): The body part names you do not
-                want to visualize. Defaults to [].
+                want to visualize. Supported parts are ['left_eye','right_eye'
+                ,'nose', 'mouth', 'face', 'left_hand', 'right_hand'].
+                Defaults to [].
 
     Raises:
         FileNotFoundError: check output video path.
@@ -240,19 +242,32 @@ def visualize_kp2d(
                     num_frame) if frame_list is not None else num_frame
     end = (min(num_frame, end) + num_frame) % num_frame
     kp2d = kp2d[start:end + 1]
+
+    # should set a resolution if no origin frames and no resolution
+    if frame_list is None and resolution is None:
+        scale = 1.5
+        resolution = [np.max(kp2d) * scale, np.max(kp2d) * scale]
+
+    # check and pop the pop_parts
+    assert set(pop_parts).issubset(
+        SMPLX_PALETTE), f'wrong part_names in pop_parts, supported parts are\
+            {set(SMPLX_PALETTE.keys())}'
+
     for part_name in pop_parts:
-        limbs_target.pop(part_name)
+        if part_name in limbs_target:
+            limbs_target.pop(part_name)
+
     # start plotting by frame
     for frame_index in range(kp2d.shape[0]):
         kp2d_frame = kp2d[frame_index]
         if kp2d_frame.ndim == 2:
             kp2d_frame = kp2d_frame[np.newaxis]
-        if frame_list is not None:
+        if frame_list is not None and resolution is None:
             image_array = cv2.imread(frame_list[frame_index])
-        else:
+        elif frame_list is None and resolution is not None:
             image_array = np.ones(
                 (resolution[1], resolution[0], 3), dtype=np.uint8) * 255
-        if resolution is not None:
+        elif frame_list is not None and resolution is not None:
             w_scale = resolution[0] / image_array.shape[1]
             h_scale = resolution[1] / image_array.shape[0]
             image_array = cv2.resize(image_array, resolution, cv2.INTER_CUBIC)

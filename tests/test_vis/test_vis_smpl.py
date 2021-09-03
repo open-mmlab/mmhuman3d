@@ -1,5 +1,6 @@
 import subprocess
 
+import numpy as np
 import pytest
 import torch
 
@@ -7,7 +8,7 @@ from mmhuman3d.core.visualization.visualize_smpl import (
     neural_render_silhouette,
     visualize_smpl_pose,
 )
-from mmhuman3d.utils.ffmpeg_utils import video_to_array
+from mmhuman3d.utils.ffmpeg_utils import array_to_video, video_to_array
 
 body_model_dir = 'body_models'
 
@@ -101,7 +102,8 @@ def test_visualize_smpl_pose():
             force=True)
     # wrong output path
     with pytest.raises(FileExistsError):
-
+        v = np.zeros((3, 512, 512, 3))
+        array_to_video(v, output_path='/tmp/1.mp4')
         visualize_smpl_pose(
             poses=torch.zeros(10, 72),
             model_type='smpl',
