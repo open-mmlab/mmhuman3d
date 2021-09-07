@@ -6,6 +6,7 @@ from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
 from mmhuman3d.data.preprocessors.mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
 from mmhuman3d.data.preprocessors.mpii_pre import mpii_extract
 from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
+from mmhuman3d.data.preprocessors.up3d_pre import up3d_extract
 
 
 def parse_args():
@@ -42,7 +43,9 @@ def main():
     output_path = args.output_path
 
     if args.datasets == ['all']:
-        args.datasets = ['coco', '3dpw', 'mpii', 'h36m', 'mpi_inf_3dhp']
+        args.datasets = [
+            'coco', '3dpw', 'mpii', 'h36m', 'mpi_inf_3dhp', 'up3d'
+        ]
 
     if 'coco' in args.datasets:
         print('******')
@@ -82,6 +85,13 @@ def main():
         mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'train')
         mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'test')
         print('Mpi_inf_3dhp preprocess finished!')
+
+    if 'up3d' in args.datasets:
+        print('******')
+        print('Preprocessing UP-3D ...')
+        UP3D_ROOT = os.path.join(root_path, 'up-3d')
+        up3d_extract(UP3D_ROOT, output_path)
+        print('up-3d preprocess finished!')
 
 
 if __name__ == '__main__':

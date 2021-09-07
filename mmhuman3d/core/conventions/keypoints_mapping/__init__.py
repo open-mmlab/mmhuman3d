@@ -6,6 +6,7 @@ import torch
 from mmhuman3d.core.conventions.keypoints_mapping import (
     coco,
     h36m,
+    lsp,
     mmpose,
     mpi_inf_3dhp,
     mpii,
@@ -23,7 +24,8 @@ KEYPOINTS_FACTORY = {
     'mpi_inf_3dhp_test': mpi_inf_3dhp.MPI_INF_3DHP_TEST_KEYPOINTS,
     'h36m': h36m.H36M_KEYPOINTS,
     'pw3d': pw3d.PW3D_KEYPOINTS,
-    'mpii': mpii.MPII_KEYPOINTS
+    'mpii': mpii.MPII_KEYPOINTS,
+    'lsp': lsp.LSP_KEYPOINTS
 }
 
 
