@@ -10,6 +10,8 @@ from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 
 import numpy as np
 
+from mmhuman3d.utils.path_utils import check_path_existence, check_path_suffix
+
 
 def array_to_video(
     image_array: np.ndarray,
@@ -110,10 +112,10 @@ def array_to_images(
     Returns:
         NoReturn
     """
-    output_folderinfo = Path(output_folder)
-    if not output_folderinfo.parent.is_dir():
+    exist_result = check_path_existence(output_folder, 'directory')
+    if exist_result == 1:
         raise FileNotFoundError('Wrong output path.')
-    elif not output_folderinfo.is_dir():
+    elif exist_result == 2:
         os.mkdir(output_folder)
 
     if not isinstance(image_array, np.ndarray):
@@ -178,9 +180,10 @@ def video_to_array(
     Returns:
         np.ndarray: shape will be (f * h * w * 3).
     """
-    input_pathinfo = Path(input_path)
-    if not (input_pathinfo.is_file()
-            and input_pathinfo.suffix.lower() in ['.mp4', '.gif']):
+    exist_result = check_path_existence(input_path, 'file')
+    suffix_result = \
+        check_path_suffix(input_path, ['.mp4', 'mkv', 'avi', '.gif'])
+    if not (exist_result == 0 and suffix_result == 0):
         raise FileNotFoundError('Wrong input path.')
     info = vid_info_reader(input_path)
     if resolution:
@@ -243,7 +246,8 @@ def images_to_array(input_folder: str,
         np.ndarray: shape will be (f * h * w * 3).
     """
     input_folderinfo = Path(input_folder)
-    if not input_folderinfo.is_dir():
+    exist_result = check_path_existence(input_folder, 'directory')
+    if not exist_result == 0:
         raise FileNotFoundError('Wrong input folder.')
 
     info = vid_info_reader(f'{input_folder}/{img_format}' % 1)
@@ -328,9 +332,10 @@ class vid_info_reader(object):
         Returns:
             NoReturn.
         """
-        input_pathinfo = Path(input_path)
-        if not (input_pathinfo.is_file() and input_pathinfo.suffix.lower()
-                in ['.mp4', '.gif', '.png', '.jpg']):
+        exist_result = check_path_existence(input_path, 'file')
+        suffix_result = \
+            check_path_suffix(input_path, ['.mp4', '.gif', '.png', '.jpg'])
+        if not (exist_result == 0 and suffix_result == 0):
             raise FileNotFoundError('Wrong input path.')
         cmd = [
             'ffprobe', '-show_format', '-show_streams', '-of', 'json',
@@ -380,13 +385,16 @@ def video_to_gif(
     Returns:
         NoReturn.
     """
-    input_pathinfo = Path(input_path)
-    output_pathinfo = Path(output_path)
-    if not (input_pathinfo.is_file()
-            and input_pathinfo.suffix.lower() in ['.mp4']):
+    exist_result = check_path_existence(input_path, 'file')
+    suffix_result = \
+        check_path_suffix(input_path, ['.mp4'])
+    if not (exist_result == 0 and suffix_result == 0):
         raise FileNotFoundError('Wrong input path.')
-    if not (output_pathinfo.suffix.lower() in ['.gif']
-            and output_pathinfo.parent.is_dir()):
+
+    exist_result = check_path_existence(output_path, 'file')
+    suffix_result = \
+        check_path_suffix(output_path, ['.gif'])
+    if not (exist_result != 1 and suffix_result == 0):
         raise FileNotFoundError('Wrong output path.')
     info = vid_info_reader(input_path)
     if resolution:
@@ -423,14 +431,16 @@ def video_to_images(
     Returns:
         NoReturn
     """
-    input_pathinfo = Path(input_path)
-    output_folderinfo = Path(output_folder)
-    if not (input_pathinfo.is_file()
-            and input_pathinfo.suffix.lower() in ['.mp4', '.gif']):
+    exist_result = check_path_existence(input_path, 'file')
+    suffix_result = \
+        check_path_suffix(input_path, ['.mp4', '.gif'])
+    if not (exist_result == 0 and suffix_result == 0):
         raise FileNotFoundError('Wrong input path.')
-    if not output_folderinfo.parent.is_dir():
+
+    exist_result = check_path_existence(output_folder, 'directory')
+    if exist_result == 1:
         raise FileNotFoundError('Wrong output path.')
-    elif not output_folderinfo.is_dir():
+    elif exist_result == 2:
         os.mkdir(output_folder)
 
     command = [
@@ -474,12 +484,15 @@ def images_to_video(
     Returns:
         NoReturn
     """
-    output_pathinfo = Path(output_path)
     input_folderinfo = Path(input_folder)
-    if not input_folderinfo.is_dir():
+    exist_result = check_path_existence(input_folder, 'directory')
+    if not exist_result == 0:
         raise FileNotFoundError('Wrong input folder.')
-    if not ((output_pathinfo.suffix.lower() in ['.mp4'])
-            and output_pathinfo.parent.is_dir()):
+
+    exist_result = check_path_existence(output_path, 'directory')
+    suffix_result = \
+        check_path_suffix(output_path, ['.mp4'])
+    if not (suffix_result == 0 and exist_result != 1):
         raise FileNotFoundError('Wrong output path.')
 
     temp_input_folder = None
@@ -569,12 +582,15 @@ def images_to_gif(
     Returns:
         NoReturn
     """
-    output_pathinfo = Path(output_path)
     input_folderinfo = Path(input_folder)
-    if not input_folderinfo.is_dir():
+    exist_result = check_path_existence(input_folder, 'directory')
+    if not exist_result == 0:
         raise FileNotFoundError('Wrong input folder.')
-    if not ((output_pathinfo.suffix.lower() in ['.gif'])
-            and output_pathinfo.parent.is_dir()):
+
+    exist_result = check_path_existence(output_path, 'file')
+    suffix_result = \
+        check_path_suffix(output_path, ['.gif'])
+    if not (suffix_result == 0 and exist_result != 1):
         raise FileNotFoundError('Wrong output path.')
 
     temp_input_folder = None
@@ -654,12 +670,16 @@ def gif_to_video(
         NoReturn
     """
     input_pathinfo = Path(input_path)
-    output_pathinfo = Path(output_path)
-    if not (input_pathinfo.is_file()
-            and input_pathinfo.suffix.lower() in ['.gif']):
+    exist_result = check_path_existence(input_pathinfo, 'file')
+    suffix_result = \
+        check_path_suffix(input_pathinfo, ['.gif'])
+    if not (exist_result == 0 and suffix_result == 0):
         raise FileNotFoundError('Wrong input path.')
-    if not ((output_pathinfo.suffix.lower() in ['.mp4'])
-            and output_pathinfo.parent.is_dir()):
+
+    exist_result = check_path_existence(output_path, 'file')
+    suffix_result = \
+        check_path_suffix(output_path, ['.mp4'])
+    if not (exist_result != 1 and suffix_result == 0):
         raise FileNotFoundError('Wrong output path.')
 
     command = [
@@ -702,15 +722,16 @@ def gif_to_images(
     Returns:
         NoReturn
     """
-    input_pathinfo = Path(input_path)
-    output_folderinfo = Path(output_folder)
-    if not (input_pathinfo.is_file()
-            and input_pathinfo.suffix.lower() in ['.gif']):
+    exist_result = check_path_existence(input_path, 'file')
+    suffix_result = \
+        check_path_suffix(input_path, ['.gif'])
+    if not (exist_result == 0 and suffix_result == 0):
         raise FileNotFoundError('Wrong input path.')
 
-    if not output_folderinfo.parent.is_dir():
+    exist_result = check_path_existence(output_folder, 'directory')
+    if exist_result == 1:
         raise FileNotFoundError('Wrong output path.')
-    elif not output_folderinfo.is_dir():
+    elif exist_result == 2:
         os.mkdir(output_folder)
     command = [
         'ffmpeg', '-i', input_path, '-r',
@@ -748,12 +769,14 @@ def spatial_crop_video(
     Returns:
         NoReturn
     """
-    input_pathinfo = Path(input_path)
-    output_pathinfo = Path(output_path)
-    if not (input_pathinfo.is_file()
-            and input_pathinfo.suffix.lower() in ['.mp4', '.gif']):
+    exist_result = check_path_existence(input_path, 'file')
+    suffix_result = \
+        check_path_suffix(input_path, ['.mp4', '.gif'])
+    if not (exist_result == 0 and suffix_result == 0):
         raise FileNotFoundError('Wrong input path.')
-    if not output_pathinfo.parent.is_dir():
+
+    exist_result = check_path_existence(output_path, 'file')
+    if exist_result == 1:
         raise FileNotFoundError('Wrong output path.')
     assert len(box) == 4
     x, y, w, h = box
@@ -806,16 +829,20 @@ def spatial_concat_video(input_path_list: List[str],
     Returns:
         NoReturn
     """
-    output_pathinfo = Path(output_path)
     lowercase = string.ascii_lowercase
     assert len(array) == 2
     assert (array[0] * array[1]) >= len(input_path_list)
     for path in input_path_list:
-        if not (Path(path).is_file()
-                and Path(path).suffix.lower() in ['.mp4']):
+        exist_result = check_path_existence(path, 'file')
+        suffix_result =  \
+            check_path_suffix(path, ['.mp4'])
+        if not (exist_result == 0 and suffix_result == 0):
             raise FileNotFoundError('Wrong input file path.')
-    if not ((output_pathinfo.suffix.lower() in ['.mp4'])
-            and output_pathinfo.parent.is_dir()):
+
+    exist_result = check_path_existence(output_path, 'file')
+    suffix_result = \
+        check_path_suffix(output_path, ['.mp4'])
+    if not (exist_result != 1 and suffix_result == 0):
         raise FileNotFoundError('Wrong output path.')
     command = ['ffmpeg']
     width, height = resolution
@@ -882,13 +909,16 @@ def temporal_crop_video(
     Returns:
         NoReturn
     """
-    input_pathinfo = Path(input_path)
-    output_pathinfo = Path(output_path)
-    if not (input_pathinfo.is_file()
-            and input_pathinfo.suffix.lower() in ['.mp4', '.gif']):
+    exist_result = check_path_existence(input_path, 'file')
+    suffix_result = \
+        check_path_suffix(input_path, ['.mp4', '.gif'])
+    if not (exist_result == 0 and suffix_result == 0):
         raise FileNotFoundError('Wrong input path.')
-    if not ((output_pathinfo.suffix.lower() in ['.mp4', '.gif'])
-            and output_pathinfo.parent.is_dir()):
+
+    exist_result = check_path_existence(output_path, 'file')
+    suffix_result = \
+        check_path_suffix(output_path, ['.mp4', '.gif'])
+    if not (exist_result != 1 and suffix_result == 0):
         raise FileNotFoundError('Wrong output path.')
     info = vid_info_reader(input_path)
     num_frames, time = int(info['nb_frames']), float(info['duration'])
@@ -936,13 +966,17 @@ def temporal_concat_video(input_path_list: List[str],
     Returns:
         NoReturn.
     """
-    output_pathinfo = Path(output_path)
     for path in input_path_list:
-        if not (Path(path).is_file()
-                and Path(path).suffix.lower() in ['.mp4', '.gif']):
+        exist_result = check_path_existence(path, 'file')
+        suffix_result = \
+            check_path_suffix(path, ['.mp4', '.gif'])
+        if not (exist_result == 0 and suffix_result == 0):
             raise FileNotFoundError('Wrong input file path.')
-    if not ((output_pathinfo.suffix.lower() in ['.mp4', '.gif'])
-            and output_pathinfo.parent.is_dir()):
+
+    exist_result = check_path_existence(output_path, 'file')
+    suffix_result = \
+        check_path_suffix(output_path, ['.mp4', '.gif'])
+    if not (exist_result != 1 and suffix_result == 0):
         raise FileNotFoundError('Wrong output path.')
     width, height = resolution
     command = ['ffmpeg']
@@ -995,12 +1029,17 @@ def compress_video(input_path: str,
         NoReturn.
     """
     input_pathinfo = Path(input_path)
-    output_pathinfo = Path(output_path)
-    if not (input_pathinfo.is_file()
-            and input_pathinfo.suffix.lower() in ['.mp4', '.gif']):
+
+    exist_result = check_path_existence(input_path, 'file')
+    suffix_result = \
+        check_path_suffix(input_path, ['.mp4', '.gif'])
+    if not (exist_result == 0 and suffix_result == 0):
         raise FileNotFoundError('Wrong input path.')
-    if not ((output_pathinfo.suffix.lower() in ['.mp4', '.gif'])
-            and output_pathinfo.parent.is_dir()):
+
+    exist_result = check_path_existence(output_path, 'file')
+    suffix_result = \
+        check_path_suffix(output_path, ['.mp4', '.gif'])
+    if not (exist_result != 1 and suffix_result == 0):
         raise FileNotFoundError('Wrong output path.')
     info = vid_info_reader(input_path)
 
