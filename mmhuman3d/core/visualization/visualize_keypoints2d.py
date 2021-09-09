@@ -1,10 +1,12 @@
 import os
+import shutil
 import warnings
 from pathlib import Path
 from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 
 import cv2
 import numpy as np
+from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
     SMPLX_LIMBS_INDEX,
@@ -12,6 +14,7 @@ from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
 )
 from mmhuman3d.utils.ffmpeg_utils import images_to_video
 from mmhuman3d.utils.keypoint_utils import get_different_colors, search_limbs
+from mmhuman3d.utils.path_utils import check_path_existence, check_path_suffix
 
 
 def plot_kp2d_frame(kp2d_person: np.ndarray,
@@ -130,24 +133,164 @@ def _get_bbox(keypoint_np: np.ndarray,
     return np.asarray([x_min, x_max, y_min, y_max])
 
 
-def visualize_kp2d(
-    kp2d: np.ndarray,
-    output_path: str,
-    frame_list: Optional[List[str]] = None,
-    limbs: Optional[Union[np.ndarray, List[int]]] = None,
-    palette: Optional[Iterable[int]] = None,
-    data_source: str = 'mmpose',
-    mask: Optional[Union[list, np.ndarray]] = None,
-    start: int = 0,
-    end: int = -1,
-    force: bool = False,
-    with_file_name: bool = True,
-    resolution: Optional[Union[Tuple[int, int], list]] = None,
-    fps: Union[float, int] = 30,
-    draw_bbox: bool = False,
-    with_number: bool = False,
-    pop_parts: Iterable[str] = [],
-) -> NoReturn:
+def _prepare_limb_palette(limbs, palette, pop_parts, data_source, mask):
+    """Prepare limbs and their palette for plotting.
+
+    Args:
+        limbs (Union[np.ndarray, List[int]]):
+            The preset limbs. This option is for free skeletons like BVH file.
+            In most cases, it's set to None,
+            this function will search a result for limbs automatically.
+        palette (Iterable):
+            The preset palette for limbs. Specified palette,
+            three int represents (B, G, R). Should be tuple or list.
+            In most cases, it's set to None,
+            a palette will be generated with the result of search_limbs.
+        pop_parts (Iterable[str]):
+            The body part names you do not
+            want to visualize.
+            When it's none, nothing will be removed.
+        data_source (str):
+            Data source type.
+        mask (Union[list, np.ndarray):
+            A mask to mask out the incorrect points.
+
+    Returns:
+        Tuple[dict, dict]: (limbs_target, limbs_palette).
+    """
+    if limbs is not None:
+        limbs_target, limbs_palette = {
+            'body': limbs.tolist() if isinstance(limbs, np.ndarray) else limbs
+        }, get_different_colors(len(limbs))
+    else:
+        limbs_target, limbs_palette = search_limbs(
+            data_source=data_source, mask=mask)
+
+    if palette:
+        limbs_palette = np.array(palette, dtype=np.uint8)[None]
+
+    # check and pop the pop_parts
+    assert set(pop_parts).issubset(
+        SMPLX_PALETTE), f'wrong part_names in pop_parts, supported parts are\
+            {set(SMPLX_PALETTE.keys())}'
+
+    for part_name in pop_parts:
+        if part_name in limbs_target:
+            limbs_target.pop(part_name)
+            limbs_palette.pop(part_name)
+    return limbs_target, limbs_palette
+
+
+def _check_output_path(output_path):
+    exist_result = check_path_existence(output_path, path_type='auto')
+    if exist_result == 1:
+        raise FileNotFoundError(f'Its parent folder does not exist:\
+                    {output_path}')
+    elif exist_result == 2:
+        os.mkdir(output_path)
+    elif exist_result == 3:
+        suffix_result = \
+            check_path_suffix(output_path, allowed_suffix=['.mp4'])
+        if suffix_result == 1:
+            raise FileNotFoundError(
+                f'The output file should be .mp4: {output_path}')
+    # output_path is a directory
+    if check_path_suffix(output_path, []) == 0:
+        temp_folder = output_path
+        os.makedirs(temp_folder, exist_ok=True)
+    else:
+        temp_folder = output_path + '_temp_images'
+        if check_path_existence(temp_folder, 'directory') == 0:
+            shutil.rmtree(temp_folder)
+        os.makedirs(temp_folder, exist_ok=False)
+    return temp_folder
+
+
+def _check_frame_path(frame_list):
+    for frame_path in frame_list:
+        if check_path_existence(frame_path, 'file') != 0 or \
+                check_path_suffix(frame_path, ['.png', '.jpg', '.jpeg']) != 0:
+            raise FileNotFoundError(
+                f'The frame should be .png or .jp(e)g: {frame_path}')
+
+
+def _check_temp_path(temp_folder, frame_list, force):
+    if not force and frame_list is not None and len(frame_list) > 0:
+        if Path(temp_folder).absolute() == \
+                Path(frame_list[0]).parent.absolute():
+            raise FileExistsError(
+                f'{temp_folder} exists (set --force to overwrite).')
+
+
+class _CavasProducer:
+
+    def __init__(self, frame_list, resolution, kp2d, default_scale=1.5):
+        # check the origin background frames
+        if frame_list is not None:
+            _check_frame_path(frame_list)
+            self.frame_list = frame_list
+        else:
+            self.frame_list = []
+        self.frame_list = frame_list
+        self.resolution = resolution
+        self.kp2d = kp2d
+        self.resolution = resolution
+        if len(self.frame_list) > 1 and \
+                check_path_existence(self.frame_list[0], 'file') == 0:
+            tmp_image_array = cv2.imread(self.frame_list[0])
+            self.auto_resolution = \
+                [tmp_image_array.shape[1], tmp_image_array.shape[0]]
+        else:
+            self.auto_resolution = \
+                [np.max(kp2d) * default_scale, np.max(kp2d) * default_scale]
+
+    def get_data(self, frame_index):
+        # frame file exists, resolution not set
+        if frame_index < len(self.frame_list) and self.resolution is None:
+            image_array = cv2.imread(self.frame_list[frame_index])
+            kp2d_frame = self.kp2d[frame_index]
+        # no frame file, resolution has been set
+        elif frame_index >= len(self.frame_list) and \
+                self.resolution is not None:
+            image_array = np.ones((self.resolution[1], self.resolution[0], 3),
+                                  dtype=np.uint8) * 255
+            kp2d_frame = self.kp2d[frame_index]
+        # frame file exists, resolution has been set
+        elif frame_index < len(self.frame_list) and \
+                self.resolution is not None:
+            image_array = cv2.imread(self.frame_list[frame_index])
+            w_scale = self.resolution[0] / image_array.shape[1]
+            h_scale = self.resolution[1] / image_array.shape[0]
+            image_array = \
+                cv2.resize(image_array, self.resolution, cv2.INTER_CUBIC)
+            kp2d_frame = \
+                np.array([[w_scale, h_scale]]) * self.kp2d[frame_index]
+        # no frame file, no resolution
+        else:
+            image_array = \
+                np.ones((self.auto_resolution[1], self.auto_resolution[0], 3),
+                        dtype=np.uint8) * 255
+            kp2d_frame = self.kp2d[frame_index]
+        return image_array, kp2d_frame
+
+
+def visualize_kp2d(kp2d: np.ndarray,
+                   output_path: str,
+                   frame_list: Optional[List[str]] = None,
+                   limbs: Optional[Union[np.ndarray, List[int]]] = None,
+                   palette: Optional[Iterable[int]] = None,
+                   data_source: str = 'mmpose',
+                   mask: Optional[Union[list, np.ndarray]] = None,
+                   start: int = 0,
+                   end: int = -1,
+                   force: bool = False,
+                   with_file_name: bool = True,
+                   resolution: Optional[Union[Tuple[int, int], list]] = None,
+                   fps: Union[float, int] = 30,
+                   draw_bbox: bool = False,
+                   with_number: bool = False,
+                   pop_parts: Iterable[str] = [],
+                   disable_tqdm: bool = False) -> NoReturn:
     """Visualize 2d keypoints to a video or into a folder of frames.
 
     Args:
@@ -185,6 +328,9 @@ def visualize_kp2d(
                 want to visualize. Supported parts are ['left_eye','right_eye'
                 ,'nose', 'mouth', 'face', 'left_hand', 'right_hand'].
                 Defaults to [].
+        disable_tqdm (bool, optional):
+            Whether to disable the entire progressbar wrapper.
+            Defaults to False.
 
     Raises:
         FileNotFoundError: check output video path.
@@ -194,16 +340,10 @@ def visualize_kp2d(
         NoReturn.
     """
     # check output path
-    output_pathinfo = Path(output_path)
-    if not output_pathinfo.parent.is_dir():
-        raise FileNotFoundError(f'The output root folder does not exist:\
-                    {output_pathinfo.parent}')
-    if output_pathinfo.suffix == '':
-        if not output_pathinfo.is_dir():
-            os.mkdir(output_path)
-    elif not output_pathinfo.suffix.lower() in ['.mp4']:
-        raise FileNotFoundError(
-            f'The output file should be .mp4: {output_path}')
+    temp_folder = _check_output_path(output_path)
+
+    # check whether temp_folder will overwrite frame_list by accident
+    _check_temp_path(temp_folder, frame_list, force)
 
     # check the input array shape, reshape to (num_frame, num_person, J, 2)
     kp2d = kp2d[..., :2].copy()
@@ -212,66 +352,22 @@ def visualize_kp2d(
     assert kp2d.ndim == 4
     num_frame, num_person = kp2d.shape[0], kp2d.shape[1]
 
-    # check the origin background frames
-    if frame_list is not None:
-        for frame_path in frame_list:
-            if not (Path(frame_path).is_file()
-                    and Path(frame_path).suffix.lower() in ['.png', '.jpg']):
-                raise FileNotFoundError(
-                    f'The frame should be .png or .jpg: {frame_path}')
-    # create a temp folder for restoring temp frames
-    if output_pathinfo.suffix.lower() in ['.mp4']:
-        temp_folder = os.path.join(
-            '.',
-            os.path.basename(output_path) + '_temp_images')
-    else:
-        temp_folder = output_path
-    os.makedirs(temp_folder, exist_ok=True)
     # search the limb connections and palettes from superset smplx
-    if limbs is not None:
-        limbs_target, limbs_palette = {
-            'body': limbs.tolist() if isinstance(limbs, np.ndarray) else limbs
-        }, get_different_colors(len(limbs))
-    else:
-        limbs_target, limbs_palette = search_limbs(
-            data_source=data_source, mask=mask)
-    if palette:
-        limbs_palette = np.array(palette, dtype=np.uint8)[None]
+    # check and pop the pop_parts
+    limbs_target, limbs_palette = _prepare_limb_palette(
+        limbs, palette, pop_parts, data_source, mask)
+
     # slice the input array temporally
     num_frame = min(len(frame_list),
                     num_frame) if frame_list is not None else num_frame
     end = (min(num_frame, end) + num_frame) % num_frame
     kp2d = kp2d[start:end + 1]
 
-    # should set a resolution if no origin frames and no resolution
-    if frame_list is None and resolution is None:
-        scale = 1.5
-        resolution = [np.max(kp2d) * scale, np.max(kp2d) * scale]
-
-    # check and pop the pop_parts
-    assert set(pop_parts).issubset(
-        SMPLX_PALETTE), f'wrong part_names in pop_parts, supported parts are\
-            {set(SMPLX_PALETTE.keys())}'
-
-    for part_name in pop_parts:
-        if part_name in limbs_target:
-            limbs_target.pop(part_name)
+    canvas_producer = _CavasProducer(frame_list, resolution, kp2d)
 
     # start plotting by frame
-    for frame_index in range(kp2d.shape[0]):
-        kp2d_frame = kp2d[frame_index]
-        if kp2d_frame.ndim == 2:
-            kp2d_frame = kp2d_frame[np.newaxis]
-        if frame_list is not None and resolution is None:
-            image_array = cv2.imread(frame_list[frame_index])
-        elif frame_list is None and resolution is not None:
-            image_array = np.ones(
-                (resolution[1], resolution[0], 3), dtype=np.uint8) * 255
-        elif frame_list is not None and resolution is not None:
-            w_scale = resolution[0] / image_array.shape[1]
-            h_scale = resolution[1] / image_array.shape[0]
-            image_array = cv2.resize(image_array, resolution, cv2.INTER_CUBIC)
-            kp2d_frame *= np.array([[w_scale, h_scale]])
+    for frame_index in tqdm(range(kp2d.shape[0]), disable=disable_tqdm):
+        image_array, kp2d_frame = canvas_producer.get_data(frame_index)
         # start plotting by person
         for person_index in range(num_person):
             if num_person >= 2:
@@ -284,36 +380,22 @@ def visualize_kp2d(
                 draw_bbox=draw_bbox,
                 with_number=with_number,
                 font_size=0.5)
-        # write the frame with opencv
-        if output_pathinfo.suffix.lower() in ['.mp4']:
-            if with_file_name:
-                h, w, _ = image_array.shape
-                cv2.putText(
-                    image_array, str(Path(frame_list[frame_index]).name),
-                    (w // 2, h // 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5 * h / 500,
-                    np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
-            cv2.imwrite(
-                os.path.join(temp_folder, '%06d.png' % frame_index),
-                image_array)
-        else:
-            if Path(temp_folder).absolute() == Path(
-                    frame_list[frame_index]).parent.absolute() and (not force):
-                raise FileExistsError(
-                    f'{temp_folder} exists (set --force to overwrite).')
-            else:
-                if with_file_name:
-                    h, w, _ = image_array.shape
-                    cv2.putText(
-                        image_array, str(Path(frame_list[frame_index]).name),
+        if with_file_name:
+            h, w, _ = image_array.shape
+            cv2.putText(image_array, str(Path(frame_list[frame_index]).name),
                         (w // 2, h // 10), cv2.FONT_HERSHEY_SIMPLEX,
                         0.5 * h / 500,
                         np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
-                cv2.imwrite(
-                    os.path.join(temp_folder,
-                                 Path(frame_list[frame_index]).name),
-                    image_array)
+        # write the frame with opencv
+        if check_path_suffix(output_path, ['.mp4']) == 0:
+            frame_path = \
+                os.path.join(temp_folder, f'{frame_index:06d}.png')
+        else:
+            frame_path = \
+                os.path.join(temp_folder, Path(frame_list[frame_index]).name)
+        cv2.imwrite(frame_path, image_array)
     # convert frames to video
-    if output_pathinfo.suffix.lower() in ['.mp4']:
+    if check_path_suffix(output_path, ['.mp4']) == 0:
         images_to_video(
             input_folder=temp_folder,
             output_path=output_path,

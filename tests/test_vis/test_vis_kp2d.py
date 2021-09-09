@@ -15,20 +15,25 @@ from mmhuman3d.utils.ffmpeg_utils import (
 )
 from mmhuman3d.utils.keypoint_utils import search_limbs
 
+data_root = 'tests/data/test_vis_kp2d'
+os.makedirs(data_root, exist_ok=True)
+
 
 def test_vis_kp2d():
     image_array = np.random.randint(
         low=0, high=255, size=(2, 512, 512, 3), dtype=np.uint8)
-    array_to_images(image_array, '/tmp', img_format='%06d.png')
+    array_to_images(image_array, data_root, img_format='%06d.png')
 
     # wrong input shape
     kp2d = np.random.randint(low=0, high=255, size=(133, 2), dtype=np.uint8)
     with pytest.raises(AssertionError):
         visualize_kp2d(
             kp2d,
-            output_path='/tmp/1.mp4',
-            frame_list=['/tmp/%06d.png' % 1,
-                        '/tmp/%06d.png' % 2],
+            output_path='tests/data/test_vis_kp2d/wrong_input_shape.mp4',
+            frame_list=[
+                'tests/data/test_vis_kp2d/%06d.png' % 1,
+                'tests/data/test_vis_kp2d/%06d.png' % 2
+            ],
         )
 
     # wrong input frame path
@@ -37,8 +42,11 @@ def test_vis_kp2d():
     with pytest.raises(FileNotFoundError):
         visualize_kp2d(
             kp2d,
-            output_path='/tmp/1.mp4',
-            frame_list=['/tmp/1.png', '/tmp/2.png'])
+            output_path='tests/data/test_vis_kp2d/wrong_input_path.mp4',
+            frame_list=[
+                'tests/data/test_vis_kp2d/1.png',
+                'tests/data/test_vis_kp2d/2.png'
+            ])
 
     # wrong output path
     kp2d = np.random.randint(
@@ -46,9 +54,11 @@ def test_vis_kp2d():
     with pytest.raises(FileNotFoundError):
         visualize_kp2d(
             kp2d,
-            output_path='/123/1.mp4',
-            frame_list=['/tmp/%06d.png' % 1,
-                        '/tmp/%06d.png' % 2])
+            output_path='/NoSuchDir/1.mp4',
+            frame_list=[
+                'tests/data/test_vis_kp2d/%06d.png' % 1,
+                'tests/data/test_vis_kp2d/%06d.png' % 2
+            ])
 
     # wrong pop parts
     kp2d = np.random.randint(
@@ -56,9 +66,11 @@ def test_vis_kp2d():
     with pytest.raises(AssertionError):
         visualize_kp2d(
             kp2d,
-            output_path='/tmp/1.mp4',
-            frame_list=['/tmp/%06d.png' % 1,
-                        '/tmp/%06d.png' % 2],
+            output_path='tests/data/test_vis_kp2d/wrong_pop_parts.mp4',
+            frame_list=[
+                'tests/data/test_vis_kp2d/%06d.png' % 1,
+                'tests/data/test_vis_kp2d/%06d.png' % 2
+            ],
             pop_parts=['rubbish'])
 
     # wrong data_source
@@ -66,9 +78,11 @@ def test_vis_kp2d():
     with pytest.raises(IndexError):
         visualize_kp2d(
             kp2d,
-            output_path='/tmp/1.mp4',
-            frame_list=['/tmp/%06d.png' % 1,
-                        '/tmp/%06d.png' % 2],
+            output_path='tests/data/test_vis_kp2d/wrong_data_source.mp4',
+            frame_list=[
+                'tests/data/test_vis_kp2d/%06d.png' % 1,
+                'tests/data/test_vis_kp2d/%06d.png' % 2
+            ],
             data_source='mmpose',
         )
 
@@ -76,33 +90,39 @@ def test_vis_kp2d():
     kp2d = np.random.randint(low=0, high=16, size=(10, 133, 2), dtype=np.uint8)
     visualize_kp2d(
         kp2d,
-        output_path='/tmp/1.mp4',
-        frame_list=['/tmp/%06d.png' % 1,
-                    '/tmp/%06d.png' % 2],
+        output_path='tests/data/test_vis_kp2d/test_shape.mp4',
+        frame_list=[
+            'tests/data/test_vis_kp2d/%06d.png' % 1,
+            'tests/data/test_vis_kp2d/%06d.png' % 2
+        ],
     )
-    assert video_to_array('/tmp/1.mp4').shape
+    assert video_to_array('tests/data/test_vis_kp2d/test_shape.mp4').shape
 
     # test multi-person shape
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 2, 133, 2), dtype=np.uint8)
     visualize_kp2d(
         kp2d,
-        output_path='/tmp/1.mp4',
-        frame_list=['/tmp/%06d.png' % 1,
-                    '/tmp/%06d.png' % 2],
+        output_path='tests/data/test_vis_kp2d/test_multi.mp4',
+        frame_list=[
+            'tests/data/test_vis_kp2d/%06d.png' % 1,
+            'tests/data/test_vis_kp2d/%06d.png' % 2
+        ],
     )
-    assert video_to_array('/tmp/1.mp4').shape
+    assert video_to_array('tests/data/test_vis_kp2d/test_multi.mp4').shape
 
     # test shape with confidence
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 133, 3), dtype=np.uint8)
     visualize_kp2d(
         kp2d,
-        output_path='/tmp/1.mp4',
-        frame_list=['/tmp/%06d.png' % 1,
-                    '/tmp/%06d.png' % 2],
+        output_path='tests/data/test_vis_kp2d/test_confidence.mp4',
+        frame_list=[
+            'tests/data/test_vis_kp2d/%06d.png' % 1,
+            'tests/data/test_vis_kp2d/%06d.png' % 2
+        ],
     )
-    assert video_to_array('/tmp/1.mp4').shape
+    assert video_to_array('tests/data/test_vis_kp2d/test_confidence.mp4').shape
 
     # visualize single frame
     kp2d = np.random.randint(low=0, high=255, size=(1, 17, 2), dtype=np.uint8)
@@ -154,20 +174,22 @@ def test_vis_kp2d():
             font_size=0.5)
 
     # test output folder
-    output_folder = '/tmp/1/'
+    output_folder = 'tests/data/test_vis_kp2d/1/'
     kp2d = np.random.randint(low=0, high=16, size=(10, 133, 2), dtype=np.uint8)
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
     visualize_kp2d(
         kp2d,
         output_path=output_folder,
-        frame_list=['/tmp/%06d.png' % 1,
-                    '/tmp/%06d.png' % 2],
+        frame_list=[
+            'tests/data/test_vis_kp2d/%06d.png' % 1,
+            'tests/data/test_vis_kp2d/%06d.png' % 2
+        ],
     )
     assert images_to_array(output_folder).shape
 
     # test output folder same as input folder
-    output_folder = '/tmp/1/'
+    output_folder = 'tests/data/test_vis_kp2d/1/'
     kp2d = np.random.randint(low=0, high=16, size=(10, 133, 2), dtype=np.uint8)
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
