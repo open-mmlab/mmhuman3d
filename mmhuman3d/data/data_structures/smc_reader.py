@@ -215,7 +215,7 @@ class SMCReader:
                 self.__map_color_to_depth__(
                     kinect_id, frame_id, threshold=threshold
                 )
-            depth = self.get_kinect_depth(kinect_id, frame_id)
+            depth = self.get_kinect_depth(kinect_id, frame_id)[0]
             return mapped_color, depth
         else:
             print('Model {} is not supported...'.format(mode))
@@ -298,8 +298,8 @@ class SMCReader:
             device_id)) @ self.get_kinect_color_extrinsics(device_id)
 
     def __map_color_to_depth__(self, device_id, frame_id, threshold=100):
-        color_image = self.get_kinect_color(device_id, frame_id)
-        depth_image = self.get_kinect_depth(device_id, frame_id)
+        color_image = self.get_kinect_color(device_id, frame_id)[0]
+        depth_image = self.get_kinect_depth(device_id, frame_id)[0]
         color_intrinsic = self.get_kinect_color_intrinsics(device_id)
         depth_intrinsic = self.get_kinect_depth_intrinsics(device_id)
 
