@@ -10,7 +10,11 @@ from typing import Iterable, List, NoReturn, Optional, Tuple, Union
 
 import numpy as np
 
-from mmhuman3d.utils.path_utils import check_path_existence, check_path_suffix
+from mmhuman3d.utils.path_utils import (
+    Existence,
+    check_path_existence,
+    check_path_suffix,
+)
 
 
 def array_to_video(
@@ -40,10 +44,8 @@ def array_to_video(
         raise TypeError('Input should be np.ndarray.')
     assert image_array.ndim == 4
     assert image_array.shape[-1] == 3
-    exist_result = check_path_existence(output_path, 'file')
-    suffix_result = \
-        check_path_suffix(output_path, ['.mp4'])
-    if not (exist_result != 1 and suffix_result == 0):
+    if not (check_path_suffix(output_path, ['.mp4'])
+            and check_path_existence(output_path) != Existence.MissingParent):
         raise FileNotFoundError('Wrong output file format.')
     if resolution:
         width, height = resolution
@@ -117,9 +119,9 @@ def array_to_images(
         NoReturn
     """
     exist_result = check_path_existence(output_folder, 'directory')
-    if exist_result == 1:
+    if exist_result == Existence.MissingParent:
         raise FileNotFoundError('Wrong output path.')
-    elif exist_result == 2:
+    elif exist_result == Existence.FolderNotExist:
         os.mkdir(output_folder)
 
     if not isinstance(image_array, np.ndarray):
@@ -185,9 +187,9 @@ def video_to_array(
         np.ndarray: shape will be (f * h * w * 3).
     """
     exist_result = check_path_existence(input_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(input_path, ['.mp4', 'mkv', 'avi', '.gif'])
-    if not (exist_result == 0 and suffix_result == 0):
+    if not (exist_result == Existence.Exist and suffix_matched):
         raise FileNotFoundError('Wrong input path.')
     info = vid_info_reader(input_path)
     if resolution:
@@ -251,7 +253,7 @@ def images_to_array(input_folder: str,
     """
     input_folderinfo = Path(input_folder)
     exist_result = check_path_existence(input_folder, 'directory')
-    if not exist_result == 0:
+    if not exist_result == Existence.Exist:
         raise FileNotFoundError('Wrong input folder.')
 
     info = vid_info_reader(f'{input_folder}/{img_format}' % 1)
@@ -337,9 +339,9 @@ class vid_info_reader(object):
             NoReturn.
         """
         exist_result = check_path_existence(input_path, 'file')
-        suffix_result = \
+        suffix_matched = \
             check_path_suffix(input_path, ['.mp4', '.gif', '.png', '.jpg'])
-        if not (exist_result == 0 and suffix_result == 0):
+        if not (exist_result == Existence.Exist and suffix_matched):
             raise FileNotFoundError('Wrong input path.')
         cmd = [
             'ffprobe', '-show_format', '-show_streams', '-of', 'json',
@@ -390,15 +392,15 @@ def video_to_gif(
         NoReturn.
     """
     exist_result = check_path_existence(input_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(input_path, ['.mp4'])
-    if not (exist_result == 0 and suffix_result == 0):
+    if not (exist_result == Existence.Exist and suffix_matched):
         raise FileNotFoundError('Wrong input path.')
 
     exist_result = check_path_existence(output_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(output_path, ['.gif'])
-    if not (exist_result != 1 and suffix_result == 0):
+    if not (exist_result != Existence.MissingParent and suffix_matched):
         raise FileNotFoundError('Wrong output path.')
     info = vid_info_reader(input_path)
     if resolution:
@@ -436,15 +438,15 @@ def video_to_images(
         NoReturn
     """
     exist_result = check_path_existence(input_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(input_path, ['.mp4', '.gif'])
-    if not (exist_result == 0 and suffix_result == 0):
+    if not (exist_result == Existence.Exist and suffix_matched):
         raise FileNotFoundError('Wrong input path.')
 
     exist_result = check_path_existence(output_folder, 'directory')
-    if exist_result == 1:
+    if exist_result == Existence.MissingParent:
         raise FileNotFoundError('Wrong output path.')
-    elif exist_result == 2:
+    elif exist_result == Existence.FolderNotExist:
         os.mkdir(output_folder)
 
     command = [
@@ -490,13 +492,13 @@ def images_to_video(
     """
     input_folderinfo = Path(input_folder)
     exist_result = check_path_existence(input_folder, 'directory')
-    if not exist_result == 0:
+    if not exist_result == Existence.Exist:
         raise FileNotFoundError('Wrong input folder.')
 
     exist_result = check_path_existence(output_path, 'directory')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(output_path, ['.mp4'])
-    if not (suffix_result == 0 and exist_result != 1):
+    if not (suffix_matched and exist_result != Existence.MissingParent):
         raise FileNotFoundError('Wrong output path.')
 
     temp_input_folder = None
@@ -590,13 +592,13 @@ def images_to_gif(
     """
     input_folderinfo = Path(input_folder)
     exist_result = check_path_existence(input_folder, 'directory')
-    if not exist_result == 0:
+    if not exist_result == Existence.Exist:
         raise FileNotFoundError('Wrong input folder.')
 
     exist_result = check_path_existence(output_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(output_path, ['.gif'])
-    if not (suffix_result == 0 and exist_result != 1):
+    if not (suffix_matched and exist_result != Existence.MissingParent):
         raise FileNotFoundError('Wrong output path.')
 
     temp_input_folder = None
@@ -677,15 +679,15 @@ def gif_to_video(
     """
     input_pathinfo = Path(input_path)
     exist_result = check_path_existence(input_pathinfo, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(input_pathinfo, ['.gif'])
-    if not (exist_result == 0 and suffix_result == 0):
+    if not (exist_result == Existence.Exist and suffix_matched):
         raise FileNotFoundError('Wrong input path.')
 
     exist_result = check_path_existence(output_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(output_path, ['.mp4'])
-    if not (exist_result != 1 and suffix_result == 0):
+    if not (exist_result != Existence.MissingParent and suffix_matched):
         raise FileNotFoundError('Wrong output path.')
 
     command = [
@@ -729,15 +731,15 @@ def gif_to_images(
         NoReturn
     """
     exist_result = check_path_existence(input_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(input_path, ['.gif'])
-    if not (exist_result == 0 and suffix_result == 0):
+    if not (exist_result == Existence.Exist and suffix_matched):
         raise FileNotFoundError('Wrong input path.')
 
     exist_result = check_path_existence(output_folder, 'directory')
-    if exist_result == 1:
+    if exist_result == Existence.MissingParent:
         raise FileNotFoundError('Wrong output path.')
-    elif exist_result == 2:
+    elif exist_result == Existence.FolderNotExist:
         os.mkdir(output_folder)
     command = [
         'ffmpeg', '-i', input_path, '-r',
@@ -776,13 +778,13 @@ def spatial_crop_video(
         NoReturn
     """
     exist_result = check_path_existence(input_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(input_path, ['.mp4', '.gif'])
-    if not (exist_result == 0 and suffix_result == 0):
+    if not (exist_result == Existence.Exist and suffix_matched):
         raise FileNotFoundError('Wrong input path.')
 
     exist_result = check_path_existence(output_path, 'file')
-    if exist_result == 1:
+    if exist_result == Existence.MissingParent:
         raise FileNotFoundError('Wrong output path.')
     assert len(box) == 4
     x, y, w, h = box
@@ -840,15 +842,15 @@ def spatial_concat_video(input_path_list: List[str],
     assert (array[0] * array[1]) >= len(input_path_list)
     for path in input_path_list:
         exist_result = check_path_existence(path, 'file')
-        suffix_result =  \
+        suffix_matched =  \
             check_path_suffix(path, ['.mp4'])
-        if not (exist_result == 0 and suffix_result == 0):
+        if not (exist_result == Existence.Exist and suffix_matched):
             raise FileNotFoundError('Wrong input file path.')
 
     exist_result = check_path_existence(output_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(output_path, ['.mp4'])
-    if not (exist_result != 1 and suffix_result == 0):
+    if not (exist_result != Existence.MissingParent and suffix_matched):
         raise FileNotFoundError('Wrong output path.')
     command = ['ffmpeg']
     width, height = resolution
@@ -916,15 +918,15 @@ def temporal_crop_video(
         NoReturn
     """
     exist_result = check_path_existence(input_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(input_path, ['.mp4', '.gif'])
-    if not (exist_result == 0 and suffix_result == 0):
+    if not (exist_result == Existence.Exist and suffix_matched):
         raise FileNotFoundError('Wrong input path.')
 
     exist_result = check_path_existence(output_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(output_path, ['.mp4', '.gif'])
-    if not (exist_result != 1 and suffix_result == 0):
+    if not (exist_result != Existence.MissingParent and suffix_matched):
         raise FileNotFoundError('Wrong output path.')
     info = vid_info_reader(input_path)
     num_frames, time = int(info['nb_frames']), float(info['duration'])
@@ -976,15 +978,15 @@ def temporal_concat_video(input_path_list: List[str],
     """
     for path in input_path_list:
         exist_result = check_path_existence(path, 'file')
-        suffix_result = \
+        suffix_matched = \
             check_path_suffix(path, ['.mp4', '.gif'])
-        if not (exist_result == 0 and suffix_result == 0):
+        if not (exist_result == Existence.Exist and suffix_matched):
             raise FileNotFoundError('Wrong input file path.')
 
     exist_result = check_path_existence(output_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(output_path, ['.mp4', '.gif'])
-    if not (exist_result != 1 and suffix_result == 0):
+    if not (exist_result != Existence.MissingParent and suffix_matched):
         raise FileNotFoundError('Wrong output path.')
     width, height = resolution
     command = ['ffmpeg']
@@ -1039,15 +1041,15 @@ def compress_video(input_path: str,
     input_pathinfo = Path(input_path)
 
     exist_result = check_path_existence(input_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(input_path, ['.mp4', '.gif'])
-    if not (exist_result == 0 and suffix_result == 0):
+    if not (exist_result == Existence.Exist and suffix_matched):
         raise FileNotFoundError('Wrong input path.')
 
     exist_result = check_path_existence(output_path, 'file')
-    suffix_result = \
+    suffix_matched = \
         check_path_suffix(output_path, ['.mp4', '.gif'])
-    if not (exist_result != 1 and suffix_result == 0):
+    if not (exist_result != Existence.MissingParent and suffix_matched):
         raise FileNotFoundError('Wrong output path.')
     info = vid_info_reader(input_path)
 
