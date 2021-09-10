@@ -36,17 +36,21 @@ def array_to_video(
     Returns:
         NoReturn.
     """
-    output_pathinfo = Path(output_path)
     if not isinstance(image_array, np.ndarray):
         raise TypeError('Input should be np.ndarray.')
     assert image_array.ndim == 4
     assert image_array.shape[-1] == 3
-    if not (output_pathinfo.suffix.lower() in ['.mp4']
-            and output_pathinfo.parent.is_dir()):
+    exist_result = check_path_existence(output_path, 'file')
+    suffix_result = \
+        check_path_suffix(output_path, ['.mp4'])
+    if not (exist_result != 1 and suffix_result == 0):
         raise FileNotFoundError('Wrong output file format.')
     if resolution:
         width, height = resolution
+        width += width % 2
+        height += height % 2
     else:
+        image_array = pad_for_libx264(image_array)
         height, width = image_array.shape[1], image_array.shape[2]
     command = [
         'ffmpeg',
@@ -543,6 +547,8 @@ def images_to_video(
     ]
     if resolution:
         width, height = resolution
+        width += width % 2
+        height += height % 2
         command.insert(1, '-s')
         command.insert(2, '%dx%d' % (width, height))
     print(f'Running \"{" ".join(command)}\"')
@@ -935,6 +941,8 @@ def temporal_crop_video(
     ]
     if resolution:
         width, height = resolution
+        width += width % 2
+        height += height % 2
         command.insert(1, '-s')
         command.insert(2, '%dx%d' % (width, height))
     print(f'Running \"{" ".join(command)}\"')
@@ -1053,16 +1061,66 @@ def compress_video(input_path: str,
             'temp_file' + input_pathinfo.suffix)
     else:
         temp_outpath = output_path
+    new_width = int(width / down_sample_scale)
+    new_width += new_width % 2
+    new_height = int(height / down_sample_scale)
+    new_height += new_height % 2
     command = [
         'ffmpeg', '-y', '-i', input_path, '-loglevel', 'error', '-b:v',
         str(bit_rate / (compress_rate * down_sample_scale)), '-r',
         str(float(fps)), '-t',
         str(duration), '-s',
-        '%dx%d' %
-        (int(width / down_sample_scale), int(height / down_sample_scale)),
-        temp_outpath
+        '%dx%d' % (new_width, new_height), temp_outpath
     ]
     print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
     if (output_path == input_path) or (not output_path):
         subprocess.call(['mv', '-f', temp_outpath, input_path])
+
+
+def pad_for_libx264(image_array):
+    """Pad zeros if width or height of image_array is not divisible by 2.
+    Otherwise you will get.
+
+    \"[libx264 @ 0x1b1d560] width not divisible by 2 \"
+
+    Args:
+        image_array (np.ndarray):
+            Image or images load by cv2.imread().
+            Possible shapes:
+            1. [height, width]
+            2. [height, width, channels]
+            3. [images, height, width]
+            4. [images, height, width, channels]
+
+    Returns:
+        np.ndarray:
+            A image with both edges divisible by 2.
+    """
+    if image_array.ndim == 2 or \
+            (image_array.ndim == 3 and image_array.shape[2] == 3):
+        hei_index = 0
+        wid_index = 1
+    elif image_array.ndim == 4 or \
+            (image_array.ndim == 3 and image_array.shape[2] != 3):
+        hei_index = 1
+        wid_index = 2
+    else:
+        return image_array
+    hei_pad = image_array.shape[hei_index] % 2
+    wid_pad = image_array.shape[wid_index] % 2
+    if hei_pad + wid_pad > 0:
+        pad_width = []
+        for dim_index in range(image_array.ndim):
+            if dim_index == hei_index:
+                pad_width.append((0, hei_pad))
+            elif dim_index == wid_index:
+                pad_width.append((0, wid_pad))
+            else:
+                pad_width.append((0, 0))
+        values = 0
+        image_array = \
+            np.pad(image_array,
+                   pad_width,
+                   mode='constant', constant_values=values)
+    return image_array

@@ -13,6 +13,7 @@ from mmhuman3d.utils.ffmpeg_utils import (
     images_to_array,
     images_to_gif,
     images_to_video,
+    pad_for_libx264,
     spatial_concat_video,
     spatial_crop_video,
     temporal_concat_video,
@@ -24,6 +25,28 @@ from mmhuman3d.utils.ffmpeg_utils import (
 )
 
 root = 'tests/data/ffmpeg_test'
+
+
+def test_pad():
+    gray_image = np.ones(shape=[25, 45], dtype=np.uint8)
+    pad_gray_image = pad_for_libx264(gray_image)
+    assert pad_gray_image.shape[0] % 2 == 0
+    assert pad_gray_image.shape[1] % 2 == 0
+
+    rgb_image = np.ones(shape=[25, 45, 3], dtype=np.uint8)
+    pad_rgb_image = pad_for_libx264(rgb_image)
+    assert pad_rgb_image.shape[0] % 2 == 0
+    assert pad_rgb_image.shape[1] % 2 == 0
+
+    gray_array = np.ones(shape=[11, 25, 45], dtype=np.uint8)
+    pad_gray_array = pad_for_libx264(gray_array)
+    assert pad_gray_array.shape[1] % 2 == 0
+    assert pad_gray_array.shape[2] % 2 == 0
+
+    rgb_array = np.ones(shape=[11, 25, 45, 3], dtype=np.uint8)
+    pad_rgb_array = pad_for_libx264(rgb_array)
+    assert pad_rgb_array.shape[1] % 2 == 0
+    assert pad_rgb_array.shape[2] % 2 == 0
 
 
 def test_generate_data():
@@ -72,8 +95,10 @@ def test_array_saver():
         low=0, high=255, size=(30, 512, 512, 3), dtype=np.uint8)
     array_to_images(v, osp.join(root, 'img_folder_saver'))
     array_to_video(v, osp.join(root, 'test_saver.mp4'))
+    array_to_video(v[:, :-1, :-1, :], osp.join(root, 'test_even.mp4'))
     assert os.path.isfile(osp.join(root, 'test_saver.mp4'))
     assert os.path.isfile(osp.join(root, 'img_folder_saver', '%06d.png' % 1))
+    assert os.path.isfile(osp.join(root, 'test_even.mp4'))
 
 
 def test_image_reader():
