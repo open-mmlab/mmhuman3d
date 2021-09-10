@@ -14,7 +14,11 @@ from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
 )
 from mmhuman3d.utils.ffmpeg_utils import images_to_video
 from mmhuman3d.utils.keypoint_utils import get_different_colors, search_limbs
-from mmhuman3d.utils.path_utils import check_path_existence, check_path_suffix
+from mmhuman3d.utils.path_utils import (
+    Existence,
+    check_path_existence,
+    check_path_suffix,
+)
 
 
 def plot_kp2d_frame(kp2d_person: np.ndarray,
@@ -183,24 +187,24 @@ def _prepare_limb_palette(limbs, palette, pop_parts, data_source, mask):
 
 def _check_output_path(output_path):
     exist_result = check_path_existence(output_path, path_type='auto')
-    if exist_result == 1:
+    if exist_result == Existence.MissingParent:
         raise FileNotFoundError(f'Its parent folder does not exist:\
                     {output_path}')
-    elif exist_result == 2:
+    elif exist_result == Existence.FolderNotExist:
         os.mkdir(output_path)
-    elif exist_result == 3:
-        suffix_result = \
+    elif exist_result == Existence.FileNotExist:
+        suffix_matched = \
             check_path_suffix(output_path, allowed_suffix=['.mp4'])
-        if suffix_result == 1:
+        if not suffix_matched:
             raise FileNotFoundError(
                 f'The output file should be .mp4: {output_path}')
     # output_path is a directory
-    if check_path_suffix(output_path, []) == 0:
+    if check_path_suffix(output_path, []):
         temp_folder = output_path
         os.makedirs(temp_folder, exist_ok=True)
     else:
         temp_folder = output_path + '_temp_images'
-        if check_path_existence(temp_folder, 'directory') == 0:
+        if check_path_existence(temp_folder, 'directory') == Existence.Exist:
             shutil.rmtree(temp_folder)
         os.makedirs(temp_folder, exist_ok=False)
     return temp_folder
@@ -208,8 +212,8 @@ def _check_output_path(output_path):
 
 def _check_frame_path(frame_list):
     for frame_path in frame_list:
-        if check_path_existence(frame_path, 'file') != 0 or \
-                check_path_suffix(frame_path, ['.png', '.jpg', '.jpeg']) != 0:
+        if check_path_existence(frame_path, 'file') != Existence.Exist or \
+                 not check_path_suffix(frame_path, ['.png', '.jpg', '.jpeg']):
             raise FileNotFoundError(
                 f'The frame should be .png or .jp(e)g: {frame_path}')
 
@@ -236,7 +240,8 @@ class _CavasProducer:
         self.kp2d = kp2d
         self.resolution = resolution
         if len(self.frame_list) > 1 and \
-                check_path_existence(self.frame_list[0], 'file') == 0:
+                check_path_existence(
+                    self.frame_list[0], 'file') == Existence.Exist:
             tmp_image_array = cv2.imread(self.frame_list[0])
             self.auto_resolution = \
                 [tmp_image_array.shape[1], tmp_image_array.shape[0]]
@@ -387,7 +392,7 @@ def visualize_kp2d(kp2d: np.ndarray,
                         0.5 * h / 500,
                         np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
         # write the frame with opencv
-        if check_path_suffix(output_path, ['.mp4']) == 0:
+        if check_path_suffix(output_path, ['.mp4']):
             frame_path = \
                 os.path.join(temp_folder, f'{frame_index:06d}.png')
         else:
@@ -395,7 +400,7 @@ def visualize_kp2d(kp2d: np.ndarray,
                 os.path.join(temp_folder, Path(frame_list[frame_index]).name)
         cv2.imwrite(frame_path, image_array)
     # convert frames to video
-    if check_path_suffix(output_path, ['.mp4']) == 0:
+    if check_path_suffix(output_path, ['.mp4']):
         images_to_video(
             input_folder=temp_folder,
             output_path=output_path,
