@@ -3,6 +3,8 @@ import os
 
 from mmhuman3d.data.preprocessors.coco_pre import coco_extract
 from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
+from mmhuman3d.data.preprocessors.lsp_extended_pre import lsp_extended_extract
+from mmhuman3d.data.preprocessors.lsp_pre import lsp_extract
 from mmhuman3d.data.preprocessors.mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
 from mmhuman3d.data.preprocessors.mpii_pre import mpii_extract
 from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
@@ -44,7 +46,8 @@ def main():
 
     if args.datasets == ['all']:
         args.datasets = [
-            'coco', '3dpw', 'mpii', 'h36m', 'mpi_inf_3dhp', 'up3d'
+            'coco', '3dpw', 'mpii', 'h36m', 'lsp_original', 'lsp_dataset',
+            'lsp_extended', 'mpi_inf_3dhp', 'up3d'
         ]
 
     if 'coco' in args.datasets:
@@ -85,6 +88,27 @@ def main():
         mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'train')
         mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'test')
         print('Mpi_inf_3dhp preprocess finished!')
+
+    if 'lsp_original' in args.datasets:
+        print('******')
+        print('Preprocessing lsp_original ...')
+        LSP_ORIGINAL_ROOT = os.path.join(root_path, 'lsp_dataset_original')
+        lsp_extract(LSP_ORIGINAL_ROOT, output_path, 'train')
+        print('LSP_original (train) preprocess finished!')
+
+    if 'lsp_dataset' in args.datasets:
+        print('******')
+        print('Preprocessing lsp_dataset ...')
+        LSP_ROOT = os.path.join(root_path, 'lsp_dataset')
+        lsp_extract(LSP_ROOT, output_path, 'test')
+        print('LSP_dataset (test) preprocess finished!')
+
+    if 'lsp_extended' in args.datasets:
+        print('******')
+        print('Preprocessing lsp_extended ...')
+        LSP_EXTENDED_ROOT = os.path.join(root_path, 'hr-lspet')
+        lsp_extended_extract(LSP_EXTENDED_ROOT, output_path)
+        print('LSP_extended (train) preprocess finished!')
 
     if 'up3d' in args.datasets:
         print('******')
