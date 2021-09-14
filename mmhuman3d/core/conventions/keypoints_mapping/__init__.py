@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
+    agora,
     coco,
     h36m,
     lsp,
@@ -16,6 +17,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 )
 
 KEYPOINTS_FACTORY = {
+    'agora': agora.AGORA_KEYPOINTS,
     'coco': coco.COCO_KEYPOINTS,
     'smplx': smplx.SMPLX_KEYPOINTS,
     'smpl': smpl.SMPL_KEYPOINTS,
