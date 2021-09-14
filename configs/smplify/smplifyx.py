@@ -1,6 +1,6 @@
 smplifyx_stages = {
     'Stage 1': {
-        'num_iter': 1,
+        'num_iter': 10,
         'fit_global_orient': True,
         'fit_transl': True,
         'fit_body_pose': False,
@@ -12,16 +12,16 @@ smplifyx_stages = {
         'fit_leye_pose': False,
         'fit_reye_pose': False,
         'joint_weights': {
-            'body_weight': 1.0,
+            'body_weight': 5.0,
             'use_shoulder_hip_only': True,
             'hand_weight': 0.0,
             'face_weight': 0.0
         }
     },
     'Stage 2': {
-        'num_iter': 1,
-        'fit_global_orient': False,
-        'fit_transl': False,
+        'num_iter': 5,
+        'fit_global_orient': True,
+        'fit_transl': True,
         'fit_body_pose': True,
         'fit_betas': True,
         'fit_left_hand_pose': False,
@@ -31,16 +31,16 @@ smplifyx_stages = {
         'fit_leye_pose': False,
         'fit_reye_pose': False,
         'joint_weights': {
-            'body_weight': 1.0,
+            'body_weight': 5.0,
             'use_shoulder_hip_only': False,
             'hand_weight': 0.0,
             'face_weight': 0.0
         }
     },
     'Stage 3': {
-        'num_iter': 1,
-        'fit_global_orient': False,
-        'fit_transl': False,
+        'num_iter': 3,
+        'fit_global_orient': True,
+        'fit_transl': True,
         'fit_body_pose': True,
         'fit_betas': True,
         'fit_left_hand_pose': True,
@@ -50,10 +50,10 @@ smplifyx_stages = {
         'fit_leye_pose': False,
         'fit_reye_pose': False,
         'joint_weights': {
-            'body_weight': 1.0,
+            'body_weight': 10.0,
             'use_shoulder_hip_only': False,
             'hand_weight': 1.0,
-            'face_weight': 0.0
+            'face_weight': 1.0
         }
     }
 }
@@ -73,28 +73,29 @@ smplifyx_opt_config = {
 
 keypoints_2d_loss_config = {
     'type': 'KeypointMSELoss',
-    'loss_weight': 0.0,
+    'loss_weight': 0,
     'reduction': 'sum',
     'sigma': 100
 }
 
 keypoints_3d_loss_config = {
     'type': 'KeypointMSELoss',
-    'loss_weight': 1.0,
+    'loss_weight': 10,
     'reduction': 'sum',
     'sigma': 100
 }
 
 shape_prior_loss_config = {
     'type': 'ShapePriorLoss',
-    'loss_weight': 1.0,
+    'loss_weight': 1,
     'reduction': 'sum'
 }
 
 joint_prior_loss_config = {
     'type': 'JointPriorLoss',
-    'loss_weight': 0.0,
+    'loss_weight': 20,
     'reduction': 'sum',
-    'spine': False,
-    'use_full_body': False
+    'smooth_spine': True,
+    'smooth_spine_loss_weight': 20,
+    'use_full_body': True
 }

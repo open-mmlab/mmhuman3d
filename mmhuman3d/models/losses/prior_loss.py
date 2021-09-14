@@ -1,9 +1,13 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from mmhuman3d.utils.transforms import aa_to_rot6d
+from mmhuman3d.core.conventions.joints_mapping.standard_joint_angles import (
+    STANDARD_JOINT_ANGLE_LIMITS,
+    TRANSFORMATION_AA_TO_SJA,
+    TRANSFORMATION_SJA_TO_AA,
+)
+from mmhuman3d.utils.transforms import aa_to_rot6d, aa_to_sja
 from ..builder import LOSSES
 
 
@@ -65,54 +69,30 @@ class JointPriorLoss(nn.Module):
             scalar. Options are "none", "mean" and "sum".
         loss_weight (float, optional): The weight of the loss. Defaults to 1.0
         use_full_body (bool, optional): Use full set of joint constraints
-        spine (bool, optional): Limit rotation of 3 spines joints
+            (in standard joint angles).
+        smooth_spine (bool, optional): Ensuring smooth spine rotations
+        smooth_spine_loss_weight (float, optional): An additional weight
+            factor multiplied on smooth spine loss
     """
 
     def __init__(self,
                  reduction='mean',
                  loss_weight=1.0,
                  use_full_body=False,
-                 spine=False):
+                 smooth_spine=False,
+                 smooth_spine_loss_weight=1.0):
         super().__init__()
         assert reduction in (None, 'none', 'mean', 'sum')
         self.reduction = reduction
         self.loss_weight = loss_weight
         self.use_full_body = use_full_body
-        self.spine = spine
+        self.smooth_spine = smooth_spine
+        self.smooth_spine_loss_weight = smooth_spine_loss_weight
 
         if self.use_full_body:
-            # all indices in body_pose
-
-            no_angle_prior_idxs = [
-                0, 3
-            ]  # no pen: L hip 1st angle, R hip 1st angle
-            pos_angle_prior_idxs = [
-                46
-            ]  # penalize extreme positive: L shoulder 2nd angle
-            neg_angle_prior_idxs = [
-                6, 49
-            ]  # penalize extreme negative: lower spine 1st, R shoulder 2nd
-            both_angle_prior_idxs = [
-                i for i in range(0, 63) if i not in no_angle_prior_idxs +
-                pos_angle_prior_idxs + neg_angle_prior_idxs
-            ]
-
-            pos_angle_prior_idxs = torch.tensor(
-                np.array(pos_angle_prior_idxs, dtype=np.int64),
-                dtype=torch.long)
-            neg_angle_prior_idxs = torch.tensor(
-                np.array(neg_angle_prior_idxs, dtype=np.int64),
-                dtype=torch.long)
-            both_angle_prior_idxs = torch.tensor(
-                np.array(both_angle_prior_idxs, dtype=np.int64),
-                dtype=torch.long)
-            no_pen_range = torch.tensor([np.pi * 0.5], dtype=torch.float32)
-
-            self.register_buffer('pos_angle_prior_idxs', pos_angle_prior_idxs)
-            self.register_buffer('neg_angle_prior_idxs', neg_angle_prior_idxs)
-            self.register_buffer('both_angle_prior_idxs',
-                                 both_angle_prior_idxs)
-            self.register_buffer('no_pen_range', no_pen_range)  # one side
+            self.register_buffer('R_t', TRANSFORMATION_AA_TO_SJA)
+            self.register_buffer('R_t_inv', TRANSFORMATION_SJA_TO_AA)
+            self.register_buffer('sja_limits', STANDARD_JOINT_ANGLE_LIMITS)
 
     def forward(self,
                 body_pose,
@@ -137,40 +117,47 @@ class JointPriorLoss(nn.Module):
             loss_weight_override
             if loss_weight_override is not None else self.loss_weight)
 
-        joint_prior_loss = torch.exp(
-            body_pose[:, [55, 58, 12, 15]] *
-            torch.tensor([1., -1., -1, -1.], device=body_pose.device))**2
-
-        if self.spine:
-            spine_poses = body_pose[:, [9, 10, 11, 18, 19, 20, 27, 28, 29]]
-            spine_loss = torch.exp(torch.abs(spine_poses))**2
-            joint_prior_loss = torch.cat([joint_prior_loss, spine_loss],
-                                         axis=1)
-
         if self.use_full_body:
-            pos_angle_prior_angles = body_pose[:, self.pos_angle_prior_idxs]
-            pos_angle_prior_loss = F.relu(pos_angle_prior_angles -
-                                          self.no_pen_range)  # positive
-            pos_angle_prior_loss = torch.exp(pos_angle_prior_loss).pow(2)
+            batch_size = body_pose.shape[0]
+            body_pose_reshape = body_pose.reshape(batch_size, -1, 3)
+            assert body_pose_reshape.shape[1] in (21, 23)  # smpl-x, smpl
+            body_pose_reshape = body_pose_reshape[:, :21, :]
 
-            neg_angle_prior_angles = body_pose[:, self.neg_angle_prior_idxs]
-            neg_angle_prior_loss = F.relu(
-                -(neg_angle_prior_angles + self.no_pen_range))  # negative
-            neg_angle_prior_loss = torch.exp(neg_angle_prior_loss).pow(2)
+            body_pose_sja = aa_to_sja(body_pose_reshape, self.R_t,
+                                      self.R_t_inv)
 
-            both_angle_prior_angles = body_pose[:, self.both_angle_prior_idxs]
-            both_angle_prior_loss = (
-                F.relu(both_angle_prior_angles - self.no_pen_range)
-                +  # positive
-                F.relu(-(both_angle_prior_angles + self.no_pen_range))
-            )  # negative
-            both_angle_prior_loss = torch.exp(both_angle_prior_loss).pow(2)
+            lower_limits = self.sja_limits[:, :, 0]  # shape: (21, 3)
+            upper_limits = self.sja_limits[:, :, 1]  # shape: (21, 3)
 
-            joint_prior_loss = torch.cat([
-                joint_prior_loss, pos_angle_prior_loss, neg_angle_prior_loss,
-                both_angle_prior_loss
-            ],
-                                         axis=1)
+            lower_loss = (torch.exp(F.relu(lower_limits - body_pose_sja)) -
+                          1).pow(2)
+            upper_loss = (torch.exp(F.relu(body_pose_sja - upper_limits)) -
+                          1).pow(2)
+
+            standard_joint_angle_prior_loss = (lower_loss + upper_loss).view(
+                body_pose.shape[0], -1)  # shape: (n, 3)
+
+            joint_prior_loss = standard_joint_angle_prior_loss
+
+        else:
+            # default joint prior loss applied on elbows and knees
+            joint_prior_loss = (torch.exp(
+                body_pose[:, [55, 58, 12, 15]] *
+                torch.tensor([1., -1., -1, -1.], device=body_pose.device)) -
+                                1)**2
+
+        if self.smooth_spine:
+            spine1 = body_pose[:, [9, 10, 11]]
+            spine2 = body_pose[:, [18, 19, 20]]
+            spine3 = body_pose[:, [27, 28, 29]]
+            smooth_spine_loss_12 = (torch.exp(F.relu(-spine1 * spine2)) -
+                                    1).pow(2) * self.smooth_spine_loss_weight
+            smooth_spine_loss_23 = (torch.exp(F.relu(-spine2 * spine3)) -
+                                    1).pow(2) * self.smooth_spine_loss_weight
+
+            joint_prior_loss = torch.cat(
+                [joint_prior_loss, smooth_spine_loss_12, smooth_spine_loss_23],
+                axis=1)
 
         joint_prior_loss = loss_weight * joint_prior_loss
 

@@ -1,6 +1,11 @@
 from enum import Enum
 from pathlib import Path
-from typing import List, Literal
+from typing import List
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 
 def check_path_suffix(path_str: str, allowed_suffix: List[str] = []) -> bool:
