@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from mmhuman3d.data.preprocessors.agora_pre import agora_extract
 from mmhuman3d.data.preprocessors.coco_pre import coco_extract
 from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
 from mmhuman3d.data.preprocessors.lsp_extended_pre import lsp_extended_extract
@@ -46,9 +47,17 @@ def main():
 
     if args.datasets == ['all']:
         args.datasets = [
-            'coco', '3dpw', 'mpii', 'h36m', 'lsp_original', 'lsp_dataset',
-            'lsp_extended', 'mpi_inf_3dhp', 'up3d'
+            'agora', 'coco', '3dpw', 'mpii', 'h36m', 'lsp_original',
+            'lsp_dataset', 'lsp_extended', 'mpi_inf_3dhp', 'up3d'
         ]
+
+    if 'agora' in args.datasets:
+        print('******')
+        print('Preprocessing agora ...')
+        AGORA_ROOT = os.path.join(root_path, 'agora')
+        agora_extract(AGORA_ROOT, output_path, mode='train')
+        agora_extract(AGORA_ROOT, output_path, mode='validation')
+        print('Agora preprocess finished!')
 
     if 'coco' in args.datasets:
         print('******')

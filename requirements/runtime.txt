@@ -4,6 +4,8 @@ h5py
 matplotlib
 numpy
 opencv-python
+pandas
+pickle5
 scipy
 smplx
 tqdm

@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 
+from mmhuman3d.data.preprocessors.agora_pre import agora_extract
 from mmhuman3d.data.preprocessors.coco_pre import coco_extract
 from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
 from mmhuman3d.data.preprocessors.lsp_extended_pre import lsp_extended_extract
@@ -48,6 +49,12 @@ def test_preprocess():
     MPII_ROOT = os.path.join(root_path, 'mpii')
     mpii_extract(MPII_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'mpii_train.npz')
+
+    AGORA_ROOT = os.path.join(root_path, 'agora')
+    agora_extract(AGORA_ROOT, output_path, 'train')
+    agora_extract(AGORA_ROOT, output_path, 'validation')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'agora_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'agora_validation.npz')
 
     LSP_ORIGINAL_ROOT = os.path.join(root_path, 'lsp_dataset_original')
     lsp_extract(LSP_ORIGINAL_ROOT, output_path, 'train')
@@ -146,7 +153,7 @@ def test_preprocessed_npz():
                         assert smplx_dict[smplx_key].shape == (N, 3)
 
             elif k == 'meta':
-                meta_keys = ['gender']
+                meta_keys = ['gender', 'kid', 'age', 'occlusion', 'ethnicity']
                 meta_dict = npfile[k].item()
                 for meta_key in meta_dict.keys():
                     assert meta_key in meta_keys
