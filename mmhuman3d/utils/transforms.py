@@ -14,6 +14,11 @@ from pytorch3d.transforms import (
     rotation_6d_to_matrix,
 )
 
+from mmhuman3d.core.conventions.joints_mapping.standard_joint_angles import (
+    TRANSFORMATION_AA_TO_SJA,
+    TRANSFORMATION_SJA_TO_AA,
+)
+
 
 class Compose:
 
@@ -28,7 +33,8 @@ class Compose:
 
     def __call__(self,
                  rotation: Union[torch.Tensor, numpy.ndarray],
-                 convention: Optional[str] = 'xyz'):
+                 convention: Optional[str] = 'xyz',
+                 **kwargs):
         convention = convention.lower()
         if not (set(convention) == set('xyz') and len(convention) == 3):
             raise ValueError(f'Invalid convention {convention}.')
@@ -42,9 +48,9 @@ class Compose:
                 'Type of rotation should be torch.Tensor or numpy.ndarray')
         for t in self.transforms:
             if 'convention' in t.__code__.co_varnames:
-                rotation = t(rotation, convention.upper())
+                rotation = t(rotation, convention.upper(), **kwargs)
             else:
-                rotation = t(rotation)
+                rotation = t(rotation, **kwargs)
         if data_type == 'numpy':
             rotation = rotation.detach().cpu().numpy()
         return rotation
@@ -457,3 +463,84 @@ def rot6d_to_quat(
             f'Invalid input rotation_6d shape f{rotation_6d.shape}.')
     t = Compose([rotation_6d_to_matrix, matrix_to_quaternion])
     return t(rotation_6d)
+
+
+def aa_to_sja(
+    axis_angle: Union[torch.Tensor, numpy.ndarray],
+    R_t: Union[torch.Tensor, numpy.ndarray] = TRANSFORMATION_AA_TO_SJA,
+    R_t_inv: Union[torch.Tensor, numpy.ndarray] = TRANSFORMATION_SJA_TO_AA
+) -> Union[torch.Tensor, numpy.ndarray]:
+    """convert axis-angles to standard joint angles.
+
+    Args:
+        axis_angle (Union[torch.Tensor, numpy.ndarray]): input shape
+                should be (..., 21, 3), ndim of input is unlimited.
+        R_t (Union[torch.Tensor, numpy.ndarray]): input shape
+                should be (..., 21, 3, 3). Transformation matrices from
+                original axis-angle coordinate system to
+                standard joint angle coordinate system,
+                ndim of input is unlimited.
+        R_t_inv (Union[torch.Tensor, numpy.ndarray]): input shape
+                should be (..., 21, 3, 3). Transformation matrices from
+                standard joint angle coordinate system to
+                original axis-angle coordinate system,
+                ndim of input is unlimited.
+
+    Returns:
+        Union[torch.Tensor, numpy.ndarray]: shape would be (..., 3).
+    """
+
+    def _aa_to_sja(aa, R_t, R_t_inv):
+        R_aa = axis_angle_to_matrix(aa)
+        R_sja = R_t @ R_aa @ R_t_inv
+        sja = matrix_to_euler_angles(R_sja, convention='XYZ')
+        return sja
+
+    if axis_angle.shape[-2:] != (21, 3):
+        raise ValueError(
+            f'Invalid input axis angles shape f{axis_angle.shape}.')
+    if R_t.shape[-3:] != (21, 3, 3):
+        raise ValueError(f'Invalid input R_t shape f{R_t.shape}.')
+    if R_t_inv.shape[-3:] != (21, 3, 3):
+        raise ValueError(f'Invalid input R_t_inv shape f{R_t.shape}.')
+    t = Compose([_aa_to_sja])
+    return t(axis_angle, R_t=R_t, R_t_inv=R_t_inv)
+
+
+def sja_to_aa(
+    sja: Union[torch.Tensor, numpy.ndarray],
+    R_t: Union[torch.Tensor, numpy.ndarray] = TRANSFORMATION_AA_TO_SJA,
+    R_t_inv: Union[torch.Tensor, numpy.ndarray] = TRANSFORMATION_SJA_TO_AA
+) -> Union[torch.Tensor, numpy.ndarray]:
+    """convert standard joint angles to axis angles.
+
+    Args:
+        sja (Union[torch.Tensor, numpy.ndarray]): input shape
+                should be (..., 21, 3). ndim of input is unlimited.
+        R_t (Union[torch.Tensor, numpy.ndarray]): input shape
+                should be (..., 21, 3, 3). Transformation matrices from
+                original axis-angle coordinate system to
+                standard joint angle coordinate system
+        R_t_inv (Union[torch.Tensor, numpy.ndarray]): input shape
+                should be (..., 21, 3, 3). Transformation matrices from
+                standard joint angle coordinate system to
+                original axis-angle coordinate system
+
+    Returns:
+        Union[torch.Tensor, numpy.ndarray]: shape would be (..., 3).
+    """
+
+    def _sja_to_aa(sja, R_t, R_t_inv):
+        R_sja = euler_angles_to_matrix(sja, convention='XYZ')
+        R_aa = R_t_inv @ R_sja @ R_t
+        aa = quaternion_to_axis_angle(matrix_to_quaternion(R_aa))
+        return aa
+
+    if sja.shape[-2:] != (21, 3):
+        raise ValueError(f'Invalid input axis angles shape f{sja.shape}.')
+    if R_t.shape[-3:] != (21, 3, 3):
+        raise ValueError(f'Invalid input R_t shape f{R_t.shape}.')
+    if R_t_inv.shape[-3:] != (21, 3, 3):
+        raise ValueError(f'Invalid input R_t_inv shape f{R_t.shape}.')
+    t = Compose([_sja_to_aa])
+    return t(sja, R_t=R_t, R_t_inv=R_t_inv)

@@ -54,3 +54,15 @@ def test_cross_entropy_loss():
     # test soft_ce_loss with weight
     assert torch.allclose(
         loss(cls_score, label, weight=weight), torch.tensor(50.))
+
+
+def test_prior_loss():
+    loss_cfg = dict(type='JointPriorLoss', use_full_body=True, reduction='sum')
+    loss = build_loss(loss_cfg)
+
+    assert torch.allclose(loss(torch.zeros(1, 21, 3)), torch.tensor(0.))
+
+    loss_cfg = dict(type='ShapePriorLoss', reduction='sum')
+    loss = build_loss(loss_cfg)
+
+    assert torch.allclose(loss(torch.zeros(1, 10)), torch.tensor(0.))

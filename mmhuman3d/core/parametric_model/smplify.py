@@ -14,6 +14,7 @@ optional:
 11. better num_videos handling
 12. step by step visualization
 13. _optimize_stage() inheritance
+14. more flexible losses: read a dict of losses
 """
 
 import torch

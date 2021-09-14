@@ -7,6 +7,7 @@ from mmhuman3d.utils.transforms import (
     aa_to_quat,
     aa_to_rot6d,
     aa_to_rotmat,
+    aa_to_sja,
     ee_to_aa,
     ee_to_quat,
     ee_to_rot6d,
@@ -23,6 +24,7 @@ from mmhuman3d.utils.transforms import (
     rotmat_to_ee,
     rotmat_to_quat,
     rotmat_to_rot6d,
+    sja_to_aa,
 )
 
 
@@ -60,6 +62,16 @@ def test_transforms_value():
         rotmat_to_aa(torch.zeros(4))
     with pytest.raises(ValueError):
         rotmat_to_aa(torch.zeros(3, 4))
+    with pytest.raises(ValueError):
+        aa_to_sja(
+            torch.zeros(1, 3),
+            R_t=torch.eye(3, 3).unsqueeze(0).expand(1, 3, 3),
+            R_t_inv=torch.eye(3, 3).unsqueeze(0).expand(1, 3, 3))
+    with pytest.raises(ValueError):
+        sja_to_aa(
+            torch.zeros(1, 3),
+            R_t=torch.eye(3, 3).unsqueeze(0).expand(1, 3, 3),
+            R_t_inv=torch.eye(3, 3).unsqueeze(0).expand(1, 3, 3))
 
 
 def test_transforms_tensor():
@@ -68,6 +80,10 @@ def test_transforms_tensor():
     quat = torch.FloatTensor([1, 0, 0, 0])
     rotmat = torch.eye(3, 3)
     rot6d = rotmat.view(-1)[:6]
+    aa_21 = torch.zeros(21, 3)
+    sja = torch.zeros(21, 3)
+    R_t = torch.eye(3, 3).unsqueeze(0).expand(21, 3, 3)
+    R_t_inv = torch.eye(3, 3).unsqueeze(0).expand(21, 3, 3)
     # test ndims
     for _ in range(10):
         # test convention
@@ -84,11 +100,11 @@ def test_transforms_tensor():
         assert check_func(aa, aa_to_ee(aa, convention='zxy'),
                           aa.shape[:-1] + (3, ))
 
-        # test aa convension
+        # test aa convention
         assert check_func(aa, aa_to_rotmat(aa), aa.shape[:-1] + (3, 3))
         assert check_func(aa, aa_to_quat(aa), aa.shape[:-1] + (4, ))
         assert check_func(aa, aa_to_rot6d(aa), aa.shape[:-1] + (6, ))
-        # test ee convension
+        # test ee convention
         assert check_func(ee, ee_to_aa(ee, convention='xyz'),
                           ee.shape[:-1] + (3, ))
         assert check_func(ee, ee_to_rotmat(ee, convention='xyz'),
@@ -97,13 +113,13 @@ def test_transforms_tensor():
                           ee.shape[:-1] + (4, ))
         assert check_func(ee, ee_to_rot6d(ee, convention='xyz'),
                           ee.shape[:-1] + (6, ))
-        # test quat convension
+        # test quat convention
         assert check_func(quat, quat_to_aa(quat), quat.shape[:-1] + (3, ))
         assert check_func(quat, quat_to_rotmat(quat), quat.shape[:-1] + (3, 3))
         assert check_func(quat, quat_to_ee(quat, convention='xyz'),
                           quat.shape[:-1] + (3, ))
         assert check_func(quat, quat_to_rot6d(quat), quat.shape[:-1] + (6, ))
-        # test rotmat convension
+        # test rotmat convention
         assert check_func(rotmat, rotmat_to_aa(rotmat),
                           rotmat.shape[:-2] + (3, ))
         assert check_func(rotmat, rotmat_to_ee(rotmat, convention='xyz'),
@@ -112,7 +128,7 @@ def test_transforms_tensor():
                           rotmat.shape[:-2] + (4, ))
         assert check_func(rotmat, rotmat_to_rot6d(rotmat),
                           rotmat.shape[:-2] + (6, ))
-        # test rot6d convension
+        # test rot6d convention
         assert check_func(rot6d, rot6d_to_aa(rot6d), rot6d.shape[:-1] + (3, ))
         assert check_func(rot6d, rot6d_to_rotmat(rot6d),
                           rot6d.shape[:-1] + (3, 3))
@@ -120,6 +136,11 @@ def test_transforms_tensor():
                           rot6d.shape[:-1] + (4, ))
         assert check_func(rot6d, rot6d_to_ee(rot6d, convention='xyz'),
                           rot6d.shape[:-1] + (3, ))
+        # test standard joint angle convention
+        assert check_func(aa_21, aa_to_sja(aa_21, R_t=R_t, R_t_inv=R_t_inv),
+                          aa_21.shape[:-2] + (21, 3))
+        assert check_func(sja, sja_to_aa(sja, R_t=R_t, R_t_inv=R_t_inv),
+                          sja.shape[:-2] + (21, 3))
 
         # test inverse transform
         assert (aa == ee_to_aa(
@@ -154,7 +175,24 @@ def test_transforms_tensor():
         assert (rot6d == rotmat_to_rot6d(rot6d_to_rotmat(rot6d))).all()
         assert (rot6d == quat_to_rot6d(rot6d_to_quat(rot6d))).all()
         assert (rot6d == aa_to_rot6d(rot6d_to_aa(rot6d))).all()
+
+        assert (aa_21 == sja_to_aa(
+            aa_to_sja(aa_21, R_t=R_t, R_t_inv=R_t_inv),
+            R_t=R_t,
+            R_t_inv=R_t_inv)).all()
+        assert (sja == aa_to_sja(
+            sja_to_aa(sja, R_t=R_t, R_t_inv=R_t_inv), R_t=R_t,
+            R_t_inv=R_t_inv)).all()
+
         aa = aa[None]
+        ee = ee[None]
+        quat = quat[None]
+        rotmat = rotmat[None]
+        rot6d = rot6d[None]
+        aa_21 = aa_21[None]
+        sja = sja[None]
+        R_t = R_t[None]
+        R_t_inv = R_t_inv[None]
 
 
 def test_transforms_numpy():
@@ -163,6 +201,10 @@ def test_transforms_numpy():
     quat = np.array([1, 0, 0, 0], dtype=np.float32)
     rotmat = np.eye(3, 3, dtype=np.float32)
     rot6d = rotmat.reshape(-1)[:6]
+    aa_21 = np.zeros((21, 3))
+    sja = np.zeros((21, 3))
+    R_t = np.eye(3, 3).reshape(1, 3, 3).repeat(21, axis=0)
+    R_t_inv = np.eye(3, 3).reshape(1, 3, 3).repeat(21, axis=0)
     # test ndims
     for _ in range(10):
         # test convention
@@ -179,11 +221,11 @@ def test_transforms_numpy():
         assert check_func(aa, aa_to_ee(aa, convention='zxy'),
                           aa.shape[:-1] + (3, ))
 
-        # test aa convension
+        # test aa convention
         assert check_func(aa, aa_to_rotmat(aa), aa.shape[:-1] + (3, 3))
         assert check_func(aa, aa_to_quat(aa), aa.shape[:-1] + (4, ))
         assert check_func(aa, aa_to_rot6d(aa), aa.shape[:-1] + (6, ))
-        # test ee convension
+        # test ee convention
         assert check_func(ee, ee_to_aa(ee, convention='xyz'),
                           ee.shape[:-1] + (3, ))
         assert check_func(ee, ee_to_rotmat(ee, convention='xyz'),
@@ -192,13 +234,13 @@ def test_transforms_numpy():
                           ee.shape[:-1] + (4, ))
         assert check_func(ee, ee_to_rot6d(ee, convention='xyz'),
                           ee.shape[:-1] + (6, ))
-        # test quat convension
+        # test quat convention
         assert check_func(quat, quat_to_aa(quat), quat.shape[:-1] + (3, ))
         assert check_func(quat, quat_to_rotmat(quat), quat.shape[:-1] + (3, 3))
         assert check_func(quat, quat_to_ee(quat, convention='xyz'),
                           quat.shape[:-1] + (3, ))
         assert check_func(quat, quat_to_rot6d(quat), quat.shape[:-1] + (6, ))
-        # test rotmat convension
+        # test rotmat convention
         assert check_func(rotmat, rotmat_to_aa(rotmat),
                           rotmat.shape[:-2] + (3, ))
         assert check_func(rotmat, rotmat_to_ee(rotmat, convention='xyz'),
@@ -207,7 +249,7 @@ def test_transforms_numpy():
                           rotmat.shape[:-2] + (4, ))
         assert check_func(rotmat, rotmat_to_rot6d(rotmat),
                           rotmat.shape[:-2] + (6, ))
-        # test rot6d convension
+        # test rot6d convention
         assert check_func(rot6d, rot6d_to_aa(rot6d), rot6d.shape[:-1] + (3, ))
         assert check_func(rot6d, rot6d_to_rotmat(rot6d),
                           rot6d.shape[:-1] + (3, 3))
@@ -249,4 +291,13 @@ def test_transforms_numpy():
         assert (rot6d == rotmat_to_rot6d(rot6d_to_rotmat(rot6d))).all()
         assert (rot6d == quat_to_rot6d(rot6d_to_quat(rot6d))).all()
         assert (rot6d == aa_to_rot6d(rot6d_to_aa(rot6d))).all()
+
         aa = aa[None]
+        ee = ee[None]
+        quat = quat[None]
+        rotmat = rotmat[None]
+        rot6d = rot6d[None]
+        aa_21 = aa_21[None]
+        sja = sja[None]
+        R_t = R_t[None]
+        R_t_inv = R_t_inv[None]
