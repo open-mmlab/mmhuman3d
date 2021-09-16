@@ -53,3 +53,15 @@ def test_conventions():
                 assert mask.shape == torch.Size([J_dst])
                 if src_name == dst_name:
                     assert mask.all() == 1
+
+    # test original_mask
+    keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
+    original_mask = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
+    original_mask[KEYPOINTS_FACTORY['smpl'].index('left_hip')] = 0
+    _, mask_coco = convert_kps(
+        keypoints=keypoints, mask=original_mask, src='smpl', dst='coco')
+    _, mask_coco_full = convert_kps(
+        keypoints=keypoints, src='smpl', dst='coco')
+    assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] == 0
+    mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] = 1
+    assert (mask_coco == mask_coco_full).all()
