@@ -6,6 +6,7 @@ import torch
 from mmhuman3d.core.conventions.keypoints_mapping import (
     agora,
     coco,
+    coco_wholebody,
     h36m,
     lsp,
     mmpose,
@@ -19,6 +20,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 KEYPOINTS_FACTORY = {
     'agora': agora.AGORA_KEYPOINTS,
     'coco': coco.COCO_KEYPOINTS,
+    'coco_wholebody': coco_wholebody.COCO_WHOLEBODY_KEYPOINTS,
     'smplx': smplx.SMPLX_KEYPOINTS,
     'smpl': smpl.SMPL_KEYPOINTS,
     'mmpose': mmpose.MMPOSE_KEYPOINTS,

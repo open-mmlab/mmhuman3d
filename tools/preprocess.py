@@ -3,6 +3,7 @@ import os
 
 from mmhuman3d.data.preprocessors.agora_pre import agora_extract
 from mmhuman3d.data.preprocessors.coco_pre import coco_extract
+from mmhuman3d.data.preprocessors.coco_wholebody_pre import coco_wb_extract
 from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
 from mmhuman3d.data.preprocessors.lsp_extended_pre import lsp_extended_extract
 from mmhuman3d.data.preprocessors.lsp_pre import lsp_extract
@@ -47,8 +48,9 @@ def main():
 
     if args.datasets == ['all']:
         args.datasets = [
-            'agora', 'coco', '3dpw', 'mpii', 'h36m', 'lsp_original',
-            'lsp_dataset', 'lsp_extended', 'mpi_inf_3dhp', 'up3d'
+            'agora', 'coco', 'coco_wholebody', '3dpw', 'mpii', 'h36m',
+            'lsp_original', 'lsp_dataset', 'lsp_extended', 'mpi_inf_3dhp',
+            'up3d'
         ]
 
     if 'agora' in args.datasets:
@@ -65,6 +67,14 @@ def main():
         COCO_ROOT = os.path.join(root_path, 'coco')
         coco_extract(COCO_ROOT, output_path)
         print('Coco preprocess finished!')
+
+    if 'coco_wholebody' in args.datasets:
+        print('******')
+        print('Preprocessing coco_wholebody ...')
+        COCO_WHOLEBODY_ROOT = os.path.join(root_path, 'coco_wholebody')
+        coco_wb_extract(COCO_WHOLEBODY_ROOT, output_path, 'train')
+        coco_wb_extract(COCO_WHOLEBODY_ROOT, output_path, 'val')
+        print('Coco_wholebody preprocess finished!')
 
     if '3dpw' in args.datasets:
         print('******')
