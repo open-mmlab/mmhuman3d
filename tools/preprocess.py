@@ -9,6 +9,7 @@ from mmhuman3d.data.preprocessors.lsp_extended_pre import lsp_extended_extract
 from mmhuman3d.data.preprocessors.lsp_pre import lsp_extract
 from mmhuman3d.data.preprocessors.mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
 from mmhuman3d.data.preprocessors.mpii_pre import mpii_extract
+from mmhuman3d.data.preprocessors.penn_action_pre import penn_action_extract
 from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
 from mmhuman3d.data.preprocessors.up3d_pre import up3d_extract
 
@@ -50,7 +51,7 @@ def main():
         args.datasets = [
             'agora', 'coco', 'coco_wholebody', '3dpw', 'mpii', 'h36m',
             'lsp_original', 'lsp_dataset', 'lsp_extended', 'mpi_inf_3dhp',
-            'up3d'
+            'up3d', 'penn_action'
         ]
 
     if 'agora' in args.datasets:
@@ -107,6 +108,13 @@ def main():
         mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'train')
         mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'test')
         print('Mpi_inf_3dhp preprocess finished!')
+
+    if 'penn_action' in args.datasets:
+        print('******')
+        print('Preprocessing penn_action ...')
+        PENN_ACTION_ROOT = os.path.join(root_path, 'Penn_Action')
+        penn_action_extract(PENN_ACTION_ROOT, output_path)
+        print('Penn_action preprocess finished!')
 
     if 'lsp_original' in args.datasets:
         print('******')
