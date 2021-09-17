@@ -10,6 +10,7 @@ from mmhuman3d.data.preprocessors.lsp_extended_pre import lsp_extended_extract
 from mmhuman3d.data.preprocessors.lsp_pre import lsp_extract
 from mmhuman3d.data.preprocessors.mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
 from mmhuman3d.data.preprocessors.mpii_pre import mpii_extract
+from mmhuman3d.data.preprocessors.penn_action_pre import penn_action_extract
 from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
 from mmhuman3d.data.preprocessors.up3d_pre import up3d_extract
 
@@ -50,6 +51,10 @@ def test_preprocess():
     MPII_ROOT = os.path.join(root_path, 'mpii')
     mpii_extract(MPII_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'mpii_train.npz')
+
+    PENN_ACTION_ROOT = os.path.join(root_path, 'Penn_Action')
+    penn_action_extract(PENN_ACTION_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'penn_action_train.npz')
 
     AGORA_ROOT = os.path.join(root_path, 'agora')
     agora_extract(AGORA_ROOT, output_path, 'train')
