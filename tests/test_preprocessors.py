@@ -4,6 +4,7 @@ import numpy as np
 
 from mmhuman3d.data.preprocessors.agora_pre import agora_extract
 from mmhuman3d.data.preprocessors.coco_pre import coco_extract
+from mmhuman3d.data.preprocessors.coco_wholebody_pre import coco_wb_extract
 from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
 from mmhuman3d.data.preprocessors.lsp_extended_pre import lsp_extended_extract
 from mmhuman3d.data.preprocessors.lsp_pre import lsp_extract
@@ -73,6 +74,13 @@ def test_preprocess():
     up3d_extract(UP3D_ROOT, output_path, 'test')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'up3d_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'up3d_test.npz')
+
+    COCO_WHOLEBODY_ROOT = os.path.join(root_path, 'coco_wholebody')
+    coco_wb_extract(COCO_WHOLEBODY_ROOT, output_path, 'train')
+    coco_wb_extract(COCO_WHOLEBODY_ROOT, output_path, 'val')
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'coco_wholebody_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'coco_wholebody_val.npz')
 
 
 def test_preprocessed_npz():

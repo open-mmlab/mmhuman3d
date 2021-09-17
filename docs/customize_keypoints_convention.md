@@ -12,9 +12,9 @@ found it in the above folder. This is because smplx does contain all the definit
 The keypoints in different datasets while sharing the same name should have the
 exactly same semantic definitions in human body.
 
-**3. Add a new keypoin name.** If you can not find an existing keypoint in [existing
-conventions](mmhuman3d/core/conventions/keypoints_mapping) for one in
-NEW_KEYPOINTS, please list it as well but you can keep the original name.
+**3. Add a new keypoint name.** If you cannot find an existing keypoint in [existing
+conventions](mmhuman3d/core/conventions/keypoints_mapping) for a keypoint in
+NEW_KEYPOINTS, please list it as well but add a prefix to the original name to differentiate it from those with smplx correspondences.
 
 **4. Modify keypoints mapping code to add new set of keypoints into use.** Add import for NEW_KEYPOINTS.py in
 [`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L6-15), and also add one line
