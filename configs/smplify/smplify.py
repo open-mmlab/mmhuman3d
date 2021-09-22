@@ -36,14 +36,14 @@ smplify_opt_config = {
 #     'betas': (0.9, 0.999)
 # }
 
-keypoints_2d_loss_config = {
+keypoints2d_loss_config = {
     'type': 'KeypointMSELoss',
     'loss_weight': 0,
     'reduction': 'sum',
     'sigma': 100
 }
 
-keypoints_3d_loss_config = {
+keypoints3d_loss_config = {
     'type': 'KeypointMSELoss',
     'loss_weight': 10,
     'reduction': 'sum',
@@ -63,4 +63,10 @@ joint_prior_loss_config = {
     'smooth_spine': True,
     'smooth_spine_loss_weight': 20,
     'use_full_body': True
+}
+
+smooth_loss_config = {
+    'type': 'SmoothJointLoss',
+    'loss_weight': 0,
+    'reduction': 'sum'
 }

@@ -20,19 +20,21 @@ def test_smpl():
         batch_size=batch_size,
     )
 
-    smplify_gta = SMPLify(
-        body_model=smpl_body_model, use_one_betas_per_video=True, num_epochs=2)
+    smplify = SMPLify(
+        body_model=smpl_body_model, use_one_betas_per_video=True, num_epochs=1)
 
     # Generate keypoints
     output = smpl_body_model()
+
+    # TODO: support 24 smpl joints
     model_joints = output.joints[:, :24, :]
 
-    keypoints_3d = model_joints.detach().to(device=device)
-    keypoints_conf_3d = torch.ones((keypoints_3d.shape[1]), device=device)
+    keypoints3d = model_joints.detach().to(device=device)
+    keypoints3d_conf = torch.ones((keypoints3d.shape[1]), device=device)
 
     # Run SMPLify
-    smplify_output = smplify_gta(
-        keypoints_3d=keypoints_3d, keypoints_conf_3d=keypoints_conf_3d)
+    smplify_output = smplify(
+        keypoints3d=keypoints3d, keypoints3d_conf=keypoints3d_conf)
 
     for k, v in smplify_output.items():
         if isinstance(v, torch.Tensor):
@@ -53,17 +55,17 @@ def test_smplx():
         batch_size=batch_size,
     )
 
-    smplifyx_gta = SMPLifyX(
-        body_model=smpl_body_model, use_one_betas_per_video=True, num_epochs=2)
+    smplifyx = SMPLifyX(
+        body_model=smpl_body_model, use_one_betas_per_video=True, num_epochs=1)
 
     # Generate keypoints
     output = smpl_body_model()
-    keypoints_3d = output.joints.detach().to(device=device)
-    keypoints_conf_3d = torch.ones((keypoints_3d.shape[1]), device=device)
+    keypoints3d = output.joints.detach().to(device=device)
+    keypoints3d_conf = torch.ones((keypoints3d.shape[1]), device=device)
 
     # Run SMPLify-X
-    smplifyx_output = smplifyx_gta(
-        keypoints_3d=keypoints_3d, keypoints_conf_3d=keypoints_conf_3d)
+    smplifyx_output = smplifyx(
+        keypoints3d=keypoints3d, keypoints3d_conf=keypoints3d_conf)
 
     for k, v in smplifyx_output.items():
         if isinstance(v, torch.Tensor):
