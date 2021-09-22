@@ -5,25 +5,28 @@
 4. hyperparameter tuining: sigma for keypoints 3d
 5. different keypoint weight for different stages
 6. add support for 45 smpl joints (update tests also)
+7. fix default config (smplify use smplify's), also in tests/
 
 optional:
-7. optimize how to get batch_size and num_frames
-8. add default body model
-9. add model inference for param init
-10. check if SMPL layer is better
-11. better num_videos handling
-12. step by step visualization
-13. _optimize_stage() inheritance
-14. more flexible losses: read a dict of losses
+8. optimize how to get batch_size and num_frames
+9. add default body model
+10. add model inference for param init
+11. check if SMPL layer is better
+12. better num_videos handling
+13. step by step visualization
+14. _optimize_stage() inheritance
+15. more flexible losses: read a dict of losses
+16. add verbose switch
 """
 
 import torch
 from configs.smplify.smplify import smplify_opt_config, smplify_stages
 from configs.smplify.smplifyx import (
     joint_prior_loss_config,
-    keypoints_2d_loss_config,
-    keypoints_3d_loss_config,
+    keypoints2d_loss_config,
+    keypoints3d_loss_config,
     shape_prior_loss_config,
+    smooth_loss_config,
     smplifyx_opt_config,
     smplifyx_stages,
 )
@@ -66,22 +69,23 @@ class SMPLify(object):
 
     def __init__(self,
                  body_model=None,
-                 keypoints_2d_weight=1.0,
-                 keypoints_3d_weight=1.0,
+                 keypoints2d_weight=1.0,
+                 keypoints3d_weight=1.0,
                  use_one_betas_per_video=False,
                  num_epochs=20,
                  camera=default_camera,
                  stage_config=smplify_stages,
                  opt_config=smplify_opt_config,
-                 keypoints_2d_loss_config=keypoints_2d_loss_config,
-                 keypoints_3d_loss_config=keypoints_3d_loss_config,
+                 keypoints2d_loss_config=keypoints2d_loss_config,
+                 keypoints3d_loss_config=keypoints3d_loss_config,
                  shape_prior_loss_config=shape_prior_loss_config,
                  joint_prior_loss_config=joint_prior_loss_config,
+                 smooth_loss_config=smooth_loss_config,
                  device=torch.device('cuda'),
                  verbose=False):
 
-        self.keypoints_2d_weight = keypoints_2d_weight
-        self.keypoints_3d_weight = keypoints_3d_weight
+        self.keypoints2d_weight = keypoints2d_weight
+        self.keypoints3d_weight = keypoints3d_weight
         self.use_one_betas_per_video = use_one_betas_per_video
         self.num_epochs = num_epochs
         self.stage_config = stage_config
@@ -89,16 +93,18 @@ class SMPLify(object):
         self.camera = camera
         self.device = device
         self.body_model = body_model.to(self.device)
-        self.keypoints_2d_mse_loss = build_loss(keypoints_2d_loss_config)
-        self.keypoints_3d_mse_loss = build_loss(keypoints_3d_loss_config)
+        self.keypoints2d_mse_loss = build_loss(keypoints2d_loss_config)
+        self.keypoints3d_mse_loss = build_loss(keypoints3d_loss_config)
         self.shape_prior_loss = build_loss(shape_prior_loss_config)
         self.joint_prior_loss = build_loss(joint_prior_loss_config).to(device)
+        self.smooth_loss = build_loss(smooth_loss_config).to(device)
+        self.verbose = verbose
 
     def __call__(self,
-                 keypoints_2d=None,
-                 keypoints_conf_2d=None,
-                 keypoints_3d=None,
-                 keypoints_conf_3d=None,
+                 keypoints2d=None,
+                 keypoints2d_conf=None,
+                 keypoints3d=None,
+                 keypoints3d_conf=None,
                  init_global_orient=None,
                  init_transl=None,
                  init_body_pose=None,
@@ -106,11 +112,11 @@ class SMPLify(object):
                  batch_size=None,
                  num_videos=None):
 
-        assert keypoints_2d is not None or keypoints_3d is not None, \
+        assert keypoints2d is not None or keypoints3d is not None, \
             'Neither of 2D nor 3D keypoints groud truth is provided.'
         if batch_size is None:
-            batch_size = keypoints_2d.shape[
-                0] if keypoints_2d is not None else keypoints_3d.shape[0]
+            batch_size = keypoints2d.shape[
+                0] if keypoints2d is not None else keypoints3d.shape[0]
         if num_videos is None:
             num_videos = batch_size
         assert batch_size % num_videos == 0
@@ -136,10 +142,10 @@ class SMPLify(object):
                     transl=transl,
                     body_pose=body_pose,
                     betas=betas,
-                    keypoints_2d=keypoints_2d,
-                    keypoints_conf_2d=keypoints_conf_2d,
-                    keypoints_3d=keypoints_3d,
-                    keypoints_conf_3d=keypoints_conf_3d,
+                    keypoints2d=keypoints2d,
+                    keypoints2d_conf=keypoints2d_conf,
+                    keypoints3d=keypoints3d,
+                    keypoints3d_conf=keypoints3d_conf,
                     **stage_config,
                 )
 
@@ -181,14 +187,15 @@ class SMPLify(object):
                         fit_transl=True,
                         fit_body_pose=True,
                         fit_betas=True,
-                        keypoints_2d=None,
-                        keypoints_conf_2d=None,
-                        keypoints_2d_weight=None,
-                        keypoints_3d=None,
-                        keypoints_conf_3d=None,
-                        keypoints_3d_weight=None,
+                        keypoints2d=None,
+                        keypoints2d_conf=None,
+                        keypoints2d_weight=None,
+                        keypoints3d=None,
+                        keypoints3d_conf=None,
+                        keypoints3d_weight=None,
                         shape_prior_weight=None,
                         joint_prior_weight=None,
+                        smooth_loss_weight=None,
                         joint_weights={},
                         num_iter=1):
 
@@ -222,14 +229,15 @@ class SMPLify(object):
 
                 loss_dict = self._compute_loss(
                     model_joints,
-                    keypoints_2d=keypoints_2d,
-                    keypoints_conf_2d=keypoints_conf_2d,
-                    keypoints_2d_weight=keypoints_2d_weight,
-                    keypoints_3d=keypoints_3d,
-                    keypoints_conf_3d=keypoints_conf_3d,
-                    keypoints_3d_weight=keypoints_3d_weight,
+                    keypoints2d=keypoints2d,
+                    keypoints2d_conf=keypoints2d_conf,
+                    keypoints2d_weight=keypoints2d_weight,
+                    keypoints3d=keypoints3d,
+                    keypoints3d_conf=keypoints3d_conf,
+                    keypoints3d_weight=keypoints3d_weight,
                     joint_prior_weight=joint_prior_weight,
                     shape_prior_weight=shape_prior_weight,
+                    smooth_loss_weight=smooth_loss_weight,
                     joint_weights=joint_weights,
                     body_pose=body_pose,
                     betas=betas_ext)
@@ -255,14 +263,15 @@ class SMPLify(object):
 
     def _compute_loss(self,
                       model_joints,
-                      keypoints_2d=None,
-                      keypoints_conf_2d=None,
-                      keypoints_3d=None,
-                      keypoints_conf_3d=None,
-                      keypoints_2d_weight=None,
-                      keypoints_3d_weight=None,
+                      keypoints2d=None,
+                      keypoints2d_conf=None,
+                      keypoints3d=None,
+                      keypoints3d_conf=None,
+                      keypoints2d_weight=None,
+                      keypoints3d_weight=None,
                       shape_prior_weight=None,
                       joint_prior_weight=None,
+                      smooth_loss_weight=None,
                       joint_weights={},
                       body_pose=None,
                       betas=None):
@@ -272,45 +281,45 @@ class SMPLify(object):
         weight = self._get_weight(**joint_weights)
 
         # 2D keypoint loss
-        if keypoints_2d is not None:
+        if keypoints2d is not None:
             projected_joints = self.camera(model_joints)
             # reprojection_error = gmof(
-            #     projected_joints - keypoints_2d, sigma=100)
+            #     projected_joints - keypoints2d, sigma=100)
             # joints_weights = torch.ones_like(
-            #     keypoints_conf_2d) * keypoints_2d_weight
-            # reprojection_weight = (joints_weights * keypoints_conf_2d)**2
+            #     keypoints2d_conf) * keypoints2d_weight
+            # reprojection_weight = (joints_weights * keypoints2d_conf)**2
             # reprojection_loss = reprojection_weight * reprojection_error.sum(
             #     dim=-1)
             # total_loss = total_loss + reprojection_loss.sum(
-            #     dim=-1) * keypoints_2d_weight
-            reprojection_loss = self.keypoints_2d_mse_loss(
+            #     dim=-1) * keypoints2d_weight
+            reprojection_loss = self.keypoints2d_mse_loss(
                 pred=projected_joints,
-                target=keypoints_2d,
-                target_conf=keypoints_conf_2d,
+                target=keypoints2d,
+                target_conf=keypoints2d_conf,
                 weight=weight,
-                loss_weight_override=keypoints_2d_weight)
+                loss_weight_override=keypoints2d_weight)
             total_loss = total_loss + reprojection_loss
 
         # 3D keypoint loss
-        if keypoints_3d is not None:
-            # keypoints_3d_weight = 1.0 if keypoints_3d_weight is None
-            # else keypoints_3d_weight
-            # joint_diff_3d = gmof(model_joints - keypoints_3d, sigma=100)
+        if keypoints3d is not None:
+            # keypoints3d_weight = 1.0 if keypoints3d_weight is None
+            # else keypoints3d_weight
+            # joint_diff_3d = gmof(model_joints - keypoints3d, sigma=100)
             # joints_weights = torch.ones_like(
-            #     keypoints_conf_3d) * keypoints_3d_weight
-            # joint_loss_3d_weight = (joints_weights * keypoints_conf_3d)**2
+            #     keypoints3d_conf) * keypoints3d_weight
+            # joint_loss_3d_weight = (joints_weights * keypoints3d_conf)**2
             # joint_loss_3d = joint_loss_3d_weight * joint_diff_3d.sum(dim=-1)
             # total_loss = total_loss + joint_loss_3d.sum(
-            #     dim=-1) * keypoints_3d_weight
-            # keypoints_3d_loss = joint_loss_3d.sum(dim=-1) *
-            # keypoints_3d_weight  # just to print
-            keypoints_3d_loss = self.keypoints_3d_mse_loss(
+            #     dim=-1) * keypoints3d_weight
+            # keypoints3d_loss = joint_loss_3d.sum(dim=-1) *
+            # keypoints3d_weight  # just to print
+            keypoints3d_loss = self.keypoints3d_mse_loss(
                 pred=model_joints,
-                target=keypoints_3d,
-                target_conf=keypoints_conf_3d,
+                target=keypoints3d,
+                target_conf=keypoints3d_conf,
                 weight=weight,
-                loss_weight_override=keypoints_3d_weight)
-            total_loss = total_loss + keypoints_3d_loss
+                loss_weight_override=keypoints3d_weight)
+            total_loss = total_loss + keypoints3d_loss
 
         # Regularizer to prevent betas from taking large values
         shape_prior_loss = self.shape_prior_loss(
@@ -338,10 +347,17 @@ class SMPLify(object):
         #      smooth_body_loss]
         # ).mean(dim=-1)
 
-        # batch_size = keypoints_3d.shape[0]
-        # print(f'3D Loss={keypoints_3d_loss.sum().item()/batch_size:.6f};',
-        #       f'Shape Loss={shape_prior_loss.item()/batch_size:.6f};',
-        #       f'joint_prior_loss={joint_prior_loss.item()/batch_size:.6f};')
+        smooth_loss = self.smooth_loss(
+            body_pose=body_pose, loss_weight_override=smooth_loss_weight)
+        total_loss = total_loss + smooth_loss
+
+        if self.verbose:
+            batch_size = keypoints3d.shape[0]
+            print(
+                f'3D Loss={keypoints3d_loss.sum().item()/batch_size:.6f};',
+                f'Shape Loss={shape_prior_loss.item()/batch_size:.6f};',
+                f'joint_prior_loss={joint_prior_loss.item()/batch_size:.6f};',
+                f'smooth_loss={smooth_loss.item()/batch_size:.6f};')
 
         return {
             'total_loss': total_loss.sum(),
@@ -353,40 +369,40 @@ class SMPLifyX(SMPLify):
 
     def __init__(self,
                  body_model=None,
-                 keypoints_2d_weight=1.0,
-                 keypoints_3d_weight=1.0,
+                 keypoints2d_weight=1.0,
+                 keypoints3d_weight=1.0,
                  use_one_betas_per_video=False,
                  num_epochs=20,
                  camera=default_camera,
                  stage_config=smplifyx_stages,
                  opt_config=smplifyx_opt_config,
-                 keypoints_2d_loss_config=keypoints_2d_loss_config,
-                 keypoints_3d_loss_config=keypoints_3d_loss_config,
+                 keypoints2d_loss_config=keypoints2d_loss_config,
+                 keypoints3d_loss_config=keypoints3d_loss_config,
                  shape_prior_loss_config=shape_prior_loss_config,
                  joint_prior_loss_config=joint_prior_loss_config,
                  device=torch.device('cuda'),
                  verbose=False):
         super(SMPLifyX, self).__init__(
             body_model=body_model,
-            keypoints_2d_weight=keypoints_2d_weight,
-            keypoints_3d_weight=keypoints_3d_weight,
+            keypoints2d_weight=keypoints2d_weight,
+            keypoints3d_weight=keypoints3d_weight,
             use_one_betas_per_video=use_one_betas_per_video,
             num_epochs=num_epochs,
             camera=camera,
             stage_config=stage_config,
             opt_config=opt_config,
-            keypoints_2d_loss_config=keypoints_2d_loss_config,
-            keypoints_3d_loss_config=keypoints_3d_loss_config,
+            keypoints2d_loss_config=keypoints2d_loss_config,
+            keypoints3d_loss_config=keypoints3d_loss_config,
             shape_prior_loss_config=shape_prior_loss_config,
             joint_prior_loss_config=joint_prior_loss_config,
             device=device,
             verbose=verbose)
 
     def __call__(self,
-                 keypoints_2d=None,
-                 keypoints_conf_2d=1.0,
-                 keypoints_3d=None,
-                 keypoints_conf_3d=1.0,
+                 keypoints2d=None,
+                 keypoints2d_conf=1.0,
+                 keypoints3d=None,
+                 keypoints3d_conf=1.0,
                  init_global_orient=None,
                  init_transl=None,
                  init_body_pose=None,
@@ -400,11 +416,11 @@ class SMPLifyX(SMPLify):
                  batch_size=None,
                  num_videos=None):
 
-        assert keypoints_2d is not None or keypoints_3d is not None, \
+        assert keypoints2d is not None or keypoints3d is not None, \
             'Neither of 2D nor 3D keypoints groud truth is provided.'
         if batch_size is None:
-            batch_size = keypoints_2d.shape[
-                0] if keypoints_2d is not None else keypoints_3d.shape[0]
+            batch_size = keypoints2d.shape[
+                0] if keypoints2d is not None else keypoints3d.shape[0]
         if num_videos is None:
             num_videos = batch_size
         assert batch_size % num_videos == 0
@@ -457,10 +473,10 @@ class SMPLifyX(SMPLify):
                     jaw_pose=jaw_pose,
                     leye_pose=leye_pose,
                     reye_pose=reye_pose,
-                    keypoints_2d=keypoints_2d,
-                    keypoints_conf_2d=keypoints_conf_2d,
-                    keypoints_3d=keypoints_3d,
-                    keypoints_conf_3d=keypoints_conf_3d,
+                    keypoints2d=keypoints2d,
+                    keypoints2d_conf=keypoints2d_conf,
+                    keypoints3d=keypoints3d,
+                    keypoints3d_conf=keypoints3d_conf,
                     **stage_config,
                 )
 
@@ -523,14 +539,15 @@ class SMPLifyX(SMPLify):
                         fit_jaw_pose=True,
                         fit_leye_pose=True,
                         fit_reye_pose=True,
-                        keypoints_2d=None,
-                        keypoints_conf_2d=None,
-                        keypoints_2d_weight=None,
-                        keypoints_3d=None,
-                        keypoints_conf_3d=None,
-                        keypoints_3d_weight=None,
+                        keypoints2d=None,
+                        keypoints2d_conf=None,
+                        keypoints2d_weight=None,
+                        keypoints3d=None,
+                        keypoints3d_conf=None,
+                        keypoints3d_weight=None,
                         joint_prior_weight=None,
                         shape_prior_weight=None,
+                        smooth_loss_weight=None,
                         joint_weights={},
                         num_iter=1):
 
@@ -573,14 +590,15 @@ class SMPLifyX(SMPLify):
 
                 loss_dict = self._compute_loss(
                     model_joints,
-                    keypoints_2d=keypoints_2d,
-                    keypoints_conf_2d=keypoints_conf_2d,
-                    keypoints_2d_weight=keypoints_2d_weight,
-                    keypoints_3d=keypoints_3d,
-                    keypoints_conf_3d=keypoints_conf_3d,
-                    keypoints_3d_weight=keypoints_3d_weight,
+                    keypoints2d=keypoints2d,
+                    keypoints2d_conf=keypoints2d_conf,
+                    keypoints2d_weight=keypoints2d_weight,
+                    keypoints3d=keypoints3d,
+                    keypoints3d_conf=keypoints3d_conf,
+                    keypoints3d_weight=keypoints3d_weight,
                     joint_prior_weight=joint_prior_weight,
                     shape_prior_weight=shape_prior_weight,
+                    smooth_loss_weight=smooth_loss_weight,
                     joint_weights=joint_weights,
                     body_pose=body_pose,
                     betas=betas_ext)
