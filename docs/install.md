@@ -30,7 +30,7 @@ c. Clone the mmhuman3d repository.
 
 ```shell
 git clone git@gitlab.bj.sensetime.com:zeotrope/zoehuman/mmhuman3d.git
-cd zeomotion
+cd mmhuman3d
 ```
 
 d. Install build requirements and then install mmhuman3d.
