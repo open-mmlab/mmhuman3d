@@ -107,7 +107,8 @@ venv.bak/
 # custom
 data
 !mmhuman3d/data
-!tests/data
+# data for pytest moved to http server
+# !tests/data
 .vscode
 .idea
 *.pkl
@@ -125,6 +126,9 @@ logs/
 *.png
 *.gif
 *.jpg
+
+# Body models
+body_models
 
 # Loaded/Saved data files
 *.npz
