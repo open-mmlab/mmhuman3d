@@ -13,6 +13,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     mpi_inf_3dhp,
     mpii,
     penn_action,
+    posetrack,
     pw3d,
     smpl,
     smplx,
@@ -31,7 +32,8 @@ KEYPOINTS_FACTORY = {
     'h36m': h36m.H36M_KEYPOINTS,
     'pw3d': pw3d.PW3D_KEYPOINTS,
     'mpii': mpii.MPII_KEYPOINTS,
-    'lsp': lsp.LSP_KEYPOINTS
+    'lsp': lsp.LSP_KEYPOINTS,
+    'posetrack': posetrack.POSETRACK_KEYPOINTS,
 }
 
 

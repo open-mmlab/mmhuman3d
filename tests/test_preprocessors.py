@@ -11,6 +11,7 @@ from mmhuman3d.data.preprocessors.lsp_pre import lsp_extract
 from mmhuman3d.data.preprocessors.mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
 from mmhuman3d.data.preprocessors.mpii_pre import mpii_extract
 from mmhuman3d.data.preprocessors.penn_action_pre import penn_action_extract
+from mmhuman3d.data.preprocessors.posetrack_pre import posetrack_extract
 from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
 from mmhuman3d.data.preprocessors.up3d_pre import up3d_extract
 
@@ -86,6 +87,12 @@ def test_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/' +
                           'coco_wholebody_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'coco_wholebody_val.npz')
+
+    POSETRACK_ROOT = os.path.join(root_path, 'PoseTrack/data')
+    posetrack_extract(POSETRACK_ROOT, output_path, 'train')
+    posetrack_extract(POSETRACK_ROOT, output_path, 'val')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'posetrack_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'posetrack_val.npz')
 
 
 def test_preprocessed_npz():
