@@ -108,11 +108,12 @@ def test_dump():
     human_data = HumanData()
     human_data.load(human_data_load_path)
     human_data_dump_path = 'tests/data/human_data/human_data_00_dump.npz'
-    if check_path_existence(human_data_dump_path, 'file') == Existence.Exist:
+    if check_path_existence(human_data_dump_path,
+                            'file') == Existence.FileExist:
         os.remove(human_data_dump_path)
     human_data.dump(human_data_dump_path, overwrite=True)
     assert check_path_existence(human_data_dump_path, 'file') == \
-        Existence.Exist
+        Existence.FileExist
     # wrong file extension
     with pytest.raises(ValueError):
         human_data.dump(

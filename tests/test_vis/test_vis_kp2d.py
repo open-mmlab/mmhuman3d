@@ -48,18 +48,6 @@ def test_vis_kp2d():
                 'tests/data/test_vis_kp2d/2.png'
             ])
 
-    # wrong output path
-    kp2d = np.random.randint(
-        low=0, high=255, size=(10, 133, 2), dtype=np.uint8)
-    with pytest.raises(FileNotFoundError):
-        visualize_kp2d(
-            kp2d,
-            output_path='/NoSuchDir/1.mp4',
-            frame_list=[
-                'tests/data/test_vis_kp2d/%06d.png' % 1,
-                'tests/data/test_vis_kp2d/%06d.png' % 2
-            ])
-
     # wrong pop parts
     kp2d = np.random.randint(
         low=0, high=255, size=(10, 133, 2), dtype=np.uint8)
@@ -71,7 +59,8 @@ def test_vis_kp2d():
                 'tests/data/test_vis_kp2d/%06d.png' % 1,
                 'tests/data/test_vis_kp2d/%06d.png' % 2
             ],
-            pop_parts=['rubbish'])
+            pop_parts=['rubbish'],
+        )
 
     # wrong data_source
     kp2d = np.random.randint(low=0, high=255, size=(10, 17, 3), dtype=np.uint8)
@@ -80,8 +69,8 @@ def test_vis_kp2d():
             kp2d,
             output_path='tests/data/test_vis_kp2d/wrong_data_source.mp4',
             frame_list=[
-                'tests/data/test_vis_kp2d/%06d.png' % 1,
-                'tests/data/test_vis_kp2d/%06d.png' % 2
+                'tests/data/test_vis_kp2d/%06d.png' % 0,
+                'tests/data/test_vis_kp2d/%06d.png' % 1
             ],
             data_source='mmpose',
         )
@@ -92,11 +81,26 @@ def test_vis_kp2d():
         kp2d,
         output_path='tests/data/test_vis_kp2d/test_shape.mp4',
         frame_list=[
-            'tests/data/test_vis_kp2d/%06d.png' % 1,
-            'tests/data/test_vis_kp2d/%06d.png' % 2
+            'tests/data/test_vis_kp2d/%06d.png' % 0,
+            'tests/data/test_vis_kp2d/%06d.png' % 1
         ],
+        overwrite=True,
     )
     assert video_to_array('tests/data/test_vis_kp2d/test_shape.mp4').shape
+
+    # file exists
+    with pytest.raises(FileExistsError):
+        kp2d = np.random.randint(
+            low=0, high=16, size=(10, 133, 2), dtype=np.uint8)
+        visualize_kp2d(
+            kp2d,
+            output_path='tests/data/test_vis_kp2d/test_shape.mp4',
+            frame_list=[
+                'tests/data/test_vis_kp2d/%06d.png' % 0,
+                'tests/data/test_vis_kp2d/%06d.png' % 1
+            ],
+            overwrite=False,
+        )
 
     # test multi-person shape
     kp2d = np.random.randint(
@@ -105,9 +109,10 @@ def test_vis_kp2d():
         kp2d,
         output_path='tests/data/test_vis_kp2d/test_multi.mp4',
         frame_list=[
-            'tests/data/test_vis_kp2d/%06d.png' % 1,
-            'tests/data/test_vis_kp2d/%06d.png' % 2
+            'tests/data/test_vis_kp2d/%06d.png' % 0,
+            'tests/data/test_vis_kp2d/%06d.png' % 1
         ],
+        overwrite=True,
     )
     assert video_to_array('tests/data/test_vis_kp2d/test_multi.mp4').shape
 
@@ -118,9 +123,10 @@ def test_vis_kp2d():
         kp2d,
         output_path='tests/data/test_vis_kp2d/test_confidence.mp4',
         frame_list=[
-            'tests/data/test_vis_kp2d/%06d.png' % 1,
-            'tests/data/test_vis_kp2d/%06d.png' % 2
+            'tests/data/test_vis_kp2d/%06d.png' % 0,
+            'tests/data/test_vis_kp2d/%06d.png' % 1
         ],
+        overwrite=True,
     )
     assert video_to_array('tests/data/test_vis_kp2d/test_confidence.mp4').shape
 
@@ -182,9 +188,10 @@ def test_vis_kp2d():
         kp2d,
         output_path=output_folder,
         frame_list=[
-            'tests/data/test_vis_kp2d/%06d.png' % 1,
-            'tests/data/test_vis_kp2d/%06d.png' % 2
+            'tests/data/test_vis_kp2d/%06d.png' % 0,
+            'tests/data/test_vis_kp2d/%06d.png' % 1
         ],
+        overwrite=True,
     )
     assert images_to_array(output_folder).shape
 
@@ -198,7 +205,8 @@ def test_vis_kp2d():
             kp2d,
             output_path=output_folder,
             frame_list=[
-                os.path.join(output_folder, '%06d.png' % 1),
-                os.path.join(output_folder, '%06d.png' % 2)
+                os.path.join(output_folder, '%06d.png' % 0),
+                os.path.join(output_folder, '%06d.png' % 1)
             ],
+            overwrite=False,
         )

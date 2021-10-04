@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import numpy
 import torch
@@ -33,7 +33,7 @@ class Compose:
 
     def __call__(self,
                  rotation: Union[torch.Tensor, numpy.ndarray],
-                 convention: Optional[str] = 'xyz',
+                 convention: str = 'xyz',
                  **kwargs):
         convention = convention.lower()
         if not (set(convention) == set('xyz') and len(convention) == 3):

@@ -1,3 +1,5 @@
+import os
+import warnings
 from enum import Enum
 from pathlib import Path
 from typing import List
@@ -17,7 +19,8 @@ def check_path_suffix(path_str: str, allowed_suffix: List[str] = []) -> bool:
         allowed_suffix (List[str], optional):
             What extension names are allowed.
             Offer a list like ['.jpg', ',jpeg'].
-            When it's [], only a blank suffix is allowed.
+            When it's [], all will be recieved.
+            Use [''] then directory is allowed.
             Defaults to [].
 
     Returns:
@@ -27,8 +30,10 @@ def check_path_suffix(path_str: str, allowed_suffix: List[str] = []) -> bool:
     """
     pathinfo = Path(path_str)
     suffix = pathinfo.suffix.lower()
-    if suffix == '':
-        if len(allowed_suffix) == 0:
+    if len(allowed_suffix) == 0:
+        return True
+    if pathinfo.is_dir():
+        if '' in allowed_suffix:
             return True
         else:
             return False
@@ -44,53 +49,183 @@ def check_path_suffix(path_str: str, allowed_suffix: List[str] = []) -> bool:
 
 
 class Existence(Enum):
-    Exist = 0
-    MissingParent = 1
-    FolderNotExist = 2
-    FileNotExist = 3
+    FileExist = 0
+    FolderExistEmpty = 1
+    FolderExistNotEmpty = 2
+    MissingParent = 3
+    FolderNotExist = 4
+    FileNotExist = 5
 
 
 def check_path_existence(
         path_str: str,
         path_type: Literal['file', 'directory', 'auto'] = 'auto') -> Existence:
-    """Check whether a file or a directory exist at the expected path.
+    """Check whether a file or a directory exists at the expected path.
 
     Args:
         path_str (str):
             Path to check.
         path_type (Literal[, optional):
             What kind of file do we expect at the path.
-            Choose among file, directory, auto.
-            Defaults to 'auto'.
+            Choose among `file`, `directory`, `auto`.
+            Defaults to 'auto'.    path_type = path_type.lower()
 
     Raises:
-        KeyError: if path_type conflicts with path_str
+        KeyError: if `path_type` conflicts with `path_str`
 
     Returns:
         Existence:
-            0: Exist, file at path_str matches path_type, and it exists.
-            1: MissingParent, its parent doesn't exist.
-            2: FolderNotExist, expecting a folder at path_str, but not found.
-            3: FileNotExist, expecting a file at path_str, but not found.
+            0: FileExist, file at path_str exists.
+            1: FolderExistEmpty, folder at path exists and.
+            2: FolderExistNotEmpty, folder at path_str exists and not empty.
+            3: MissingParent, its parent doesn't exist.
+            4: FolderNotExist, expecting a folder at path_str, but not found.
+            5: FileNotExist, expecting a file at path_str, but not found.
     """
     path_type = path_type.lower()
-    assert path_type in ['file', 'directory', 'auto']
+    assert path_type in {'file', 'directory', 'auto'}
     pathinfo = Path(path_str)
     if not pathinfo.parent.is_dir():
         return Existence.MissingParent
     suffix = pathinfo.suffix.lower()
     if path_type == 'directory' or\
             path_type == 'auto' and suffix == '':
-        if pathinfo.exists() and pathinfo.is_dir():
-            return Existence.Exist
+        if pathinfo.is_dir():
+            if len(os.listdir(path_str)) == 0:
+                return Existence.FolderExistEmpty
+            else:
+                return Existence.FolderExistNotEmpty
         else:
             return Existence.FolderNotExist
     elif path_type == 'file' or\
             path_type == 'auto' and suffix != '':
-        if not pathinfo.exists() or not pathinfo.is_file():
-            return Existence.FileNotExist
+        if pathinfo.is_file():
+            return Existence.FileExist
+        elif pathinfo.is_dir():
+            if len(os.listdir(path_str)) == 0:
+                return Existence.FolderExistEmpty
+            else:
+                return Existence.FolderExistNotEmpty
+        if path_str.endswith('/'):
+            return Existence.FolderNotExist
         else:
-            return Existence.Exist
+            return Existence.FileNotExist
     else:
         raise KeyError(f'{path_str} doesn\'t match any expectation '
                        f'when type is set to: {path_type}')
+
+
+def prepare_output_path(output_path: str,
+                        allowed_suffix: List[str] = [],
+                        tag: str = 'output file',
+                        path_type: Literal['file', 'directory',
+                                           'auto'] = 'auto',
+                        overwrite: bool = True) -> None:
+    """Check output folder or file.
+
+    Args:
+        output_path (str): could be folder or file.
+        allowed_suffix (List[str], optional):
+            Check the suffix of `output_path`. If folder, should be [] or [''].
+            If could both be folder or file, should be [suffixs..., ''].
+            Defaults to [].
+        tag (str, optional): The `string` tag to specify the output type.
+            Defaults to 'output file'.
+        path_type (Literal[, optional):
+            Choose `file` for file and `directory` for folder.
+            Choose `auto` if allowed to be both.
+            Defaults to 'auto'.
+        overwrite (bool, optional):
+            Whether overwrite the existing file or folder.
+            Defaults to True.
+
+    Raises:
+        FileNotFoundError: suffix does not match.
+        FileExistsError: file or folder already exists and `overwrite` is
+            False.
+
+    Returns:
+        None
+    """
+    if path_type.lower() == 'directory':
+        allowed_suffix = []
+    exist_result = check_path_existence(output_path, path_type=path_type)
+    if exist_result == Existence.MissingParent:
+        warnings.warn(
+            f'The parent folder of {tag} does not exist: {output_path},'
+            f' will make dir f{Path(output_path).parent.absolute().__str__()}')
+        os.makedirs(
+            Path(output_path).parent.absolute().__str__(), exist_ok=True)
+
+    if exist_result == Existence.FolderNotExist:
+        os.mkdir(output_path)
+        print(f'Making directory {output_path} for saveing results.')
+    elif exist_result == Existence.FileNotExist:
+        suffix_matched = \
+            check_path_suffix(output_path, allowed_suffix=allowed_suffix)
+        if not suffix_matched:
+            raise FileNotFoundError(
+                f'The {tag} should be {", ".join(allowed_suffix)}: '
+                f'{output_path}.')
+    elif exist_result == Existence.FileExist:
+        if not overwrite:
+            raise FileExistsError(
+                f'{output_path} exists (set overwrite = True to overwrite).')
+        else:
+            print(f'Overwriting {output_path}.')
+    elif exist_result == Existence.FolderExistEmpty:
+        pass
+    elif exist_result == Existence.FolderExistNotEmpty:
+        if not overwrite:
+            raise FileExistsError(
+                f'{output_path} is not empty (set overwrite = '
+                'True to overwrite the files).')
+        else:
+            print(f'Overwriting {output_path} and its files.')
+    else:
+        raise FileNotFoundError(f'No Existence type for {output_path}.')
+
+
+def check_input_path(
+    input_path: str,
+    allowed_suffix: List[str] = [],
+    tag: str = 'input file',
+    path_type: Literal['file', 'directory', 'auto'] = 'auto',
+):
+    """Check input folder or file.
+
+    Args:
+        input_path (str): input folder or file path.
+        allowed_suffix (List[str], optional):
+            Check the suffix of `output_path`. If folder, should be [] or [''].
+            If could both be folder or file, should be [suffixs..., ''].
+            Defaults to [].
+        tag (str, optional): The `string` tag to specify the output type.
+            Defaults to 'output file'.
+        path_type (Literal[, optional):
+            Choose `file` for file and `directory` for folder.
+            Choose `auto` if allowed to be both.
+            Defaults to 'auto'.
+
+    Raises:
+        FileNotFoundError: file does not exists or suffix does not match.
+
+    Returns:
+        None
+    """
+    if path_type.lower() == 'directory':
+        allowed_suffix = []
+    exist_result = check_path_existence(input_path, path_type=path_type)
+
+    if exist_result in [
+            Existence.FileExist, Existence.FolderExistEmpty,
+            Existence.FolderExistNotEmpty
+    ]:
+        suffix_matched = \
+            check_path_suffix(input_path, allowed_suffix=allowed_suffix)
+        if not suffix_matched:
+            raise FileNotFoundError(
+                f'The {tag} should be {", ".join(allowed_suffix)}:'
+                f'{input_path}.')
+    else:
+        raise FileNotFoundError(f'The {tag} does not exist: {input_path}.')

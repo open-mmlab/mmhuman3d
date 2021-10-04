@@ -192,7 +192,7 @@ class HumanData(dict):
         if not check_path_suffix(npz_path, ['.npz']):
             raise ValueError('Not an npz file.')
         if not overwrite:
-            if check_path_existence(npz_path, 'file') == Existence.Exist:
+            if check_path_existence(npz_path, 'file') == Existence.FileExist:
                 raise FileExistsError
         np.savez_compressed(npz_path, **self)
 

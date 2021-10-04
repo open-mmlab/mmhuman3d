@@ -1,8 +1,8 @@
 import json
 
+from mmhuman3d.core.cameras import CameraParameter
 from mmhuman3d.core.visualization.renderer.vedo_render import VedoRenderer
 from mmhuman3d.data.data_structures.smc_reader import SMCReader
-from mmhuman3d.utils.cameras import CameraParameter
 
 
 def visualize_chessboard_kinects_rgb(chessboard_path, interactive=True):

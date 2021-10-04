@@ -8,16 +8,16 @@ from mmhuman3d.utils.ffmpeg_utils import (
     array_to_images,
     array_to_video,
     compress_video,
+    crop_video,
     gif_to_images,
     gif_to_video,
     images_to_array,
     images_to_gif,
     images_to_video,
     pad_for_libx264,
+    slice_video,
     spatial_concat_video,
-    spatial_crop_video,
     temporal_concat_video,
-    temporal_crop_video,
     vid_info_reader,
     video_to_array,
     video_to_gif,
@@ -84,13 +84,6 @@ def test_array_saver():
             low=0, high=255, size=(30, 512, 512, 3), dtype=np.uint8)
         array_to_video(v, osp.join(root, 'test_saver.gif'))
 
-    # wrong out path
-    with pytest.raises(FileNotFoundError):
-        v = np.random.randint(
-            low=0, high=255, size=(30, 512, 512, 3), dtype=np.uint8)
-        array_to_video(v, '/NoSuchDir/test_saver.mp4')
-        array_to_images(v, osp.join('/NoSuchDir', 'img_folder_saver'))
-
     v = np.random.randint(
         low=0, high=255, size=(30, 512, 512, 3), dtype=np.uint8)
     array_to_images(v, osp.join(root, 'img_folder_saver'))
@@ -137,15 +130,7 @@ def skip_temporal_c1():
         ],
                               output_path=osp.join(
                                   root, 'test_temporal_concat_output.mp4'))
-    with pytest.raises(FileNotFoundError):
-        temporal_concat_video([
-            osp.join(root, 'input_video.mp4'),
-            osp.join(root, 'input_video.mp4'),
-            osp.join(root, 'input_video.mp4')
-        ],
-                              output_path=osp.join(
-                                  '/NoSuchDir',
-                                  'test_temporal_concat_output.mp4'))
+
     temporal_concat_video(
         [osp.join(root, 'input_video.mp4'),
          osp.join(root, 'input_gif.gif')],
@@ -166,17 +151,7 @@ def test_spatial_c1():
                                  root, 'test_spacial_concat_output.mp4'),
                              array=[2, 2],
                              padding=1)
-    with pytest.raises(FileNotFoundError):
-        spatial_concat_video([
-            osp.join(root, 'input_video.mp4'),
-            osp.join(root, 'input_video.mp4'),
-            osp.join(root, 'input_video.mp4')
-        ],
-                             output_path=osp.join(
-                                 '/NoSuchDir',
-                                 'test_spacial_concat_output.mp4'),
-                             array=[2, 2],
-                             padding=1)
+
     spatial_concat_video([
         osp.join(root, 'input_video.mp4'),
         osp.join(root, 'input_video.mp4'),
@@ -190,21 +165,16 @@ def test_spatial_c1():
 
 
 def test_temporal_c2():
-    # temporal_crop_video
+    # slice_video
     # wrong input/output
     with pytest.raises(FileNotFoundError):
-        temporal_crop_video(
+        slice_video(
             osp.join(root, 'NoSuchFile.mp4'),
             osp.join(root, 'test_temporal_crop_output.mp4'),
             start=0,
             end=10)
-    with pytest.raises(FileNotFoundError):
-        temporal_crop_video(
-            osp.join(root, 'input_video.mp4'),
-            osp.join('/NoSuchDir', 'test_temporal_crop_output.mp4'),
-            start=0,
-            end=10)
-    temporal_crop_video(
+
+    slice_video(
         osp.join(root, 'input_video.mp4'),
         osp.join(root, 'test_temporal_crop_output.mp4'),
         start=0,
@@ -212,25 +182,21 @@ def test_temporal_c2():
 
 
 def test_spacial_c2():
-    # spatial_crop_video
+    # crop_video
     # wrong box
     with pytest.raises(AssertionError):
-        spatial_crop_video(
+        crop_video(
             osp.join(root, 'input_video.mp4'),
             osp.join(root, 'test_spacial_crop_output.mp4'),
             box=[10, 10, -1, -1])
     # wrong input/output
     with pytest.raises(FileNotFoundError):
-        spatial_crop_video(
+        crop_video(
             osp.join(root, 'NoSuchFile.mp4'),
             osp.join(root, 'test_spacial_crop_output.mp4'),
             box=[10, 10, -1, -1])
-    with pytest.raises(FileNotFoundError):
-        spatial_crop_video(
-            osp.join(root, 'input_video.mp4'),
-            osp.join('/NoSuchDir', 'test_spacial_crop_output.mp4'),
-            box=[10, 10, -1, -1])
-    spatial_crop_video(
+
+    crop_video(
         osp.join(root, 'input_video.mp4'),
         osp.join(root, 'test_spacial_crop_output.mp4'),
         box=[10, 10, 100, 100])
@@ -247,11 +213,7 @@ def test_convert():
         images_to_gif(
             osp.join('/NoSuchDir', 'img_folder'),
             osp.join(root, 'images_to_gif_output.gif'))
-    # wrong outpath
-    with pytest.raises(FileNotFoundError):
-        images_to_gif(
-            osp.join(root, 'input_images'),
-            osp.join('/NoSuchDir', 'images_to_gif_output.gif'))
+
     images_to_gif(
         osp.join(root, 'input_images'),
         osp.join(root, 'images_to_gif_output.gif'),
@@ -264,10 +226,6 @@ def test_convert():
             osp.join('/NoSuchDir', 'input_images'),
             osp.join(root, 'images_to_video_output.mp4'))
     # wrong outpath
-    with pytest.raises(FileNotFoundError):
-        images_to_video(
-            osp.join(root, 'input_images'),
-            osp.join('/NoSuchDir', 'images_to_video_output.mp4'))
     images_to_video(
         osp.join(root, 'input_images'),
         osp.join(root, 'images_to_video_output.mp4'))
@@ -279,10 +237,6 @@ def test_convert():
             osp.join('/NoSuchDir', 'input_gif.gif'),
             osp.join(root, 'gif_to_video_output.mp4'))
     # wrong outpath
-    with pytest.raises(FileNotFoundError):
-        gif_to_video(
-            osp.join(root, 'input_gif.gif'),
-            osp.join('/NoSuchDir', 'gif_to_video_output.mp4'))
     gif_to_video(
         osp.join(root, 'input_gif.gif'),
         osp.join(root, 'gif_to_video_output.mp4'))
@@ -293,11 +247,6 @@ def test_convert():
         gif_to_images(
             osp.join('/NoSuchDir', 'input_gif.gif'),
             osp.join(root, 'gif_to_images_output'))
-    # wrong outpath
-    with pytest.raises(FileNotFoundError):
-        gif_to_images(
-            osp.join(root, 'input_gif.gif'),
-            osp.join('/NoSuchDir', 'gif_to_images_output'))
     gif_to_images(
         osp.join(root, 'input_gif.gif'), osp.join(root,
                                                   'gif_to_images_output'))
@@ -310,11 +259,6 @@ def test_convert():
         video_to_gif(
             osp.join('/NoSuchDir', 'input_video.mp4'),
             osp.join(root, 'video_to_gif_output.gif'))
-    # wrong outpath
-    with pytest.raises(FileNotFoundError):
-        video_to_gif(
-            osp.join(root, 'input_video.mp4'),
-            osp.join('/NoSuchDir', 'video_to_gif_output.gif'))
     video_to_gif(
         osp.join(root, 'input_video.mp4'),
         osp.join(root, 'video_to_gif_output.gif'))
@@ -325,11 +269,7 @@ def test_convert():
         video_to_images(
             osp.join('/NoSuchDir', 'input_video.mp4'),
             osp.join(root, 'video_to_images_output'))
-    # wrong outpath
-    with pytest.raises(FileNotFoundError):
-        video_to_images(
-            osp.join(root, 'input_video.mp4'),
-            osp.join('/NoSuchDir', 'video_to_images_output'))
+
     video_to_images(
         osp.join(root, 'input_video.mp4'),
         osp.join(root, 'video_to_images_output'))

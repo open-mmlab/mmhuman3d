@@ -2,7 +2,7 @@ import io
 import os
 import shutil
 from pathlib import Path
-from typing import Iterable, List, NoReturn, Optional, Union
+from typing import Iterable, List, Optional, Union
 
 import cv2
 import numpy as np
@@ -85,7 +85,8 @@ class Axes3dBaseRenderer(object):
                     cam_elev_angle=10,
                     cam_hori_angle=45):
         fig = plt.figure()
-        ax = Axes3D(fig)
+        ax = Axes3D(fig, auto_add_to_figure=False)
+        fig.add_axes(ax)
         ax.set_xlim(*visual_range[0])
         ax.set_ylim(*visual_range[1])
         ax.set_zlim(*visual_range[2])
@@ -133,7 +134,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
         resolution: Iterable[int] = (720, 720),
         visual_range: Iterable[int] = (-100, 100),
         frame_names: Optional[List[str]] = None,
-    ) -> NoReturn:
+    ) -> None:
         """Render 3d keypoints to a video.
 
         Args:
@@ -154,7 +155,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
             frame_names (Optional[List[str]], optional):  List of string
                     for frame title, no title if None. Defaults to None.
         Returns:
-            NoReturn.
+            None.
         """
         assert self.if_camera_init is True
         assert self.if_connection_setup is True
@@ -234,9 +235,9 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     s=10,
                     marker='o')
             if num_person >= 2:
-                ax.w_xaxis.set_ticklabels([])
-                ax.w_yaxis.set_ticklabels([])
-                ax.w_zaxis.set_ticklabels([])
+                ax.xaxis.set_ticklabels([])
+                ax.yaxis.set_ticklabels([])
+                ax.zaxis.set_ticklabels([])
                 labels = []
                 custom_lines = []
                 for person_index in range(num_person):

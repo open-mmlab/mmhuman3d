@@ -1,17 +1,17 @@
 base_directional_light = {
     'light_type': 'directional',
-    'direction': [[1.0, 1.0, 3.0]],
+    'direction': [[10.0, 10.0, -10.0]],
     'ambient_color': [[0.5, 0.5, 0.5]],
-    'diffuse_color': [[0.3, 0.3, 0.3]],
-    'specular_color': [[0.2, 0.2, 0.2]],
+    'diffuse_color': [[0.5, 0.5, 0.5]],
+    'specular_color': [[0.5, 0.5, 0.5]],
 }
 
 base_point_light = {
     'light_type': 'point',
     'ambient_color': [[0.5, 0.5, 0.5]],
     'diffuse_color': [[0.3, 0.3, 0.3]],
-    'specular_color': [[0.2, 0.2, 0.2]],
-    'location': [[0.0, 0.0, 3.0]],
+    'specular_color': [[0.5, 0.5, 0.5]],
+    'location': [[2.0, 2.0, -2.0]],
 }
 
 base_ambient_light = {
@@ -38,8 +38,6 @@ silhouete_material = {
 
 base_camera = {
     'camera_type': 'weakpespective',
-    'axis_sign': [0, 0, 0],
-    'orbit_speed': None,
 }
 
 white_blend_params = {'background_color': (1.0, 1.0, 1.0)}
@@ -85,10 +83,10 @@ RENDER_CONFIGS = {
         'material': base_material,
         'raster': {
             'resolution': [1024, 1024],
-            'blur_radius': 0,
+            'blur_radius': 0.0,
             'faces_per_pixel': 1,
-            'cull_to_frustum': False,
-            'cull_backfaces': False,
+            'cull_to_frustum': True,
+            'cull_backfaces': True,
         },
         'shader': {
             'shader_type': 'phong',
