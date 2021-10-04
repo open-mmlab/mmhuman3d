@@ -1,4 +1,4 @@
-## Visualization (version 0.1.0)
+## Visualization (version 0.2.0)
 
 ### Visualize 2d keypoints  
 - **simple example for visualize 2d keypoints:**
@@ -139,18 +139,15 @@
     ```
     You could also feed dict tensor of smplx definitions. You could check that in [visualize_smpl](mmhuman3d/core/visualization/visualize_smpl.py#L166-211) or [original smplx](https://github.com/vchoutas/smplx/blob/master/smplx/body_models.py).
 
-- **fast visualize multi-person smpl pose:**
 
-    Without translation, the best way you visualize multi smpl(x) pose is to concat the videos.  
-    E.g., you have multi-person smpl pose as [pose1, pose2, pose3, poses4, poses5]
-    ```python
-    from mmhuman3d.utils.ffmpeg_utils import spatial_concat_video
-    for index, pose in enumerate(poses):
-        visualize_smpl_pose(poses=poses, body_model_dir=body_model_dir, output_path='path_to_video%d.mp4'%index, model_type='smplx', render_choice='hq', resolution=(1024, 1024))
-    #you have 5 videos, so you can set array to [3, 2] which means 3xrows and 2xcolumns
-    spatial_concat_video(input_path_list=[path_to_video1, ..., path_to_video5], output_path='out.mp4', array=[3,2], resolution=(1024, 1024), remove_raw_files=True)
-    ```
-- **visualize smpl with origin frames:**
+- **visualize T-pose:**
+
+    ```TODO```
+
+- **visualize smpl with predicted camera:**
+
+
+- **visualize smpl with opencv camera:**
 
     ```TODO```
 
@@ -189,14 +186,10 @@
 
     compress_gif, compress_video
 
-### Cameras
+### Cameras(for v0.3.0)
 - **WeakPerspectiveCameras:**
 
     ```TODO```
-- **PerspectiveCameras:**
-
-    ```TODO```
-
-- **OrthographicCameras:**
+- **Convert cameras:**
 
     ```TODO```

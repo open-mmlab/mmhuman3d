@@ -11,25 +11,25 @@ from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
 
 
 def search_limbs(
-    data_source: str,
-    mask: Optional[Union[np.ndarray, tuple,
-                         list]] = None) -> Tuple[dict, dict]:
+        data_source: str,
+        mask: Optional[Union[np.ndarray, tuple, list]] = None,
+        keypoints_factory: dict = KEYPOINTS_FACTORY) -> Tuple[dict, dict]:
     """Search the corresponding limbs following the basis smplx limbs. The mask
     could mask out the incorrect keypoints.
 
     Args:
         data_source (str): data source type.
-
         mask (Optional[Union[np.ndarray, tuple, list]], optional):
             refer to keypoints_mapping. Defaults to None.
-
+        keypoints_factory (dict, optional): Dict of all the conventions.
+            Defaults to KEYPOINTS_FACTORY.
     Returns:
         Tuple[dict, dict]: (limbs_target, limbs_palette).
     """
     limbs_source = SMPLX_LIMBS_INDEX
     limbs_palette = SMPLX_PALETTE
-    keypoints_source = KEYPOINTS_FACTORY['smplx']
-    keypoints_target = KEYPOINTS_FACTORY[data_source]
+    keypoints_source = keypoints_factory['smplx']
+    keypoints_target = keypoints_factory[data_source]
     limbs_target = {}
     for k, part_limbs in limbs_source.items():
         limbs_target[k] = []

@@ -6,15 +6,78 @@ import string
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable, List, NoReturn, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from mmhuman3d.utils.path_utils import (
-    Existence,
-    check_path_existence,
-    check_path_suffix,
-)
+from mmhuman3d.utils.path_utils import check_input_path, prepare_output_path
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
+
+class video_writer:
+
+    def __init__(self,
+                 output_path,
+                 resolution,
+                 fps=30.0,
+                 num_frame=1e9) -> None:
+        prepare_output_path(
+            output_path,
+            allowed_suffix=['.mp4'],
+            tag='output video',
+            path_type='file',
+            overwrite=True)
+        if resolution:
+            width, height = resolution
+            width += width % 2
+            height += height % 2
+        command = [
+            'ffmpeg',
+            '-y',  # (optional) overwrite output file if it exists
+            '-f',
+            'rawvideo',
+            '-s',
+            '%dx%d' % (width, height),  # size of one frame
+            '-pix_fmt',
+            'bgr24',
+            '-r',
+            f'{fps}',  # frames per second
+            '-loglevel',
+            'error',
+            '-threads',
+            '1',
+            '-i',
+            '-',  # The input comes from a pipe
+            '-vcodec',
+            'libx264',
+            '-an',  # Tells FFMPEG not to expect any audio
+            output_path,
+        ]
+        print(f'Running \"{" ".join(command)}\"')
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if process.stdin is None or process.stderr is None:
+            raise BrokenPipeError('No buffer recieved.')
+        self.process = process
+        self.num_frame = num_frame
+        self.len = 0
+
+    def write(self, image_array: np.ndarray):
+        if self.len <= self.num_frame:
+            self.process.stdin.write(image_array.tobytes())
+            self.len += 1
+
+    def __del__(self):
+        self.process.stdin.close()
+        self.process.stderr.close()
+        self.process.wait()
 
 
 def array_to_video(
@@ -22,7 +85,7 @@ def array_to_video(
     output_path: str,
     fps: Union[int, float] = 30,
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
+) -> None:
     """Convert an array to a video directly, gif not supported.
 
     Args:
@@ -30,23 +93,26 @@ def array_to_video(
         output_path (str): output video file path.
         fps (Union[int, float, optional): fps. Defaults to 30.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): (width, height) of the output video.
-                Defaults to None.
+            optional): (width, height) of the output video.
+            Defaults to None.
 
     Raises:
         FileNotFoundError: check output path.
         TypeError: check input array.
 
     Returns:
-        NoReturn.
+        None.
     """
     if not isinstance(image_array, np.ndarray):
         raise TypeError('Input should be np.ndarray.')
     assert image_array.ndim == 4
     assert image_array.shape[-1] == 3
-    if not (check_path_suffix(output_path, ['.mp4'])
-            and check_path_existence(output_path) != Existence.MissingParent):
-        raise FileNotFoundError('Wrong output file format.')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.mp4'],
+        tag='output video',
+        path_type='file',
+        overwrite=True)
     if resolution:
         width, height = resolution
         width += width % 2
@@ -77,21 +143,22 @@ def array_to_video(
         output_path,
     ]
     print(f'Running \"{" ".join(command)}\"')
-    pipe = subprocess.Popen(
+    process = subprocess.Popen(
         command,
         stdin=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+    if process.stdin is None or process.stderr is None:
+        raise BrokenPipeError('No buffer recieved.')
     index = 0
     while True:
-        index += 1
         if index >= image_array.shape[0]:
             break
-        pipe.stdin.write(image_array[index].tobytes())
-
-    pipe.stdin.close()
-    pipe.stderr.close()
-    pipe.wait()
+        process.stdin.write(image_array[index].tobytes())
+        index += 1
+    process.stdin.close()
+    process.stderr.close()
+    process.wait()
 
 
 def array_to_images(
@@ -99,30 +166,31 @@ def array_to_images(
     output_folder: str,
     img_format: str = '%06d.png',
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
+) -> None:
     """Convert an array to images directly.
 
     Args:
         image_array (np.ndarray): shape should be (f * h * w * 3).
         output_folder (str): output folder for the images.
         img_format (str, optional): format of the images.
-                Defaults to '%06d.png'.
+            Defaults to '%06d.png'.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): resolution(width, height) of output.
-                Defaults to None.
+            optional): resolution(width, height) of output.
+            Defaults to None.
 
     Raises:
         FileNotFoundError: check output folder.
         TypeError: check input array.
 
     Returns:
-        NoReturn
+        None
     """
-    exist_result = check_path_existence(output_folder, 'directory')
-    if exist_result == Existence.MissingParent:
-        raise FileNotFoundError('Wrong output path.')
-    elif exist_result == Existence.FolderNotExist:
-        os.mkdir(output_folder)
+    prepare_output_path(
+        output_folder,
+        allowed_suffix=[],
+        tag='output image folder',
+        path_type='directory',
+        overwrite=True)
 
     if not isinstance(image_array, np.ndarray):
         raise TypeError('Input should be np.ndarray.')
@@ -149,36 +217,50 @@ def array_to_images(
         '-',  # The input comes from a pipe
         '-f',
         'image2',
+        '-start_number',
+        '0',
         os.path.join(output_folder, img_format),
     ]
     print(f'Running \"{" ".join(command)}\"')
-    pipe = subprocess.Popen(
+    process = subprocess.Popen(
         command,
         stdin=subprocess.PIPE,
         stderr=subprocess.PIPE,
         bufsize=10**8,
         close_fds=True)
+    if process.stdin is None or process.stderr is None:
+        raise BrokenPipeError('No buffer recieved.')
     index = 0
     while True:
         if index >= image_array.shape[0]:
             break
-        pipe.stdin.write(image_array[index].tobytes())
+        process.stdin.write(image_array[index].tobytes())
         index += 1
-    pipe.stdin.close()
-    pipe.stderr.close()
-    pipe.wait()
+    process.stdin.close()
+    process.stderr.close()
+    process.wait()
 
 
 def video_to_array(
     input_path: str,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    start: int = 0,
+    end: int = -1,
 ) -> np.ndarray:
-    """Read a video/gif as an array of (f * h * w * 3).
+    """
+    Read a video/gif as an array of (f * h * w * 3).
+
     Args:
         input_path (str): input path.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): resolution(width, height) of output.
-                Defaults to None.
+            optional): resolution(width, height) of output.
+            Defaults to None.
+        start (int, optional): start frame index. Included.
+             If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to 0.
+        end (int, optional): end frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to -1.
 
     Raises:
         FileNotFoundError: check the input path.
@@ -186,20 +268,28 @@ def video_to_array(
     Returns:
         np.ndarray: shape will be (f * h * w * 3).
     """
-    exist_result = check_path_existence(input_path, 'file')
-    suffix_matched = \
-        check_path_suffix(input_path, ['.mp4', 'mkv', 'avi', '.gif'])
-    if not (exist_result == Existence.Exist and suffix_matched):
-        raise FileNotFoundError('Wrong input path.')
+    check_input_path(
+        input_path,
+        allowed_suffix=['.mp4', 'mkv', 'avi', '.gif'],
+        tag='input video',
+        path_type='file')
+
     info = vid_info_reader(input_path)
     if resolution:
         width, height = resolution
     else:
         width, height = int(info['width']), int(info['height'])
+    num_frames = int(info['nb_frames'])
+    start = (min(start, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) + num_frames) % num_frames
     command = [
         'ffmpeg',
         '-i',
         input_path,
+        '-filter_complex',
+        f'[0]trim=start_frame={start}:end_frame={end+1}[v0]',
+        '-map',
+        '[v0]',
         '-pix_fmt',
         'bgr24',  # bgr24 for matching OpenCV
         '-s',
@@ -215,11 +305,13 @@ def video_to_array(
     print(f'Running \"{" ".join(command)}\"')
     # Execute FFmpeg as sub-process with stdout as a pipe
     process = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=10**8)
+    if process.stdout is None:
+        raise BrokenPipeError('No buffer recieved.')
     # Read decoded video frames from the PIPE until no more frames to read
     array = []
     while True:
         # Read decoded video frame (in raw video format) from stdout process.
-        buffer = process.stdout.read(width * height * 3)
+        buffer = process.stdout.read(int(width * height * 3))
         # Break the loop if buffer length is not W*H*3\
         # (when FFmpeg streaming ends).
         if len(buffer) != width * height * 3:
@@ -232,18 +324,28 @@ def video_to_array(
     return np.concatenate(array)
 
 
-def images_to_array(input_folder: str,
-                    resolution: Optional[Union[Tuple[int, int],
-                                               Tuple[float, float]]] = None,
-                    img_format: str = '%06d.png') -> np.ndarray:
-    """Read a folder of images as an array of (f * h * w * 3).
+def images_to_array(
+    input_folder: str,
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    img_format: str = '%06d.png',
+    start: int = 0,
+    end: int = -1,
+) -> np.ndarray:
+    """
+    Read a folder of images as an array of (f * h * w * 3).
 
     Args:
         input_folder (str): folder of input images.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]]:
-                resolution(width, height) of output. Defaults to None.
+            resolution(width, height) of output. Defaults to None.
         img_format (str, optional): format of images to be read.
-                Defaults to '%06d.png'.
+            Defaults to '%06d.png'.
+        start (int, optional): start frame index. Included.
+             If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to 0.
+        end (int, optional): end frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to -1.
 
     Raises:
         FileNotFoundError: check the input path.
@@ -251,18 +353,20 @@ def images_to_array(input_folder: str,
     Returns:
         np.ndarray: shape will be (f * h * w * 3).
     """
-    input_folderinfo = Path(input_folder)
-    exist_result = check_path_existence(input_folder, 'directory')
-    if not exist_result == Existence.Exist:
-        raise FileNotFoundError('Wrong input folder.')
+    check_input_path(
+        input_folder,
+        allowed_suffix=[''],
+        tag='input image folder',
+        path_type='directory')
 
-    info = vid_info_reader(f'{input_folder}/{img_format}' % 1)
+    info = vid_info_reader(f'{input_folder}/{img_format}' % 0)
+    input_folderinfo = Path(input_folder)
     width, height = int(info['width']), int(info['height'])
     if resolution:
         width, height = resolution
     else:
         width, height = int(info['width']), int(info['height'])
-
+    ext = 'png'
     temp_input_folder = None
     if img_format is None:
         file_list = []
@@ -281,17 +385,23 @@ def images_to_array(input_folder: str,
         for index, file_name in enumerate(file_list):
             shutil.copy(
                 file_name,
-                os.path.join(temp_input_folder, '%06d.%s' % (index + 1, ext)))
+                os.path.join(temp_input_folder, '%06d.%s' % (index, ext)))
         input_folder = temp_input_folder
         img_format = '%06d.' + ext
-
+    num_frames = len(os.listdir(input_folder))
+    start = (min(start, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) + num_frames) % num_frames
     command = [
         'ffmpeg',
         '-y',
         '-threads',
-        '4',
+        '1',
+        '-start_number',
+        f'{start}',
         '-i',
         f'{input_folder}/{img_format}',
+        '-frames:v',
+        f'{end - start + 1}',
         '-f',
         'rawvideo',
         '-pix_fmt',
@@ -304,11 +414,13 @@ def images_to_array(input_folder: str,
     ]
     print(f'Running \"{" ".join(command)}\"')
     process = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=10**8)
+    if process.stdout is None:
+        raise BrokenPipeError('No buffer recieved.')
     # Read decoded video frames from the PIPE until no more frames to read
     array = []
     while True:
         # Read decoded video frame (in raw video format) from stdout process.
-        buffer = process.stdout.read(width * height * 3)
+        buffer = process.stdout.read(int(width * height * 3))
         # Break the loop if buffer length is not W*H*3\
         # (when FFmpeg streaming ends).
         if len(buffer) != width * height * 3:
@@ -325,7 +437,7 @@ def images_to_array(input_folder: str,
 
 class vid_info_reader(object):
 
-    def __init__(self, input_path) -> NoReturn:
+    def __init__(self, input_path) -> None:
         """Get video information from video, mimiced from ffmpeg-python.
         https://github.com/kkroening/ffmpeg-python.
 
@@ -336,13 +448,13 @@ class vid_info_reader(object):
             FileNotFoundError: check the input path.
 
         Returns:
-            NoReturn.
+            None.
         """
-        exist_result = check_path_existence(input_path, 'file')
-        suffix_matched = \
-            check_path_suffix(input_path, ['.mp4', '.gif', '.png', '.jpg'])
-        if not (exist_result == Existence.Exist and suffix_matched):
-            raise FileNotFoundError('Wrong input path.')
+        check_input_path(
+            input_path,
+            allowed_suffix=['.mp4', '.gif', '.png', '.jpg', '.jpeg'],
+            tag='input file',
+            path_type='file')
         cmd = [
             'ffprobe', '-show_format', '-show_streams', '-of', 'json',
             input_path
@@ -358,8 +470,18 @@ class vid_info_reader(object):
             sys.exit(1)
         self.video_stream = video_stream
 
-    def __getitem__(self, key: str):
-        """Key ([str]): range in ['index', 'codec_name', 'codec_long_name',
+    def __getitem__(
+        self,
+        key: Literal['index', 'codec_name', 'codec_long_name', 'profile',
+                     'codec_type', 'codec_time_base', 'codec_tag_string',
+                     'codec_tag', 'width', 'height', 'coded_width',
+                     'coded_height', 'has_b_frames', 'pix_fmt', 'level',
+                     'chroma_location', 'refs', 'is_avc', 'nal_length_size',
+                     'r_frame_rate', 'avg_frame_rate', 'time_base',
+                     'start_pts', 'start_time', 'duration_ts', 'duration',
+                     'bit_rate', 'bits_per_raw_sample', 'nb_frames',
+                     'disposition', 'tags']):
+        """Key (str): select in ['index', 'codec_name', 'codec_long_name',
         'profile', 'codec_type', 'codec_time_base', 'codec_tag_string',
         'codec_tag', 'width', 'height', 'coded_width', 'coded_height',
         'has_b_frames', 'pix_fmt', 'level', 'chroma_location', 'refs',
@@ -374,34 +496,35 @@ def video_to_gif(
     input_path: str,
     output_path: str,
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
+) -> None:
     """Convert a video to a gif file.
 
     Args:
         input_path (str): video file path.
         output_path (str): gif file path.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): (width, height) of the output video.
-                Defaults to None.
+            optional): (width, height) of the output video.
+            Defaults to None.
 
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
 
     Returns:
-        NoReturn.
+        None.
     """
-    exist_result = check_path_existence(input_path, 'file')
-    suffix_matched = \
-        check_path_suffix(input_path, ['.mp4'])
-    if not (exist_result == Existence.Exist and suffix_matched):
-        raise FileNotFoundError('Wrong input path.')
+    check_input_path(
+        input_path,
+        allowed_suffix=['.mp4'],
+        tag='input video',
+        path_type='file')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.gif'],
+        tag='output gif',
+        path_type='file',
+        overwrite=True)
 
-    exist_result = check_path_existence(output_path, 'file')
-    suffix_matched = \
-        check_path_suffix(output_path, ['.gif'])
-    if not (exist_result != Existence.MissingParent and suffix_matched):
-        raise FileNotFoundError('Wrong output path.')
     info = vid_info_reader(input_path)
     if resolution:
         width, height = resolution
@@ -417,41 +540,54 @@ def video_to_gif(
     subprocess.call(command)
 
 
-def video_to_images(
-    input_path: str,
-    output_folder: str,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
+def video_to_images(input_path: str,
+                    output_folder: str,
+                    resolution: Optional[Union[Tuple[int, int],
+                                               Tuple[float, float]]] = None,
+                    start: int = 0,
+                    end: int = -1) -> None:
     """Convert a video to a folder of images.
 
     Args:
         input_path (str): video file path
         output_folder (str): ouput folder to store the images
         resolution (Optional[Tuple[int, int]], optional):
-                (width, height) of output. defaults to None.
+            (width, height) of output. defaults to None.
+        start (int, optional): start frame index. Included.
+             If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to 0.
+        end (int, optional): end frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to -1.
 
     Raises:
         FileNotFoundError: check the input path
         FileNotFoundError: check the output path
 
     Returns:
-        NoReturn
+        None
     """
-    exist_result = check_path_existence(input_path, 'file')
-    suffix_matched = \
-        check_path_suffix(input_path, ['.mp4', '.gif'])
-    if not (exist_result == Existence.Exist and suffix_matched):
-        raise FileNotFoundError('Wrong input path.')
-
-    exist_result = check_path_existence(output_folder, 'directory')
-    if exist_result == Existence.MissingParent:
-        raise FileNotFoundError('Wrong output path.')
-    elif exist_result == Existence.FolderNotExist:
-        os.mkdir(output_folder)
+    check_input_path(
+        input_path,
+        allowed_suffix=['.mp4'],
+        tag='input video',
+        path_type='file')
+    prepare_output_path(
+        output_folder,
+        allowed_suffix=[],
+        tag='output image folder',
+        path_type='directory',
+        overwrite=True)
+    info = vid_info_reader(input_path)
+    num_frames = int(info['nb_frames'])
+    start = (min(start, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) + num_frames) % num_frames
 
     command = [
-        'ffmpeg', '-i', input_path, '-f', 'image2', '-v', 'error', '-threads',
-        '4', f'{output_folder}/%06d.png'
+        'ffmpeg', '-i', input_path, '-filter_complex',
+        f'[0]trim=start_frame={start}:end_frame={end+1}[v0]', '-map', '[v0]',
+        '-f', 'image2', '-v', 'error', '-start_number', '0', '-threads', '1',
+        f'{output_folder}/%06d.png'
     ]
     if resolution:
         width, height = resolution
@@ -467,42 +603,55 @@ def images_to_video(
     remove_raw_file: bool = False,
     img_format: str = '%06d.png',
     fps: Union[int, float] = 30,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    start: int = 0,
+    end: int = -1,
+) -> None:
     """Convert a folder of images to a video.
 
     Args:
         input_folder (str): input image folder
         output_path (str): output video file path
         remove_raw_file (bool, optional): whether remove raw images.
-                    Defaults to False.
+            Defaults to False.
         img_format (str, optional): format to name the images].
-                    Defaults to '%06d.png'.
+            Defaults to '%06d.png'.
         fps (Union[int, float], optional): output video fps. Defaults to 30.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                    optional): (width, height) of output.
-                    defaults to None.
+            optional): (width, height) of output.
+            defaults to None.
+        start (int, optional): start frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to 0.
+        end (int, optional): end frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to -1.
 
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
 
     Returns:
-        NoReturn
+        None
     """
+    check_input_path(
+        input_folder,
+        allowed_suffix=[],
+        tag='input image folder',
+        path_type='directory')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.mp4'],
+        tag='output video',
+        path_type='file',
+        overwrite=True)
     input_folderinfo = Path(input_folder)
-    exist_result = check_path_existence(input_folder, 'directory')
-    if not exist_result == Existence.Exist:
-        raise FileNotFoundError('Wrong input folder.')
-
-    exist_result = check_path_existence(output_path, 'directory')
-    suffix_matched = \
-        check_path_suffix(output_path, ['.mp4'])
-    if not (suffix_matched and exist_result != Existence.MissingParent):
-        raise FileNotFoundError('Wrong output path.')
-
+    num_frames = len(os.listdir(input_folder))
+    start = (min(start, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) + num_frames) % num_frames
     temp_input_folder = None
     if img_format is None:
+        ext = 'png'
         file_list = []
         temp_input_folder = os.path.join(input_folderinfo.parent,
                                          input_folderinfo.name + '_temp')
@@ -528,8 +677,12 @@ def images_to_video(
         '-y',
         '-threads',
         '4',
+        '-start_number',
+        str(start),
         '-i',
         f'{input_folder}/{img_format}',
+        '-frames:v',
+        f'{end - start + 1}',
         '-profile:v',
         'baseline',
         '-level',
@@ -567,8 +720,10 @@ def images_to_gif(
     remove_raw_file: bool = False,
     img_format: str = '%06d.png',
     fps: int = 15,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    start: int = 0,
+    end: int = -1,
+) -> None:
     """Convert series of images to a video, similar to images_to_video, but
     provide more suitable parameters.
 
@@ -576,31 +731,41 @@ def images_to_gif(
         input_folder (str): input image folder.
         output_path (str): output gif file path.
         remove_raw_file (bool, optional): whether remove raw images.
-                Defaults to False.
+            Defaults to False.
         img_format (str, optional): format to name the images.
-                Defaults to '%06d.png'.
+            Defaults to '%06d.png'.
         fps (int, optional): output video fps. Defaults to 15.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): (width, height) of output. Defaults to None.
+            optional): (width, height) of output. Defaults to None.
+        start (int, optional): start frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to 0.
+        end (int, optional): end frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to -1.
 
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
 
     Returns:
-        NoReturn
+        None
     """
     input_folderinfo = Path(input_folder)
-    exist_result = check_path_existence(input_folder, 'directory')
-    if not exist_result == Existence.Exist:
-        raise FileNotFoundError('Wrong input folder.')
-
-    exist_result = check_path_existence(output_path, 'file')
-    suffix_matched = \
-        check_path_suffix(output_path, ['.gif'])
-    if not (suffix_matched and exist_result != Existence.MissingParent):
-        raise FileNotFoundError('Wrong output path.')
-
+    check_input_path(
+        input_folder,
+        allowed_suffix=[],
+        tag='input image folder',
+        path_type='directory')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.gif'],
+        tag='output gif',
+        path_type='file',
+        overwrite=True)
+    num_frames = len(os.listdir(input_folder))
+    start = (min(start, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) + num_frames) % num_frames
     temp_input_folder = None
     if img_format is None:
         file_list = []
@@ -608,6 +773,7 @@ def images_to_gif(
                                          input_folderinfo.name + '_temp')
         os.makedirs(temp_input_folder, exist_ok=True)
         pngs = glob.glob(os.path.join(input_folder, '*.png'))
+        ext = 'png'
         if pngs:
             ext = 'png'
         file_list.extend(pngs)
@@ -628,8 +794,12 @@ def images_to_gif(
         '-y',
         '-threads',
         '4',
+        '-start_number',
+        f'{start}',
         '-i',
         f'{input_folder}/{img_format}',
+        '-frames:v',
+        f'{end - start + 1}',
         '-r',
         f'{fps}',
         '-loglevel',
@@ -656,7 +826,7 @@ def gif_to_video(
     fps: int = 30,
     remove_raw_file: bool = False,
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
+) -> None:
     """Convert a gif file to a video.
 
     Args:
@@ -664,32 +834,27 @@ def gif_to_video(
         output_path (str): output video file path.
         fps (int, optional): fps. Defaults to 30.
         remove_raw_file (bool, optional): whether remove original input file.
-                Defaults to False.
+            Defaults to False.
         down_sample_scale (Union[int, float], optional): down sample scale.
-                Defaults to 1.
+            Defaults to 1.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): (width, height) of output. Defaults to None.
+            optional): (width, height) of output. Defaults to None.
 
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
 
     Returns:
-        NoReturn
+        None
     """
-    input_pathinfo = Path(input_path)
-    exist_result = check_path_existence(input_pathinfo, 'file')
-    suffix_matched = \
-        check_path_suffix(input_pathinfo, ['.gif'])
-    if not (exist_result == Existence.Exist and suffix_matched):
-        raise FileNotFoundError('Wrong input path.')
-
-    exist_result = check_path_existence(output_path, 'file')
-    suffix_matched = \
-        check_path_suffix(output_path, ['.mp4'])
-    if not (exist_result != Existence.MissingParent and suffix_matched):
-        raise FileNotFoundError('Wrong output path.')
-
+    check_input_path(
+        input_path, allowed_suffix=['.gif'], tag='input gif', path_type='file')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.mp4'],
+        tag='output video',
+        path_type='file',
+        overwrite=True)
     command = [
         'ffmpeg', '-i', input_path, '-r', f'{fps}', '-loglevel', 'error', '-y',
         output_path, '-threads', '4'
@@ -710,7 +875,7 @@ def gif_to_images(
     fps: int = 30,
     img_format: str = '%06d.png',
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
+) -> None:
     """Convert a gif file to a folder of images.
 
     Args:
@@ -718,81 +883,31 @@ def gif_to_images(
         output_folder (str): output folder to save the images.
         fps (int, optional): fps. Defaults to 30.
         img_format (str, optional): output image name format.
-                Defaults to '%06d.png'.
+            Defaults to '%06d.png'.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): (width, height) of output.
-                Defaults to None.
+            optional): (width, height) of output.
+            Defaults to None.
 
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
 
     Returns:
-        NoReturn
+        None
     """
-    exist_result = check_path_existence(input_path, 'file')
-    suffix_matched = \
-        check_path_suffix(input_path, ['.gif'])
-    if not (exist_result == Existence.Exist and suffix_matched):
-        raise FileNotFoundError('Wrong input path.')
-
-    exist_result = check_path_existence(output_folder, 'directory')
-    if exist_result == Existence.MissingParent:
-        raise FileNotFoundError('Wrong output path.')
-    elif exist_result == Existence.FolderNotExist:
-        os.mkdir(output_folder)
+    check_input_path(
+        input_path, allowed_suffix=['.gif'], tag='input gif', path_type='file')
+    prepare_output_path(
+        output_folder,
+        allowed_suffix=[],
+        tag='output image folder',
+        path_type='directory',
+        overwrite=True)
     command = [
         'ffmpeg', '-i', input_path, '-r',
         str(fps), '-loglevel', 'error', '-f', 'image2', '-v', 'error',
-        '-threads', '4', '-y', f'{output_folder}/{img_format}'
-    ]
-    if resolution:
-        width, height = resolution
-        command.insert(3, '-s')
-        command.insert('%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
-    subprocess.call(command)
-
-
-def spatial_crop_video(
-    input_path: str,
-    output_path: str,
-    box: Iterable[int] = [0, 0, 100, 100],
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
-    """Spatially crop a video or gif file.
-
-    Args:
-        input_path (str): input video or gif file path.
-        output_path (str): output video or gif file path.
-        box (Iterable[int], optional): [x, y of the crop region left.
-                corner and width and height]. Defaults to [0, 0, 100, 100].
-        resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): (width, height) of output. Defaults to None.
-
-    Raises:
-        FileNotFoundError: check the input path.
-        FileNotFoundError: check the output path.
-
-    Returns:
-        NoReturn
-    """
-    exist_result = check_path_existence(input_path, 'file')
-    suffix_matched = \
-        check_path_suffix(input_path, ['.mp4', '.gif'])
-    if not (exist_result == Existence.Exist and suffix_matched):
-        raise FileNotFoundError('Wrong input path.')
-
-    exist_result = check_path_existence(output_path, 'file')
-    if exist_result == Existence.MissingParent:
-        raise FileNotFoundError('Wrong output path.')
-    assert len(box) == 4
-    x, y, w, h = box
-    assert (w > 0 and h > 0)
-    command = [
-        'ffmpeg', '-i', input_path, '-vf',
-        'crop=%d:%d:%d:%d' % (w, h, x, y), '-loglevel', 'error', '-y',
-        output_path
+        '-threads', '4', '-y', '-start_number', '0',
+        f'{output_folder}/{img_format}'
     ]
     if resolution:
         width, height = resolution
@@ -802,33 +917,89 @@ def spatial_crop_video(
     subprocess.call(command)
 
 
-def spatial_concat_video(input_path_list: List[str],
-                         output_path: str,
-                         array: List[int] = [1, 1],
-                         direction='h',
-                         resolution: Optional[Union[Tuple[int, int],
-                                                    Tuple[float,
-                                                          float]]] = (512,
-                                                                      512),
-                         remove_raw_files: bool = False,
-                         padding: int = 0) -> NoReturn:
-    """Spatially concat some videos as an array video.
+def crop_video(
+    input_path: str,
+    output_path: str,
+    box: Optional[Union[List[int], Tuple[int, int, int, int]]] = None,
+    start: int = 0,
+    end: int = -1,
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
+) -> None:
+    """Spatially or temporally crop a video or gif file.
 
     Args:
-        input_path_list (list): input video or gif file list.
+        input_path (str): input video or gif file path.
         output_path (str): output video or gif file path.
-        array (List[int], optional): line number and column number of
-                    the video array]. Defaults to [1, 1].
-        direction (str, optional): [choose in 'h' or 'v', represent
-                    horizontal and vertical separately].
-                    Defaults to 'h'.
+        box (Iterable[int], optional): [x, y of the crop region left.
+            corner and width and height]. Defaults to [0, 0, 100, 100].
+        start (int, optional): start frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to 0.
+        end (int, optional): end frame index. Included.
+            If < 0, will be converted to frame_index range in [0, frame_num].
+            Defaults to -1.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                    optional): (width, height) of output.
-                    Defaults to (512, 512).
-        remove_raw_files (bool, optional): whether remove raw images.
-                    Defaults to False.
-        padding (int, optional): width of pixels between videos.
-                    Defaults to 0.
+            optional): (width, height) of output. Defaults to None.
+
+    Raises:
+        FileNotFoundError: check the input path.
+        FileNotFoundError: check the output path.
+
+    Returns:
+        None'-start_number', f'{start}',
+    """
+    check_input_path(
+        input_path,
+        allowed_suffix=['.gif', '.mp4'],
+        tag='input video',
+        path_type='file')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.gif', '.mp4'],
+        tag='output video',
+        path_type='file',
+        overwrite=True)
+
+    info = vid_info_reader(input_path)
+    width, height = int(info['width']), int(info['height'])
+
+    if box is None:
+        box = [0, 0, width, height]
+
+    assert len(box) == 4
+    x, y, w, h = box
+    assert (w > 0 and h > 0)
+    command = [
+        'ffmpeg', '-i', input_path, '-vcodec', 'libx264', '-vf',
+        'crop=%d:%d:%d:%d' % (w, h, x, y), '-loglevel', 'error', '-y',
+        output_path
+    ]
+    if resolution:
+        width, height = resolution
+        width += width % 2
+        height += height % 2
+        command.insert(-1, '-s')
+        command.insert(-1, '%dx%d' % (width, height))
+    print(f'Running \"{" ".join(command)}\"')
+    subprocess.call(command)
+
+
+def slice_video(
+    input_path: str,
+    output_path: str,
+    start: int = 0,
+    end: int = -1,
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
+) -> None:
+    """Temporally crop a video/gif into another video/gif.
+
+    Args:
+        input_path (str): input video or gif file path.
+        output_path (str): output video of gif file path.
+        start (int, optional): start frame index. Defaults to 0.
+        end (int, optional): end frame index. Defaults to -1.
+        resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
+            optional): (width, height) of output. Defaults to None.
 
     Raises:
         FileNotFoundError: check the input path.
@@ -837,21 +1008,75 @@ def spatial_concat_video(input_path_list: List[str],
     Returns:
         NoReturn
     """
+    info = vid_info_reader(input_path)
+    num_frames = int(info['nb_frames'])
+    start = (min(start, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) + num_frames) % num_frames
+    command = [
+        'ffmpeg', '-y', '-i', input_path, '-filter_complex',
+        f'[0]trim=start_frame={start}:end_frame={end+1}[v0]', '-map', '[v0]',
+        '-loglevel', 'error', '-vcodec', 'libx264', output_path
+    ]
+    if resolution:
+        width, height = resolution
+        width += width % 2
+        height += height % 2
+        command.insert(1, '-s')
+        command.insert(2, '%dx%d' % (width, height))
+    print(f'Running \"{" ".join(command)}\"')
+    subprocess.call(command)
+
+
+def spatial_concat_video(input_path_list: List[str],
+                         output_path: str,
+                         array: List[int] = [1, 1],
+                         direction='h',
+                         resolution: Union[Tuple[int,
+                                                 int], List[int], List[float],
+                                           Tuple[float, float]] = (512, 512),
+                         remove_raw_files: bool = False,
+                         padding: int = 0) -> None:
+    """Spatially concat some videos as an array video.
+
+    Args:
+        input_path_list (list): input video or gif file list.
+        output_path (str): output video or gif file path.
+        array (List[int], optional): line number and column number of
+            the video array]. Defaults to [1, 1].
+        direction (str, optional): [choose in 'h' or 'v', represent
+            horizontal and vertical separately].
+            Defaults to 'h'.
+        resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
+            optional): (width, height) of output.
+            Defaults to (512, 512).
+        remove_raw_files (bool, optional): whether remove raw images.
+            Defaults to False.
+        padding (int, optional): width of pixels between videos.
+            Defaults to 0.
+
+    Raises:
+        FileNotFoundError: check the input path.
+        FileNotFoundError: check the output path.
+
+    Returns:
+        None
+    """
     lowercase = string.ascii_lowercase
     assert len(array) == 2
     assert (array[0] * array[1]) >= len(input_path_list)
     for path in input_path_list:
-        exist_result = check_path_existence(path, 'file')
-        suffix_matched =  \
-            check_path_suffix(path, ['.mp4'])
-        if not (exist_result == Existence.Exist and suffix_matched):
-            raise FileNotFoundError('Wrong input file path.')
+        check_input_path(
+            path,
+            allowed_suffix=['.gif', '.mp4'],
+            tag='input video',
+            path_type='file')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.gif', '.mp4'],
+        tag='output video',
+        path_type='file',
+        overwrite=True)
 
-    exist_result = check_path_existence(output_path, 'file')
-    suffix_matched = \
-        check_path_suffix(output_path, ['.mp4'])
-    if not (exist_result != Existence.MissingParent and suffix_matched):
-        raise FileNotFoundError('Wrong output path.')
     command = ['ffmpeg']
     width, height = resolution
     scale_command = []
@@ -893,71 +1118,11 @@ def spatial_concat_video(input_path_list: List[str],
         subprocess.call(command)
 
 
-def temporal_crop_video(
-    input_path: str,
-    output_path: str,
-    start: int = 0,
-    end: int = -1,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> NoReturn:
-    """Temporally crop a video/gif into another video/gif.
-
-    Args:
-        input_path (str): input video or gif file path.
-        output_path (str): output video of gif file path.
-        start (int, optional): start frame index. Defaults to 0.
-        end (int, optional): end frame index. Defaults to -1.
-        resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-                optional): (width, height) of output. Defaults to None.
-
-    Raises:
-        FileNotFoundError: check the input path.
-        FileNotFoundError: check the output path.
-
-    Returns:
-        NoReturn
-    """
-    exist_result = check_path_existence(input_path, 'file')
-    suffix_matched = \
-        check_path_suffix(input_path, ['.mp4', '.gif'])
-    if not (exist_result == Existence.Exist and suffix_matched):
-        raise FileNotFoundError('Wrong input path.')
-
-    exist_result = check_path_existence(output_path, 'file')
-    suffix_matched = \
-        check_path_suffix(output_path, ['.mp4', '.gif'])
-    if not (exist_result != Existence.MissingParent and suffix_matched):
-        raise FileNotFoundError('Wrong output path.')
-    info = vid_info_reader(input_path)
-    num_frames, time = int(info['nb_frames']), float(info['duration'])
-    end = min(end, num_frames - 1)
-    end = (num_frames + end) % num_frames
-    fps = num_frames / float(time)
-    start = start / fps
-    end = end / fps
-    command = [
-        'ffmpeg', '-y', '-ss',
-        str(start), '-t',
-        str(end - start), '-accurate_seek', '-i', input_path, '-loglevel',
-        'error', '-vcodec', 'libx264', output_path
-    ]
-    if resolution:
-        width, height = resolution
-        width += width % 2
-        height += height % 2
-        command.insert(1, '-s')
-        command.insert(2, '%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
-    subprocess.call(command)
-
-
 def temporal_concat_video(input_path_list: List[str],
                           output_path: str,
-                          resolution: Optional[Union[Tuple[int, int],
-                                                     Tuple[float,
-                                                           float]]] = (512,
-                                                                       512),
-                          remove_raw_files: bool = False) -> NoReturn:
+                          resolution: Union[Tuple[int, int],
+                                            Tuple[float, float]] = (512, 512),
+                          remove_raw_files: bool = False) -> None:
     """Concat no matter videos or gifs into a temporal sequence, and save as a
     new video or gif file.
 
@@ -965,29 +1130,31 @@ def temporal_concat_video(input_path_list: List[str],
         input_path_list (List[str]): list of input video paths.
         output_path (str): output video file path.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]]
-                , optional): (width, height) of output]. Defaults to (512,512).
+            , optional): (width, height) of output].
+            Defaults to (512,512).
         remove_raw_files (bool, optional): whether remove the input videos.
-                Defaults to False.
+            Defaults to False.
 
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
 
     Returns:
-        NoReturn.
+        None.
     """
     for path in input_path_list:
-        exist_result = check_path_existence(path, 'file')
-        suffix_matched = \
-            check_path_suffix(path, ['.mp4', '.gif'])
-        if not (exist_result == Existence.Exist and suffix_matched):
-            raise FileNotFoundError('Wrong input file path.')
+        check_input_path(
+            path,
+            allowed_suffix=['.gif', '.mp4'],
+            tag='input video',
+            path_type='file')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.gif', '.mp4'],
+        tag='output video',
+        path_type='file',
+        overwrite=True)
 
-    exist_result = check_path_existence(output_path, 'file')
-    suffix_matched = \
-        check_path_suffix(output_path, ['.mp4', '.gif'])
-    if not (exist_result != Existence.MissingParent and suffix_matched):
-        raise FileNotFoundError('Wrong output path.')
     width, height = resolution
     command = ['ffmpeg']
     concat_command = []
@@ -996,7 +1163,7 @@ def temporal_concat_video(input_path_list: List[str],
         command.append('-i')
         command.append(vid_file)
         scale_command.append(
-            '[%d:v]scale=%d:%d:force_original_aspect_ratio=0[v%d];' %
+            '[%d:v]scale=%d:%d:overwrite_original_aspect_ratio=0[v%d];' %
             (index, width, height, index))
         concat_command.append('[v%d]' % index)
     concat_command = ''.join(concat_command)
@@ -1019,16 +1186,16 @@ def compress_video(input_path: str,
                    output_path: str,
                    compress_rate: int = 1,
                    down_sample_scale: Union[float, int] = 1,
-                   fps: int = 30) -> NoReturn:
+                   fps: int = 30) -> None:
     """Compress a video file.
 
     Args:
         input_path (str): input video file path.
         output_path (str): output video file path.
         compress_rate (int, optional): compress rate, influents the bit rate.
-                Defaults to 1.
+            Defaults to 1.
         down_sample_scale (Union[float, int], optional): spatial down sample
-                scale. Defaults to 1.
+            scale. Defaults to 1.
         fps (int, optional): [description]. Defaults to 30.
 
     Raises:
@@ -1036,21 +1203,22 @@ def compress_video(input_path: str,
         FileNotFoundError: check the output path.
 
     Returns:
-        NoReturn.
+        None.
     """
     input_pathinfo = Path(input_path)
 
-    exist_result = check_path_existence(input_path, 'file')
-    suffix_matched = \
-        check_path_suffix(input_path, ['.mp4', '.gif'])
-    if not (exist_result == Existence.Exist and suffix_matched):
-        raise FileNotFoundError('Wrong input path.')
+    check_input_path(
+        input_path,
+        allowed_suffix=['.gif', '.mp4'],
+        tag='input video',
+        path_type='file')
+    prepare_output_path(
+        output_path,
+        allowed_suffix=['.gif', '.mp4'],
+        tag='output video',
+        path_type='file',
+        overwrite=True)
 
-    exist_result = check_path_existence(output_path, 'file')
-    suffix_matched = \
-        check_path_suffix(output_path, ['.mp4', '.gif'])
-    if not (exist_result != Existence.MissingParent and suffix_matched):
-        raise FileNotFoundError('Wrong output path.')
     info = vid_info_reader(input_path)
 
     width = int(info['width'])
