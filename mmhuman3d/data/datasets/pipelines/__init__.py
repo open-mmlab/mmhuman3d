@@ -12,18 +12,17 @@ from .loading import LoadImageFromFile
 from .transforms import (
     CenterCrop,
     ColorJitter,
+    GetRandomScaleRotation,
+    KeypointsSelection,
     Lighting,
-    RandomCrop,
-    RandomErasing,
-    RandomFlip,
-    RandomGrayscale,
-    RandomResizedCrop,
-    Resize,
+    MeshAffine,
+    RandomChannelNoise,
+    RandomHorizontalFlip,
 )
 
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToPIL', 'ToNumpy',
-    'Transpose', 'Collect', 'LoadImageFromFile', 'Resize', 'CenterCrop',
-    'RandomFlip', 'RandomCrop', 'RandomResizedCrop', 'RandomGrayscale',
-    'ColorJitter', 'Lighting', 'RandomErasing'
+    'Transpose', 'Collect', 'LoadImageFromFile', 'CenterCrop',
+    'RandomHorizontalFlip', 'ColorJitter', 'Lighting', 'RandomChannelNoise',
+    'GetRandomScaleRotation', 'KeypointsSelection', 'MeshAffine'
 ]

@@ -130,7 +130,13 @@ class KeypointMSELoss(nn.Module):
         # adjust weight with confidences
         weight = weight if weight is not None else 1.0
         weight = weight * pred_conf * target_conf
-        weight = weight.view(1, -1, 1)
+        B, J = pred.shape[:2]
+        if len(weight.shape) == 1:
+            # for simplify tools
+            weight = weight.view(1, -1, 1)
+        else:
+            # for body model estimator
+            weight = weight.view(B, J, 1)
 
         loss = loss_weight * mse_loss_with_gmof(
             pred,

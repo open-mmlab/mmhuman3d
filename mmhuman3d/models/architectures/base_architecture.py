@@ -6,11 +6,11 @@ import torch.distributed as dist
 from mmcv.runner import BaseModule
 
 
-class BaseImageEstimator(BaseModule, metaclass=ABCMeta):
-    """Base class for image estimator."""
+class BaseArchitecture(BaseModule, metaclass=ABCMeta):
+    """Base class for mmhuman3d architecture."""
 
     def __init__(self, init_cfg=None):
-        super(BaseImageEstimator, self).__init__(init_cfg)
+        super(BaseArchitecture, self).__init__(init_cfg)
 
     @abstractmethod
     def forward_train(self, **kwargs):

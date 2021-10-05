@@ -7,14 +7,15 @@ from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import (
     DistSamplerSeedHook,
     Fp16OptimizerHook,
-    build_optimizer,
+    OptimizerHook,
     build_runner,
 )
 from mmcv.runner.hooks import DistEvalHook, EvalHook
 
+from mmhuman3d.core.distributed_wrapper import DistributedDataParallelWrapper
+from mmhuman3d.core.optimizer import build_optimizers
 from mmhuman3d.data.datasets import build_dataloader, build_dataset
 from mmhuman3d.utils import get_root_logger
-from mmhuman3d.utils.dist_utils import DistOptimizerHook
 
 
 def set_random_seed(seed, deterministic=False):
@@ -61,16 +62,27 @@ def train_model(model,
             seed=cfg.seed) for ds in dataset
     ]
 
+    # determine wether use adversarial training precess or not
+    use_adverserial_train = cfg.get('use_adversarial_train', False)
+
     # put model on gpus
     if distributed:
         find_unused_parameters = cfg.get('find_unused_parameters', False)
         # Sets the `find_unused_parameters` parameter in
         # torch.nn.parallel.DistributedDataParallel
-        model = MMDistributedDataParallel(
-            model.cuda(),
-            device_ids=[torch.cuda.current_device()],
-            broadcast_buffers=False,
-            find_unused_parameters=find_unused_parameters)
+        if use_adverserial_train:
+            # Use DistributedDataParallelWrapper for adversarial training
+            model = DistributedDataParallelWrapper(
+                model,
+                device_ids=[torch.cuda.current_device()],
+                broadcast_buffers=False,
+                find_unused_parameters=find_unused_parameters)
+        else:
+            model = MMDistributedDataParallel(
+                model.cuda(),
+                device_ids=[torch.cuda.current_device()],
+                broadcast_buffers=False,
+                find_unused_parameters=find_unused_parameters)
     else:
         if device == 'cuda':
             model = MMDataParallel(
@@ -81,7 +93,7 @@ def train_model(model,
             raise ValueError(F'unsupported device name {device}.')
 
     # build runner
-    optimizer = build_optimizer(model, cfg.optimizer)
+    optimizer = build_optimizers(model, cfg.optimizer)
 
     if cfg.get('runner') is None:
         cfg.runner = {
@@ -105,15 +117,20 @@ def train_model(model,
     # an ugly walkaround to make the .log and .log.json filenames the same
     runner.timestamp = timestamp
 
-    # fp16 setting
-    fp16_cfg = cfg.get('fp16', None)
-    if fp16_cfg is not None:
-        optimizer_config = Fp16OptimizerHook(
-            **cfg.optimizer_config, **fp16_cfg, distributed=distributed)
-    elif distributed and 'type' not in cfg.optimizer_config:
-        optimizer_config = DistOptimizerHook(**cfg.optimizer_config)
+    if use_adverserial_train:
+        # The optimizer step process is included in the train_step function
+        # of the model, so the runner should NOT include optimizer hook.
+        optimizer_config = None
     else:
-        optimizer_config = cfg.optimizer_config
+        # fp16 setting
+        fp16_cfg = cfg.get('fp16', None)
+        if fp16_cfg is not None:
+            optimizer_config = Fp16OptimizerHook(
+                **cfg.optimizer_config, **fp16_cfg, distributed=distributed)
+        elif distributed and 'type' not in cfg.optimizer_config:
+            optimizer_config = OptimizerHook(**cfg.optimizer_config)
+        else:
+            optimizer_config = cfg.optimizer_config
 
     # register hooks
     runner.register_training_hooks(
@@ -138,6 +155,7 @@ def train_model(model,
             round_up=True)
         eval_cfg = cfg.get('evaluation', {})
         eval_cfg['by_epoch'] = cfg.runner['type'] != 'IterBasedRunner'
+        eval_cfg['work_dir'] = cfg.work_dir
         eval_hook = DistEvalHook if distributed else EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 

@@ -5,11 +5,11 @@ from mmcv.parallel import collate, scatter
 from mmcv.runner import load_checkpoint
 
 from mmhuman3d.data.datasets.pipelines import Compose
-from mmhuman3d.models import build_framework
+from mmhuman3d.models import build_architecture
 
 
 def init_model(config, checkpoint=None, device='cuda:0', options=None):
-    """Initialize a framework from config file.
+    """Initialize an architecture from config file.
 
     Args:
         config (str or :obj:`mmcv.Config`): Config file path or the config
@@ -19,7 +19,7 @@ def init_model(config, checkpoint=None, device='cuda:0', options=None):
         options (dict): Options to override some settings in the used config.
 
     Returns:
-        nn.Module: The constructed framework.
+        nn.Module: The constructed architecture.
     """
     if isinstance(config, str):
         config = mmcv.Config.fromfile(config)
@@ -29,7 +29,7 @@ def init_model(config, checkpoint=None, device='cuda:0', options=None):
     if options is not None:
         config.merge_from_dict(options)
     config.model.pretrained = None
-    model = build_framework(config.model)
+    model = build_architecture(config.model)
     if checkpoint is not None:
         map_loc = 'cpu' if device == 'cpu' else None
         checkpoint = load_checkpoint(model, checkpoint, map_location=map_loc)
@@ -50,10 +50,10 @@ def init_model(config, checkpoint=None, device='cuda:0', options=None):
 
 
 def inference_model(model, img):
-    """Inference image(s) with the framework.
+    """Inference image(s) with the architecture.
 
     Args:
-        model (nn.Module): The loaded framework.
+        model (nn.Module): The loaded architecture.
         img (str/ndarray): The image filename or loaded image.
 
     Returns:

@@ -1,9 +1,7 @@
 import argparse
 import os
-import warnings
 
 import mmcv
-import numpy as np
 import torch
 from mmcv import DictAction
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
@@ -15,13 +13,15 @@ from mmcv.runner import (
 )
 
 from mmhuman3d.apis import multi_gpu_test, single_gpu_test
-from mmhuman3d.datasets import build_dataloader, build_dataset
-from mmhuman3d.models import build_classifier
+from mmhuman3d.data.datasets import build_dataloader, build_dataset
+from mmhuman3d.models import build_architecture
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='mmhuman3d test model')
     parser.add_argument('config', help='test config file path')
+    parser.add_argument(
+        '--work-dir', help='the dir to save evaluation results')
     parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument('--out', help='output result file')
     parser.add_argument(
@@ -86,7 +86,6 @@ def main():
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
-    cfg.model.pretrained = None
     cfg.data.test.test_mode = True
 
     # init distributed env first, since logger depends on the dist info.
@@ -108,27 +107,17 @@ def main():
         round_up=True)
 
     # build the model and load checkpoint
-    model = build_classifier(cfg.model)
+    model = build_architecture(cfg.model)
     fp16_cfg = cfg.get('fp16', None)
     if fp16_cfg is not None:
         wrap_fp16_model(model)
-    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
-
-    if 'CLASSES' in checkpoint.get('meta', {}):
-        CLASSES = checkpoint['meta']['CLASSES']
-    else:
-        from mmhuman3d.datasets import ImageNet
-        warnings.simplefilter('once')
-        warnings.warn('Class names are not saved in the checkpoint\'s '
-                      'meta data, use imagenet by default.')
-        CLASSES = ImageNet.CLASSES
+    load_checkpoint(model, args.checkpoint, map_location='cpu')
 
     if not distributed:
         if args.device == 'cpu':
             model = model.cpu()
         else:
             model = MMDataParallel(model, device_ids=[0])
-        model.CLASSES = CLASSES
         show_kwargs = {} if args.show_options is None else args.show_options
         outputs = single_gpu_test(model, data_loader, args.show, args.show_dir,
                                   **show_kwargs)
@@ -141,29 +130,12 @@ def main():
                                  args.gpu_collect)
 
     rank, _ = get_dist_info()
+    eval_cfg = cfg.get('evaluation', {})
     if rank == 0:
-        if args.metrics:
-            results = dataset.evaluate(outputs, args.metrics,
-                                       args.metric_options)
-            for k, v in results.items():
-                print(f'\n{k} : {v:.2f}')
-        else:
-            warnings.warn('Evaluation metrics are not specified.')
-            scores = np.vstack(outputs)
-            pred_score = np.max(scores, axis=1)
-            pred_label = np.argmax(scores, axis=1)
-            pred_class = [CLASSES[lb] for lb in pred_label]
-            results = {
-                'pred_score': pred_score,
-                'pred_label': pred_label,
-                'pred_class': pred_class
-            }
-            if not args.out:
-                print('\nthe predicted result for the first element is '
-                      f'pred_score = {pred_score[0]:.2f}, '
-                      f'pred_label = {pred_label[0]} '
-                      f'and pred_class = {pred_class[0]}. '
-                      'Specify --out to save all results to files.')
+        results = dataset.evaluate(outputs, args.work_dir, **eval_cfg)
+        for k, v in results.items():
+            print(f'\n{k} : {v:.2f}')
+
     if args.out and rank == 0:
         print(f'\nwriting results to {args.out}')
         mmcv.dump(results, args.out)

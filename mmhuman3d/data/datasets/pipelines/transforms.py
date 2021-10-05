@@ -1,689 +1,370 @@
-import inspect
 import math
 import random
-from numbers import Number
-from typing import Sequence
 
+import cv2
 import mmcv
 import numpy as np
 
 from ..builder import PIPELINES
 from .compose import Compose
 
-try:
-    import albumentations
-except ImportError:
-    albumentations = None
 
-
-@PIPELINES.register_module()
-class RandomCrop(object):
-    """Crop the given Image at a random location.
-
-    Args:
-        size (sequence or int): Desired output size of the crop. If size is an
-            int instead of sequence like (h, w), a square crop (size, size) is
-            made.
-        padding (int or sequence, optional): Optional padding on each border
-            of the image. If a sequence of length 4 is provided, it is used to
-            pad left, top, right, bottom borders respectively.  If a sequence
-            of length 2 is provided, it is used to pad left/right, top/bottom
-            borders, respectively. Default: None, which means no padding.
-        pad_if_needed (boolean): It will pad the image if smaller than the
-            desired size to avoid raising an exception. Since cropping is done
-            after padding, the padding seems to be done at a random offset.
-            Default: False.
-        pad_val (Number | Sequence[Number]): Pixel pad_val value for constant
-            fill. If a tuple of length 3, it is used to pad_val R, G, B
-            channels respectively. Default: 0.
-        padding_mode (str): Type of padding. Should be: constant, edge,
-            reflect or symmetric. Default: constant.
-            -constant: Pads with a constant value, this value is specified
-                with pad_val.
-            -edge: pads with the last value at the edge of the image.
-            -reflect: Pads with reflection of image without repeating the
-                last value on the edge. For example, padding [1, 2, 3, 4]
-                with 2 elements on both sides in reflect mode will result
-                in [3, 2, 1, 2, 3, 4, 3, 2].
-            -symmetric: Pads with reflection of image repeating the last
-                value on the edge. For example, padding [1, 2, 3, 4] with
-                2 elements on both sides in symmetric mode will result in
-                [2, 1, 1, 2, 3, 4, 4, 3].
-    """
-
-    def __init__(self,
-                 size,
-                 padding=None,
-                 pad_if_needed=False,
-                 pad_val=0,
-                 padding_mode='constant'):
-        if isinstance(size, (tuple, list)):
-            self.size = size
-        else:
-            self.size = (size, size)
-        # check padding mode
-        assert padding_mode in ['constant', 'edge', 'reflect', 'symmetric']
-        self.padding = padding
-        self.pad_if_needed = pad_if_needed
-        self.pad_val = pad_val
-        self.padding_mode = padding_mode
-
-    @staticmethod
-    def get_params(img, output_size):
-        """Get parameters for ``crop`` for a random crop.
-
-        Args:
-            img (ndarray): Image to be cropped.
-            output_size (tuple): Expected output size of the crop.
-
-        Returns:
-            tuple: Params (xmin, ymin, target_height, target_width) to be
-                passed to ``crop`` for random crop.
-        """
-        height = img.shape[0]
-        width = img.shape[1]
-        target_height, target_width = output_size
-        if width == target_width and height == target_height:
-            return 0, 0, height, width
-
-        ymin = random.randint(0, height - target_height)
-        xmin = random.randint(0, width - target_width)
-        return ymin, xmin, target_height, target_width
-
-    def __call__(self, results):
-        """
-        Args:
-            img (ndarray): Image to be cropped.
-        """
-        for key in results.get('img_fields', ['img']):
-            img = results[key]
-            if self.padding is not None:
-                img = mmcv.impad(
-                    img, padding=self.padding, pad_val=self.pad_val)
-
-            # pad the height if needed
-            if self.pad_if_needed and img.shape[0] < self.size[0]:
-                img = mmcv.impad(
-                    img,
-                    padding=(0, self.size[0] - img.shape[0], 0,
-                             self.size[0] - img.shape[0]),
-                    pad_val=self.pad_val,
-                    padding_mode=self.padding_mode)
-
-            # pad the width if needed
-            if self.pad_if_needed and img.shape[1] < self.size[1]:
-                img = mmcv.impad(
-                    img,
-                    padding=(self.size[1] - img.shape[1], 0,
-                             self.size[1] - img.shape[1], 0),
-                    pad_val=self.pad_val,
-                    padding_mode=self.padding_mode)
-
-            ymin, xmin, height, width = self.get_params(img, self.size)
-            results[key] = mmcv.imcrop(
-                img,
-                np.array([
-                    xmin,
-                    ymin,
-                    xmin + width - 1,
-                    ymin + height - 1,
-                ]))
-        return results
-
-    def __repr__(self):
-        return (self.__class__.__name__ +
-                f'(size={self.size}, padding={self.padding})')
-
-
-@PIPELINES.register_module()
-class RandomResizedCrop(object):
-    """Crop the given image to random size and aspect ratio.
-
-    A crop of random size (default: of 0.08 to 1.0) of the original size and a
-    random aspect ratio (default: of 3/4 to 4/3) of the original aspect ratio
-    is made. This crop is finally resized to given size.
+def get_affine_transform(center,
+                         scale,
+                         rot,
+                         output_size,
+                         shift=(0., 0.),
+                         inv=False):
+    """Get the affine transform matrix, given the center/scale/rot/output_size.
 
     Args:
-        size (sequence | int): Desired output size of the crop. If size is an
-            int instead of sequence like (h, w), a square crop (size, size) is
-            made.
-        scale (tuple): Range of the random size of the cropped image compared
-            to the original image. Defaults to (0.08, 1.0).
-        ratio (tuple): Range of the random aspect ratio of the cropped image
-            compared to the original image. Defaults to (3. / 4., 4. / 3.).
-        max_attempts (int): Maximum number of attempts before falling back to
-            Central Crop. Defaults to 10.
-        efficientnet_style (bool): Whether to use efficientnet style Random
-            ResizedCrop. Defaults to False.
-        min_covered (Number): Minimum ratio of the cropped area to the original
-             area. Only valid if efficientnet_style is true. Defaults to 0.1.
-        crop_padding (int): The crop padding parameter in efficientnet style
-            center crop. Only valid if efficientnet_style is true.
-            Defaults to 32.
-        interpolation (str): Interpolation method, accepted values are
-            'nearest', 'bilinear', 'bicubic', 'area', 'lanczos'. Defaults to
-            'bilinear'.
-        backend (str): The image resize backend type, accpeted values are
-            `cv2` and `pillow`. Defaults to `cv2`.
-    """
-
-    def __init__(self,
-                 size,
-                 scale=(0.08, 1.0),
-                 ratio=(3. / 4., 4. / 3.),
-                 max_attempts=10,
-                 efficientnet_style=False,
-                 min_covered=0.1,
-                 crop_padding=32,
-                 interpolation='bilinear',
-                 backend='cv2'):
-        if efficientnet_style:
-            assert isinstance(size, int)
-            self.size = (size, size)
-            assert crop_padding >= 0
-        else:
-            if isinstance(size, (tuple, list)):
-                self.size = size
-            else:
-                self.size = (size, size)
-        if (scale[0] > scale[1]) or (ratio[0] > ratio[1]):
-            raise ValueError('range should be of kind (min, max). '
-                             f'But received scale {scale} and rato {ratio}.')
-        assert min_covered >= 0, 'min_covered should be no less than 0.'
-        assert isinstance(max_attempts, int) and max_attempts >= 0, \
-            'max_attempts mush be of typle int and no less than 0.'
-        assert interpolation in ('nearest', 'bilinear', 'bicubic', 'area',
-                                 'lanczos')
-        if backend not in ['cv2', 'pillow']:
-            raise ValueError(f'backend: {backend} is not supported for resize.'
-                             'Supported backends are "cv2", "pillow"')
-
-        self.scale = scale
-        self.ratio = ratio
-        self.max_attempts = max_attempts
-        self.efficientnet_style = efficientnet_style
-        self.min_covered = min_covered
-        self.crop_padding = crop_padding
-        self.interpolation = interpolation
-        self.backend = backend
-
-    @staticmethod
-    def get_params(img, scale, ratio, max_attempts=10):
-        """Get parameters for ``crop`` for a random sized crop.
-
-        Args:
-            img (ndarray): Image to be cropped.
-            scale (tuple): Range of the random size of the cropped image
-                compared to the original image size.
-            ratio (tuple): Range of the random aspect ratio of the cropped
-                image compared to the original image area.
-            max_attempts (int): Maximum number of attempts before falling back
-                to central crop. Defaults to 10.
-
-        Returns:
-            tuple: Params (ymin, xmin, ymax, xmax) to be passed to `crop` for
-                a random sized crop.
-        """
-        height = img.shape[0]
-        width = img.shape[1]
-        area = height * width
-
-        for _ in range(max_attempts):
-            target_area = random.uniform(*scale) * area
-            log_ratio = (math.log(ratio[0]), math.log(ratio[1]))
-            aspect_ratio = math.exp(random.uniform(*log_ratio))
-
-            target_width = int(round(math.sqrt(target_area * aspect_ratio)))
-            target_height = int(round(math.sqrt(target_area / aspect_ratio)))
-
-            if 0 < target_width <= width and 0 < target_height <= height:
-                ymin = random.randint(0, height - target_height)
-                xmin = random.randint(0, width - target_width)
-                ymax = ymin + target_height - 1
-                xmax = xmin + target_width - 1
-                return ymin, xmin, ymax, xmax
-
-        # Fallback to central crop
-        in_ratio = float(width) / float(height)
-        if in_ratio < min(ratio):
-            target_width = width
-            target_height = int(round(target_width / min(ratio)))
-        elif in_ratio > max(ratio):
-            target_height = height
-            target_width = int(round(target_height * max(ratio)))
-        else:  # whole image
-            target_width = width
-            target_height = height
-        ymin = (height - target_height) // 2
-        xmin = (width - target_width) // 2
-        ymax = ymin + target_height - 1
-        xmax = xmin + target_width - 1
-        return ymin, xmin, ymax, xmax
-
-    # https://github.com/kakaobrain/fast-autoaugment/blob/master/FastAutoAugment/data.py # noqa
-    @staticmethod
-    def get_params_efficientnet_style(img,
-                                      size,
-                                      scale,
-                                      ratio,
-                                      max_attempts=10,
-                                      min_covered=0.1,
-                                      crop_padding=32):
-        """Get parameters for ``crop`` for a random sized crop in efficientnet
-        style.
-
-        Args:
-            img (ndarray): Image to be cropped.
-            size (sequence): Desired output size of the crop.
-            scale (tuple): Range of the random size of the cropped image
-                compared to the original image size.
-            ratio (tuple): Range of the random aspect ratio of the cropped
-                image compared to the original image area.
-            max_attempts (int): Maximum number of attempts before falling back
-                to central crop. Defaults to 10.
-            min_covered (Number): Minimum ratio of the cropped area to the
-                original area. Only valid if efficientnet_style is true.
-                Defaults to 0.1.
-            crop_padding (int): The crop padding parameter in efficientnet
-                style center crop. Defaults to 32.
-
-        Returns:
-            tuple: Params (ymin, xmin, ymax, xmax) to be passed to `crop` for
-                a random sized crop.
-        """
-        height, width = img.shape[:2]
-        area = height * width
-        min_target_area = scale[0] * area
-        max_target_area = scale[1] * area
-
-        for _ in range(max_attempts):
-            aspect_ratio = random.uniform(*ratio)
-            min_target_height = int(
-                round(math.sqrt(min_target_area / aspect_ratio)))
-            max_target_height = int(
-                round(math.sqrt(max_target_area / aspect_ratio)))
-
-            if max_target_height * aspect_ratio > width:
-                max_target_height = int((width + 0.5 - 1e-7) / aspect_ratio)
-                if max_target_height * aspect_ratio > width:
-                    max_target_height -= 1
-
-            max_target_height = min(max_target_height, height)
-            min_target_height = min(max_target_height, min_target_height)
-
-            # slightly differs from tf inplementation
-            target_height = int(
-                round(random.uniform(min_target_height, max_target_height)))
-            target_width = int(round(target_height * aspect_ratio))
-            target_area = target_height * target_width
-
-            # slight differs from tf. In tf, if target_area > max_target_area,
-            # area will be recalculated
-            if (target_area < min_target_area or target_area > max_target_area
-                    or target_width > width or target_height > height
-                    or target_area < min_covered * area):
-                continue
-
-            ymin = random.randint(0, height - target_height)
-            xmin = random.randint(0, width - target_width)
-            ymax = ymin + target_height - 1
-            xmax = xmin + target_width - 1
-
-            return ymin, xmin, ymax, xmax
-
-        # Fallback to central crop
-        img_short = min(height, width)
-        crop_size = size[0] / (size[0] + crop_padding) * img_short
-
-        ymin = max(0, int(round((height - crop_size) / 2.)))
-        xmin = max(0, int(round((width - crop_size) / 2.)))
-        ymax = min(height, ymin + crop_size) - 1
-        xmax = min(width, xmin + crop_size) - 1
-
-        return ymin, xmin, ymax, xmax
-
-    def __call__(self, results):
-        for key in results.get('img_fields', ['img']):
-            img = results[key]
-            if self.efficientnet_style:
-                get_params_func = self.get_params_efficientnet_style
-                get_params_args = dict(
-                    img=img,
-                    size=self.size,
-                    scale=self.scale,
-                    ratio=self.ratio,
-                    max_attempts=self.max_attempts,
-                    min_covered=self.min_covered,
-                    crop_padding=self.crop_padding)
-            else:
-                get_params_func = self.get_params
-                get_params_args = dict(
-                    img=img,
-                    scale=self.scale,
-                    ratio=self.ratio,
-                    max_attempts=self.max_attempts)
-            ymin, xmin, ymax, xmax = get_params_func(**get_params_args)
-            img = mmcv.imcrop(img, bboxes=np.array([xmin, ymin, xmax, ymax]))
-            results[key] = mmcv.imresize(
-                img,
-                tuple(self.size[::-1]),
-                interpolation=self.interpolation,
-                backend=self.backend)
-        return results
-
-    def __repr__(self):
-        repr_str = self.__class__.__name__ + f'(size={self.size}'
-        repr_str += f', scale={tuple(round(s, 4) for s in self.scale)}'
-        repr_str += f', ratio={tuple(round(r, 4) for r in self.ratio)}'
-        repr_str += f', max_attempts={self.max_attempts}'
-        repr_str += f', efficientnet_style={self.efficientnet_style}'
-        repr_str += f', min_covered={self.min_covered}'
-        repr_str += f', crop_padding={self.crop_padding}'
-        repr_str += f', interpolation={self.interpolation}'
-        repr_str += f', backend={self.backend})'
-        return repr_str
-
-
-@PIPELINES.register_module()
-class RandomGrayscale(object):
-    """Randomly convert image to grayscale with a probability of gray_prob.
-
-    Args:
-        gray_prob (float): Probability that image should be converted to
-            grayscale. Default: 0.1.
-
+        center (np.ndarray[2, ]): Center of the bounding box (x, y).
+        scale (np.ndarray[2, ]): Scale of the bounding box
+            wrt [width, height].
+        rot (float): Rotation angle (degree).
+        output_size (np.ndarray[2, ] | list(2,)): Size of the
+            destination heatmaps.
+        shift (0-100%): Shift translation ratio wrt the width/height.
+            Default (0., 0.).
+        inv (bool): Option to inverse the affine transform direction.
+            (inv=False: src->dst or inv=True: dst->src)
     Returns:
-        ndarray: Grayscale version of the input image with probability
-            gray_prob and unchanged with probability (1-gray_prob).
-            - If input image is 1 channel: grayscale version is 1 channel.
-            - If input image is 3 channel: grayscale version is 3 channel
-                with r == g == b.
+        np.ndarray: The transform matrix.
+    """
+    assert len(center) == 2
+    assert len(scale) == 2
+    assert len(output_size) == 2
+    assert len(shift) == 2
+
+    # pixel_std is 200.
+    scale_tmp = scale * 200.0
+
+    shift = np.array(shift)
+    src_w = scale_tmp[0]
+    dst_w = output_size[0]
+    dst_h = output_size[1]
+
+    rot_rad = np.pi * rot / 180
+    src_dir = rotate_point([0., src_w * -0.5], rot_rad)
+    dst_dir = np.array([0., dst_w * -0.5])
+
+    src = np.zeros((3, 2), dtype=np.float32)
+    src[0, :] = center + scale_tmp * shift
+    src[1, :] = center + src_dir + scale_tmp * shift
+    src[2, :] = _get_3rd_point(src[0, :], src[1, :])
+
+    dst = np.zeros((3, 2), dtype=np.float32)
+    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
+    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5]) + dst_dir
+    dst[2, :] = _get_3rd_point(dst[0, :], dst[1, :])
+
+    if inv:
+        trans = cv2.getAffineTransform(np.float32(dst), np.float32(src))
+    else:
+        trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
+
+    return trans
+
+
+def affine_transform(pt, trans_mat):
+    """Apply an affine transformation to the points.
+
+    Args:
+        pt (np.ndarray): a 2 dimensional point to be transformed
+        trans_mat (np.ndarray): 2x3 matrix of an affine transform
+    Returns:
+        np.ndarray: Transformed points.
+    """
+    assert len(pt) == 2
+    new_pt = np.array(trans_mat) @ np.array([pt[0], pt[1], 1.])
+
+    return new_pt
+
+
+def _get_3rd_point(a, b):
+    """To calculate the affine matrix, three pairs of points are required. This
+    function is used to get the 3rd point, given 2D points a & b.
+
+    The 3rd point is defined by rotating vector `a - b` by 90 degrees
+    anticlockwise, using b as the rotation center.
+    Args:
+        a (np.ndarray): point(x,y)
+        b (np.ndarray): point(x,y)
+    Returns:
+        np.ndarray: The 3rd point.
+    """
+    assert len(a) == 2
+    assert len(b) == 2
+    direction = a - b
+    third_pt = b + np.array([-direction[1], direction[0]], dtype=np.float32)
+
+    return third_pt
+
+
+def rotate_point(pt, angle_rad):
+    """Rotate a point by an angle.
+
+    Args:
+        pt (list[float]): 2 dimensional point to be rotated
+        angle_rad (float): rotation angle by radian
+    Returns:
+        list[float]: Rotated point.
+    """
+    assert len(pt) == 2
+    sn, cs = np.sin(angle_rad), np.cos(angle_rad)
+    new_x = pt[0] * cs - pt[1] * sn
+    new_y = pt[0] * sn + pt[1] * cs
+    rotated_pt = [new_x, new_y]
+
+    return rotated_pt
+
+
+def get_warp_matrix(theta, size_input, size_dst, size_target):
+    """Calculate the transformation matrix under the constraint of unbiased.
+
+    Paper ref: Huang et al. The Devil is in the Details: Delving into Unbiased
+    Data Processing for Human Pose Estimation (CVPR 2020).
+    Args:
+        theta (float): Rotation angle in degrees.
+        size_input (np.ndarray): Size of input image [w, h].
+        size_dst (np.ndarray): Size of output image [w, h].
+        size_target (np.ndarray): Size of ROI in input plane [w, h].
+    Returns:
+        matrix (np.ndarray): A matrix for transformation.
+    """
+    theta = np.deg2rad(theta)
+    matrix = np.zeros((2, 3), dtype=np.float32)
+    scale_x = size_dst[0] / size_target[0]
+    scale_y = size_dst[1] / size_target[1]
+    matrix[0, 0] = math.cos(theta) * scale_x
+    matrix[0, 1] = -math.sin(theta) * scale_x
+    matrix[0, 2] = scale_x * (-0.5 * size_input[0] * math.cos(theta) +
+                              0.5 * size_input[1] * math.sin(theta) +
+                              0.5 * size_target[0])
+    matrix[1, 0] = math.sin(theta) * scale_y
+    matrix[1, 1] = math.cos(theta) * scale_y
+    matrix[1, 2] = scale_y * (-0.5 * size_input[0] * math.sin(theta) -
+                              0.5 * size_input[1] * math.cos(theta) +
+                              0.5 * size_target[1])
+    return matrix
+
+
+def warp_affine_joints(joints, mat):
+    """Apply affine transformation defined by the transform matrix on the
+    joints.
+
+    Args:
+        joints (np.ndarray[..., 2]): Origin coordinate of joints.
+        mat (np.ndarray[3, 2]): The affine matrix.
+    Returns:
+        matrix (np.ndarray[..., 2]): Result coordinate of joints.
+    """
+    joints = np.array(joints)
+    shape = joints.shape
+    joints = joints.reshape(-1, 2)
+    return np.dot(
+        np.concatenate((joints, joints[:, 0:1] * 0 + 1), axis=1),
+        mat.T).reshape(shape)
+
+
+def _construct_rotation_matrix(rot, size=3):
+    """Construct the in-plane rotation matrix.
+
+    Args:
+        rot (float): Rotation angle (degree).
+        size (int): The size of the rotation matrix.
+            Candidate Values: 2, 3. Defaults to 3.
+    Returns:
+        rot_mat (np.ndarray([size, size]): Rotation matrix.
+    """
+    rot_mat = np.eye(size, dtype=np.float32)
+    if rot != 0:
+        rot_rad = np.deg2rad(rot)
+        sn, cs = np.sin(rot_rad), np.cos(rot_rad)
+        rot_mat[0, :2] = [cs, -sn]
+        rot_mat[1, :2] = [sn, cs]
+
+    return rot_mat
+
+
+def _flip_smpl_pose(pose):
+    """Flip SMPL pose parameters horizontally.
+
+    Args:
+        pose (np.ndarray([72])): SMPL pose parameters
+    Returns:
+        pose_flipped
     """
 
-    def __init__(self, gray_prob=0.1):
-        self.gray_prob = gray_prob
+    flippedParts = [
+        0, 1, 2, 6, 7, 8, 3, 4, 5, 9, 10, 11, 15, 16, 17, 12, 13, 14, 18, 19,
+        20, 24, 25, 26, 21, 22, 23, 27, 28, 29, 33, 34, 35, 30, 31, 32, 36, 37,
+        38, 42, 43, 44, 39, 40, 41, 45, 46, 47, 51, 52, 53, 48, 49, 50, 57, 58,
+        59, 54, 55, 56, 63, 64, 65, 60, 61, 62, 69, 70, 71, 66, 67, 68
+    ]
+    pose_flipped = pose[flippedParts]
+    # Negate the second and the third dimension of the axis-angle
+    pose_flipped[1::3] = -pose_flipped[1::3]
+    pose_flipped[2::3] = -pose_flipped[2::3]
+    return pose_flipped
 
-    def __call__(self, results):
-        """
-        Args:
-            img (ndarray): Image to be converted to grayscale.
 
-        Returns:
-            ndarray: Randomly grayscaled image.
-        """
-        for key in results.get('img_fields', ['img']):
-            img = results[key]
-            num_output_channels = img.shape[2]
-            if random.random() < self.gray_prob:
-                if num_output_channels > 1:
-                    img = mmcv.rgb2gray(img)[:, :, None]
-                    results[key] = np.dstack(
-                        [img for _ in range(num_output_channels)])
-                    return results
-            results[key] = img
-        return results
+def _flip_keypoints(keypoints, keypoints_mask, flip_pairs, img_width=None):
+    """Flip human joints horizontally.
 
-    def __repr__(self):
-        return self.__class__.__name__ + f'(gray_prob={self.gray_prob})'
+    Note:
+        num_keypoints: K
+        num_dimension: D
+    Args:
+        keypoints (np.ndarray([K, D])): Coordinates of keypoints.
+        keypoints_mask (np.ndarray([K])): Visibility of keypoints.
+        flip_pairs (list[tuple()]): Pairs of keypoints which are mirrored
+            (for example, left ear -- right ear).
+    Returns:
+        keypoints_flipped, keypoints_mask_flipped
+    """
+
+    assert len(keypoints) == len(keypoints_mask)
+
+    keypoints_flipped = keypoints.copy()
+    keypoints_mask_flipped = keypoints_mask.copy()
+
+    # Swap left-right parts
+    for left, right in flip_pairs:
+        keypoints_flipped[left, :] = keypoints[right, :]
+        keypoints_flipped[right, :] = keypoints[left, :]
+
+        keypoints_mask_flipped[left] = keypoints_mask[right]
+        keypoints_mask_flipped[right] = keypoints_mask[left]
+
+    # Flip horizontally
+    if img_width is None:
+        keypoints_flipped[:, 0] = -keypoints_flipped[:, 0]
+    else:
+        keypoints_flipped[:, 0] = img_width - 1 - keypoints_flipped[:, 0]
+    keypoints_flipped = \
+        keypoints_flipped * keypoints_mask_flipped.reshape((-1, 1))
+
+    return keypoints_flipped, keypoints_mask_flipped
+
+
+def _rotate_joints_3d(joints_3d, rot):
+    """Rotate the 3D joints in the local coordinates.
+
+    Notes:
+        Joints number: K
+    Args:
+        joints_3d (np.ndarray([K, 3])): Coordinates of keypoints.
+        rot (float): Rotation angle (degree).
+    Returns:
+        joints_3d_rotated
+    """
+    # in-plane rotation
+    # 3D joints are rotated counterclockwise,
+    # so the rot angle is inversed.
+    rot_mat = _construct_rotation_matrix(-rot, 3)
+
+    joints_3d_rotated = np.einsum('ij,kj->ki', rot_mat, joints_3d)
+    joints_3d_rotated = joints_3d_rotated.astype('float32')
+    return joints_3d_rotated
+
+
+def _rotate_smpl_pose(pose, rot):
+    """Rotate SMPL pose parameters.
+
+    SMPL (https://smpl.is.tue.mpg.de/) is a 3D
+    human model.
+    Args:
+        pose (np.ndarray([72])): SMPL pose parameters
+        rot (float): Rotation angle (degree).
+    Returns:
+        pose_rotated
+    """
+    pose_rotated = pose.copy()
+    if rot != 0:
+        rot_mat = _construct_rotation_matrix(-rot)
+        orient = pose[:3]
+        # find the rotation of the body in camera frame
+        per_rdg, _ = cv2.Rodrigues(orient)
+        # apply the global rotation to the global orientation
+        res_rot, _ = cv2.Rodrigues(np.dot(rot_mat, per_rdg))
+        pose_rotated[:3] = (res_rot.T)[0]
+
+    return pose_rotated
 
 
 @PIPELINES.register_module()
-class RandomFlip(object):
+class RandomHorizontalFlip(object):
     """Flip the image randomly.
 
-    Flip the image randomly based on flip probaility and flip direction.
+    Flip the image randomly based on flip probaility.
 
     Args:
         flip_prob (float): probability of the image being flipped. Default: 0.5
-        direction (str): The flipping direction. Options are
-            'horizontal' and 'vertical'. Default: 'horizontal'.
     """
 
-    def __init__(self, flip_prob=0.5, direction='horizontal'):
+    def __init__(self, flip_prob=0.5, flip_pairs=None):
         assert 0 <= flip_prob <= 1
-        assert direction in ['horizontal', 'vertical']
         self.flip_prob = flip_prob
-        self.direction = direction
+        self.flip_pairs = flip_pairs
 
     def __call__(self, results):
-        """Call function to flip image.
+        """Call function to flip image and annotations.
 
         Args:
             results (dict): Result dict from loading pipeline.
 
         Returns:
-            dict: Flipped results, 'flip', 'flip_direction' keys are added into
+            dict: Flipped results, 'flip' key is added into
                 result dict.
         """
-        flip = True if np.random.rand() < self.flip_prob else False
-        results['flip'] = flip
-        results['flip_direction'] = self.direction
-        if results['flip']:
-            # flip image
-            for key in results.get('img_fields', ['img']):
-                results[key] = mmcv.imflip(
-                    results[key], direction=results['flip_direction'])
+        if np.random.rand() > self.flip_prob:
+            return results
+
+        # flip image
+        for key in results.get('img_fields', ['img']):
+            results[key] = mmcv.imflip(results[key], direction='horizontal')
+
+        # flip keypoints2d
+        if 'keypoints2d' in results:
+            assert self.flip_pairs is not None
+            width = results['img'][:, ::-1, :].shape[1]
+            keypoints2d = results['keypoints2d']
+            keypoints2d_mask = results['keypoints2d_mask']
+            keypoints2d, keypoints2d_mask = _flip_keypoints(
+                keypoints2d, keypoints2d_mask, self.flip_pairs, width)
+            results['keypoints2d'] = keypoints2d
+            results['keypoints2d_mask'] = keypoints2d_mask
+
+        # flip bbox center
+        center = results['center']
+        center[0] = width - 1 - center[0]
+        results['center'] = center
+
+        # flip keypoints3d
+        if 'keypoints3d' in results:
+            assert self.flip_pairs is not None
+            keypoints3d = results['keypoints3d']
+            keypoints3d_mask = results['keypoints3d_mask']
+            keypoints3d, keypoints3d_mask = _flip_keypoints(
+                keypoints3d, keypoints3d_mask, self.flip_pairs)
+            results['keypoints3d'] = keypoints3d
+            results['keypoints3d_mask'] = keypoints3d_mask
+
+        # flip smpl
+        if 'smpl_body_pose' in results:
+            global_orient = results['smpl_global_orient']
+            body_pose = results['smpl_body_pose'].reshape((-1))
+            smpl_pose = np.concatenate((global_orient, body_pose), axis=-1)
+            smpl_pose_flipped = _flip_smpl_pose(smpl_pose)
+            global_orient = smpl_pose_flipped[:3]
+            body_pose = smpl_pose_flipped[3:]
+            results['smpl_global_orient'] = global_orient
+            results['smpl_body_pose'] = body_pose.reshape((-1, 3))
         return results
 
     def __repr__(self):
         return self.__class__.__name__ + f'(flip_prob={self.flip_prob})'
-
-
-@PIPELINES.register_module()
-class RandomErasing(object):
-    """Randomly selects a rectangle region in an image and erase pixels.
-
-    Args:
-        erase_prob (float): Probability that image will be randomly erased.
-            Default: 0.5
-        min_area_ratio (float): Minimum erased area / input image area
-            Default: 0.02
-        max_area_ratio (float): Maximum erased area / input image area
-            Default: 0.4
-        aspect_range (sequence | float): Aspect ratio range of erased area.
-            if float, it will be converted to (aspect_ratio, 1/aspect_ratio)
-            Default: (3/10, 10/3)
-        mode (str): Fill method in erased area, can be:
-            - 'const' (default): All pixels are assign with the same value.
-            - 'rand': each pixel is assigned with a random value in [0, 255]
-        fill_color (sequence | Number): Base color filled in erased area.
-            Default: (128, 128, 128)
-        fill_std (sequence | Number, optional): If set and mode='rand', fill
-            erased area with random color from normal distribution
-            (mean=fill_color, std=fill_std); If not set, fill erased area with
-            random color from uniform distribution (0~255)
-            Default: None
-
-    Note:
-        See https://arxiv.org/pdf/1708.04896.pdf
-        This paper provided 4 modes: RE-R, RE-M, RE-0, RE-255, and use RE-M as
-        default.
-        - RE-R: RandomErasing(mode='rand')
-        - RE-M: RandomErasing(mode='const', fill_color=(123.67, 116.3, 103.5))
-        - RE-0: RandomErasing(mode='const', fill_color=0)
-        - RE-255: RandomErasing(mode='const', fill_color=255)
-    """
-
-    def __init__(self,
-                 erase_prob=0.5,
-                 min_area_ratio=0.02,
-                 max_area_ratio=0.4,
-                 aspect_range=(3 / 10, 10 / 3),
-                 mode='const',
-                 fill_color=(128, 128, 128),
-                 fill_std=None):
-        assert isinstance(erase_prob, float) and 0. <= erase_prob <= 1.
-        assert isinstance(min_area_ratio, float) and 0. <= min_area_ratio <= 1.
-        assert isinstance(max_area_ratio, float) and 0. <= max_area_ratio <= 1.
-        assert min_area_ratio <= max_area_ratio, \
-            'min_area_ratio should be smaller than max_area_ratio'
-        if isinstance(aspect_range, float):
-            aspect_range = min(aspect_range, 1 / aspect_range)
-            aspect_range = (aspect_range, 1 / aspect_range)
-        assert isinstance(aspect_range, Sequence) and len(aspect_range) == 2 \
-            and all(isinstance(x, float) for x in aspect_range), \
-            'aspect_range should be a float or Sequence with two float.'
-        assert all(x > 0 for x in aspect_range), \
-            'aspect_range should be positive.'
-        assert aspect_range[0] <= aspect_range[1], \
-            'In aspect_range (min, max), min should be smaller than max.'
-        assert mode in ['const', 'rand']
-        if isinstance(fill_color, Number):
-            fill_color = [fill_color] * 3
-        assert isinstance(fill_color, Sequence) and len(fill_color) == 3 \
-            and all(isinstance(x, Number) for x in fill_color), \
-            'fill_color should be a float or Sequence with three int.'
-        if fill_std is not None:
-            if isinstance(fill_std, Number):
-                fill_std = [fill_std] * 3
-            assert isinstance(fill_std, Sequence) and len(fill_std) == 3 \
-                and all(isinstance(x, Number) for x in fill_std), \
-                'fill_std should be a float or Sequence with three int.'
-
-        self.erase_prob = erase_prob
-        self.min_area_ratio = min_area_ratio
-        self.max_area_ratio = max_area_ratio
-        self.aspect_range = aspect_range
-        self.mode = mode
-        self.fill_color = fill_color
-        self.fill_std = fill_std
-
-    def _fill_pixels(self, img, top, left, h, w):
-        if self.mode == 'const':
-            patch = np.empty((h, w, 3), dtype=np.uint8)
-            patch[:, :] = np.array(self.fill_color, dtype=np.uint8)
-        elif self.fill_std is None:
-            # Uniform distribution
-            patch = np.random.uniform(0, 256, (h, w, 3)).astype(np.uint8)
-        else:
-            # Normal distribution
-            patch = np.random.normal(self.fill_color, self.fill_std, (h, w, 3))
-            patch = np.clip(patch.astype(np.int32), 0, 255).astype(np.uint8)
-
-        img[top:top + h, left:left + w] = patch
-        return img
-
-    def __call__(self, results):
-        """
-        Args:
-            results (dict): Results dict from pipeline
-
-        Returns:
-            dict: Results after the transformation.
-        """
-        for key in results.get('img_fields', ['img']):
-            if np.random.rand() > self.erase_prob:
-                continue
-            img = results[key]
-            img_h, img_w = img.shape[:2]
-
-            # convert to log aspect to ensure equal probability of aspect ratio
-            log_aspect_range = np.log(
-                np.array(self.aspect_range, dtype=np.float32))
-            aspect_ratio = np.exp(np.random.uniform(*log_aspect_range))
-            area = img_h * img_w
-            area *= np.random.uniform(self.min_area_ratio, self.max_area_ratio)
-
-            h = min(int(round(np.sqrt(area * aspect_ratio))), img_h)
-            w = min(int(round(np.sqrt(area / aspect_ratio))), img_w)
-            top = np.random.randint(0, img_h - h) if img_h > h else 0
-            left = np.random.randint(0, img_w - w) if img_w > w else 0
-            img = self._fill_pixels(img, top, left, h, w)
-
-            results[key] = img
-        return results
-
-    def __repr__(self):
-        repr_str = self.__class__.__name__
-        repr_str += f'(erase_prob={self.erase_prob}, '
-        repr_str += f'min_area_ratio={self.min_area_ratio}, '
-        repr_str += f'max_area_ratio={self.max_area_ratio}, '
-        repr_str += f'aspect_range={self.aspect_range}, '
-        repr_str += f'mode={self.mode}, '
-        repr_str += f'fill_color={self.fill_color}, '
-        repr_str += f'fill_std={self.fill_std})'
-        return repr_str
-
-
-@PIPELINES.register_module()
-class Resize(object):
-    """Resize images.
-
-    Args:
-        size (int | tuple): Images scales for resizing (h, w).
-            When size is int, the default behavior is to resize an image
-            to (size, size). When size is tuple and the second value is -1,
-            the short edge of an image is resized to its first value.
-            For example, when size is 224, the image is resized to 224x224.
-            When size is (224, -1), the short side is resized to 224 and the
-            other side is computed based on the short side, maintaining the
-            aspect ratio.
-        interpolation (str): Interpolation method, accepted values are
-            "nearest", "bilinear", "bicubic", "area", "lanczos".
-            More details can be found in `mmcv.image.geometric`.
-        backend (str): The image resize backend type, accpeted values are
-            `cv2` and `pillow`. Default: `cv2`.
-    """
-
-    def __init__(self, size, interpolation='bilinear', backend='cv2'):
-        assert isinstance(size, int) or (isinstance(size, tuple)
-                                         and len(size) == 2)
-        self.resize_w_short_side = False
-        if isinstance(size, int):
-            assert size > 0
-            size = (size, size)
-        else:
-            assert size[0] > 0 and (size[1] > 0 or size[1] == -1)
-            if size[1] == -1:
-                self.resize_w_short_side = True
-        assert interpolation in ('nearest', 'bilinear', 'bicubic', 'area',
-                                 'lanczos')
-        if backend not in ['cv2', 'pillow']:
-            raise ValueError(f'backend: {backend} is not supported for resize.'
-                             'Supported backends are "cv2", "pillow"')
-
-        self.size = size
-        self.interpolation = interpolation
-        self.backend = backend
-
-    def _resize_img(self, results):
-        for key in results.get('img_fields', ['img']):
-            img = results[key]
-            ignore_resize = False
-            if self.resize_w_short_side:
-                h, w = img.shape[:2]
-                short_side = self.size[0]
-                if (w <= h and w == short_side) or (h <= w
-                                                    and h == short_side):
-                    ignore_resize = True
-                else:
-                    if w < h:
-                        width = short_side
-                        height = int(short_side * h / w)
-                    else:
-                        height = short_side
-                        width = int(short_side * w / h)
-            else:
-                height, width = self.size
-            if not ignore_resize:
-                img = mmcv.imresize(
-                    img,
-                    size=(width, height),
-                    interpolation=self.interpolation,
-                    return_scale=False,
-                    backend=self.backend)
-                results[key] = img
-                results['img_shape'] = img.shape
-
-    def __call__(self, results):
-        self._resize_img(results)
-        return results
-
-    def __repr__(self):
-        repr_str = self.__class__.__name__
-        repr_str += f'(size={self.size}, '
-        repr_str += f'interpolation={self.interpolation})'
-        return repr_str
 
 
 @PIPELINES.register_module()
@@ -924,133 +605,145 @@ class Lighting(object):
 
 
 @PIPELINES.register_module()
-class Albu(object):
-    """Albumentation augmentation.
+class RandomChannelNoise:
+    """Data augmentation with random channel noise.
 
-    Adds custom transformations from Albumentations library.
-    Please, visit `https://albumentations.readthedocs.io`
-    to get more information.
-    An example of ``transforms`` is as followed:
-
-    .. code-block::
-        [
-            dict(
-                type='ShiftScaleRotate',
-                shift_limit=0.0625,
-                scale_limit=0.0,
-                rotate_limit=0,
-                interpolation=1,
-                p=0.5),
-            dict(
-                type='RandomBrightnessContrast',
-                brightness_limit=[0.1, 0.3],
-                contrast_limit=[0.1, 0.3],
-                p=0.2),
-            dict(type='ChannelShuffle', p=0.1),
-            dict(
-                type='OneOf',
-                transforms=[
-                    dict(type='Blur', blur_limit=3, p=1.0),
-                    dict(type='MedianBlur', blur_limit=3, p=1.0)
-                ],
-                p=0.1),
-        ]
-
+    Required keys: 'img'
+    Modifies key: 'img'
     Args:
-        transforms (list[dict]): A list of albu transformations
-        keymap (dict): Contains {'input key':'albumentation-style key'}
+        noise_factor (float): Multiply each channel with
+         a factor between``[1-scale_factor, 1+scale_factor]``
     """
 
-    def __init__(self, transforms, keymap=None, update_pad_shape=False):
-        if albumentations is None:
-            raise RuntimeError('albumentations is not installed')
-        else:
-            from albumentations import Compose
-
-        self.transforms = transforms
-        self.filter_lost_elements = False
-        self.update_pad_shape = update_pad_shape
-
-        self.aug = Compose([self.albu_builder(t) for t in self.transforms])
-
-        if not keymap:
-            self.keymap_to_albu = {
-                'img': 'image',
-            }
-        else:
-            self.keymap_to_albu = keymap
-        self.keymap_back = {v: k for k, v in self.keymap_to_albu.items()}
-
-    def albu_builder(self, cfg):
-        """Import a module from albumentations.
-
-        It inherits some of :func:`build_from_cfg` logic.
-        Args:
-            cfg (dict): Config dict. It should at least contain the key "type".
-        Returns:
-            obj: The constructed object.
-        """
-
-        assert isinstance(cfg, dict) and 'type' in cfg
-        args = cfg.copy()
-
-        obj_type = args.pop('type')
-        if mmcv.is_str(obj_type):
-            if albumentations is None:
-                raise RuntimeError('albumentations is not installed')
-            obj_cls = getattr(albumentations, obj_type)
-        elif inspect.isclass(obj_type):
-            obj_cls = obj_type
-        else:
-            raise TypeError(
-                f'type must be a str or valid type, but got {type(obj_type)}')
-
-        if 'transforms' in args:
-            args['transforms'] = [
-                self.albu_builder(transform)
-                for transform in args['transforms']
-            ]
-
-        return obj_cls(**args)
-
-    @staticmethod
-    def mapper(d, keymap):
-        """Dictionary mapper.
-
-        Renames keys according to keymap provided.
-        Args:
-            d (dict): old dict
-            keymap (dict): {'old_key':'new_key'}
-        Returns:
-            dict: new dict.
-        """
-
-        updated_dict = {}
-        for k, v in zip(d.keys(), d.values()):
-            new_k = keymap.get(k, k)
-            updated_dict[new_k] = d[k]
-        return updated_dict
+    def __init__(self, noise_factor=0.4):
+        self.noise_factor = noise_factor
 
     def __call__(self, results):
-        # dict to albumentations format
-        results = self.mapper(results, self.keymap_to_albu)
+        """Perform data augmentation with random channel noise."""
+        img = results['img']
 
-        results = self.aug(**results)
+        # Each channel is multiplied with a number
+        # in the area [1-self.noise_factor, 1+self.noise_factor]
+        pn = np.random.uniform(1 - self.noise_factor, 1 + self.noise_factor,
+                               (1, 3))
+        img = cv2.multiply(img, pn)
 
-        if 'gt_labels' in results:
-            if isinstance(results['gt_labels'], list):
-                results['gt_labels'] = np.array(results['gt_labels'])
-            results['gt_labels'] = results['gt_labels'].astype(np.int64)
+        results['img'] = img
+        return results
 
-        # back to the original format
-        results = self.mapper(results, self.keymap_back)
 
-        # update final shape
-        if self.update_pad_shape:
-            results['pad_shape'] = results['img'].shape
+@PIPELINES.register_module()
+class GetRandomScaleRotation:
+    """Data augmentation with random scaling & rotating.
+
+    Required key: 'scale'. Modifies key: 'scale' and 'rotation'.
+    Args:
+        rot_factor (int): Rotating to ``[-2*rot_factor, 2*rot_factor]``.
+        scale_factor (float): Scaling to ``[1-scale_factor, 1+scale_factor]``.
+        rot_prob (float): Probability of random rotation.
+    """
+
+    def __init__(self, rot_factor=30, scale_factor=0.25, rot_prob=0.6):
+        self.rot_factor = rot_factor
+        self.scale_factor = scale_factor
+        self.rot_prob = rot_prob
+
+    def __call__(self, results):
+        """Perform data augmentation with random scaling & rotating."""
+        s = results['scale']
+
+        sf = self.scale_factor
+        rf = self.rot_factor
+
+        s_factor = np.clip(np.random.randn() * sf + 1, 1 - sf, 1 + sf)
+        s = s * s_factor
+
+        r_factor = np.clip(np.random.randn() * rf, -rf * 2, rf * 2)
+        r = r_factor if np.random.rand() <= self.rot_prob else 0
+
+        results['scale'] = s
+        results['rotation'] = r
 
         return results
 
-    def __repr__(self):
-        repr_str = self.__class__.__name__ + f'(transforms={self.transforms})'
-        return repr_str
+
+@PIPELINES.register_module()
+class KeypointsSelection:
+    """Select keypoints.
+
+    Modifies key: 'keypoints2d', 'keypoints2d_mask',
+         'keypoints3d' and 'keypoints3d_mask'.
+    Args:
+        keypoints_index (list[int]): indexes of keypoints.
+    """
+
+    def __init__(self, keypoints_index):
+        self.keypoints_index = keypoints_index
+
+    def __call__(self, results):
+        """Perform keypoints selection."""
+        if 'keypoints2d' in results:
+            results['keypoints2d'] = \
+                results['keypoints2d'][..., self.keypoints_index, :]
+            results['keypoints2d_mask'] = \
+                results['keypoints2d_mask'][..., self.keypoints_index]
+        if 'keypoints3d' in results:
+            results['keypoints3d'] = \
+                results['keypoints3d'][..., self.keypoints_index, :]
+            results['keypoints3d_mask'] = \
+                results['keypoints3d_mask'][..., self.keypoints_index]
+        return results
+
+
+@PIPELINES.register_module()
+class MeshAffine:
+    """Affine transform the image to get input image.
+
+    Affine transform the 2D keypoints, 3D kepoints. Required keys: 'img',
+    'pose', 'img_shape', 'rotation' and 'center'. Modifies key: 'img',
+    ''keypoints2d','keypoints2d_mask', 'keypoints3d', 'keypoints3d_mask',
+    'pose',.
+    """
+
+    def __init__(self, img_res):
+        self.img_res = img_res
+        self.image_size = np.array([img_res, img_res])
+
+    def __call__(self, results):
+        img = results['img']
+        c = results['center']
+        s = results['scale']
+        r = results['rotation']
+
+        trans = get_affine_transform(c, s, r, self.image_size)
+
+        img = cv2.warpAffine(
+            img,
+            trans, (int(self.image_size[0]), int(self.image_size[1])),
+            flags=cv2.INTER_LINEAR)
+        results['img'] = img
+
+        if 'keypoints2d' in results:
+            keypoints2d = results['keypoints2d']
+            keypoints2d_mask = results['keypoints2d_mask']
+            num_keypoints = len(keypoints2d)
+            for i in range(num_keypoints):
+                if keypoints2d_mask[i] > 0.0:
+                    keypoints2d[i][:2] = \
+                        affine_transform(keypoints2d[i][:2], trans)
+            results['keypoints2d'] = keypoints2d
+
+        if 'keypoints3d' in results:
+            keypoints3d = results['keypoints3d']
+            keypoints3d[:, :3] = _rotate_joints_3d(keypoints3d[:, :3], r)
+            results['keypoints3d'] = keypoints3d
+
+        if 'smpl_body_pose' in results:
+            global_orient = results['smpl_global_orient']
+            body_pose = results['smpl_body_pose'].reshape((-1))
+            pose = np.concatenate((global_orient, body_pose), axis=-1)
+            pose = _rotate_smpl_pose(pose, r)
+            results['global_orient'] = pose[:3]
+            results['body_pose'] = pose[3:].reshape((-1, 3))
+
+        return results
