@@ -1,13 +1,22 @@
 from mmcv.cnn import MODELS as MMCV_MODELS
 from mmcv.utils import Registry
 
-MODELS = Registry('models', parent=MMCV_MODELS)
+
+def build_from_cfg(cfg, registry, default_args=None):
+    if cfg is None:
+        return None
+    return MMCV_MODELS.build_func(cfg, registry, default_args)
+
+
+MODELS = Registry('models', parent=MMCV_MODELS, build_func=build_from_cfg)
 
 BACKBONES = MODELS
 NECKS = MODELS
 HEADS = MODELS
 LOSSES = MODELS
-FRAMEWORKS = MODELS
+ARCHITECTURES = MODELS
+BODY_MODELS = MODELS
+DISCRIMINATORS = MODELS
 
 
 def build_backbone(cfg):
@@ -30,6 +39,16 @@ def build_loss(cfg):
     return LOSSES.build(cfg)
 
 
-def build_framework(cfg):
+def build_architecture(cfg):
     """Build framework."""
-    return FRAMEWORKS.build(cfg)
+    return ARCHITECTURES.build(cfg)
+
+
+def build_body_model(cfg):
+    """Build body model."""
+    return BODY_MODELS.build(cfg)
+
+
+def build_discriminator(cfg):
+    """Build discriminator."""
+    return DISCRIMINATORS.build(cfg)

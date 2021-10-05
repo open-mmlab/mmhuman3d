@@ -25,7 +25,6 @@ PIPELINES = Registry('pipeline')
 
 def build_dataset(cfg, default_args=None):
     from .dataset_wrappers import (
-        ClassBalancedDataset,
         ConcatDataset,
         RepeatDataset,
     )
@@ -34,9 +33,6 @@ def build_dataset(cfg, default_args=None):
     elif cfg['type'] == 'RepeatDataset':
         dataset = RepeatDataset(
             build_dataset(cfg['dataset'], default_args), cfg['times'])
-    elif cfg['type'] == 'ClassBalancedDataset':
-        dataset = ClassBalancedDataset(
-            build_dataset(cfg['dataset'], default_args), cfg['oversample_thr'])
     else:
         dataset = build_from_cfg(cfg, DATASETS, default_args)
 
