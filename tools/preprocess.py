@@ -2,6 +2,7 @@ import argparse
 import os
 
 from mmhuman3d.data.preprocessors.agora_pre import agora_extract
+from mmhuman3d.data.preprocessors.amass_pre import amass_extract
 from mmhuman3d.data.preprocessors.coco_pre import coco_extract
 from mmhuman3d.data.preprocessors.coco_wholebody_pre import coco_wb_extract
 from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
@@ -50,7 +51,7 @@ def main():
 
     if args.datasets == ['all']:
         args.datasets = [
-            'agora', 'coco', 'coco_wholebody', '3dpw', 'mpii', 'h36m',
+            'agora', 'amass', 'coco', 'coco_wholebody', '3dpw', 'mpii', 'h36m',
             'lsp_original', 'lsp_dataset', 'lsp_extended', 'mpi_inf_3dhp',
             'up3d', 'penn_action', 'posetrack'
         ]
@@ -62,6 +63,13 @@ def main():
         agora_extract(AGORA_ROOT, output_path, mode='train')
         agora_extract(AGORA_ROOT, output_path, mode='validation')
         print('Agora preprocess finished!')
+
+    if 'amass' in args.datasets:
+        print('******')
+        print('Preprocessing amass ...')
+        AMASS_ROOT = os.path.join(root_path, 'AMASS_file')
+        amass_extract(AMASS_ROOT, output_path)
+        print('AMASS preprocess finished!')
 
     if 'coco' in args.datasets:
         print('******')

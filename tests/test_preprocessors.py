@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 from mmhuman3d.data.preprocessors.agora_pre import agora_extract
+from mmhuman3d.data.preprocessors.amass_pre import amass_extract
 from mmhuman3d.data.preprocessors.coco_pre import coco_extract
 from mmhuman3d.data.preprocessors.coco_wholebody_pre import coco_wb_extract
 from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
@@ -88,6 +89,10 @@ def test_preprocess():
                           'coco_wholebody_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'coco_wholebody_val.npz')
 
+    AMASS_ROOT = os.path.join(root_path, 'AMASS_file')
+    amass_extract(AMASS_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'amass.npz')
+
     POSETRACK_ROOT = os.path.join(root_path, 'PoseTrack/data')
     posetrack_extract(POSETRACK_ROOT, output_path, 'train')
     posetrack_extract(POSETRACK_ROOT, output_path, 'val')
@@ -100,13 +105,17 @@ def test_preprocessed_npz():
     assert os.path.exists(npz_folder)
     all_keys = [
         'image_path', 'bbox_xywh', 'config', 'keypoints2d', 'keypoints3d',
-        'smpl', 'smplx', 'meta', 'mask'
+        'smpl', 'smplx', 'smplh', 'meta', 'mask', 'video_path', 'frame_idx'
     ]
 
     for npf in os.listdir(npz_folder):
         npfile = np.load(os.path.join(npz_folder, npf), allow_pickle=True)
-        assert 'image_path' in npfile
-        N = npfile['image_path'].shape[0]
+        assert 'image_path' or 'video_path' in npfile
+        if 'image_path' in npfile:
+            N = npfile['image_path'].shape[0]
+        else:
+            assert 'frame_idx' in npfile
+            N = npfile['video_path'].shape[0]
 
         for k in npfile.files:
             assert (k in all_keys)
@@ -115,6 +124,13 @@ def test_preprocessed_npz():
             # check shape of every attributes
             if k == 'image_path':
                 assert isinstance(npfile[k][0], np.str_)
+
+            elif k == 'video_path':
+                assert isinstance(npfile[k][0], np.str_)
+
+            elif k == 'frame_idx':
+                assert npfile[k].shape == (N, )
+
             elif k == 'bbox_xywh':
                 assert npfile[k].shape == (N, 4)
 
@@ -141,6 +157,27 @@ def test_preprocessed_npz():
                         assert smpl_dict[smpl_key].shape == (N, 10)
                     elif smpl_key == 'transl':
                         assert smpl_dict[smpl_key].shape == (N, 3)
+
+            elif k == 'smplh':
+                smplh_keys = [
+                    'body_pose', 'global_orient', 'betas', 'transl',
+                    'left_hand_pose', 'right_hand_pose'
+                ]
+                smplh_dict = npfile[k].item()
+                for smplh_key in smplh_dict.keys():
+                    assert smplh_key in smplh_keys
+                    if smplh_key == 'body_pose':
+                        assert smplh_dict[smplh_key].shape == (N, 21, 3)
+                    elif smplh_key == 'global_orient':
+                        assert smplh_dict[smplh_key].shape == (N, 3)
+                    elif smplh_key == 'betas':
+                        assert smplh_dict[smplh_key].shape == (N, 10)
+                    elif smplh_key == 'transl':
+                        assert smplh_dict[smplh_key].shape == (N, 3)
+                    elif smplh_key == 'left_hand_pose':
+                        assert smplh_dict[smplh_key].shape == (N, 15, 3)
+                    elif smplh_key == 'right_hand_pose':
+                        assert smplh_dict[smplh_key].shape == (N, 15, 3)
 
             elif k == 'smplx':
                 smplx_keys = [
