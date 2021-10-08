@@ -1,4 +1,3 @@
-import mmcv
 import torch
 import torch.nn as nn
 
@@ -6,7 +5,6 @@ from ..builder import LOSSES
 from .utils import weighted_loss
 
 
-@mmcv.jit(derivate=True, coderize=True)
 @weighted_loss
 def smooth_l1_loss(pred, target, beta=1.0):
     """Smooth L1 loss.
@@ -27,7 +25,6 @@ def smooth_l1_loss(pred, target, beta=1.0):
     return loss
 
 
-@mmcv.jit(derivate=True, coderize=True)
 @weighted_loss
 def l1_loss(pred, target):
     """L1 loss.
