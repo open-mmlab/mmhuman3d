@@ -1,4 +1,7 @@
-smplify_stages = {
+body_model_type = 'smpl'
+smplify_method = 'smplify'
+
+stage_config = {
     'Stage 1': {
         'num_iter': 10,
         'fit_global_orient': True,
@@ -23,18 +26,12 @@ smplify_stages = {
     }
 }
 
-smplify_opt_config = {
+opt_config = {
     'type': 'LBFGS',
     'max_iter': 20,
     'lr': 1e-2,
     'line_search_fn': 'strong_wolfe'
 }
-
-# smplifyx_opt_config = {
-#     'type': 'Adam',
-#     'lr': 1e-2,
-#     'betas': (0.9, 0.999)
-# }
 
 keypoints2d_loss_config = {
     'type': 'KeypointMSELoss',

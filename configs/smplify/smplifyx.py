@@ -1,4 +1,7 @@
-smplifyx_stages = {
+body_model_type = 'smplx'
+smplify_method = 'smplifyx'
+
+stage_config = {
     'Stage 1': {
         'num_iter': 10,
         'fit_global_orient': True,
@@ -58,7 +61,7 @@ smplifyx_stages = {
     }
 }
 
-smplifyx_opt_config = {
+opt_config = {
     'type': 'LBFGS',
     'max_iter': 20,
     'lr': 1e-2,
