@@ -20,19 +20,23 @@ optional:
 """
 
 import torch
-from configs.smplify.smplify import smplify_opt_config, smplify_stages
+from configs.smplify.smplify import opt_config as smplify_opt_config
+from configs.smplify.smplify import stage_config as smplify_stages
 from configs.smplify.smplifyx import (
     joint_prior_loss_config,
     keypoints2d_loss_config,
     keypoints3d_loss_config,
+)
+from configs.smplify.smplifyx import opt_config as smplifyx_opt_config
+from configs.smplify.smplifyx import (
     shape_prior_loss_config,
     smooth_loss_config,
-    smplifyx_opt_config,
-    smplifyx_stages,
 )
+from configs.smplify.smplifyx import stage_config as smplifyx_stages
 from mmcv.runner import build_optimizer
 
 from mmhuman3d.models.builder import build_loss
+from .builder import REGISTRANTS
 
 # TODO: placeholder
 default_camera = {}
@@ -64,6 +68,7 @@ class OptimizableParameters():
         return self.opt_params
 
 
+@REGISTRANTS.register_module(name='smplify')
 class SMPLify(object):
     """Re-implementation of SMPLify with extended features."""
 
@@ -82,7 +87,8 @@ class SMPLify(object):
                  joint_prior_loss_config=joint_prior_loss_config,
                  smooth_loss_config=smooth_loss_config,
                  device=torch.device('cuda'),
-                 verbose=False):
+                 verbose=False,
+                 **kwargs):
 
         self.keypoints2d_weight = keypoints2d_weight
         self.keypoints3d_weight = keypoints3d_weight
@@ -364,6 +370,7 @@ class SMPLify(object):
         }
 
 
+@REGISTRANTS.register_module(name='smplifyx')
 class SMPLifyX(SMPLify):
     """Re-implementation of SMPLify-X with extended features."""
 
@@ -380,8 +387,10 @@ class SMPLifyX(SMPLify):
                  keypoints3d_loss_config=keypoints3d_loss_config,
                  shape_prior_loss_config=shape_prior_loss_config,
                  joint_prior_loss_config=joint_prior_loss_config,
+                 smooth_loss_config=smooth_loss_config,
                  device=torch.device('cuda'),
-                 verbose=False):
+                 verbose=False,
+                 **kwargs):
         super(SMPLifyX, self).__init__(
             body_model=body_model,
             keypoints2d_weight=keypoints2d_weight,
@@ -395,6 +404,7 @@ class SMPLifyX(SMPLify):
             keypoints3d_loss_config=keypoints3d_loss_config,
             shape_prior_loss_config=shape_prior_loss_config,
             joint_prior_loss_config=joint_prior_loss_config,
+            smooth_loss_config=smooth_loss_config,
             device=device,
             verbose=verbose)
 

@@ -65,7 +65,7 @@ def convert_kps(
             : tuple of (out_keypoints, mask). out_keypoints and mask will be of
             the same type.
     """
-    assert keypoints.ndim in [3, 4]
+    assert keypoints.ndim in {3, 4}
     if src == dst:
         return keypoints, np.ones((keypoints.shape[-2]))
     src_names = keypoints_factory[src.lower()]
