@@ -12,6 +12,8 @@ from mmhuman3d.utils.path_utils import (
 )
 
 _T1 = TypeVar('_T1')
+_KT = TypeVar('_KT')
+_VT = TypeVar('_VT')
 
 _HumanData_SUPPORTED_KEYS = {
     'image_path': {
@@ -196,16 +198,61 @@ class HumanData(dict):
                 raise FileExistsError
         np.savez_compressed(npz_path, **self)
 
-    def __setitem__(self, key: Any, val: Any):
-        """Set self[key] to value. Only be called when using
-        human_data[key] = val. Methods like update won't call __setitem__.
+    def __getitem__(self, key: _KT) -> _VT:
+        """Get value defined by HumanData. This function will be called by
+        self[key]. If the key is among ['keypoints2d', 'keypoints3d'], An array
+        with zero-padding at absent keypoint will be returned. Call
+        self.get_raw_value(k) to get value without padding.
 
         Args:
-            key (Any):
+            key (_KT):
+                Key in HumanData.
+
+        Returns:
+            _VT:
+                Value to the key.
+        """
+        value = super().__getitem__(key)
+        mask_key = f'{key}_mask'
+        if key in self and \
+                isinstance(value, np.ndarray) and \
+                'keypoints' in key and \
+                mask_key in self:
+            mask_array = np.asarray(super().__getitem__(mask_key))
+            ret_value = \
+                self.__class__.__add_zero_pad__(value, mask_array)
+            return ret_value
+        else:
+            return value
+
+    def get_raw_value(self, key: _KT) -> _VT:
+        """Get raw value from the dict. It acts the same as
+        dict.__getitem__(k).
+
+        Args:
+            key (_KT):
+                Key in dict.
+
+        Returns:
+            _VT:
+                Value to the key.
+        """
+        value = super().__getitem__(key)
+        return value
+
+    def __setitem__(self, key: _KT, val: _VT):
+        """Set self[key] to value. Only be called when using
+        human_data[key] = val. Methods like update won't call __setitem__.
+        If the key is among ['keypoints2d', 'keypoints3d'],
+        and f'{key}_mask' is in self.keys(), invalid zeros
+        will be removed before setting value.
+
+        Args:
+            key (_KT):
                 Key in HumanData.
                 Better be an element in HumanData.SUPPORTED_KEYS.
                 If not, an Error will be raised in key_strict mode.
-            val (Any):
+            val (_VT):
                 Value to the key.
 
         Raises:
@@ -213,22 +260,42 @@ class HumanData(dict):
                 self.get_key_strict() is True and
                 key cannot be found in
                 HumanData.SUPPORTED_KEYS.
+            ValueError:
+                Value is supported but doesn't match definition.
         """
-        key_check = self.__check_key__(key)
-        if key_check == _KeyCheck.ERROR:
-            raise KeyError(self.__class__.__get_key_error_msg__(key))
-        elif key_check == _KeyCheck.WARN:
-            class_logger = self.__class__.logger
-            if class_logger == 'silent':
-                pass
-            else:
-                print_log(
-                    msg=self.__class__.__get_key_warn_msg__(key),
-                    logger=class_logger,
-                    level=logging.WARN)
-        val_check = self.__check_value__(key, val)
-        if not val_check:
-            raise ValueError(self.__class__.__get_value_error_msg__())
+        self.__check_key__(key)
+        self.__check_value__(key, val)
+        # if it can be compressed by mask
+        mask_key = f'{key}_mask'
+        if isinstance(val, np.ndarray) and \
+                'keypoints' in key and \
+                mask_key in self:
+            mask_array = np.asarray(super().__getitem__(mask_key))
+            val = \
+                self.__class__.__remove_zero_pad__(val, mask_array)
+        dict.__setitem__(self, key, val)
+
+    def set_raw_value(self, key: _KT, val: _VT) -> None:
+        """Set the raw value of self[key] to val after key check. It acts the
+        same as dict.__setitem__(self, key, val) if the key satisfied
+        constraints.
+
+        Args:
+            key (_KT):
+                Key in dict.
+            val (_VT):
+                Value to the key.
+
+        Raises:
+            KeyError:
+                self.get_key_strict() is True and
+                key cannot be found in
+                HumanData.SUPPORTED_KEYS.
+            ValueError:
+                Value is supported but doesn't match definition.
+        """
+        self.__check_key__(key)
+        self.__check_value__(key, val)
         dict.__setitem__(self, key, val)
 
     def pop_unsupported_items(self):
@@ -251,6 +318,12 @@ class HumanData(dict):
         Returns:
             bool:
                 True for matched, ortherwise False.
+
+        Raises:
+            KeyError:
+                self.get_key_strict() is True and
+                key cannot be found in
+                HumanData.SUPPORTED_KEYS.
         """
         ret_key_check = _KeyCheck.PASS
         if self.get_key_strict():
@@ -262,6 +335,17 @@ class HumanData(dict):
                 # log warning message at the first time
                 ret_key_check = _KeyCheck.WARN
                 self.__class__.WARNED_KEYS.append(key)
+        if ret_key_check == _KeyCheck.ERROR:
+            raise KeyError(self.__class__.__get_key_error_msg__(key))
+        elif ret_key_check == _KeyCheck.WARN:
+            class_logger = self.__class__.logger
+            if class_logger == 'silent':
+                pass
+            else:
+                print_log(
+                    msg=self.__class__.__get_key_warn_msg__(key),
+                    logger=class_logger,
+                    level=logging.WARN)
         return ret_key_check
 
     def __check_value__(self, key: Any, val: Any) -> bool:
@@ -277,10 +361,16 @@ class HumanData(dict):
         Returns:
             bool:
                 True for matched, ortherwise False.
+
+        Raises:
+            ValueError:
+                Value is supported but doesn't match definition.
         """
         ret_bool = self.__check_value_type__(key, val) and\
             self.__check_value_shape__(key, val) and\
             self.__check_value_temporal__(key, val)
+        if not ret_bool:
+            raise ValueError(self.__class__.__get_value_error_msg__())
         return ret_bool
 
     def __check_value_type__(self, key: Any, val: Any) -> bool:
@@ -405,6 +495,26 @@ class HumanData(dict):
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
+
+    @classmethod
+    def __add_zero_pad__(cls, compressed_array: np.ndarray,
+                         mask_array: np.ndarray) -> np.ndarray:
+        assert mask_array.sum() == compressed_array.shape[1]
+        temporal_len, _, dim = compressed_array.shape
+        mask_len = mask_array.shape[0]
+        ret_value = np.zeros(
+            shape=[temporal_len, mask_len, dim], dtype=compressed_array.dtype)
+        valid_mask_index = np.where(mask_array == 1)[0]
+        ret_value[:, valid_mask_index, :] = compressed_array
+        return ret_value
+
+    @classmethod
+    def __remove_zero_pad__(cls, zero_pad_array: np.ndarray,
+                            mask_array: np.ndarray) -> np.ndarray:
+        assert mask_array.shape[0] == zero_pad_array.shape[1]
+        valid_mask_index = np.where(mask_array == 1)[0]
+        ret_value = np.take(zero_pad_array, valid_mask_index, axis=1)
+        return ret_value
 
     @classmethod
     def __get_key_warn_msg__(cls, key: Any) -> str:

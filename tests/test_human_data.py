@@ -19,8 +19,22 @@ def test_new():
 
 
 def test_set():
+    # set item correctly
     human_data = HumanData()
-    human_data['keypoints2d'] = np.zeros(shape=[3, 144, 3])
+    sample_keypoints2d = np.zeros(shape=[3, 144, 3])
+    human_data['keypoints2d'] = sample_keypoints2d
+    # set item with mask
+    human_data = HumanData()
+    sample_keypoints2d = np.zeros(shape=[3, 144, 3])
+    sample_keypoints2d_mask = np.zeros(shape=[144])
+    sample_keypoints2d_mask[0:4] = 1
+    human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data['keypoints2d'] = sample_keypoints2d
+    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
+    non_zero_padding_kp2d = human_data.get_raw_value('keypoints2d')
+    assert non_zero_padding_kp2d.shape[1] == 4
+    human_data.set_raw_value('keypoints2d', non_zero_padding_kp2d)
+    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
     # strict==True does not allow unsupported keys
     human_data.set_key_strict(True)
     with pytest.raises(KeyError):
@@ -129,3 +143,16 @@ def test_log():
     logger = logging.getLogger()
     HumanData.set_logger(logger)
     test_set()
+
+
+def shape_equal(ndarray_0, ndarray_1):
+    shape_0 = np.asarray(ndarray_0.shape)
+    shape_1 = np.asarray(ndarray_1.shape)
+    if shape_0.ndim != shape_1.ndim:
+        return False
+    else:
+        diff_value = np.abs(shape_0 - shape_1).sum()
+        if diff_value == 0:
+            return True
+        else:
+            return False
