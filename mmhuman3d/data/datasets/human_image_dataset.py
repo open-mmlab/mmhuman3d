@@ -23,14 +23,13 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                  body_model=None,
                  ann_file=None,
                  test_mode=False):
-        if dataset_name is not None:
-            self.dataset_name = dataset_name
+        super(HumanImageDataset,
+              self).__init__(data_prefix, pipeline, ann_file, test_mode,
+                             dataset_name)
         if body_model is not None:
             self.body_model = build_body_model(body_model)
         else:
             self.body_model = None
-        super(HumanImageDataset, self).__init__(data_prefix, pipeline,
-                                                ann_file, test_mode)
 
     def get_annotation_file(self):
         ann_prefix = os.path.join(self.data_prefix, 'preprocessed_datasets')
@@ -125,6 +124,10 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         data_infos = []
         for idx in range(num_data):
             info = {}
+
+            info['dataset_name'] = self.dataset_name
+            info['sample_idx'] = idx
+
             info['img_prefix'] = None
             info['image_path'] = os.path.join(self.data_prefix, 'datasets',
                                               self.dataset_name,
