@@ -1,115 +1,126 @@
 import os
+import os.path as osp
 
 import numpy as np
 
-from mmhuman3d.data.preprocessors.agora_pre import agora_extract
-from mmhuman3d.data.preprocessors.amass_pre import amass_extract
-from mmhuman3d.data.preprocessors.coco_pre import coco_extract
-from mmhuman3d.data.preprocessors.coco_wholebody_pre import coco_wb_extract
-from mmhuman3d.data.preprocessors.h36m_pre import h36m_extract
-from mmhuman3d.data.preprocessors.lsp_extended_pre import lsp_extended_extract
-from mmhuman3d.data.preprocessors.lsp_pre import lsp_extract
-from mmhuman3d.data.preprocessors.mpi_inf_3dhp_pre import mpi_inf_3dhp_extract
-from mmhuman3d.data.preprocessors.mpii_pre import mpii_extract
-from mmhuman3d.data.preprocessors.penn_action_pre import penn_action_extract
-from mmhuman3d.data.preprocessors.posetrack_pre import posetrack_extract
-from mmhuman3d.data.preprocessors.pw3d_pre import pw3d_extract
-from mmhuman3d.data.preprocessors.up3d_pre import up3d_extract
+from mmhuman3d.data.data_converters import build_data_converter
 
 
 def test_preprocess():
     root_path = 'tests/data/dataset_sample'
-    os.makedirs('/tmp/preprocessed_npzs', exist_ok=True)
     output_path = '/tmp/preprocessed_npzs'
+    os.makedirs(output_path, exist_ok=True)
 
-    PW3D_ROOT = os.path.join(root_path, '3DPW')
-    pw3d_extract(PW3D_ROOT, output_path, mode='train')
-    pw3d_extract(PW3D_ROOT, output_path, mode='test')
+    PW3D_ROOT = osp.join(root_path, '3DPW')
+    cfg = dict(type='Pw3dConverter', modes=['train', 'test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(PW3D_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, '3dpw_test.npz'))
+    assert osp.exists(osp.join(output_path, '3dpw_train.npz'))
 
-    assert os.path.exists('/tmp/preprocessed_npzs/' + '3dpw_test.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + '3dpw_train.npz')
+    H36M_ROOT = osp.join(root_path, 'h36m')
+    cfg = dict(type='H36mConverter', modes=['train', 'valid'], protocol=1)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(H36M_ROOT, output_path)
+    cfg = dict(type='H36mConverter', modes=['valid'], protocol=2)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(H36M_ROOT, output_path)
 
-    H36M_ROOT = os.path.join(root_path, 'h36m')
-    h36m_extract(H36M_ROOT, output_path, mode='train', protocol=1)
-    h36m_extract(H36M_ROOT, output_path, mode='valid', protocol=1)
-    h36m_extract(H36M_ROOT, output_path, mode='valid', protocol=2)
+    assert osp.exists(osp.join(output_path, 'h36m_train.npz'))
+    assert osp.exists(osp.join(output_path, 'h36m_valid_protocol1.npz'))
+    assert osp.exists(osp.join(output_path, 'h36m_valid_protocol2.npz'))
 
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'h36m_train.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'h36m_valid_protocol1.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'h36m_valid_protocol2.npz')
+    COCO_ROOT = osp.join(root_path, 'coco')
+    cfg = dict(type='CocoConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(COCO_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'coco_2014_train.npz'))
 
-    COCO_ROOT = os.path.join(root_path, 'coco')
-    coco_extract(COCO_ROOT, output_path)
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'coco_2014_train.npz')
+    MPI_INF_3DHP_ROOT = osp.join(root_path, 'mpi_inf_3dhp')
+    cfg = dict(type='MpiInf3dhpConverter', modes=['train', 'test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(MPI_INF_3DHP_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'mpi_inf_3dhp_test.npz'))
+    assert osp.exists(osp.join(output_path, 'mpi_inf_3dhp_train.npz'))
 
-    MPI_INF_3DHP_ROOT = os.path.join(root_path, 'mpi_inf_3dhp')
-    mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'train')
-    mpi_inf_3dhp_extract(MPI_INF_3DHP_ROOT, output_path, 'test')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'mpi_inf_3dhp_test.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'mpi_inf_3dhp_train.npz')
+    MPII_ROOT = osp.join(root_path, 'mpii')
+    cfg = dict(type='MpiiConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(MPII_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'mpii_train.npz'))
 
-    MPII_ROOT = os.path.join(root_path, 'mpii')
-    mpii_extract(MPII_ROOT, output_path)
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'mpii_train.npz')
+    PENN_ACTION_ROOT = osp.join(root_path, 'Penn_Action')
+    cfg = dict(type='PennActionConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(PENN_ACTION_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'penn_action_train.npz'))
 
-    PENN_ACTION_ROOT = os.path.join(root_path, 'Penn_Action')
-    penn_action_extract(PENN_ACTION_ROOT, output_path)
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'penn_action_train.npz')
+    AGORA_ROOT = osp.join(root_path, 'agora')
+    # agora_extract(AGORA_ROOT, output_path, 'train')
+    # agora_extract(AGORA_ROOT, output_path, 'validation')
+    cfg = dict(
+        type='AgoraConverter', modes=['train', 'validation'], fit='smplx')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(AGORA_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'agora_train.npz'))
+    assert osp.exists(osp.join(output_path, 'agora_validation.npz'))
 
-    AGORA_ROOT = os.path.join(root_path, 'agora')
-    agora_extract(AGORA_ROOT, output_path, 'train')
-    agora_extract(AGORA_ROOT, output_path, 'validation')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'agora_train.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'agora_validation.npz')
+    LSP_ORIGINAL_ROOT = osp.join(root_path, 'lsp_dataset_original')
+    cfg = dict(type='LspConverter', modes=['train'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(LSP_ORIGINAL_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'lsp_train.npz'))
 
-    LSP_ORIGINAL_ROOT = os.path.join(root_path, 'lsp_dataset_original')
-    lsp_extract(LSP_ORIGINAL_ROOT, output_path, 'train')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'lsp_train.npz')
+    LSP_ROOT = osp.join(root_path, 'lsp_dataset')
+    cfg = dict(type='LspConverter', modes=['test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(LSP_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'lsp_test.npz'))
 
-    LSP_ROOT = os.path.join(root_path, 'lsp_dataset')
-    lsp_extract(LSP_ROOT, output_path, 'test')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'lsp_test.npz')
+    HR_LSPET_ROOT = osp.join(root_path, 'hr-lspet')
+    cfg = dict(type='LspExtendedConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(HR_LSPET_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'hr-lspet_train.npz'))
 
-    HR_LSPET_ROOT = os.path.join(root_path, 'hr-lspet')
-    lsp_extended_extract(HR_LSPET_ROOT, output_path)
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'hr-lspet_train.npz')
+    UP3D_ROOT = osp.join(root_path, 'up-3d')
+    cfg = dict(type='Up3dConverter', modes=['trainval', 'test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(UP3D_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'up3d_trainval.npz'))
+    assert osp.exists(osp.join(output_path, 'up3d_test.npz'))
 
-    UP3D_ROOT = os.path.join(root_path, 'up-3d')
-    up3d_extract(UP3D_ROOT, output_path, 'train')
-    up3d_extract(UP3D_ROOT, output_path, 'test')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'up3d_train.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'up3d_test.npz')
+    COCO_WHOLEBODY_ROOT = osp.join(root_path, 'coco_wholebody')
+    cfg = dict(type='CocoWholebodyConverter', modes=['train', 'val'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(COCO_WHOLEBODY_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'coco_wholebody_train.npz'))
+    assert osp.exists(osp.join(output_path, 'coco_wholebody_val.npz'))
 
-    COCO_WHOLEBODY_ROOT = os.path.join(root_path, 'coco_wholebody')
-    coco_wb_extract(COCO_WHOLEBODY_ROOT, output_path, 'train')
-    coco_wb_extract(COCO_WHOLEBODY_ROOT, output_path, 'val')
-    assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'coco_wholebody_train.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'coco_wholebody_val.npz')
+    AMASS_ROOT = osp.join(root_path, 'AMASS_file')
+    cfg = dict(type='AmassConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(AMASS_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'amass.npz'))
 
-    AMASS_ROOT = os.path.join(root_path, 'AMASS_file')
-    amass_extract(AMASS_ROOT, output_path)
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'amass.npz')
-
-    POSETRACK_ROOT = os.path.join(root_path, 'PoseTrack/data')
-    posetrack_extract(POSETRACK_ROOT, output_path, 'train')
-    posetrack_extract(POSETRACK_ROOT, output_path, 'val')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'posetrack_train.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'posetrack_val.npz')
+    POSETRACK_ROOT = osp.join(root_path, 'PoseTrack/data')
+    cfg = dict(type='PosetrackConverter', modes=['train', 'val'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(POSETRACK_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'posetrack_train.npz'))
+    assert osp.exists(osp.join(output_path, 'posetrack_val.npz'))
 
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'
-    assert os.path.exists(npz_folder)
+    assert osp.exists(npz_folder)
     all_keys = [
         'image_path', 'bbox_xywh', 'config', 'keypoints2d', 'keypoints3d',
         'smpl', 'smplx', 'smplh', 'meta', 'mask', 'video_path', 'frame_idx'
     ]
 
     for npf in os.listdir(npz_folder):
-        npfile = np.load(os.path.join(npz_folder, npf), allow_pickle=True)
+        npfile = np.load(osp.join(npz_folder, npf), allow_pickle=True)
         assert 'image_path' or 'video_path' in npfile
         if 'image_path' in npfile:
             N = npfile['image_path'].shape[0]
@@ -218,3 +229,8 @@ def test_preprocessed_npz():
 
             elif k == 'mask':
                 assert npfile[k].shape == (144, )
+
+
+if __name__ == '__main__':
+    test_preprocess()
+    test_preprocessed_npz()
