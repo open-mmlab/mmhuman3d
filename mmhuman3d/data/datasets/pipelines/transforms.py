@@ -319,7 +319,10 @@ class RandomHorizontalFlip(object):
                 result dict.
         """
         if np.random.rand() > self.flip_prob:
+            results['is_flipped'] = np.array([0])
             return results
+
+        results['is_flipped'] = np.array([1])
 
         # flip image
         for key in results.get('img_fields', ['img']):
@@ -659,7 +662,7 @@ class GetRandomScaleRotation:
         s = s * s_factor
 
         r_factor = np.clip(np.random.randn() * rf, -rf * 2, rf * 2)
-        r = r_factor if np.random.rand() <= self.rot_prob else 0
+        r = r_factor if np.random.rand() <= self.rot_prob else 0.0
 
         results['scale'] = s
         results['rotation'] = r

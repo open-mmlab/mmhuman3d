@@ -19,13 +19,21 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         test_mode (bool): in train mode or test mode
     """
 
-    def __init__(self, data_prefix, pipeline, ann_file=None, test_mode=False):
+    def __init__(self,
+                 data_prefix,
+                 pipeline,
+                 ann_file=None,
+                 test_mode=False,
+                 dataset_name=None):
         super(BaseDataset, self).__init__()
 
         self.ann_file = ann_file
         self.data_prefix = data_prefix
         self.test_mode = test_mode
         self.pipeline = Compose(pipeline)
+        if dataset_name is not None:
+            self.dataset_name = dataset_name
+
         self.data_infos = self.load_annotations()
 
     @abstractmethod
@@ -34,6 +42,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     def prepare_data(self, idx):
         results = copy.deepcopy(self.data_infos[idx])
+        results['dataset_name'] = self.dataset_name
+        results['sample_idx'] = idx
         return self.pipeline(results)
 
     def __len__(self):
