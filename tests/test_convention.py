@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pytest
 import torch
@@ -65,3 +67,23 @@ def test_conventions():
     assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] == 0
     mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] = 1
     assert (mask_coco == mask_coco_full).all()
+
+
+def test_cache():
+    mmpose_keypoints2d = np.ones((1, 133, 3))
+    mmpose_mask = np.ones((133, ))
+    start_time = time.time()
+    convert_kps(
+        keypoints=mmpose_keypoints2d,
+        mask=mmpose_mask,
+        src='mmpose',
+        dst='smpl')
+    without_cache_time = time.time() - start_time
+    start_time = time.time()
+    convert_kps(
+        keypoints=mmpose_keypoints2d,
+        mask=mmpose_mask,
+        src='mmpose',
+        dst='smpl')
+    with_cache_time = time.time() - start_time
+    assert with_cache_time < without_cache_time

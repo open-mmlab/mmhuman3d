@@ -8,6 +8,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     coco,
     coco_wholebody,
     h36m,
+    human_data_10,
     lsp,
     mmpose,
     mpi_inf_3dhp,
@@ -20,6 +21,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 )
 
 KEYPOINTS_FACTORY = {
+    'human_data_1.0': human_data_10.HUMAN_DATA_10,
     'agora': agora.AGORA_KEYPOINTS,
     'coco': coco.COCO_KEYPOINTS,
     'coco_wholebody': coco_wholebody.COCO_WHOLEBODY_KEYPOINTS,
@@ -35,6 +37,8 @@ KEYPOINTS_FACTORY = {
     'lsp': lsp.LSP_KEYPOINTS,
     'posetrack': posetrack.POSETRACK_KEYPOINTS,
 }
+
+__KEYPOINTS_MAPPING_CACHE__ = {}
 
 
 def convert_kps(
@@ -87,25 +91,64 @@ def convert_kps(
         mask = torch.zeros((len(dst_names)), dtype=torch.uint8)
     else:
         raise TypeError('keypoints should be torch.Tensor or np.ndarray')
-    intersection = set(dst_names) & set(src_names)
 
-    src_to_intersection_idx = []
-    intersection_names = []
-    for name in src_names:
-        if name in intersection:
-            index = src_names.index(name)
-            if index not in src_to_intersection_idx:
-                src_to_intersection_idx.append(index)
-                intersection_names.append(name)
+    src_to_intersection_idx, \
+        dst_to_intersection_index, \
+        _ = get_mapping(src, dst, keypoints_factory)
+
     keypoints_intersection = keypoints[:, src_to_intersection_idx]
     mask_intersection = original_mask[
         src_to_intersection_idx] if original_mask is not None else 1
-    dst_to_intersection_index = []
-    for name in intersection_names:
-        dst_to_intersection_index.append(dst_names.index(name))
-
     out_keypoints[:, dst_to_intersection_index] = keypoints_intersection
     out_shape = original_shape + (len(dst_names), keypoints.shape[-1])
     out_keypoints = out_keypoints.reshape(out_shape)
     mask[dst_to_intersection_index] = mask_intersection
     return out_keypoints, mask
+
+
+def get_mapping(src: str,
+                dst: str,
+                keypoints_factory: dict = KEYPOINTS_FACTORY):
+    """Get mapping list from src to dst.
+
+    Args:
+        src (str): source data type from keypoints_factory.
+        dst (str): destination data type from keypoints_factory.
+        keypoints_factory (dict, optional): A class to store the attributes.
+            Defaults to keypoints_factory.
+
+    Returns:
+        list:
+            [src_to_intersection_idx, dst_to_intersection_index,
+             intersection_names]
+    """
+    if src in __KEYPOINTS_MAPPING_CACHE__ and \
+            dst in __KEYPOINTS_MAPPING_CACHE__[src]:
+        return __KEYPOINTS_MAPPING_CACHE__[src][dst]
+    else:
+        src_names = keypoints_factory[src.lower()]
+        dst_names = keypoints_factory[dst.lower()]
+        intersection = set(dst_names) & set(src_names)
+        # for each name in intersection,
+        # put its index in src_names into src_to_intersection_idx
+        src_to_intersection_idx = []
+        intersection_names = []
+        for name in src_names:
+            if name in intersection:
+                index = src_names.index(name)
+                if index not in src_to_intersection_idx:
+                    src_to_intersection_idx.append(index)
+                    intersection_names.append(name)
+        # for each name in intersection,
+        # put its index in dst_names into dst_to_intersection_index
+        dst_to_intersection_index = []
+        for name in intersection_names:
+            dst_to_intersection_index.append(dst_names.index(name))
+        mapping_list = [
+            src_to_intersection_idx, dst_to_intersection_index,
+            intersection_names
+        ]
+        if src not in __KEYPOINTS_MAPPING_CACHE__:
+            __KEYPOINTS_MAPPING_CACHE__[src] = {}
+        __KEYPOINTS_MAPPING_CACHE__[src][dst] = mapping_list
+        return mapping_list
