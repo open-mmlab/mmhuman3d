@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Any, Type, TypeVar, Union
+from typing import Any, Type, TypeVar, Union, overload
 
 import numpy as np
 from mmcv.utils import print_log
@@ -239,6 +239,120 @@ class HumanData(dict):
         """
         value = super().__getitem__(key)
         return value
+
+    def get_value_in_shape(self,
+                           key: _KT,
+                           shape: Union[list, tuple],
+                           padding_constant: int = 0) -> np.ndarray:
+        """Get value in a specific shape. For each dim, if the required shape
+        is smaller than current shape, ndarray will be sliced. Otherwise, it
+        will be padded with padding_constant at the end.
+
+        Args:
+            key (_KT):
+                Key in dict. The value of this key must be
+                an instance of numpy.ndarray.
+            shape (Union[list, tuple]):
+                Shape of the returned array. Its length
+                must be equal to value.ndim. Set -1 for
+                a dimension if you do not want to edit it.
+            padding_constant (int, optional):
+                The value to set the padded values for each axis.
+                Defaults to 0.
+
+        Raises:
+            ValueError:
+                A value in shape is neither positive integer nor -1.
+
+        Returns:
+            np.ndarray:
+                An array in required shape.
+        """
+        value = self.get_raw_value(key)
+        assert isinstance(value, np.ndarray)
+        assert value.ndim == len(shape)
+        pad_width_list = []
+        slice_list = []
+        for dim_index in range(len(shape)):
+            if shape[dim_index] == -1:
+                # no pad or slice
+                pad_width_list.append((0, 0))
+                slice_list.append(slice(None))
+            elif shape[dim_index] > 0:
+                # valid shape value
+                wid = shape[dim_index] - value.shape[dim_index]
+                if wid > 0:
+                    pad_width_list.append((0, wid))
+                else:
+                    pad_width_list.append((0, 0))
+                slice_list.append(slice(0, shape[dim_index]))
+            else:
+                # invalid
+                raise ValueError
+        pad_value = np.pad(
+            value,
+            pad_width=pad_width_list,
+            mode='constant',
+            constant_values=padding_constant)
+        return pad_value[tuple(slice_list)]
+
+    @overload
+    def get_temporal_slice(self, stop: int):
+        ...
+
+    @overload
+    def get_temporal_slice(self, start: int, stop: int):
+        ...
+
+    @overload
+    def get_temporal_slice(self, start: int, stop: int, step: int):
+        ...
+
+    def get_temporal_slice(self,
+                           arg_0: int,
+                           arg_1: Union[int, Any] = None,
+                           step: int = 1):
+        """Slice all temporal values along timeline dimension.
+
+        Args:
+            arg_0 (int):
+                When arg_1 is None, arg_0 is stop and start=0.
+                When arg_1 is not None, arg_0 is start.
+            arg_1 (Union[int, Any], optional):
+                None or where to stop.
+                Defaults to None.
+            step (int, optional):
+                Length of step. Defaults to 1.
+
+        Returns:
+            HumanData:
+                A new HumanData instance with sliced values.
+        """
+        ret_human_data = HumanData.new(key_strict=self.get_key_strict())
+        if arg_1 is None:
+            start = 0
+            stop = arg_0
+        else:
+            start = arg_0
+            stop = arg_1
+        slice_index = slice(start, stop, step)
+        supported_keys = self.__class__.SUPPORTED_KEYS
+        for key in self.keys():
+            if key in supported_keys and \
+                    'temporal_dim' in supported_keys[key] and \
+                    supported_keys[key]['temporal_dim'] >= 0:
+                slice_list = []
+                for dim_index in range(len(supported_keys[key]['shape'])):
+                    if dim_index == supported_keys[key]['temporal_dim']:
+                        slice_list.append(slice_index)
+                    else:
+                        slice_list.append(slice(None))
+                raw_value = self.get_raw_value(key)
+                sliced_value = raw_value[tuple(slice_list)]
+                ret_human_data[key] = sliced_value
+            else:
+                ret_human_data[key] = self.get_raw_value(key)
+        return ret_human_data
 
     def __setitem__(self, key: _KT, val: _VT):
         """Set self[key] to value. Only be called when using

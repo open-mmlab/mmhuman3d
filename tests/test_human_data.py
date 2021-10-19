@@ -87,6 +87,74 @@ def test_pop_unsupported_items():
     assert 'keypoints4d' not in human_data
 
 
+def test_padding_and_slice():
+    human_data_load_path = 'tests/data/human_data/human_data_00.npz'
+    human_data = HumanData()
+    human_data.load(human_data_load_path)
+    assert human_data['keypoints2d'].shape[2] == 3
+    # raw shape: 199, 18, 3
+    raw_value = human_data.get_raw_value('keypoints2d')
+    # test type Error
+    with pytest.raises(AssertionError):
+        human_data.get_value_in_shape('misc', [
+            1,
+        ])
+    # test shape Error
+    with pytest.raises(AssertionError):
+        human_data.get_value_in_shape('keypoints2d', [200, 19])
+    # test value Error
+    with pytest.raises(ValueError):
+        human_data.get_value_in_shape('keypoints2d', [0, 19, 4])
+    # test padding
+    padding_value = \
+        human_data.get_value_in_shape('keypoints2d', [200, 19, 4])
+    assert padding_value[199, 18, 3] == 0
+    # test padding customed value
+    padding_value = \
+        human_data.get_value_in_shape('keypoints2d', [200, 19, 4], 1)
+    assert padding_value[199, 18, 3] == 1
+    # test slice
+    slice_value = \
+        human_data.get_value_in_shape('keypoints2d', [100, 10, 2])
+    assert raw_value[0, 0, 0] == slice_value[0, 0, 0]
+    # test padding + slice
+    target_value = \
+        human_data.get_value_in_shape('keypoints2d', [200, 10, 2])
+    assert target_value[199, 9, 1] == 0
+    assert raw_value[0, 0, 0] == target_value[0, 0, 0]
+    # test default dim
+    target_value = \
+        human_data.get_value_in_shape('keypoints2d', [-1, 10, 2])
+    assert raw_value.shape[0] == target_value.shape[0]
+
+
+def test_temporal_slice():
+    human_data_load_path = 'tests/data/human_data/human_data_00.npz'
+    human_data = HumanData()
+    human_data.load(human_data_load_path)
+    assert human_data['keypoints2d'].shape[2] == 3
+    # raw shape: 199, 18, 3
+    raw_value = human_data.get_raw_value('keypoints2d')
+    # slice with stop
+    sliced_human_data = human_data.get_temporal_slice(1)
+    assert sliced_human_data['keypoints2d'].shape[0] == 1
+    assert \
+        sliced_human_data.get_raw_value('keypoints2d')[0, 0, 0] == \
+        raw_value[0, 0, 0]
+    # slice with start and stop
+    sliced_human_data = human_data.get_temporal_slice(1, 3)
+    assert sliced_human_data['keypoints2d'].shape[0] == 2
+    assert \
+        sliced_human_data.get_raw_value('keypoints2d')[0, 0, 0] == \
+        raw_value[1, 0, 0]
+    # slice with start, stop and step
+    sliced_human_data = human_data.get_temporal_slice(0, 5, 2)
+    assert sliced_human_data['keypoints2d'].shape[0] == 3
+    assert \
+        sliced_human_data.get_raw_value('keypoints2d')[1, 0, 0] == \
+        raw_value[2, 0, 0]
+
+
 def test_load():
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
     human_data = HumanData()
