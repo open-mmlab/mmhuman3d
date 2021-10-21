@@ -143,10 +143,10 @@ class MpiInf3dhpConverter(BaseModeConverter):
 
             keypoints2d_ = np.array(keypoints2d_).reshape((-1, 28, 3))
             keypoints2d_, mask = convert_kps(keypoints2d_, 'mpi_inf_3dhp',
-                                             'smplx')
+                                             'human_data_1.0')
             keypoints3d_ = np.array(keypoints3d_).reshape((-1, 28, 4))
             keypoints3d_, _ = convert_kps(keypoints3d_, 'mpi_inf_3dhp',
-                                          'smplx')
+                                          'human_data_1.0')
 
         elif mode == 'test':
 
@@ -188,10 +188,10 @@ class MpiInf3dhpConverter(BaseModeConverter):
 
             keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
             keypoints2d_, mask = convert_kps(keypoints2d_, 'mpi_inf_3dhp_test',
-                                             'smplx')
+                                             'human_data_1.0')
             keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
             keypoints3d_, _ = convert_kps(keypoints3d_, 'mpi_inf_3dhp_test',
-                                          'smplx')
+                                          'human_data_1.0')
 
         total_dict['image_path'] = image_path_
         total_dict['bbox_xywh'] = bbox_xywh_

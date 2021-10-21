@@ -149,9 +149,10 @@ class H36mConverter(BaseModeConverter):
                         keypoints3d_.append(keypoints3d17)
 
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'h36m', 'smplx')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'h36m',
+                                         'human_data_1.0')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
-        keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m', 'smplx')
+        keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m', 'human_data_1.0')
 
         total_dict['image_path'] = image_path_
         total_dict['bbox_xywh'] = bbox_xywh_

@@ -54,7 +54,8 @@ class CocoConverter(BaseConverter):
 
         # convert keypoints
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'coco', 'smplx')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'coco',
+                                         'human_data_1.0')
 
         total_dict['image_path'] = image_path_
         total_dict['keypoints2d'] = keypoints2d_

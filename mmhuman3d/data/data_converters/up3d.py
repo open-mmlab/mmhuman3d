@@ -78,7 +78,7 @@ class Up3dConverter(BaseModeConverter):
             keypoints2d_.append(keypoints2d)
 
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 14, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'lsp', 'smplx')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'lsp', 'human_data_1.0')
 
         # change list to np array
         smpl['body_pose'] = np.array(smpl['body_pose']).reshape((-1, 23, 3))

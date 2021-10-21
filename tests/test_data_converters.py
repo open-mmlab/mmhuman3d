@@ -230,7 +230,7 @@ def test_preprocessed_npz():
                     assert meta_dict['gender'].shape == (N, )
 
             elif k == 'mask':
-                assert npfile[k].shape == (144, )
+                assert npfile[k].shape == (162, )
 
 
 if __name__ == '__main__':
