@@ -48,6 +48,7 @@ def convert_kps(
     keypoints: Union[np.ndarray, torch.Tensor],
     src: str,
     dst: str,
+    compress: bool = False,
     mask: Optional[Union[np.ndarray, torch.Tensor]] = None,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
 ) -> Tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
@@ -106,7 +107,34 @@ def convert_kps(
     out_shape = original_shape + (len(dst_names), keypoints.shape[-1])
     out_keypoints = out_keypoints.reshape(out_shape)
     mask[dst_to_intersection_index] = mask_intersection
+
+    if compress:
+        sorted_dst_to_intersection_index = sorted(dst_to_intersection_index)
+        out_keypoints = np.take(
+            out_keypoints, sorted_dst_to_intersection_index, axis=1)
     return out_keypoints, mask
+
+
+def compress_converted_kps(
+    zero_pad_array: Union[np.ndarray, torch.Tensor],
+    mask_array: Union[np.ndarray, torch.Tensor],
+) -> Union[np.ndarray, torch.Tensor]:
+    """Compress keypoints that are zero-padded after applying convert_kps.
+
+    Args:
+        keypoints (np.ndarray): input keypoints array, could be
+            (f * n * J * 3/2) or (f * J * 3/2). You can set keypoints as
+            np.zeros((1, J, 2)) if you only need mask.
+        mask [Union[np.ndarray, torch.Tensor]]:
+            The original mask to mark the existence of the keypoints.
+    Returns:
+        Union[np.ndarray, torch.Tensor]: out_keypoints
+    """
+
+    assert mask_array.shape[0] == zero_pad_array.shape[1]
+    valid_mask_index = np.where(mask_array == 1)[0]
+    compressed_array = np.take(zero_pad_array, valid_mask_index, axis=1)
+    return compressed_array
 
 
 def get_mapping(src: str,
