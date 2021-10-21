@@ -3,6 +3,7 @@ from .amass import AmassConverter
 from .builder import build_data_converter
 from .coco import CocoConverter
 from .coco_wholebody import CocoWholebodyConverter
+from .crowdpose import CrowdposeConverter
 from .h36m import H36mConverter
 from .lsp import LspConverter
 from .lsp_extended import LspExtendedConverter
@@ -18,5 +19,5 @@ __all__ = [
     'AmassConverter', 'CocoConverter', 'CocoWholebodyConverter',
     'H36mConverter', 'LspExtendedConverter', 'LspConverter',
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
-    'Pw3dConverter', 'Up3dConverter'
+    'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter'
 ]

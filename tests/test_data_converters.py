@@ -56,8 +56,6 @@ def test_preprocess():
     assert osp.exists(osp.join(output_path, 'penn_action_train.npz'))
 
     AGORA_ROOT = osp.join(root_path, 'agora')
-    # agora_extract(AGORA_ROOT, output_path, 'train')
-    # agora_extract(AGORA_ROOT, output_path, 'validation')
     cfg = dict(
         type='AgoraConverter', modes=['train', 'validation'], fit='smplx')
     data_converter = build_data_converter(cfg)
@@ -109,6 +107,16 @@ def test_preprocess():
     data_converter.convert(POSETRACK_ROOT, output_path)
     assert osp.exists(osp.join(output_path, 'posetrack_train.npz'))
     assert osp.exists(osp.join(output_path, 'posetrack_val.npz'))
+
+    CROWDPOSE_ROOT = os.path.join(root_path, 'Crowdpose')
+    cfg = dict(
+        type='CrowdposeConverter', modes=['train', 'val', 'test', 'trainval'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(CROWDPOSE_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_val.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_test.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_trainval.npz')
 
 
 def test_preprocessed_npz():

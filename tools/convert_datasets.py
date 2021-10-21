@@ -9,6 +9,10 @@ DATASET_CONFIGS = dict(
     amass=dict(type='AmassConverter', prefix='AMASS_file'),
     coco=dict(type='CocoConverter'),
     coco_wholebody=dict(type='CocoWholebodyConverter', modes=['train', 'val']),
+    crowdpose=dict(
+        type='CrowdposeConverter',
+        modes=['train', 'val', 'test', 'trainval'],
+        prefix='Crowdpose'),
     pw3d=dict(type='Pw3dConverter', modes=['train', 'test'], prefix='3DPW'),
     mpii=dict(type='MpiiConverter'),
     h36m_p1=dict(
