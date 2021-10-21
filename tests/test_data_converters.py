@@ -149,10 +149,12 @@ def test_preprocessed_npz():
                 assert npfile[k].shape == ()
 
             elif k == 'keypoints2d':
-                assert npfile[k].shape == (N, 144, 3)
+                N_keypoints = npfile[k].shape[1]
+                assert npfile[k].shape == (N, N_keypoints, 3)
 
             elif k == 'keypoints3d':
-                assert npfile[k].shape == (N, 144, 4)
+                N_keypoints = npfile[k].shape[1]
+                assert npfile[k].shape == (N, N_keypoints, 4)
 
             elif k == 'smpl':
                 assert isinstance(npfile[k].item(), dict)
