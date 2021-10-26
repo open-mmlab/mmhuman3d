@@ -63,7 +63,7 @@ class PennActionConverter(BaseConverter):
 
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 13, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'penn_action',
-                                         'human_data_1.0')
+                                         'human_data')
         total_dict['image_path'] = image_path_
         total_dict['bbox_xywh'] = bbox_xywh_
         total_dict['keypoints2d'] = keypoints2d_

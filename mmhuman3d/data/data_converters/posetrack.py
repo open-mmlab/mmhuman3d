@@ -58,7 +58,7 @@ class PosetrackConverter(BaseModeConverter):
         # convert keypoints
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'posetrack',
-                                         'human_data_1.0')
+                                         'human_data')
 
         total_dict['image_path'] = image_path_
         total_dict['keypoints2d'] = keypoints2d_
