@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -9,7 +10,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     coco_wholebody,
     crowdpose,
     h36m,
-    human_data_10,
+    human_data,
     lsp,
     mmpose,
     mpi_inf_3dhp,
@@ -23,13 +24,16 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 )
 
 KEYPOINTS_FACTORY = {
-    'human_data_1.0': human_data_10.HUMAN_DATA_10,
+    'human_data': human_data.HUMAN_DATA,
     'agora': agora.AGORA_KEYPOINTS,
     'coco': coco.COCO_KEYPOINTS,
     'coco_wholebody': coco_wholebody.COCO_WHOLEBODY_KEYPOINTS,
     'crowdpose': crowdpose.CROWDPOSE_KEYPOINTS,
     'smplx': smplx.SMPLX_KEYPOINTS,
     'smpl': smpl.SMPL_KEYPOINTS,
+    'smpl_45': smpl.SMPL_45_KEYPOINTS,
+    'smpl_54': smpl.SMPL_54_KEYPOINTS,
+    'smpl_49': smpl.SMPL_49_KEYPOINTS,
     'mmpose': mmpose.MMPOSE_KEYPOINTS,
     'mpi_inf_3dhp': mpi_inf_3dhp.MPI_INF_3DHP_KEYPOINTS,
     'mpi_inf_3dhp_test': mpi_inf_3dhp.MPI_INF_3DHP_TEST_KEYPOINTS,
@@ -43,7 +47,11 @@ KEYPOINTS_FACTORY = {
     'openpose_135': openpose.OPENPOSE_135_KEYPOINTS
 }
 
-__KEYPOINTS_MAPPING_CACHE__ = {}
+__KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
+
+# TODO: temporary solution
+# duplicates in SMPL_49 requires special treatment
+__KEYPOINTS_MAPPING_CACHE__['smpl_54']['smpl_49'] = smpl.SMPL_54_TO_SMPL_49
 
 
 def convert_kps(
@@ -59,9 +67,10 @@ def convert_kps(
     smpl, mmpose, mpi_inf_3dhp, mpi_inf_3dhp_test, h36m, pw3d, mpii, lsp.
 
     Args:
-        keypoints (np.ndarray): input keypoints array, could be
-            (f * n * J * 3/2) or (f * J * 3/2). You can set keypoints as
-            np.zeros((1, J, 2)) if you only need mask.
+        keypoints [Union[np.ndarray, torch.Tensor]]: input keypoints array,
+            could be (f * n * J * 3/2) or (f * J * 3/2).
+            You can set keypoints as np.zeros((1, J, 2))
+            if you only need mask.
         src (str): source data type from keypoints_factory.
         dst (str): destination data type from keypoints_factory.
         mask (Optional[Union[np.ndarray, torch.Tensor]], optional):
@@ -80,10 +89,17 @@ def convert_kps(
         return keypoints, np.ones((keypoints.shape[-2]))
     src_names = keypoints_factory[src.lower()]
     dst_names = keypoints_factory[dst.lower()]
-    original_shape = keypoints.shape[:-2]
+    extra_dims = keypoints.shape[:-2]
     keypoints = keypoints.reshape(-1, len(src_names), keypoints.shape[-1])
-    out_keypoints = np.zeros(
-        (keypoints.shape[0], len(dst_names), keypoints.shape[-1]))
+
+    if isinstance(keypoints, np.ndarray):
+        out_keypoints = np.zeros(
+            (keypoints.shape[0], len(dst_names), keypoints.shape[-1]))
+    else:
+        out_keypoints = torch.zeros(
+            (keypoints.shape[0], len(dst_names), keypoints.shape[-1]),
+            device=keypoints.device,
+            dtype=keypoints.dtype)
 
     original_mask = mask
     if original_mask is not None:
@@ -94,26 +110,21 @@ def convert_kps(
     if isinstance(keypoints, np.ndarray):
         mask = np.zeros((len(dst_names)), dtype=np.uint8)
     elif isinstance(keypoints, torch.Tensor):
-        mask = torch.zeros((len(dst_names)), dtype=torch.uint8)
+        mask = torch.zeros((len(dst_names)),
+                           dtype=torch.uint8,
+                           device=keypoints.device)
     else:
         raise TypeError('keypoints should be torch.Tensor or np.ndarray')
 
-    src_to_intersection_idx, \
-        dst_to_intersection_index, \
-        _ = get_mapping(src, dst, keypoints_factory)
+    dst_idxs, src_idxs, _ = get_mapping(src, dst, keypoints_factory)
 
-    keypoints_intersection = keypoints[:, src_to_intersection_idx]
-    mask_intersection = original_mask[
-        src_to_intersection_idx] if original_mask is not None else 1
-    out_keypoints[:, dst_to_intersection_index] = keypoints_intersection
-    out_shape = original_shape + (len(dst_names), keypoints.shape[-1])
+    out_keypoints[:, dst_idxs] = keypoints[:, src_idxs]
+    out_shape = extra_dims + (len(dst_names), keypoints.shape[-1])
     out_keypoints = out_keypoints.reshape(out_shape)
-    mask[dst_to_intersection_index] = mask_intersection
 
-    if compress:
-        sorted_dst_to_intersection_index = sorted(dst_to_intersection_index)
-        out_keypoints = np.take(
-            out_keypoints, sorted_dst_to_intersection_index, axis=1)
+    mask[dst_idxs] = original_mask[src_idxs] \
+        if original_mask is not None else 1.0
+
     return out_keypoints, mask
 
 
@@ -161,26 +172,19 @@ def get_mapping(src: str,
     else:
         src_names = keypoints_factory[src.lower()]
         dst_names = keypoints_factory[dst.lower()]
-        intersection = set(dst_names) & set(src_names)
-        # for each name in intersection,
-        # put its index in src_names into src_to_intersection_idx
-        src_to_intersection_idx = []
-        intersection_names = []
-        for name in src_names:
-            if name in intersection:
-                index = src_names.index(name)
-                if index not in src_to_intersection_idx:
-                    src_to_intersection_idx.append(index)
-                    intersection_names.append(name)
-        # for each name in intersection,
-        # put its index in dst_names into dst_to_intersection_index
-        dst_to_intersection_index = []
-        for name in intersection_names:
-            dst_to_intersection_index.append(dst_names.index(name))
-        mapping_list = [
-            src_to_intersection_idx, dst_to_intersection_index,
-            intersection_names
-        ]
+
+        dst_idxs, src_idxs, intersection = [], [], []
+        for dst_idx, dst_name in enumerate(dst_names):
+            for src_idx, src_name in enumerate(src_names):
+                if src_name == dst_name:
+                    dst_idxs.append(dst_idx)
+                    src_idxs.append(src_idx)
+                    intersection.append(dst_name)
+                    break  # select the first src keypoint with the same name
+        intersection = list(set(intersection))
+
+        mapping_list = [dst_idxs, src_idxs, intersection]
+
         if src not in __KEYPOINTS_MAPPING_CACHE__:
             __KEYPOINTS_MAPPING_CACHE__[src] = {}
         __KEYPOINTS_MAPPING_CACHE__[src][dst] = mapping_list

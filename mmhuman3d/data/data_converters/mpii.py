@@ -53,8 +53,7 @@ class MpiiConverter(BaseConverter):
             keypoints2d_.append(keypoints2d16)
 
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 16, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'mpii',
-                                         'human_data_1.0')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'mpii', 'human_data')
         total_dict['image_path'] = image_path_
         total_dict['bbox_xywh'] = bbox_xywh_
         total_dict['keypoints2d'] = keypoints2d_

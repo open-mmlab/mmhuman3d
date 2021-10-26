@@ -1,32 +1,32 @@
 MPI_INF_3DHP_KEYPOINTS = [
     'spine_3',
-    'spine_4',
+    'spine_4_3dhp',
     'spine_2',
-    'Spine (H36M)',  # close to spine2
+    'spine_h36m',  # close to spine2
     'pelvis',
     'neck',  # throat
-    'head',
+    'head_3dhp',
     'headtop',
-    'left_clavicle',
+    'left_clavicle_3dhp',
     'left_shoulder',
     'left_elbow',
     'left_wrist',
-    'left_hand',
-    'right_clavicle',
+    'left_hand_3dhp',
+    'right_clavicle_3dhp',
     'right_shoulder',
     'right_elbow',
     'right_wrist',
-    'right_hand',
+    'right_hand_3dhp',
     'left_hip',
     'left_knee',
     'left_ankle',
     'left_foot',
-    'left_toe',
+    'left_toe_3dhp',
     'right_hip',
     'right_knee',
     'right_ankle',
     'right_foot',
-    'right_toe'
+    'right_toe_3dhp'
 ]
 
 MPI_INF_3DHP_TEST_KEYPOINTS = [
@@ -45,6 +45,6 @@ MPI_INF_3DHP_TEST_KEYPOINTS = [
     'left_knee',
     'left_ankle',
     'pelvis',
-    'Spine (H36M)',  # close to spine2
+    'spine_h36m',  # close to spine2
     'head'
 ]
