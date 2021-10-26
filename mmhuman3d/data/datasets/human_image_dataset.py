@@ -152,6 +152,10 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
             data_infos.append(info)
 
+        # save memory
+        del data
+        print('data deleted.')
+
         return data_infos
 
     def evaluate(self, outputs, res_folder, metric='joint_error', logger=None):
