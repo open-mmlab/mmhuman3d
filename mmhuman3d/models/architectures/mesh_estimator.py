@@ -230,11 +230,12 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         gt_out = self.smpl(
             betas=gt_betas, body_pose=gt_pose, global_orient=gt_global_orient)
         if num_keypoints == 49:
-            gt_model_joints = gt_out.joints
-            gt_vertices = gt_out.vertices
+            gt_model_joints = gt_out['joints']
+            gt_vertices = gt_out['vertices']
         else:
-            gt_model_joints = gt_out.joints[:, 25:, :]
-            gt_vertices = gt_out.vertices
+            gt_model_joints = gt_out['joints'][:, 25:, :]
+            gt_vertices = gt_out['vertices']
+        # TODO: add joint mask
 
         # Get current best fits from the dictionary
         opt_pose, opt_betas = self.fits_dict[(dataset_name, indices.cpu(),
@@ -247,11 +248,11 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             body_pose=opt_pose[:, 3:],
             global_orient=opt_pose[:, :3])
         if num_keypoints == 49:
-            opt_joints = opt_output.joints
-            opt_vertices = opt_output.vertices
+            opt_joints = opt_output['joints']
+            opt_vertices = opt_output['vertices']
         else:
-            opt_joints = opt_output.joints[:, 25:, :]
-            opt_vertices = opt_output.vertices
+            opt_joints = opt_output['joints'][:, 25:, :]
+            opt_vertices = opt_output['vertices']
 
         # # De-normalize 2D keypoints from [-1,1] to pixel space
         # gt_keypoints_2d_orig = gt_keypoints_2d.clone()
@@ -509,6 +510,10 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         pred_keypoints3d = pred_output['joints']
         pred_vertices = pred_output['vertices']
 
+        # # TODO: temp. Should we multiply confs here?
+        # pred_keypoints3d_mask = pred_output['joint_mask']
+        # keypoints3d_mask = keypoints3d_mask * pred_keypoints3d_mask
+
         # TODO: temp solution
         if 'valid_fit' in targets:
             has_smpl = targets['valid_fit'].view(-1)
@@ -533,9 +538,13 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         # TODO: temp
         num_joints = gt_keypoints3d.shape[1]
+        num_joints_pred = pred_keypoints3d.shape[1]
         assert num_joints in [24, 49]
         if num_joints == 24:
-            pred_keypoints3d = pred_keypoints3d[:, 25:, :]
+            if num_joints_pred == 49:
+                pred_keypoints3d = pred_keypoints3d[:, 25:, :]
+            else:
+                assert num_joints_pred == 24
         else:
             # openpose keypoints are not used for loss computation
             keypoints3d_mask[:, :25] = 0

@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from mmhuman3d.models.utils.smpl import JOINT_IDS, SMPL49
+from mmhuman3d.models.utils.smpl import JOINT_IDS, SMPL
 
 max_mixture_prior_folder = 'data'
 model_path = 'data/body_models/smpl'
@@ -325,11 +325,14 @@ class SMPLify():
             num_gaussians=8,
             dtype=torch.float32).to(device)
         # Load SMPL model
-        self.smpl = SMPL49(
+        self.smpl = SMPL(
             model_path=model_path,
             batch_size=batch_size,
             create_transl=False,
-            extra_joints_regressor='data/J_regressor_extra.npy').to(device)
+            extra_joints_regressor='data/J_regressor_extra.npy',
+            keypoint_src='smpl_54',
+            keypoint_dst='smpl_49',
+        ).to(device)
 
     def __call__(self, init_pose, init_betas, init_cam_t, camera_center,
                  keypoints_2d):
@@ -383,7 +386,7 @@ class SMPLify():
             smpl_output = self.smpl(
                 global_orient=global_orient, body_pose=body_pose, betas=betas)
 
-            model_joints = smpl_output.joints
+            model_joints = smpl_output['joints']
             loss = camera_fitting_loss(
                 model_joints,
                 camera_translation,
@@ -415,7 +418,7 @@ class SMPLify():
         for i in range(self.num_iters):
             smpl_output = self.smpl(
                 global_orient=global_orient, body_pose=body_pose, betas=betas)
-            model_joints = smpl_output.joints
+            model_joints = smpl_output['joints']
             loss = body_fitting_loss(
                 body_pose,
                 betas,
@@ -437,7 +440,7 @@ class SMPLify():
                 body_pose=body_pose,
                 betas=betas,
                 return_full_pose=True)
-            model_joints = smpl_output.joints
+            model_joints = smpl_output['joints']
             reprojection_loss = body_fitting_loss(
                 body_pose,
                 betas,
@@ -450,8 +453,8 @@ class SMPLify():
                 focal_length=self.focal_length,
                 output='reprojection')
 
-        vertices = smpl_output.vertices.detach()
-        joints = smpl_output.joints.detach()
+        vertices = smpl_output['vertices'].detach()
+        joints = smpl_output['joints'].detach()
         pose = torch.cat([global_orient, body_pose], dim=-1).detach()
         betas = betas.detach()
 
@@ -490,7 +493,7 @@ class SMPLify():
                 body_pose=body_pose,
                 betas=betas,
                 return_full_pose=True)
-            model_joints = smpl_output.joints
+            model_joints = smpl_output['joints']
             reprojection_loss = body_fitting_loss(
                 body_pose,
                 betas,

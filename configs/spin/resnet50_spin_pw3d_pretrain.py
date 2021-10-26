@@ -89,6 +89,7 @@ train_pipeline = [
 #     'smpl_body_pose', 'smpl_global_orient', 'smpl_betas', 'smpl_transl'
 # ]
 # train_adv_pipeline = [dict(type='Collect', keys=adv_data_keys, meta_keys=[])]
+data_keys.remove('is_flipped')
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='KeypointsSelection', keypoints_index=keypoints_index),

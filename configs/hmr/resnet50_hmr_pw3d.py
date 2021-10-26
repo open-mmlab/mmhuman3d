@@ -34,8 +34,10 @@ model = dict(
         smpl_mean_params='data/body_models/smpl_mean_params.npz'),
     body_model=dict(
         type='SMPL',
-        smpl_path='data/body_models/smpl',
-        joints_regressor='data/body_models/joints_regressor_cmr.npy'),
+        keypoint_src='smpl_54',
+        keypoint_dst='smpl_49',
+        model_path='data/body_models/smpl',
+        extra_joints_regressor='data/J_regressor_extra.npy'),
     loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=1000),
     loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=100),
     loss_vertex=dict(type='L1Loss', loss_weight=20),
@@ -94,7 +96,7 @@ test_pipeline = [
 ]
 data = dict(
     samples_per_gpu=32,
-    workers_per_gpu=4,
+    workers_per_gpu=1,
     train=dict(
         type='AdversarialDataset',
         train_dataset=dict(
@@ -148,9 +150,11 @@ data = dict(
     test=dict(
         type=dataset_type,
         body_model=dict(
-            type='SMPL',
-            smpl_path='data/body_models/smpl',
-            joints_regressor='data/body_models/joints_regressor_cmr.npy'),
+            type='GenderedSMPL',
+            keypoint_src='smpl_54',
+            keypoint_dst='smpl_49',
+            model_path='data/body_models/smpl',
+            extra_joints_regressor='data/J_regressor_extra.npy'),
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,

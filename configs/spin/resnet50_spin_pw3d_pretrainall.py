@@ -31,10 +31,15 @@ model = dict(
         feat_dim=2048,
         smpl_mean_params='data/body_models/smpl_mean_params.npz'),
     body_model=dict(
-        type='SMPL49',
+        # type='SMPL49',
+        # model_path='data/body_models/smpl',
+        # gender='neutral',
+        # create_transl=False,
+        # extra_joints_regressor='data/J_regressor_extra.npy'),
+        type='SMPL',
+        keypoint_src='smpl_54',
+        keypoint_dst='smpl_49',
         model_path='data/body_models/smpl',
-        gender='neutral',
-        create_transl=False,
         extra_joints_regressor='data/J_regressor_extra.npy'),
     # registrant=dict(),
     # loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=1000),
@@ -88,6 +93,7 @@ train_pipeline = [
 #     'smpl_body_pose', 'smpl_global_orient', 'smpl_betas', 'smpl_transl'
 # ]
 # train_adv_pipeline = [dict(type='Collect', keys=adv_data_keys, meta_keys=[])]
+data_keys.remove('is_flipped')
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='KeypointsSelection', keypoints_index=keypoints_index),
@@ -156,10 +162,15 @@ data = dict(
     test=dict(
         type=dataset_type,
         body_model=dict(
-            type='SMPL49',
+            # type='SMPL49',
+            # model_path='data/body_models/smpl',
+            # gender='neutral',
+            # create_transl=False,
+            # extra_joints_regressor='data/J_regressor_extra.npy'),
+            type='GenderedSMPL',
+            keypoint_src='smpl_54',
+            keypoint_dst='smpl_49',
             model_path='data/body_models/smpl',
-            gender='neutral',
-            create_transl=False,
             extra_joints_regressor='data/J_regressor_extra.npy'),
         dataset_name='pw3d',
         data_prefix='data',
