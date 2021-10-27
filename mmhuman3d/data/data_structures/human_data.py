@@ -171,6 +171,9 @@ class HumanData(dict):
                     value = value.item()
                 if value is None:
                     tmp_data_dict.pop(key)
+                elif key == 'bbox_xywh' and value.shape[1] == 4:
+                    value = np.hstack([value, np.ones([value.shape[0], 1])])
+                    tmp_data_dict[key] = value
                 else:
                     tmp_data_dict[key] = value
             self.update(tmp_data_dict)
