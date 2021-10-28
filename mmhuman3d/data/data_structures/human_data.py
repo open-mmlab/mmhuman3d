@@ -1,8 +1,9 @@
 import logging
 from enum import Enum
-from typing import Any, Type, TypeVar, Union, overload
+from typing import Any, Optional, Type, TypeVar, Union, overload
 
 import numpy as np
+import torch
 from mmcv.utils import print_log
 
 from mmhuman3d.utils.path_utils import (
@@ -11,9 +12,12 @@ from mmhuman3d.utils.path_utils import (
     check_path_suffix,
 )
 
+# In T = TypeVar('T'), T can be anything.
+# See definition of typing.TypeVar for details.
 _T1 = TypeVar('_T1')
 _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')
+_CPU_DEVICE = torch.device('cpu')
 
 _HumanData_SUPPORTED_KEYS = {
     'image_path': {
@@ -200,6 +204,65 @@ class HumanData(dict):
             if check_path_existence(npz_path, 'file') == Existence.FileExist:
                 raise FileExistsError
         np.savez_compressed(npz_path, **self)
+
+    def to(self,
+           device: Optional[Union[torch.device, str]] = _CPU_DEVICE,
+           dtype: Optional[torch.dtype] = None,
+           non_blocking: Optional[bool] = False,
+           copy: Optional[bool] = False,
+           memory_format: Optional[torch.memory_format] = None) -> dict:
+        """Convert values in numpy.ndarray type to torch.Tensor, and move
+        Tensors to the target device. All keys will exist in the returned dict.
+
+        Args:
+            device (Union[torch.device, str], optional):
+                A specified device. Defaults to CPU_DEVICE.
+            dtype (torch.dtype, optional):
+                The data type of the expected torch.Tensor.
+                If dtype is None, it is decided according to numpy.ndarry.
+                Defaults to None.
+            non_blocking (bool, optional):
+                When non_blocking, tries to convert asynchronously with
+                respect to the host if possible, e.g.,
+                converting a CPU Tensor with pinned memory to a CUDA Tensor.
+                Defaults to False.
+            copy (bool, optional):
+                When copy is set, a new Tensor is created even when
+                the Tensor already matches the desired conversion.
+                No matter what value copy is, Tensor constructed from numpy
+                will not share the same memory with the source numpy.ndarray.
+                Defaults to False.
+            memory_format (torch.memory_format, optional):
+                The desired memory format of returned Tensor.
+                Not supported by pytorch-cpu.
+                Defaults to None.
+
+        Returns:
+            dict:
+                A dict with all numpy.ndarray values converted into
+                torch.Tensor and all Tensors moved to the target device.
+        """
+        ret_dict = {}
+        for key in self.keys():
+            raw_value = self.get_raw_value(key)
+            tensor_value = None
+            if isinstance(raw_value, np.ndarray):
+                tensor_value = torch.from_numpy(raw_value).clone()
+            elif isinstance(raw_value, torch.Tensor):
+                tensor_value = raw_value
+            if tensor_value is None:
+                ret_dict[key] = raw_value
+            else:
+                if memory_format is None:
+                    ret_dict[key] = \
+                        tensor_value.to(device, dtype,
+                                        non_blocking, copy)
+                else:
+                    ret_dict[key] = \
+                        tensor_value.to(device, dtype,
+                                        non_blocking, copy,
+                                        memory_format=memory_format)
+        return ret_dict
 
     def __getitem__(self, key: _KT) -> _VT:
         """Get value defined by HumanData. This function will be called by
