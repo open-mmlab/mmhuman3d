@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseConverter
 from .builder import DATA_CONVERTERS
 
@@ -19,8 +20,8 @@ class MpiiConverter(BaseConverter):
         return [x, y, w, h]
 
     def convert(self, dataset_path, out_path):
-        # total dictionary to store all data
-        total_dict = {}
+        # use HumanData to store all data
+        human_data = HumanData()
 
         # structs we use
         image_path_, bbox_xywh_, keypoints2d_ = [], [], []
@@ -52,17 +53,20 @@ class MpiiConverter(BaseConverter):
             bbox_xywh_.append(bbox_xywh)
             keypoints2d_.append(keypoints2d16)
 
+        bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
+        bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 16, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'mpii', 'human_data')
-        total_dict['image_path'] = image_path_
-        total_dict['bbox_xywh'] = bbox_xywh_
-        total_dict['keypoints2d'] = keypoints2d_
-        total_dict['mask'] = mask
-        total_dict['config'] = 'mpii'
+
+        human_data['image_path'] = image_path_
+        human_data['bbox_xywh'] = bbox_xywh_
+        human_data['keypoints2d_mask'] = mask
+        human_data['keypoints2d'] = keypoints2d_
+        human_data['config'] = 'mpii'
 
         # store the data struct
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
         out_file = os.path.join(out_path, 'mpii_train.npz')
-        np.savez_compressed(out_file, **total_dict)
+        human_data.dump(out_file)

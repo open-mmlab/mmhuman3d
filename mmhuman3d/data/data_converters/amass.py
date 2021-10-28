@@ -4,6 +4,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseConverter
 from .builder import DATA_CONVERTERS
 
@@ -30,7 +31,8 @@ all_sequences = [
 class AmassConverter(BaseConverter):
 
     def convert(self, dataset_path, out_path):
-        total_dict = {}
+        # use HumanData to store all data
+        human_data = HumanData()
 
         # structs we use
         video_path_, frame_idx_ = [], []
@@ -103,11 +105,11 @@ class AmassConverter(BaseConverter):
             (-1, 15, 3))
         meta['gender'] = np.array(meta['gender'])
 
-        total_dict['video_path'] = video_path_
-        total_dict['frame_idx'] = np.array(frame_idx_).reshape(-1)
-        total_dict['meta'] = meta
-        total_dict['config'] = 'amass'
-        total_dict['smplh'] = smplh
+        human_data['video_path'] = video_path_
+        human_data['frame_idx'] = np.array(frame_idx_).reshape(-1)
+        human_data['meta'] = meta
+        human_data['config'] = 'amass'
+        human_data['smplh'] = smplh
 
         # store data
         if not os.path.isdir(out_path):
@@ -115,4 +117,4 @@ class AmassConverter(BaseConverter):
 
         file_name = 'amass.npz'
         out_file = os.path.join(out_path, file_name)
-        np.savez_compressed(out_file, **total_dict)
+        human_data.dump(out_file)

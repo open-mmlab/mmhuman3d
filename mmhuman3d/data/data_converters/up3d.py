@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -19,9 +20,8 @@ class Up3dConverter(BaseModeConverter):
         super(Up3dConverter, self).__init__(modes)
 
     def convert_by_mode(self, dataset_path, out_path, mode):
-
-        # total dictionary to store all data
-        total_dict = {}
+        # use HumanData to store all data
+        human_data = HumanData()
 
         # structs we use
         image_path_, bbox_xywh_, keypoints2d_ = [], [], []
@@ -81,17 +81,19 @@ class Up3dConverter(BaseModeConverter):
         keypoints2d_, mask = convert_kps(keypoints2d_, 'lsp', 'human_data')
 
         # change list to np array
+        bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
+        bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         smpl['body_pose'] = np.array(smpl['body_pose']).reshape((-1, 23, 3))
         smpl['global_orient'] = np.array(smpl['global_orient']).reshape(
             (-1, 3))
         smpl['betas'] = np.array(smpl['betas']).reshape((-1, 10))
 
-        total_dict['image_path'] = image_path_
-        total_dict['bbox_xywh'] = bbox_xywh_
-        total_dict['smpl'] = smpl
-        total_dict['keypoints2d'] = keypoints2d_
-        total_dict['config'] = 'up3d'
-        total_dict['mask'] = mask
+        human_data['image_path'] = image_path_
+        human_data['bbox_xywh'] = bbox_xywh_
+        human_data['smpl'] = smpl
+        human_data['keypoints2d_mask'] = mask
+        human_data['keypoints2d'] = keypoints2d_
+        human_data['config'] = 'up3d'
 
         # store data
         if not os.path.isdir(out_path):
@@ -99,4 +101,4 @@ class Up3dConverter(BaseModeConverter):
 
         file_name = 'up3d_%s.npz' % mode
         out_file = os.path.join(out_path, file_name)
-        np.savez_compressed(out_file, **total_dict)
+        human_data.dump(out_file)
