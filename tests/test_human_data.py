@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import pytest
+import torch
 
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.utils.path_utils import Existence, check_path_existence
@@ -211,6 +212,24 @@ def test_log():
     logger = logging.getLogger()
     HumanData.set_logger(logger)
     test_set()
+
+
+def test_to_device():
+    if torch.cuda.is_available():
+        device_name = 'cuda:0'
+    else:
+        device_name = 'cpu'
+    default_device = torch.device(device_name)
+    human_data_load_path = 'tests/data/human_data/human_data_00.npz'
+    human_data = HumanData.fromfile(human_data_load_path)
+    tensor_dict = human_data.to(default_device)
+    assert tensor_dict['keypoints2d'].size(2) == 3
+    # if cuda is available, test whether it is on gpu
+    if 'cuda' in device_name:
+        assert tensor_dict['keypoints2d'].get_device() == 0
+        # default to cpu
+        tensor_dict = human_data.to()
+    assert tensor_dict['keypoints2d'].is_cuda is False
 
 
 def shape_equal(ndarray_0, ndarray_1):
