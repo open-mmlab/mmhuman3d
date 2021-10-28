@@ -7,6 +7,8 @@ import torch
 from mmhuman3d.core.conventions.keypoints_mapping import (
     KEYPOINTS_FACTORY,
     convert_kps,
+    get_flip_pairs,
+    get_keypoint_idxs_by_part,
 )
 
 
@@ -87,3 +89,32 @@ def test_cache():
         dst='smpl')
     with_cache_time = time.time() - start_time
     assert with_cache_time < without_cache_time
+
+
+def test_get_flip_pairs():
+    stable_conventions = [
+        'coco', 'smpl', 'smplx', 'mpi_inf_3dhp', 'openpose_25'
+    ]
+    pair_len = [8, 9, 45, 10, 11]
+    for idx in range(len(stable_conventions)):
+        convention = stable_conventions[idx]
+        flip_pairs = get_flip_pairs(convention)
+        assert len(flip_pairs) == pair_len[idx]
+        for flip_pair in flip_pairs:
+            assert len(flip_pair) == 2
+            assert type(flip_pair[0]) is int and type(flip_pair[1]) is int
+
+
+def test_get_keypoint_idxs_by_part():
+    stable_conventions = [
+        'coco', 'smpl', 'smplx', 'mpi_inf_3dhp', 'openpose_25'
+    ]
+    head_len = [5, 1, 77, 2, 5]
+    with pytest.raises(ValueError):
+        head_idxs = get_keypoint_idxs_by_part('heed', stable_conventions[0])
+    for idx in range(len(stable_conventions)):
+        convention = stable_conventions[idx]
+        head_idxs = get_keypoint_idxs_by_part('head', convention)
+        assert len(head_idxs) == head_len[idx]
+        for head_idx in head_idxs:
+            assert type(head_idx) is int
