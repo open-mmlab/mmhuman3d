@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -44,7 +44,7 @@ KEYPOINTS_FACTORY = {
     'lsp': lsp.LSP_KEYPOINTS,
     'posetrack': posetrack.POSETRACK_KEYPOINTS,
     'openpose_25': openpose.OPENPOSE_25_KEYPOINTS,
-    'openpose_135': openpose.OPENPOSE_135_KEYPOINTS
+    'openpose_135': openpose.OPENPOSE_135_KEYPOINTS,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
@@ -189,3 +189,46 @@ def get_mapping(src: str,
             __KEYPOINTS_MAPPING_CACHE__[src] = {}
         __KEYPOINTS_MAPPING_CACHE__[src][dst] = mapping_list
         return mapping_list
+
+
+def get_flip_pairs(convention: str = 'smplx',
+                   keypoints_factory: dict = KEYPOINTS_FACTORY) -> List[int]:
+    """Get indices of left, right keypoint pairs from specified convention.
+
+    Args:
+        convention (str): data type from keypoints_factory.
+        keypoints_factory (dict, optional): A class to store the attributes.
+            Defaults to keypoints_factory.
+    Returns:
+        List[int]: left, right keypoint indices
+    """
+    flip_pairs = []
+    keypoints = keypoints_factory[convention]
+    left_kps = [kp for kp in keypoints if 'left_' in kp]
+    for left_kp in left_kps:
+        right_kp = left_kp.replace('left_', 'right_')
+        flip_pairs.append([keypoints.index(kp) for kp in [left_kp, right_kp]])
+    return flip_pairs
+
+
+def get_keypoint_idxs_by_part(
+        part: str,
+        convention: str = 'smplx',
+        keypoints_factory: dict = KEYPOINTS_FACTORY) -> List[int]:
+    """Get part keypoints indices from specified part and convention.
+
+    Args:
+        part (str): part to search from
+        convention (str): data type from keypoints_factory.
+        keypoints_factory (dict, optional): A class to store the attributes.
+            Defaults to keypoints_factory.
+    Returns:
+        List[int]: part keypoint indices
+    """
+    humandata_parts = human_data.HUMAN_DATA_PARTS
+    keypoints = keypoints_factory[convention]
+    if part not in humandata_parts.keys():
+        raise ValueError('part not in allowed parts')
+    part_keypoints = list(set(humandata_parts[part]) & set(keypoints))
+    part_keypoints_idx = [keypoints.index(kp) for kp in part_keypoints]
+    return part_keypoints_idx
