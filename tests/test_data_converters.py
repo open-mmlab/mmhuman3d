@@ -124,7 +124,8 @@ def test_preprocessed_npz():
     assert osp.exists(npz_folder)
     all_keys = [
         'image_path', 'bbox_xywh', 'config', 'keypoints2d', 'keypoints3d',
-        'smpl', 'smplx', 'smplh', 'meta', 'mask', 'video_path', 'frame_idx'
+        'smpl', 'smplx', 'smplh', 'meta', 'keypoints2d_mask', 'video_path',
+        'frame_idx', 'keypoints3d_mask'
     ]
 
     for npf in os.listdir(npz_folder):
@@ -151,7 +152,7 @@ def test_preprocessed_npz():
                 assert npfile[k].shape == (N, )
 
             elif k == 'bbox_xywh':
-                assert npfile[k].shape == (N, 4)
+                assert npfile[k].shape == (N, 5)
 
             elif k == 'config':
                 assert npfile[k].shape == ()

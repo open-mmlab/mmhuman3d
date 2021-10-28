@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -27,8 +28,8 @@ class H36mConverter(BaseModeConverter):
         self.extract_img = extract_img
 
     def convert_by_mode(self, dataset_path, out_path, mode):
-        # total dict to store data
-        total_dict = {}
+        # use HumanData to store all data
+        human_data = HumanData()
 
         # pick 17 joints from 32 (repeated) joints
         h36m_idx = [
@@ -148,17 +149,20 @@ class H36mConverter(BaseModeConverter):
                         keypoints2d_.append(keypoints2d17)
                         keypoints3d_.append(keypoints3d17)
 
+        bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
+        bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'h36m', 'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
         keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m', 'human_data')
 
-        total_dict['image_path'] = image_path_
-        total_dict['bbox_xywh'] = bbox_xywh_
-        total_dict['keypoints2d'] = keypoints2d_
-        total_dict['keypoints3d'] = keypoints3d_
-        total_dict['mask'] = mask
-        total_dict['config'] = 'h36m'
+        human_data['image_path'] = image_path_
+        human_data['bbox_xywh'] = bbox_xywh_
+        human_data['keypoints2d_mask'] = mask
+        human_data['keypoints3d_mask'] = mask
+        human_data['keypoints2d'] = keypoints2d_
+        human_data['keypoints3d'] = keypoints3d_
+        human_data['config'] = 'h36m'
 
         # store the data struct
         if not os.path.isdir(out_path):
@@ -169,4 +173,4 @@ class H36mConverter(BaseModeConverter):
         elif mode == 'valid':
             out_file = os.path.join(
                 out_path, 'h36m_valid_protocol%d.npz' % self.protocol)
-        np.savez_compressed(out_file, **total_dict)
+        human_data.dump(out_file)

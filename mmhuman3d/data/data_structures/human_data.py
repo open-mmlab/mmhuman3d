@@ -17,7 +17,7 @@ _VT = TypeVar('_VT')
 
 _HumanData_SUPPORTED_KEYS = {
     'image_path': {
-        'type': str,
+        'type': list,
     },
     'bbox_xywh': {
         'type': np.ndarray,

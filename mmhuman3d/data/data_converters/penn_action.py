@@ -6,6 +6,7 @@ from scipy.io import loadmat
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseConverter
 from .builder import DATA_CONVERTERS
 
@@ -23,8 +24,8 @@ class PennActionConverter(BaseConverter):
         return mat
 
     def convert(self, dataset_path, out_path):
-
-        total_dict = {}
+        # use HumanData to store all data
+        human_data = HumanData()
 
         image_path_, bbox_xywh_, keypoints2d_ = [], [], []
 
@@ -61,17 +62,19 @@ class PennActionConverter(BaseConverter):
                 bbox_xywh_.append(bbox_xywh)
                 keypoints2d_.append(kp)
 
+        bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
+        bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 13, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'penn_action',
                                          'human_data')
-        total_dict['image_path'] = image_path_
-        total_dict['bbox_xywh'] = bbox_xywh_
-        total_dict['keypoints2d'] = keypoints2d_
-        total_dict['mask'] = mask
-        total_dict['config'] = 'penn_action'
+        human_data['image_path'] = image_path_
+        human_data['bbox_xywh'] = bbox_xywh_
+        human_data['keypoints2d_mask'] = mask
+        human_data['keypoints2d'] = keypoints2d_
+        human_data['config'] = 'penn_action'
 
         # store the data struct
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
         out_file = os.path.join(out_path, 'penn_action_train.npz')
-        np.savez_compressed(out_file, **total_dict)
+        human_data.dump(out_file)

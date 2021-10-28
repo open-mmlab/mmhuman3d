@@ -5,8 +5,9 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.data.data_converters.base_converter import BaseModeConverter
 from mmhuman3d.data.data_converters.builder import DATA_CONVERTERS
+from mmhuman3d.data.data_structures.human_data import HumanData
+from .base_converter import BaseModeConverter
 
 
 @DATA_CONVERTERS.register_module()
@@ -28,9 +29,8 @@ class Pw3dConverter(BaseModeConverter):
         return [x, y, w, h]
 
     def convert_by_mode(self, dataset_path, out_path, mode):
-
-        # total dictionary to store all data
-        total_dict = {}
+        # use HumanData to store all data
+        human_data = HumanData()
 
         # structs we use
         image_path_, bbox_xywh_ = [], []
@@ -103,17 +103,19 @@ class Pw3dConverter(BaseModeConverter):
                         meta['gender'].append(gender)
 
         # change list to np array
+        bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
+        bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         smpl['body_pose'] = np.array(smpl['body_pose']).reshape((-1, 23, 3))
         smpl['global_orient'] = np.array(smpl['global_orient']).reshape(
             (-1, 3))
         smpl['betas'] = np.array(smpl['betas']).reshape((-1, 10))
         meta['gender'] = np.array(meta['gender'])
 
-        total_dict['image_path'] = image_path_
-        total_dict['bbox_xywh'] = bbox_xywh_
-        total_dict['smpl'] = smpl
-        total_dict['meta'] = meta
-        total_dict['config'] = '3dpw'
+        human_data['image_path'] = image_path_
+        human_data['bbox_xywh'] = bbox_xywh_
+        human_data['smpl'] = smpl
+        human_data['meta'] = meta
+        human_data['config'] = '3dpw'
 
         # store data
         if not os.path.isdir(out_path):
@@ -121,4 +123,4 @@ class Pw3dConverter(BaseModeConverter):
 
         file_name = '3dpw_{}.npz'.format(mode)
         out_file = os.path.join(out_path, file_name)
-        np.savez_compressed(out_file, **total_dict)
+        human_data.dump(out_file)

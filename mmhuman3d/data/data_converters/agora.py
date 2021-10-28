@@ -5,6 +5,7 @@ import pickle5 as pickle
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -23,8 +24,8 @@ class AgoraConverter(BaseModeConverter):
         self.fit = fit
 
     def convert_by_mode(self, dataset_path, out_path, mode):
-        # total dictionary to store all data
-        total_dict = {}
+        # use HumanData to store all data
+        human_data = HumanData()
 
         # structs we use
         image_path_, bbox_xywh_, keypoints2d_, keypoints3d_ = [], [], [], []
@@ -171,23 +172,25 @@ class AgoraConverter(BaseModeConverter):
         meta['occlusion'] = np.array(meta['occlusion'])
         meta['ethnicity'] = np.array(meta['ethnicity'])
 
+        bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
+        bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 127, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'agora', 'human_data')
-
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 127, 4))
         keypoints3d_, _ = convert_kps(keypoints3d_, 'agora', 'human_data')
 
-        total_dict['image_path'] = image_path_
-        total_dict['bbox_xywh'] = bbox_xywh_
-        total_dict['keypoints2d'] = keypoints2d_
-        total_dict['keypoints3d'] = keypoints3d_
-        total_dict['mask'] = mask
-        total_dict['meta'] = meta
-        total_dict['config'] = 'agora'
+        human_data['image_path'] = image_path_
+        human_data['bbox_xywh'] = bbox_xywh_
+        human_data['keypoints2d_mask'] = mask
+        human_data['keypoints3d_mask'] = mask
+        human_data['keypoints2d'] = keypoints2d_
+        human_data['keypoints3d'] = keypoints3d_
+        human_data['meta'] = meta
+        human_data['config'] = 'agora'
         if self.fit == 'smplx':
-            total_dict['smplx'] = smplx
+            human_data['smplx'] = smplx
         else:
-            total_dict['smpl'] = smpl
+            human_data['smpl'] = smpl
 
         # store data
         if not os.path.isdir(out_path):
@@ -195,4 +198,4 @@ class AgoraConverter(BaseModeConverter):
 
         file_name = 'agora_{}.npz'.format(mode)
         out_file = os.path.join(out_path, file_name)
-        np.savez_compressed(out_file, **total_dict)
+        human_data.dump(out_file)
