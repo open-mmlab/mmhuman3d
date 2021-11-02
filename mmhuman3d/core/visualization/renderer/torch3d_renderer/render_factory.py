@@ -7,14 +7,7 @@ from pytorch3d.renderer import (
     SoftPhongShader,
     SoftSilhouetteShader,
 )
-from pytorch3d.renderer.cameras import (
-    FoVOrthographicCameras,
-    FoVPerspectiveCameras,
-    OrthographicCameras,
-    PerspectiveCameras,
-)
 
-from mmhuman3d.core.cameras import WeakPerspectiveCamerasVibe
 from mmhuman3d.core.conventions.segmentation.smpl import (
     SMPL_SEGMENTATION_DICT,
     smpl_part_segmentation,
@@ -34,11 +27,11 @@ SHADER_FACTORY = {
 }
 
 CAMERA_FACTORY = {
-    'perspective': PerspectiveCameras,
-    'orthographic': OrthographicCameras,
-    'fovperspective': FoVPerspectiveCameras,
-    'fovorthographic': FoVOrthographicCameras,
-    'weakperspective': WeakPerspectiveCamerasVibe,
+    'perspective': 'PerspectiveCameras',
+    'orthographic': 'OrthographicCameras',
+    'fovperspective': 'FoVPerspectiveCameras',
+    'fovorthographic': 'FoVOrthographicCameras',
+    'weakperspective': 'WeakPerspectiveCameras',
 }
 
 LIGHTS_FACTORY = {'directional': DirectionalLights, 'point': PointLights}

@@ -1,26 +1,32 @@
 import os.path as osp
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 import torch
 from pytorch3d.io import save_obj
-from pytorch3d.renderer import (
-    MeshRasterizer,
-    MeshRenderer,
-    SoftSilhouetteShader,
-    TexturesVertex,
-)
+from pytorch3d.renderer import TexturesVertex
 from pytorch3d.renderer.lighting import DirectionalLights, PointLights
 from pytorch3d.structures import Meshes
 from pytorch3d.transforms import Rotate, Transform3d, Translate
 
+from mmhuman3d.utils.ffmpeg_utils import images_to_array
 from mmhuman3d.utils.keypoint_utils import get_different_colors
-from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
+from mmhuman3d.utils.mesh_utils import (
+    join_batch_meshes_as_scene,
+    mesh_to_pointcloud_vc,
+)
 from .base_renderer import MeshBaseRenderer
+from .depth_renderer import DepthRenderer
+from .pointcloud_renderer import PointCloudRenderer
 from .render_factory import PALETTE, SMPL_SEGMENTATION
 from .textures import TexturesClosest
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 
 class SMPLRenderer(MeshBaseRenderer):
@@ -35,15 +41,29 @@ class SMPLRenderer(MeshBaseRenderer):
                  return_tensor: bool = False,
                  alpha: float = 1.0,
                  model_type='smpl',
+                 img_format: str = '%06d.png',
+                 out_img_format: str = '%06d.png',
                  render_choice='mq',
+                 projection: Literal['weakperspective', 'fovperspective',
+                                     'orthographics', 'perspective',
+                                     'fovorthographics'] = 'weakperspective',
+                 frames_folder: Optional[str] = None,
+                 plot_kps: bool = False,
+                 vis_kp_index: bool = False,
                  **kwargs) -> None:
-        self.alpha = max(min(1.0, alpha), 0.1)
+        if plot_kps:
+            self.alpha = max(min(0.8, alpha), 0.1)
+        else:
+            self.alpha = max(min(1.0, alpha), 0.1)
         self.model_type = model_type
         self.render_choice = render_choice
         self.raw_faces = torch.LongTensor(faces.astype(
             np.int32)) if isinstance(faces, np.ndarray) else faces
         self.palette = palette
-
+        self.frames_folder = frames_folder
+        self.plot_kps = plot_kps
+        self.vis_kp_index = vis_kp_index
+        self.out_img_format = out_img_format
         super().__init__(
             resolution,
             device=device,
@@ -51,7 +71,29 @@ class SMPLRenderer(MeshBaseRenderer):
             output_path=output_path,
             return_tensor=return_tensor,
             alpha=alpha,
+            img_format=img_format,
+            projection=projection,
             **kwargs)
+        if plot_kps:
+            self.joints_renderer = PointCloudRenderer(
+                resolution=resolution,
+                device=device,
+                return_tensor=True,
+                projection=projection,
+                radius=0.008)
+        if self.render_choice == 'pointcloud':
+            self.pointcloud_renderer = PointCloudRenderer(
+                resolution=resolution,
+                device=device,
+                return_tensor=True,
+                projection=projection,
+                radius=0.003)
+        elif self.render_choice == 'depth':
+            self.depth_renderer = DepthRenderer(
+                device=device,
+                resolution=resolution,
+                projection=projection,
+                return_tensor=True)
         """
         Render Mesh for SMPL and SMPL-X. For function render_smpl.
         2 modes: mesh render with different quality and palette,
@@ -108,7 +150,9 @@ class SMPLRenderer(MeshBaseRenderer):
         R: Optional[torch.Tensor] = None,
         T: Optional[torch.Tensor] = None,
         images: Optional[torch.Tensor] = None,
-        file_names: Optional[Union[List[str], Union[str]]] = None,
+        joints: Optional[torch.Tensor] = None,
+        joints_gt: Optional[torch.Tensor] = None,
+        indexs: Optional[Iterable[int]] = None,
     ) -> Union[None, torch.Tensor]:
         """Forward render procedure.
 
@@ -116,26 +160,32 @@ class SMPLRenderer(MeshBaseRenderer):
             vertices (torch.Tensor): shape should be (frame, num_V, 3) or
                 (frame, num_people, num_V, 3). Num people Would influence
                 the visualization.
-            K (Optional[Union[torch.Tensor]], optional):
+            K (Optional[torch.Tensor], optional):
                 shape should be (f * 4 * 4)/perspective/orthographics or
                 (f * P * 4)/weakperspective, f could be 1.
                 P is person number, should be 1 if single person. Usually for
                 HMR, VIBE predicted cameras.
                 Defaults to None.
-            R (Optional[Union[torch.Tensor]], optional):
+            R (Optional[torch.Tensor], optional):
                 shape should be (f * 3 * 3).
                 Will be look_at_view if None.
                 Defaults to None.
-            T (Optional[Union[torch.Tensor]], optional):
+            T (Optional[torch.Tensor], optional):
                 shape should be (f * 3).
                 Will be look_at_view if None.
                 Defaults to None.
             images (Optional[torch.Tensor], optional): Tensor of background
                 images. If None, no background.
                 Defaults to None.
-            file_names (Iterable[str], optional): File formated name for
-                ffmpeg reading and writing.
-                Defaults to [].
+            joints (Optional[torch.Tensor], optional):
+                joints produced from smpl model.
+                Defaults to None.
+            joints_gt (Optional[torch.Tensor], optional):
+                ground-truth points passed.
+                Defaults to None.
+            indexs (Optional[Iterable[int]], optional):
+                indexs for writing images.
+                Defaults to None.
 
         Returns:
             Union[None, torch.Tensor]:
@@ -152,6 +202,16 @@ class SMPLRenderer(MeshBaseRenderer):
         """
         num_frame, num_person, num_verts, _ = vertices.shape
         faces = self.raw_faces[None].repeat(num_frame, 1, 1)
+        if self.frames_folder is not None and images is None:
+            images = images_to_array(
+                self.frames_folder,
+                resolution=self.resolution,
+                img_format=self.img_format,
+                start=indexs[0],
+                end=indexs[-1],
+                disable_log=True).astype(np.float64)
+            images = torch.Tensor(images).to(self.device)
+
         if images is not None:
             images = images.to(self.device)
 
@@ -204,55 +264,41 @@ class SMPLRenderer(MeshBaseRenderer):
             mesh_list.append(mesh)
         meshes = join_batch_meshes_as_scene(mesh_list)
 
-        # initial cameras
-        K = K.to(self.device) if K is not None else None
-        R = R.to(self.device) if R is not None else None
-        T = T.to(self.device) if T is not None else None
-        # if self.camera_type == 'fovperspective':
-        #     R, T = orbit_camera_extrinsic()
-        camera_params = {
-            'device': self.device,
-            'K': K,
-            'R': R,
-            'T': T,
-        }
-        cameras = self.camera_register[self.camera_type](**camera_params)
-
         # transform lights with camera extrinsic matrix
         transformation = Transform3d(device=self.device)
-        if R is not None:
-            transformation = transformation.compose(
-                Rotate(R.permute(0, 2, 1), device=self.device))
-        if T is not None:
-            transformation = transformation.compose(
-                Translate(-T, device=self.device))
+        transformation = transformation.compose(
+            Rotate(R.permute(0, 2, 1), device=self.device))
+        transformation = transformation.compose(
+            Translate(-T, device=self.device))
         if isinstance(self.lights, DirectionalLights):
             lights = self.lights.clone()
+            if self.projection == 'fovperspective':
+                lights.direction[:, 2] *= -1
             lights.direction = transformation.transform_points(
-                self.lights.direction)
+                lights.direction)
         elif isinstance(self.lights, PointLights):
             lights = self.lights.clone()
-            lights.location = transformation.transform_points(
-                self.lights.location)
+            if self.projection == 'fovperspective':
+                lights.location[:, 2] *= -1
+            lights.location = transformation.transform_points(lights.location)
         else:
             raise TypeError(f'Wrong light type: {type(self.lights)}.')
+        cameras = self.init_cameras(K, R, T)
+        if self.render_choice == 'pointcloud':
+            pointclouds = mesh_to_pointcloud_vc(meshes, alpha=1.0)
+            rendered_images = self.pointcloud_renderer(
+                pointclouds=pointclouds, K=K, R=R, T=T)
+            # initial renderer
+        elif self.render_choice == 'depth':
+            rendered_images = self.depth_renderer(meshes, K=K, R=R, T=T)
+        else:
+            renderer = self.init_renderer(cameras, lights)
 
-        # initial renderer
-        renderer = MeshRenderer(
-            rasterizer=MeshRasterizer(
-                cameras=cameras, raster_settings=self.raster_settings),
-            shader=self.shader(
-                device=self.device,
-                cameras=cameras,
-                lights=lights,
-                materials=self.materials,
-                blend_params=self.blend_params) if
-            (self.shader is not SoftSilhouetteShader) else self.shader())
-
-        # process render tensor and mask
-        rendered_images = renderer(meshes)
-        rgbs, valid_masks = rendered_images.clone()[
-            ..., :3], (rendered_images[..., 3:] > 0) * 1.0
+            # process render tensor and mask
+            rendered_images = renderer(meshes)
+        rgbs = rendered_images.clone()[..., :3] / rendered_images[
+            ..., :3].max()
+        valid_masks = (rendered_images[..., 3:] > 0) * 1.0
         if self.render_choice == 'part_silhouette':
             rendered_silhouettes = rgbs[None] * 100
             part_silhouettes = []
@@ -267,11 +313,13 @@ class SMPLRenderer(MeshBaseRenderer):
 
         # save .obj files
         if self.obj_path and (self.render_choice != 'part_silhouette'):
-            for index in range(num_frame):
+            for idx, real_idx in enumerate(indexs):
                 save_obj(
-                    osp.join(self.obj_path,
-                             Path(file_names[index]).stem + '.obj'),
-                    vertices[index], faces[index])
+                    osp.join(
+                        self.obj_path,
+                        Path(self.out_img_format % real_idx).stem + '.obj'),
+                    meshes.verts_padded()[idx],
+                    meshes.faces_padded()[idx])
 
         # write temp images for the output video
         if self.output_path is not None:
@@ -290,17 +338,66 @@ class SMPLRenderer(MeshBaseRenderer):
                     output_images = rgbs * 255 * valid_masks * self.alpha + \
                         images * valid_masks * (
                             1 - self.alpha) + (1 - valid_masks) * images
-                    output_images = output_images.detach().cpu().numpy(
-                    ).astype(np.uint8)
-                else:
-                    output_images = (rgbs.detach().cpu().numpy() * 255).astype(
-                        np.uint8)
 
-            for index in range(output_images.shape[0]):
+                else:
+                    output_images = rgbs * 255 * valid_masks * self.alpha + \
+                        + 255 - valid_masks * self.alpha * 255
+
+                if self.plot_kps:
+                    joints = joints.to(self.device)
+                    joints_2d = cameras.transform_points_screen(
+                        joints, image_size=self.resolution)[..., :2]
+                    if joints_gt is None:
+                        joints_padded = joints
+                        num_joints = joints_padded.shape[1]
+                        joints_rgb_padded = torch.ones(
+                            num_frame, num_joints, 4) * (
+                                torch.tensor([0.0, 1.0, 0.0, 1.0]).view(
+                                    1, 1, 4))
+                    else:
+                        joints_gt = joints_gt.to(self.device)
+                        joints_padded = torch.cat([joints, joints_gt], dim=1)
+                        num_joints = joints.shape[1]
+                        num_joints_gt = joints_gt.shape[1]
+                        joints_rgb = torch.ones(num_frame, num_joints, 4) * (
+                            torch.tensor([0.0, 1.0, 0.0, 1.0]).view(1, 1, 4))
+                        joints_rgb_gt = torch.ones(
+                            num_frame, num_joints_gt, 4) * (
+                                torch.tensor([0.0, 0.0, 1.0, 1.0]).view(
+                                    1, 1, 4))
+                        joints_rgb_padded = torch.cat(
+                            [joints_rgb, joints_rgb_gt], dim=1)
+
+                    pointcloud_images = self.joints_renderer(
+                        vertices=joints_padded,
+                        verts_rgba=joints_rgb_padded.to(self.device),
+                        K=K,
+                        R=R,
+                        T=T)
+
+                    pointcloud_rgb = pointcloud_images[..., :3]
+                    pointcloud_mask = (pointcloud_images[..., 3:] > 0) * 1.0
+                    output_images = output_images * (
+                        1 - pointcloud_mask
+                    ) + pointcloud_mask * pointcloud_rgb * 255
+
+                output_images = output_images.detach().cpu().numpy().astype(
+                    np.uint8)
+            for frame_idx, real_idx in enumerate(indexs):
                 folder = self.temp_path if self.temp_path is not None else\
                     self.output_path
+                im = output_images[frame_idx]
+                if self.plot_kps and self.vis_kp_index:
+                    point_xy = joints_2d[frame_idx]
+                    for j_idx in range(point_xy.shape[-2]):
+                        x = point_xy[j_idx, 0]
+                        y = point_xy[j_idx, 1]
+                        cv2.putText(im, str(j_idx), (int(x), int(y)),
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.25 * self.resolution[1] / 500, [0, 0, 0],
+                                    int(1 * self.resolution[1] / 1000))
                 cv2.imwrite(
-                    osp.join(folder, file_names[index]), output_images[index])
+                    osp.join(folder, self.out_img_format % real_idx), im)
 
         # return
         if self.return_tensor:

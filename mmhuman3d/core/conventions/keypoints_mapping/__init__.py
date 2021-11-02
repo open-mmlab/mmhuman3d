@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import torch
+from mmcv.utils import print_log
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
     agora,
@@ -12,7 +13,6 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     h36m,
     human_data,
     lsp,
-    mmpose,
     mpi_inf_3dhp,
     mpii,
     openpose,
@@ -34,11 +34,11 @@ KEYPOINTS_FACTORY = {
     'smpl_45': smpl.SMPL_45_KEYPOINTS,
     'smpl_54': smpl.SMPL_54_KEYPOINTS,
     'smpl_49': smpl.SMPL_49_KEYPOINTS,
-    'mmpose': mmpose.MMPOSE_KEYPOINTS,
     'mpi_inf_3dhp': mpi_inf_3dhp.MPI_INF_3DHP_KEYPOINTS,
     'mpi_inf_3dhp_test': mpi_inf_3dhp.MPI_INF_3DHP_TEST_KEYPOINTS,
     'penn_action': penn_action.PENN_ACTION_KEYPOINTS,
     'h36m': h36m.H36M_KEYPOINTS,
+    'h36m_mmpose': h36m.H36M_KEYPOINTS_MMPOSE,
     'pw3d': pw3d.PW3D_KEYPOINTS,
     'mpii': mpii.MPII_KEYPOINTS,
     'lsp': lsp.LSP_KEYPOINTS,
@@ -59,12 +59,13 @@ def convert_kps(
     src: str,
     dst: str,
     compress: bool = False,
+    approximate: bool = False,
     mask: Optional[Union[np.ndarray, torch.Tensor]] = None,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
 ) -> Tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
     """Convert keypoints following the mapping correspondence between src and
     dst keypoints definition. Supported conventions by now: agora, coco, smplx,
-    smpl, mmpose, mpi_inf_3dhp, mpi_inf_3dhp_test, h36m, pw3d, mpii, lsp.
+    smpl, mpi_inf_3dhp, mpi_inf_3dhp_test, h36m, h36m_mmpose, pw3d, mpii, lsp.
 
     Args:
         keypoints [Union[np.ndarray, torch.Tensor]]: input keypoints array,
@@ -73,6 +74,7 @@ def convert_kps(
             if you only need mask.
         src (str): source data type from keypoints_factory.
         dst (str): destination data type from keypoints_factory.
+        approximate (bool): control whether approximate mapping is allowed.
         mask (Optional[Union[np.ndarray, torch.Tensor]], optional):
             The original mask to mark the existence of the keypoints.
             None represents all ones mask.
@@ -116,8 +118,8 @@ def convert_kps(
     else:
         raise TypeError('keypoints should be torch.Tensor or np.ndarray')
 
-    dst_idxs, src_idxs, _ = get_mapping(src, dst, keypoints_factory)
-
+    dst_idxs, src_idxs, _ = \
+        get_mapping(src, dst, approximate, keypoints_factory)
     out_keypoints[:, dst_idxs] = keypoints[:, src_idxs]
     out_shape = extra_dims + (len(dst_names), keypoints.shape[-1])
     out_keypoints = out_keypoints.reshape(out_shape)
@@ -152,12 +154,14 @@ def compress_converted_kps(
 
 def get_mapping(src: str,
                 dst: str,
+                approximate: bool = False,
                 keypoints_factory: dict = KEYPOINTS_FACTORY):
     """Get mapping list from src to dst.
 
     Args:
         src (str): source data type from keypoints_factory.
         dst (str): destination data type from keypoints_factory.
+        approximate (bool): control whether approximate mapping is allowed.
         keypoints_factory (dict, optional): A class to store the attributes.
             Defaults to keypoints_factory.
 
@@ -167,28 +171,60 @@ def get_mapping(src: str,
              intersection_names]
     """
     if src in __KEYPOINTS_MAPPING_CACHE__ and \
-            dst in __KEYPOINTS_MAPPING_CACHE__[src]:
-        return __KEYPOINTS_MAPPING_CACHE__[src][dst]
+        dst in __KEYPOINTS_MAPPING_CACHE__[src] and \
+            __KEYPOINTS_MAPPING_CACHE__[src][dst][3] == approximate:
+        return __KEYPOINTS_MAPPING_CACHE__[src][dst][:3]
     else:
         src_names = keypoints_factory[src.lower()]
         dst_names = keypoints_factory[dst.lower()]
 
         dst_idxs, src_idxs, intersection = [], [], []
+        unmapped_names, approximate_names = [], []
         for dst_idx, dst_name in enumerate(dst_names):
-            for src_idx, src_name in enumerate(src_names):
-                if src_name == dst_name:
-                    dst_idxs.append(dst_idx)
-                    src_idxs.append(src_idx)
-                    intersection.append(dst_name)
-                    break  # select the first src keypoint with the same name
-        intersection = list(set(intersection))
+            matched = False
+            try:
+                src_idx = src_names.index(dst_name)
+            except ValueError:
+                src_idx = -1
+            if src_idx >= 0:
+                matched = True
+                dst_idxs.append(dst_idx)
+                src_idxs.append(src_idx)
+                intersection.append(dst_name)
+            # approximate mapping
+            if approximate and not matched:
+                approximate_matched = False
+                for part_list in human_data.APPROXIMATE_MAPPING_LIST:
+                    if dst_name in part_list:
+                        for approximate_name in part_list:
+                            if approximate_name != dst_name:
+                                try:
+                                    src_idx = src_names.index(approximate_name)
+                                except ValueError:
+                                    src_idx = -1
+                                if src_idx >= 0:
+                                    dst_idxs.append(dst_idx)
+                                    src_idxs.append(src_idx)
+                                    intersection.append(dst_name)
+                                    unmapped_names.append(src_names[src_idx])
+                                    approximate_names.append(dst_name)
+                                    approximate_matched = True
+                                    break
 
-        mapping_list = [dst_idxs, src_idxs, intersection]
+                    if approximate_matched:
+                        break
+        if unmapped_names:
+            warn_message = \
+                f'Approximate mapping {unmapped_names}' +\
+                f' to {approximate_names}'
+            print_log(msg=warn_message)
+
+        mapping_list = [dst_idxs, src_idxs, intersection, approximate]
 
         if src not in __KEYPOINTS_MAPPING_CACHE__:
             __KEYPOINTS_MAPPING_CACHE__[src] = {}
         __KEYPOINTS_MAPPING_CACHE__[src][dst] = mapping_list
-        return mapping_list
+        return mapping_list[:3]
 
 
 def get_flip_pairs(convention: str = 'smplx',

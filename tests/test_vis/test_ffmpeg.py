@@ -101,10 +101,10 @@ def test_image_reader():
 
     # shape should be (f, h, w, 3)
     v = images_to_array(osp.join(root, 'input_images'), resolution=(300, 200))
-    assert v.shape[1:] == (200, 300, 3)
+    assert v.shape[1:] == (300, 200, 3)
     v = video_to_array(
         osp.join(root, 'input_video.mp4'), resolution=(300, 200))
-    assert v.shape[1:] == (200, 300, 3)
+    assert v.shape[1:] == (300, 200, 3)
 
     vid = vid_info_reader(osp.join(root, 'input_video.mp4'))
     for k in [

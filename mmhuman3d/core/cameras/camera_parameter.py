@@ -321,13 +321,13 @@ class CameraParameter:
             K=k_4x4,
             R=r_3x3,
             T=t_3,
-            projection='weakperspective',
+            is_perspective=False,
             convention_src='pytorch3d',
             convention_dst='opencv',
-            image_size_src=(height, width),
-            image_size_dst=(height, width))
+            resolution_src=(height, width),
+            resolution_dst=(height, width))
         k_3x3 = \
-            convert_K_4x4_to_3x3(new_K, projection='weakperspective')
+            convert_K_4x4_to_3x3(new_K, is_perspective=False)
         k_3x3.numpy().squeeze(0)
         r_3x3 = new_R.numpy().squeeze(0)
         t_3 = new_T.numpy().squeeze(0)
@@ -351,7 +351,7 @@ class CameraParameter:
         k_3x3 = self.get_mat_np('in_mat')  # shape (3, 3)
         k_3x3 = np.expand_dims(k_3x3, 0)  # shape (1, 3, 3)
         k_4x4 = convert_K_3x3_to_4x4(
-            K=k_3x3, projection='weakperspective')  # shape (1, 4, 4)
+            K=k_3x3, is_perspective=False)  # shape (1, 4, 4)
         rotation = self.get_mat_np('rotation_mat')  # shape (3, 3)
         rotation = np.expand_dims(rotation, 0)  # shape (1, 3, 3)
         translation = self.get_value('translation')  # list, len==3
@@ -361,11 +361,11 @@ class CameraParameter:
             K=k_4x4,
             R=rotation,
             T=translation,
-            projection='weakperspective',
+            is_perspective=False,
             convention_src='opencv',
             convention_dst='pytorch3d',
-            image_size_src=(height, width),
-            image_size_dst=(height, width))
+            resolution_src=(height, width),
+            resolution_dst=(height, width))
         new_K = torch.from_numpy(new_K)
         new_R = torch.from_numpy(new_R)
         new_T = torch.from_numpy(new_T)

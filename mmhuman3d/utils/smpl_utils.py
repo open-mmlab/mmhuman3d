@@ -1,10 +1,17 @@
+import copy
 import os.path as osp
-from functools import partial
 from typing import Iterable, Optional, Union
 
 import numpy as np
 import smplx
 import torch
+
+from mmhuman3d.core.conventions.cameras import (
+    convert_cameras,
+    convert_perspective_to_weakperspective,
+    convert_world_view,
+)
+from mmhuman3d.utils.transforms import aa_to_rotmat, rotmat_to_aa
 
 
 class SMPL_(smplx.SMPL):
@@ -256,15 +263,15 @@ def get_body_model(model_path: str,
                    use_face_contour=True,
                    use_pca=False,
                    num_pca_comps=6):
-    func = partial(
-        create,
+    return create(
         model_path=model_path,
         model_type=model_type,
         gender=gender,
         use_face_contour=use_face_contour,
         num_betas=num_betas,
-        batch_size=batch_size)
-    return func(use_pca=use_pca, num_pca_comps=num_pca_comps)
+        batch_size=batch_size,
+        use_pca=use_pca,
+        num_pca_comps=num_pca_comps)
 
 
 def get_mesh_info(body_model,
@@ -299,7 +306,10 @@ def get_mesh_info(body_model,
         else:
             res_dict['vertices'] = model_output.vertices
     if 'faces' in required_keys:
-        res_dict['faces'] = body_model.faces
+        if use_numpy:
+            res_dict['faces'] = body_model.faces
+        else:
+            res_dict['faces'] = torch.Tensor(body_model.faces.astype(np.int32))
     if 'joints' in required_keys:
         if use_numpy:
             res_dict['joints'] = model_output.joints.detach().cpu().numpy()
@@ -322,3 +332,142 @@ def get_mesh_info(body_model,
             res_dict['limbs'] = torch.cat(
                 [torch.arange(parents.shape[0])[None], parents[None]], dim=0).T
     return res_dict
+
+
+def convert_smpl_from_opencv_calibration(
+        R: Union[np.ndarray, torch.Tensor],
+        T: Union[np.ndarray, torch.Tensor],
+        K: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        resolution: Optional[Union[Iterable[int], int]] = None,
+        verts: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        poses: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        transl: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        body_model_dir: Optional[str] = None,
+        betas: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        model_type: Optional[str] = 'smpl',
+        gender: Optional[str] = 'neutral'):
+    """Convert opencv calibration smpl poses&transl parameters to model based
+    poses&transl or verts.
+
+    Args:
+        R (Union[np.ndarray, torch.Tensor]): (frame, 3, 3)
+        T (Union[np.ndarray, torch.Tensor]): [(frame, 3)
+        K (Optional[Union[np.ndarray, torch.Tensor]], optional):
+            (frame, 3, 3) or (frame, 4, 4). Defaults to None.
+        resolution (Optional[Union[Iterable[int], int]], optional):
+            (height, width). Defaults to None.
+        verts (Optional[Union[np.ndarray, torch.Tensor]], optional):
+            (frame, num_verts, 3). Defaults to None.
+        poses (Optional[Union[np.ndarray, torch.Tensor]], optional):
+            (frame, 72/165). Defaults to None.
+        transl (Optional[Union[np.ndarray, torch.Tensor]], optional):
+            (frame, 3). Defaults to None.
+        body_model_dir (Optional[str], optional): model path.
+            Defaults to None.
+        betas (Optional[Union[np.ndarray, torch.Tensor]], optional):
+            (frame, 10). Defaults to None.
+        model_type (Optional[str], optional): choose in 'smpl' or 'smplx'.
+            Defaults to 'smpl'.
+        gender (Optional[str], optional): choose in 'male', 'female',
+            'neutral'.
+            Defaults to 'neutral'.
+
+    Raises:
+        ValueError: wrong input poses or transl.
+
+    Returns:
+        Tuple[torch.Tensor]: Return converted poses, transl, pred_cam
+            or verts, pred_cam.
+    """
+    R_, T_ = convert_world_view(R, T)
+
+    RT = torch.eye(4, 4)[None]
+    RT[:, :3, :3] = R_
+    RT[:, :3, 3] = T_
+
+    if verts is not None:
+        poses = None
+        betas = None
+        transl = None
+    else:
+        assert poses is not None
+        assert transl is not None
+        if isinstance(poses, dict):
+            poses = copy.deepcopy(poses)
+            for k in poses:
+                if isinstance(poses[k], np.ndarray):
+                    poses[k] = torch.Tensor(poses[k])
+        elif isinstance(poses, np.ndarray):
+            poses = torch.Tensor(poses)
+        elif isinstance(poses, torch.Tensor):
+            poses = poses.clone()
+        else:
+            raise ValueError(f'Wrong data type of poses: {type(poses)}.')
+
+        if isinstance(transl, np.ndarray):
+            transl = torch.Tensor(transl)
+        elif isinstance(transl, torch.Tensor):
+            transl = transl.clone()
+        else:
+            raise ValueError('Should pass valid `transl`.')
+        transl = transl.view(-1, 3)
+
+        if isinstance(betas, np.ndarray):
+            betas = torch.Tensor(betas)
+        elif isinstance(betas, torch.Tensor):
+            betas = betas.clone()
+
+        body_model = get_body_model(
+            body_model_dir, gender=gender, model_type=model_type)
+        if isinstance(poses, dict):
+            poses.update({'transl': transl, 'betas': betas})
+        else:
+            if isinstance(poses, np.ndarray):
+                poses = torch.tensor(poses)
+            poses = body_model.tensor2dict(
+                full_pose=poses, transl=transl, betas=betas)
+        verts = get_mesh_info(body_model, **poses)['vertices']
+
+        global_orient = poses['global_orient']
+        global_orient = rotmat_to_aa(R_ @ aa_to_rotmat(global_orient))
+        poses['global_orient'] = global_orient
+        poses['transl'] = None
+        verts_rotated = get_mesh_info(body_model, **poses)['vertices']
+        rotated_pose = body_model.dict2tensor(poses)
+
+    verts_converted = verts.clone().view(-1, 3)
+    verts_converted = RT @ torch.cat(
+        [verts_converted,
+         torch.ones(verts_converted.shape[0], 1)], dim=-1).unsqueeze(-1)
+    verts_converted = verts_converted.squeeze(-1)
+    verts_converted = verts_converted[:, :3] / verts_converted[:, 3:]
+    verts_converted = verts_converted.view(verts.shape[0], -1, 3)
+    num_frame = verts_converted.shape[0]
+    if poses is not None:
+        transl = torch.mean(verts_converted - verts_rotated, dim=1)
+
+    pred_cam = None
+    if K is not None:
+        zmean = torch.mean(verts_converted, dim=1)[:, 2]
+
+        K, _, _ = convert_cameras(
+            K,
+            is_perspective=True,
+            convention_dst='opencv',
+            convention_src='opencv',
+            in_ndc_dst=True,
+            in_ndc_src=False,
+            resolution_src=resolution)
+        K = K.repeat(num_frame, 1, 1)
+
+        # transl_ = torch.zeros_like(ppoi
+        print('transl_added')
+        pred_cam = convert_perspective_to_weakperspective(
+            K=K, zmean=zmean, in_ndc=True, resolution=resolution)
+        if poses is not None:
+            pred_cam[:, 2] += transl[:, 0]
+            pred_cam[:, 3] += transl[:, 1]
+    if poses is not None:
+        return rotated_pose, pred_cam
+    else:
+        return verts_converted, pred_cam

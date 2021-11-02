@@ -15,14 +15,22 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from mmhuman3d.core.cameras import (
-    WeakPerspectiveCamerasVibe,
-    orbit_camera_extrinsic,
+    WeakPerspectiveCameras,
+    compute_orbit_cameras,
 )
 from mmhuman3d.core.conventions.cameras import convert_cameras
-from mmhuman3d.core.visualization.renderer import RenderDataset, SMPLRenderer
-from mmhuman3d.utils.ffmpeg_utils import images_to_array, video_to_images
-from mmhuman3d.utils.path_utils import check_input_path, prepare_output_path
+from mmhuman3d.utils.ffmpeg_utils import (
+    images_to_array,
+    video_to_array,
+    video_to_images,
+)
+from mmhuman3d.utils.path_utils import (
+    check_input_path,
+    check_path_suffix,
+    prepare_output_path,
+)
 from mmhuman3d.utils.smpl_utils import get_body_model, get_mesh_info
+from .renderer import RenderDataset, SMPLRenderer
 
 try:
     from typing import Literal
@@ -36,7 +44,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
     NUM_BODY_JOINTS = body_model.NUM_BODY_JOINTS
     NUM_DIM = 3 * (NUM_JOINTS + 1)
     body_pose_keys = body_model.body_pose_keys
-
+    joints = None
     if poses is not None:
         if isinstance(poses, dict):
             if not body_pose_keys.issubset(poses):
@@ -79,7 +87,8 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
             required_keys=['vertices', 'faces', 'joints'],
             **pose_dict)
 
-        vertices, faces = mesh_info['vertices'], mesh_info['faces']
+        vertices, faces, joints = mesh_info['vertices'], mesh_info[
+            'faces'], mesh_info['joints']
 
     elif verts is not None:
         if isinstance(verts, np.ndarray):
@@ -104,7 +113,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         num_person = vertices.shape[1]
     else:
         raise ValueError('Poses and verts are all None.')
-    return vertices, faces, num_frame, num_person, start, end
+    return vertices, faces, joints, num_frame, num_person, start, end
 
 
 def render_smpl(
@@ -117,6 +126,7 @@ def render_smpl(
     gender: Literal['male', 'female', 'neutral'] = 'neutral',
     body_model_dir: Optional[str] = None,
     body_model: Optional[nn.Module] = None,
+    use_pca: bool = False,
     # camera paramters
     R: Optional[Union[torch.Tensor, np.ndarray]] = None,
     T: Optional[Union[torch.Tensor, np.ndarray]] = None,
@@ -128,8 +138,8 @@ def render_smpl(
                         'orthographics', 'fovorthographics'] = 'perspective',
     orbit_speed: Union[float, Tuple[float, float]] = 0.0,
     # render choice parameters
-    render_choice: Literal['lq', 'mq', 'hq', 'silhouette',
-                           'part_silhouette'] = 'hq',
+    render_choice: Literal['lq', 'mq', 'hq', 'silhouette', 'depth',
+                           'pointcloud', 'part_silhouette'] = 'hq',
     palette: Union[List[str], str, np.ndarray] = 'white',
     resolution: Union[List[int], Tuple[int, int]] = (1024, 1024),
     start: int = 0,
@@ -147,6 +157,13 @@ def render_smpl(
     img_format: str = 'frame_%06d.jpg',
     overwrite: bool = False,
     obj_path: Optional[str] = None,
+    read_frames_batch: bool = False,
+    # visualize keypoints
+    plot_kps: bool = False,
+    kp3d: Optional[Union[np.ndarray, torch.Tensor]] = None,
+    smpl_joints: Optional[Union[np.ndarray, torch.Tensor]] = None,
+    mask: Optional[Union[np.ndarray, List[int]]] = None,
+    vis_kp_index: bool = False,
 ) -> Union[None, torch.Tensor]:
     """Render SMPL or SMPL-X mesh or silhouette into differentiable tensors,
     and export video or images.
@@ -155,33 +172,35 @@ def render_smpl(
         # smpl parameters:
         poses (Union[torch.Tensor, np.ndarray, dict]):
             1). `tensor` or `array` and ndim is 2, shape should be
-                (frame, 172).
+                (frame, 72).
             2). `tensor` or `array` and ndim is 3, shape should be
-                (frame, P, 72). P equals 1 means single-person.
+                (frame, num_person, 72/165). num_person equals 1 means
+                single-person.
                 Rendering predicted multi-person should feed together with
-                multi-person weakperspective cameras.
+                multi-person weakperspective cameras. meshes would be computed
+                and use an identity intrinsic matrix.
             3). `dict`, standard dict format defined in smplx.body_models.
                 will be treated as single-person.
             Lower priority than `verts`.
             Defaults to None.
         betas (Optional[Union[torch.Tensor, np.ndarray]], optional):
             1). ndim is 2, shape should be (frame, 10).
-            2). ndim is 3, shape should be (frame, P, 10). P equals 1 means
-                single-person. If poses are multi-person, betas should be set
-                to the same person number.
+            2). ndim is 3, shape should be (frame, num_person, 10). num_person
+                equals 1 means single-person. If poses are multi-person, betas
+                should be set to the same person number.
             None will use default betas.
             Defaults to None.
         transl (Optional[Union[torch.Tensor, np.ndarray]], optional):
             translations of smpl(x).
             1). ndim is 2, shape should be (frame, 3).
-            2). ndim is 3, shape should be (frame, P, 3). P equals 1 means
-                single-person. If poses are multi-person, transl should be set
-                to the same person number.
+            2). ndim is 3, shape should be (frame, num_person, 3). num_person
+                equals 1 means single-person. If poses are multi-person,
+                transl should be set to the same person number.
             Defaults to None.
         verts (Optional[Union[torch.Tensor, np.ndarray]], optional):
             1). ndim is 3, shape should be (frame, num_verts, 3).
-            2). ndim is 4, shape should be (frame, P, num_verts, 3).
-                P equals 1 means single-person.
+            2). ndim is 4, shape should be (frame, num_person, num_verts, 3).
+                num_person equals 1 means single-person.
             Higher priority over `poses` & `betas` & `transl`.
             Defaults to None.
         model_type (Literal[, optional): choose in 'smpl' or 'smplx'.
@@ -216,8 +235,8 @@ def render_smpl(
             `convert_cameras`.
             Defaults to None.
         pred_cam (Optional[Union[torch.Tensor, np.ndarray]], optional):
-            shape should be (frame, 4) or (frame, P, 4). If f equals 1, will be
-            repeated to num_frame. P is person number, should be 1 if single
+            shape should be (frame, 4) or (frame, num_person, 4). If f equals
+            1, will be repeated to num_frame. num_person should be 1 if single
             person. Usually for HMR, VIBE predicted cameras.
             Higher priority than `K` & `R` & `T`.
             Defaults to None.
@@ -227,19 +246,7 @@ def render_smpl(
             'maya', 'blender', 'unity'].
             If want to use a new convention, define your convention in
             (CAMERA_CONVENTION_FACTORY)[mmhuman3d/core/conventions/cameras/
-            __init__.py] by the order of right to, up to, and off screen.
-            E.g., the first one is pyrender and its convention should be
-            '+x+y+z'. '+' could be ignored.
-            The second one is opencv and its convention should be '+x-y-z'.
-            The third one is pytorch3d and its convention should be '-xyz'.
-                    opengl(pyrender)     opencv            pytorch3d
-                    y                   z                     y
-                    |                  /                      |
-                    |                 /                       |
-                    |_______x        /________x     x________ |
-                   /                |                        /
-                  /                 |                       /
-               z /                y |                    z /
+            __init__.py] by the order of right, front and up.
             Defaults to 'pytorch3d'.
         projection (Literal[, optional): projection mode of camers. Choose in
             ['orthographics, fovperspective', 'perspective', 'weakperspective',
@@ -252,11 +259,11 @@ def render_smpl(
         # render choice parameters:
         render_choice (Literal[, optional):
             choose in ['lq', 'mq', 'hq', 'silhouette', 'part_silhouette'].
-            lq, mq, hq would output (frame * h * w * 4) tensor.
+            lq, mq, hq would output (frame, h, w, 4) tensor.
             lq means low quality, mq means medium quality,
             hq means high quality.
-            silhouette would output (frame * h * w) binary tensor.
-            part_silhouette would output (frame * h * w * n_class) tensor.
+            silhouette would output (frame, h, w) binary tensor.
+            part_silhouette would output (frame, h, w, n_class) tensor.
             n_class is the body segmentation classes.
             Defaults to 'mq'.
         palette (Union[List[str], str, np.ndarray], optional):
@@ -315,6 +322,19 @@ def render_smpl(
             Defaults to False.
         obj_path (bool, optional): the directory path to store the `.obj`
             files. Defaults to None.
+        read_frames_batch (bool, optional): [description]. Defaults to False.
+
+        # visualize keypoints
+        plot_kps (bool, optional): [description]. Defaults to False.
+        kp3d (Optional[Union[np.ndarray, torch.Tensor]], optional):
+            the keypoints of any convention, should pass `mask` if have any
+            none-sense points. Shape should be (frame, )
+            Defaults to None.
+        smpl_joints (Optional[Union[np.ndarray, torch.Tensor]], optional):
+            smpl joints output by body_model, required if pass `verts`.
+            Defaults to None.
+        mask (Optional[Union[np.ndarray, List[int]]], optional):
+            Mask of keypoints existence. Defaults to None.
 
     Returns:
         Union[None, torch.Tensor]: return the rendered image tensors or None.
@@ -416,7 +436,8 @@ def render_smpl(
             body_model = get_body_model(
                 model_path=body_model_dir,
                 model_type=model_type,
-                gender=gender)
+                gender=gender,
+                use_pca=use_pca)
         else:
             raise ValueError('Please input body_model or body_model_dir.')
     else:
@@ -424,8 +445,23 @@ def render_smpl(
             warnings.warn('Redundant input, will take body_model directly'
                           'and ignore body_model_dir.')
 
-    vertices, faces, num_frame, num_person, start, end = _prepare_mesh(
+    vertices, faces, joints, num_frame, num_person, start, end = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
+    if not plot_kps:
+        joints = None
+        if kp3d is not None:
+            warnings.warn('`plot_kps` is False, `kp3d` will be set as None.')
+            kp3d = None
+        if smpl_joints is not None:
+            warnings.warn(
+                '`plot_kps` is False, `smpl_joints` will be set as None.')
+            smpl_joints = None
+
+    if num_frame > 500:
+        read_frames_batch = True
+
+    frames_folder = None
+    remove_folder = False
 
     if image_array is not None:
         frame_list = None
@@ -449,54 +485,94 @@ def render_smpl(
                 origin_frames = None
 
             # read the origin frames as array if any.
-            if origin_frames is not None:
+            if origin_frames is not None and frame_list is None:
                 check_input_path(
                     input_path=origin_frames,
                     allowed_suffix=['.mp4', '.gif', ''],
                     tag='origin frames',
                     path_type='auto')
                 if Path(origin_frames).is_file():
-                    temp_folder = osp.join(
-                        Path(output_path).parent,
-                        Path(output_path).name + '_input_temp')
-                    os.makedirs(temp_folder, exist_ok=True)
-                    video_to_images(
-                        origin_frames, temp_folder, start=start, end=end)
-                    image_array = images_to_array(
-                        temp_folder, img_format='%06d.png')
+                    if read_frames_batch:
+                        frames_folder = osp.join(
+                            Path(output_path).parent,
+                            Path(output_path).name + '_input_temp')
+                        os.makedirs(frames_folder, exist_ok=True)
+                        video_to_images(
+                            origin_frames, frames_folder, start=start, end=end)
+                        remove_folder = True
+                    else:
+                        remove_folder = False
+                        frames_folder = None
+                        image_array = video_to_array(
+                            origin_frames, start=start, end=end)
                 else:
-                    temp_folder = None
-                    image_array = images_to_array(
-                        origin_frames,
-                        img_format=img_format,
-                        start=start,
-                        end=end)
-            elif frame_list is not None:
-                temp_folder = osp.join(
+                    if read_frames_batch:
+                        frames_folder = origin_frames
+                        remove_folder = False
+                        image_array = None
+                    else:
+                        image_array = images_to_array(
+                            origin_frames,
+                            img_format=img_format,
+                            start=start,
+                            end=end)
+                        remove_folder = False
+                        frames_folder = origin_frames
+            elif frame_list is not None and origin_frames is None:
+                frames_folder = osp.join(
                     Path(output_path).parent,
                     Path(output_path).name + '_input_temp')
+                os.makedirs(frames_folder, exist_ok=True)
                 for frame_idx, frame_path in enumerate(frame_list):
-                    check_input_path(
-                        input_path=frame_path,
-                        allowed_suffix=['.jpg', '.png', '.jpeg'],
-                        tag='origin frames',
-                        path_type='file')
-                    shutil.copy(
-                        frame_path,
-                        os.path.join(temp_folder, img_format % frame_idx))
-                image_array = images_to_array(
-                    temp_folder, img_format=img_format)
+                    if check_path_suffix(
+                            path_str=frame_path,
+                            allowed_suffix=['.jpg', '.png', '.jpeg']):
+                        shutil.copy(
+                            frame_path,
+                            os.path.join(frames_folder,
+                                         '%06d.png' % frame_idx))
+                        img_format = '%06d.png'
+                if not read_frames_batch:
+                    image_array = images_to_array(
+                        frames_folder,
+                        img_format=img_format,
+                        remove_raw_files=True)
+                    frames_folder = None
+                    remove_folder = False
+                else:
+                    image_array = None
+                    remove_folder = True
 
     vertices = vertices.view(num_frame, num_person, -1, 3)
 
+    if isinstance(kp3d, np.ndarray):
+        kp3d = torch.Tensor(kp3d)
+    if isinstance(smpl_joints, np.ndarray):
+        smpl_joints = torch.Tensor(smpl_joints)
+
+    if smpl_joints is not None:
+        if mask is not None:
+            map_index = np.where(np.array(mask) != 0)[0]
+            smpl_joints = smpl_joints[map_index.tolist()]
+        smpl_joints = smpl_joints[start:end + 1]
+        smpl_joints = smpl_joints.view(num_frame, -1, 3)
+    joints = joints if joints is not None else smpl_joints
+
+    if kp3d is not None:
+        kp3d = kp3d[start:end + 1]
+        kp3d = kp3d.view(num_frame, -1, 3)
+
     # prepare render_param_dict
     if render_choice not in [
-            'hq', 'mq', 'lq', 'silhouette', 'part_silhouette'
+            'hq', 'mq', 'lq', 'silhouette', 'part_silhouette', 'depth',
+            'pointcloud'
     ]:
         raise ValueError('Please choose the right render_choice.')
-    render_param_dict = copy.deepcopy(RENDER_CONFIGS[render_choice.lower()])
-    render_param_dict['camera']['camera_type'] = projection
-
+    if render_choice not in ['depth', 'pointcloud']:
+        render_param_dict = copy.deepcopy(
+            RENDER_CONFIGS[render_choice.lower()])
+    else:
+        render_param_dict = copy.deepcopy(RENDER_CONFIGS['lq'])
     # body part colorful visualization should use flat shader to be shaper.
     if isinstance(palette, str):
         if (palette == 'segmentation') and ('silhouette'
@@ -520,13 +596,31 @@ def render_smpl(
     if pred_cam is not None:
         assert projection == 'weakperspective', 'Providing `pred_cam` should '
         'set `projection` as `weakperspective` at the same time.'
+        r = resolution[1] / resolution[0]
+        pred_cam = pred_cam[start:end + 1]
+        pred_cam = pred_cam.view(num_frame, num_person, 4)
+        # if num_person > 1:
+        sx, sy, tx, ty = torch.unbind(pred_cam, -1)
 
-        K, R, T = WeakPerspectiveCamerasVibe.compute_matrix_from_pred_cam(
+        vertices[..., 0] += tx.view(num_frame, num_person, 1)
+        vertices[..., 1] += ty.view(num_frame, num_person, 1)
+        vertices[..., 0] *= sx.view(num_frame, num_person, 1)
+        vertices[..., 1] *= sy.view(num_frame, num_person, 1)
+        pred_cam = torch.tensor([1.0, 1.0, 0.0,
+                                 0.0]).view(1, 4).repeat(num_frame, 1)
+        K, R, T = WeakPerspectiveCameras.convert_pred_cam_to_matrix(
             pred_cam=pred_cam,
-            znear=torch.min(vertices[..., 2]),
-            aspect_ratio=resolution[1] / resolution[0])
+            znear=torch.min(vertices[..., 2] - 1),
+            aspect_ratio=r)
     # pred_cam and K are None, use look_at_view
-
+    if K is None:
+        projection = 'fovperspective'
+        K, R, T = compute_orbit_cameras(
+            at=(torch.mean(vertices.view(-1, 3), 0)),
+            orbit_speed=orbit_speed,
+            batch_size=num_frame,
+            convention=convention)
+        convention = 'pytorch3d'
     if isinstance(R, np.ndarray):
         R = torch.Tensor(R).view(-1, 3, 3)
     elif isinstance(R, torch.Tensor):
@@ -559,22 +653,26 @@ def render_smpl(
     if K is not None:
         if len(K) > num_frame:
             K = K[start:end + 1]
-    else:
-        projection = 'fovperspective'
-        R, T = orbit_camera_extrinsic(
-            at=(torch.mean(vertices.view(-1, 3), 0)),
-            orbit_speed=orbit_speed,
-            batch=num_frame,
-            convention=convention)
+
+    assert projection in [
+        'perspective', 'weakperspective', 'orthographics', 'fovorthographics',
+        'fovperspective'
+    ]
+    if projection in ['fovperspective', 'perspective']:
+        is_perspective = True
+    elif projection in [
+            'fovorthographics', 'weakperspective', 'orthographics'
+    ]:
+        is_perspective = False
 
     K, R, T = convert_cameras(
         convention_dst='pytorch3d',
         K=K,
         R=R,
         T=T,
-        projection=projection,
+        is_perspective=is_perspective,
         convention_src=convention,
-        image_size_src=resolution,
+        resolution_src=resolution,
         in_ndc_src=in_ndc)
 
     # initialize the renderer.
@@ -588,14 +686,27 @@ def render_smpl(
         return_tensor=return_tensor,
         alpha=alpha,
         model_type=model_type,
+        img_format=img_format,
         render_choice=render_choice,
+        projection=projection,
+        frames_folder=frames_folder,
+        plot_kps=plot_kps,
+        vis_kp_index=vis_kp_index,
         **render_param_dict)
 
     renderer = renderer.to(device)
 
     # prepare the render data.
     render_dataset = RenderDataset(
-        images=image_array, vertices=vertices, K=K, R=R, T=T)
+        **{
+            'images': image_array,
+            'vertices': vertices,
+            'K': K,
+            'R': R,
+            'T': T,
+            'joints': joints,
+            'joints_gt': kp3d,
+        })
 
     RenderLoader = DataLoader(
         dataset=render_dataset, batch_size=batch_size, shuffle=False)
@@ -605,7 +716,7 @@ def render_smpl(
         renderer = nn.parallel.DataParallel(renderer, device_ids=gpu_list)
 
     # start rendering. no grad if non-differentiable render.
-    # return None if only need video.
+    # return None if return_tensor is False.
     results = []
     for data in tqdm(RenderLoader):
         if no_grad:
@@ -617,6 +728,11 @@ def render_smpl(
             result = renderer(**data)
             results.append(result)
     renderer.export()
+
+    if remove_folder:
+        if Path(frames_folder).is_dir():
+            shutil.rmtree(frames_folder)
+
     if return_tensor:
         results = torch.cat(results, 0)
         return results
@@ -624,18 +740,24 @@ def render_smpl(
         return None
 
 
-def neural_render_silhouette(
+def neural_render_smpl(
         poses,
         betas=None,
         transl=None,
         verts=None,
+        render_choice='silhouette',
+        projection='weakperspective',
+        convention='opencv',
         pred_cam=None,
+        K=None,
+        R=None,
+        T=None,
         body_model_dir=None,
         body_model=None,
         model_type='smpl',
         gender='neutral',
         resolution=(1024, 1024),
-        batch_size=20,
+        batch_size=10,
 ):
     """Differentiable render silhouette of SMPL(X) mesh.
 
@@ -648,9 +770,6 @@ def neural_render_silhouette(
     assert pred_cam is not None, '`pred_cam` is required.'
     func = partial(
         render_smpl,
-        render_choice='silhouette',
-        projection='weakperspective',
-        convention='opencv',
         return_tensor=True,
         obj_path=None,
         origin_frames=None,
@@ -668,8 +787,14 @@ def neural_render_silhouette(
         poses=poses,
         betas=betas,
         transl=transl,
+        render_choice=render_choice,
         verts=verts,
+        projection=projection,
+        convention=convention,
         pred_cam=pred_cam,
+        K=K,
+        R=R,
+        T=T,
         body_model_dir=body_model_dir,
         body_model=body_model,
         model_type=model_type,
@@ -678,198 +803,43 @@ def neural_render_silhouette(
         batch_size=batch_size)
 
 
-def neural_render_part_silhouette(poses,
-                                  betas=None,
-                                  transl=None,
-                                  verts=None,
-                                  pred_cam=None,
-                                  body_model_dir=None,
-                                  body_model=None,
-                                  model_type='smpl',
-                                  gender='neutral',
-                                  resolution=(1024, 1024),
-                                  batch_size=20):
-    """Differentiable render body part silhouette of SMPL(X) mesh.
-
-    You could specify these following parameters:
-            poses,  betas, transl, cameras, body_model_dir,
-            model_type, resolution, start, end, gender, batch_size.
-    Returns:
-        torch.Tensor: Would be shape of (frame, H, W, n_part)
-    """
-    assert pred_cam is not None, '`pred_cam` is required.'
-    func = partial(
-        render_smpl,
-        render_choice='part_silhouette',
-        projection='weakperspective',
-        convention='opencv',
-        return_tensor=True,
-        obj_path=None,
-        origin_frames=None,
-        output_path=None,
-        no_grad=False,
-        start=0,
-        end=-1,
-        overwrite=False)
-
-    return func(
-        poses=poses,
-        betas=betas,
-        transl=transl,
-        verts=verts,
-        pred_cam=pred_cam,
-        body_model_dir=body_model_dir,
-        body_model=body_model,
-        model_type=model_type,
-        gender=gender,
-        resolution=resolution,
-        batch_size=batch_size)
-
-
-def visualize_silhouette(
-    poses=None,
-    betas=None,
-    verts=None,
-    transl=None,
-    model_type='smpl',
-    gender='neutral',
-    body_model_dir=None,
-    body_model=None,
-    batch_size=10,
-    pred_cam=None,
-    output_path='sample.mp4',
-    resolution=(1024, 1024),
-    origin_frames=None,
-    overwrite=True,
-    start=0,
-    end=-1,
-) -> None:
-    """Simpliest way to visualize the silhouette of smpl pose. render_choice
-    should be in 'hq', 'mq', 'lq'.
-
-    Returns:
-        None
-    """
-    assert pred_cam is not None, '`pred_cam` is required.'
-    func = partial(
-        render_smpl,
-        projection='weakperspective',
-        convention='opencv',
-        in_ndc=True,
-        R=None,
-        T=None,
-        render_choice='silhouette',
-        return_tensor=False,
-        no_grad=True,
-        obj_path=None,
-    )
-    func(
-        poses=poses,
-        betas=betas,
-        verts=verts,
-        transl=transl,
-        pred_cam=pred_cam,
-        batch_size=batch_size,
-        body_model_dir=body_model_dir,
-        body_model=body_model,
-        model_type=model_type,
-        output_path=output_path,
-        overwrite=overwrite,
-        resolution=resolution,
-        gender=gender,
-        origin_frames=origin_frames,
-        start=start,
-        end=end,
-    )
-
-
-def visualize_part_silhouette(
-    poses=None,
-    betas=None,
-    verts=None,
-    transl=None,
-    pred_cam=None,
-    model_type='smpl',
-    gender='neutral',
-    body_model_dir=None,
-    body_model=None,
-    batch_size=10,
-    output_path='sample.mp4',
-    resolution=(1024, 1024),
-    origin_frames=None,
-    overwrite=True,
-    start=0,
-    end=-1,
-) -> None:
-    """Simpliest way to visualize body part silhouette of smpl pose.
-    `render_choice` should be in 'hq', 'mq', 'lq'.
-
-    Returns:
-        None
-    """
-    assert pred_cam is not None, '`pred_cam` is required.'
-    func = partial(
-        render_smpl,
-        projection='weakperspective',
-        convention='opencv',
-        in_ndc=True,
-        R=None,
-        T=None,
-        render_choice='part_silhouette',
-        return_tensor=False,
-        no_grad=True,
-        obj_path=None,
-    )
-    func(
-        poses=poses,
-        betas=betas,
-        verts=verts,
-        transl=transl,
-        pred_cam=pred_cam,
-        gender=gender,
-        batch_size=batch_size,
-        body_model_dir=body_model_dir,
-        body_model=body_model,
-        model_type=model_type,
-        output_path=output_path,
-        overwrite=overwrite,
-        resolution=resolution,
-        origin_frames=origin_frames,
-        start=start,
-        end=end,
-    )
-
-
-def visualize_smpl_opencv(
-    poses=None,
-    betas=None,
-    verts=None,
-    transl=None,
-    model_type='smpl',
-    gender='neutral',
-    body_model_dir=None,
-    body_model=None,
-    palette='random',
-    batch_size=10,
-    K=None,
-    R=None,
-    T=None,
-    output_path='sample.mp4',
-    resolution=None,
-    render_choice='hq',
-    origin_frames=None,
-    overwrite=True,
-    start=0,
-    end=-1,
-    alpha=1.0,
-) -> None:
+def visualize_smpl_opencv(poses=None,
+                          betas=None,
+                          verts=None,
+                          transl=None,
+                          model_type='smpl',
+                          gender='neutral',
+                          body_model_dir=None,
+                          body_model=None,
+                          palette='random',
+                          batch_size=10,
+                          K=None,
+                          R=None,
+                          T=None,
+                          output_path='sample.mp4',
+                          resolution=None,
+                          render_choice='hq',
+                          origin_frames=None,
+                          overwrite=True,
+                          start=0,
+                          end=-1,
+                          alpha=1.0,
+                          kp3d=None,
+                          vis_kp_index=False,
+                          mask=None) -> None:
     """Visualize a smpl mesh which has opencv calibration matrix defined in
     screen.
 
     Require K, R, T and resolution.
     """
-    if render_choice.lower() not in ['hq', 'mq', 'lq']:
-        raise ValueError("Please choose render_choice in ['hq', 'mq', 'lq'].")
+    if render_choice == 'pointcloud':
+        plot_kps = True
+    else:
+        plot_kps = False
+    if render_choice.lower() not in ['hq', 'mq', 'lq', 'depth', 'pointcloud']:
+        raise ValueError(
+            "Please choose render_choice in ['hq', 'mq', 'lq', 'depth',"
+            " 'pointcloud'].")
     assert K is not None, '`K` is required.'
     assert R is not None, '`R` is required.'
     assert T is not None, '`T` is required.'
@@ -905,38 +875,51 @@ def visualize_smpl_opencv(
         start=start,
         end=end,
         alpha=alpha,
-    )
+        plot_kps=plot_kps,
+        kp3d=kp3d,
+        vis_kp_index=vis_kp_index,
+        mask=mask)
 
 
-def visualize_smpl_pred(
-    poses=None,
-    betas=None,
-    verts=None,
-    transl=None,
-    model_type='smpl',
-    gender='neutral',
-    body_model_dir=None,
-    body_model=None,
-    palette='random',
-    batch_size=10,
-    pred_cam=None,
-    output_path='sample.mp4',
-    resolution=(1024, 1024),
-    render_choice='hq',
-    origin_frames=None,
-    overwrite=True,
-    alpha=1.0,
-    start=0,
-    end=-1,
-) -> None:
+def visualize_smpl_pred(poses=None,
+                        betas=None,
+                        verts=None,
+                        transl=None,
+                        model_type='smpl',
+                        gender='neutral',
+                        body_model_dir=None,
+                        body_model=None,
+                        palette='random',
+                        img_format='%06d.png',
+                        batch_size=10,
+                        pred_cam=None,
+                        output_path='sample.mp4',
+                        resolution=(1024, 1024),
+                        render_choice='hq',
+                        origin_frames=None,
+                        overwrite=True,
+                        alpha=1.0,
+                        start=0,
+                        end=-1,
+                        read_frames_batch=False,
+                        kp3d=None,
+                        vis_kp_index=False,
+                        obj_path=None,
+                        mask=None) -> None:
     """Simpliest way to visualize pred smpl with orign frames and predicted
     cameras. `render_choice` should be in 'hq', 'mq', 'lq'.
 
     Returns:
         None
     """
-    if render_choice.lower() not in ['hq', 'mq', 'lq']:
-        raise ValueError("Please choose render_choice in ['hq', 'mq', 'lq'].")
+    if render_choice == 'pointcloud':
+        plot_kps = True
+    else:
+        plot_kps = False
+    if render_choice.lower() not in ['hq', 'mq', 'lq', 'depth', 'pointcloud']:
+        raise ValueError(
+            "Please choose render_choice in ['hq', 'mq', 'lq', 'depth',"
+            " 'pointcloud'].")
     assert pred_cam is not None, '`pred_cam` is required.'
     func = partial(
         render_smpl,
@@ -948,7 +931,6 @@ def visualize_smpl_pred(
         in_ndc=True,
         return_tensor=False,
         no_grad=True,
-        obj_path=None,
     )
     func(
         poses=poses,
@@ -969,7 +951,14 @@ def visualize_smpl_pred(
         origin_frames=origin_frames,
         start=start,
         end=end,
-        alpha=alpha)
+        obj_path=obj_path,
+        img_format=img_format,
+        alpha=alpha,
+        read_frames_batch=read_frames_batch,
+        plot_kps=plot_kps,
+        kp3d=kp3d,
+        vis_kp_index=vis_kp_index,
+        mask=mask)
 
 
 def visualize_T_pose(poses,
@@ -981,17 +970,25 @@ def visualize_T_pose(poses,
                      render_choice='hq',
                      palette='white',
                      overwrite=False,
+                     kp3d=None,
                      resolution=(1024, 1024),
+                     vis_kp_index=False,
                      batch_size=10) -> None:
-    """Simpliest way to visualize a sequence of smpl pose. render_choice should
-    be in 'hq', 'mq', 'lq'.
+    """Simpliest way to visualize a sequence of T pose or smpl pose without
+    `global_orient`. `render_choice` should be in 'hq', 'mq', 'lq'.
 
     Returns:
         None
     """
     assert poses is not None, '`poses` is required.'
-    if render_choice.lower() not in ['hq', 'mq', 'lq']:
-        raise ValueError("Please choose render_choice in ['hq', 'mq', 'lq'].")
+    if render_choice.lower() not in ['hq', 'mq', 'lq', 'depth', 'pointcloud']:
+        raise ValueError(
+            "Please choose render_choice in ['hq', 'mq', 'lq', 'depth',"
+            " 'pointcloud'].")
+    if render_choice == 'pointcloud':
+        plot_kps = True
+    else:
+        plot_kps = False
     func = partial(
         render_smpl,
         betas=None,
@@ -1017,34 +1014,49 @@ def visualize_T_pose(poses,
         palette=palette,
         output_path=output_path,
         overwrite=overwrite,
+        vis_kp_index=vis_kp_index,
+        plot_kps=plot_kps,
+        kp3d=kp3d,
         resolution=resolution,
         batch_size=batch_size)
 
 
-def visualize_smpl_pose(poses=None,
-                        verts=None,
-                        body_model_dir=None,
-                        body_model=None,
-                        output_path='sample.mp4',
-                        orbit_speed=0.0,
-                        model_type='smpl',
-                        render_choice='hq',
-                        overwrite=False,
-                        batch_size=10,
-                        palette='white',
-                        resolution=(1024, 1024),
-                        start=0,
-                        end=-1) -> None:
-    """Simpliest way to visualize a sequence of smpl pose. render_choice should
-    be in 'hq', 'mq', 'lq'.
+def visualize_smpl_pose(
+    poses=None,
+    verts=None,
+    body_model_dir=None,
+    body_model=None,
+    output_path='sample.mp4',
+    orbit_speed=0.0,
+    model_type='smpl',
+    render_choice='hq',
+    overwrite=False,
+    batch_size=10,
+    palette='white',
+    resolution=(1024, 1024),
+    start=0,
+    end=-1,
+    kp3d=None,
+    vis_kp_index=False,
+    mask=None,
+) -> None:
+    """Simpliest way to visualize a sequence of smpl pose. Cameras will focus
+    on the center of smpl mesh. `orbit speed` is recomended. `render_choice`
+    should be in 'hq', 'mq', 'lq'.
 
     Returns:
         None
     """
     assert poses is not None or verts is not None, \
         '`poses` or `verts` is required.'
-    if render_choice.lower() not in ['hq', 'mq', 'lq']:
-        raise ValueError("Please choose render_choice in ['hq', 'mq', 'lq'].")
+    if render_choice.lower() not in ['hq', 'mq', 'lq', 'depth', 'pointcloud']:
+        raise ValueError(
+            "Please choose render_choice in ['hq', 'mq', 'lq', 'depth',"
+            " 'pointcloud'].")
+    if render_choice == 'pointcloud':
+        plot_kps = True
+    else:
+        plot_kps = False
     func = partial(
         render_smpl,
         betas=None,
@@ -1074,4 +1086,8 @@ def visualize_smpl_pose(poses=None,
         overwrite=overwrite,
         resolution=resolution,
         start=start,
-        end=end)
+        end=end,
+        plot_kps=plot_kps,
+        kp3d=kp3d,
+        vis_kp_index=vis_kp_index,
+        mask=mask)

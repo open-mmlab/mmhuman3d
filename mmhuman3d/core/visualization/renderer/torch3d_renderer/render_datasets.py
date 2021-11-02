@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -7,13 +5,7 @@ from torch.utils.data import Dataset
 
 class RenderDataset(Dataset):
 
-    def __init__(self,
-                 vertices: Union[np.ndarray, torch.Tensor],
-                 K: Optional[Union[np.ndarray, torch.Tensor]] = None,
-                 R: Optional[Union[np.ndarray, torch.Tensor]] = None,
-                 T: Optional[Union[np.ndarray, torch.Tensor]] = None,
-                 img_format: str = '%06d.png',
-                 images: Optional[Union[np.ndarray, torch.Tensor]] = None):
+    def __init__(self, vertices, **kwargs):
         """Prepare the render dataset as for function `render_smpl`.
 
         Args:
@@ -24,8 +16,7 @@ class RenderDataset(Dataset):
             K (Optional[Union[np.ndarray, torch.Tensor]], optional):
                 Intrinsic matrix of cameras.
                 Shape should be (num_frames, 4, 4).
-                Could use (1, 4, 4) to make a fixed intrinsic matrix.
-                If `K` is `None`, will use default FovPerspectiveCameras.
+                Could use (1, 4, 4) to make a fixed intrinsic matrix.pose_dict.
                 Defaults to None.
             R (Optional[Union[np.ndarray, torch.Tensor]], optional):
                 Extrinsic Rotation matrix of cameras.
@@ -39,59 +30,50 @@ class RenderDataset(Dataset):
                 Could use (1, 3) to make a fixed extrinsic translation.
                 If `T` is `None`, will use torch.zeroes by default.
                 Defaults to None.
-            img_format (str, optional):
-                Output image format, set to serve the functions in
-                `ffmpeg_utils`.
-                Defaults to '%06d.png'.
             images (Optional[Union[np.ndarray, torch.Tensor]], optional):
                 Background images.
                 Defaults to None.
+
+            joints (Optional[Union[np.ndarray, torch.Tensor]], optional):
+                Shape should be (num_frames, num_kps, 3)
+                Defaults to None.
+            joints_gt (Optional[Union[np.ndarray, torch.Tensor]], optional):
+                Shape should be (num_frames, num_kps, 3)
+                Defaults to None.
         """
         super(RenderDataset, self).__init__()
-        self.num_frames = vertices.shape[0]
-        self.len = self.num_frames
-        self.img_format = img_format
-        if images is not None:
-            self.images = torch.from_numpy(images.astype(np.float32)) \
-                if isinstance(images, np.ndarray) else images
-            self.with_origin_image = True
-        else:
-            self.images = None
-            self.with_origin_image = False
-        self.vertices = torch.from_numpy(vertices.astype(
-            np.float32)) if isinstance(vertices, np.ndarray) else vertices
-        self.K = torch.from_numpy(K.astype(np.float32)) if isinstance(
-            K, np.ndarray) else K
-        self.R = torch.from_numpy(R.astype(np.float32)) if isinstance(
-            R, np.ndarray) else R
-        self.T = torch.from_numpy(T.astype(np.float32)) if isinstance(
-            T, np.ndarray) else T
+        self.len = vertices.shape[0]
+        kwargs['vertices'] = vertices
+        required_keys = [
+            'vertices',
+            'K',
+            'R',
+            'T',
+            'images',
+            'joints',
+            'joints_gt',
+            'faces',
+        ]
+        self.vars = []
+        for k in required_keys:
+            v = kwargs.get(k, None)
+            if isinstance(v, np.ndarray):
+                v = torch.from_numpy(v)
+
+            if v is not None:
+                self.vars.append(k)
+                setattr(self, k, v)
 
     def __getitem__(self, index):
         result_dict = {
-            'vertices': self.vertices[index],
-            'file_names': self.img_format % (index),
+            'indexs': index,
         }
-        if self.with_origin_image:
-            result_dict.update({'images': self.images[index]})
-        if self.K is not None:
-            if self.K.shape[0] == self.num_frames:
-                result_dict.update({'K': self.K[index]})
 
-            else:
-                result_dict.update({'K': self.K[0]})
-        if self.R is not None:
-            if self.R.shape[0] == self.num_frames:
-                result_dict.update({'R': self.R[index]})
+        for k in self.vars:
+            v = getattr(self, k)
+            idx = min(len(v) - 1, index)
+            result_dict.update({k: v[idx].to(torch.float32)})
 
-            else:
-                result_dict.update({'R': self.R[0]})
-        if self.T is not None:
-            if self.T.shape[0] == self.num_frames:
-                result_dict.update({'T': self.T[index]})
-
-            else:
-                result_dict.update({'T': self.T[0]})
         return result_dict
 
     def __len__(self):

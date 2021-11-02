@@ -4,13 +4,12 @@ import numpy as np
 import pytest
 import torch
 
-from mmhuman3d.core.visualization.visualize_smpl import (
-    neural_render_part_silhouette,
-    neural_render_silhouette,
-    visualize_part_silhouette,
+from mmhuman3d.core.visualization import (
+    neural_render_smpl,
     visualize_smpl_opencv,
     visualize_smpl_pose,
     visualize_smpl_pred,
+    visualize_T_pose,
 )
 from mmhuman3d.utils.ffmpeg_utils import array_to_video, video_to_array
 
@@ -197,7 +196,7 @@ def test_visualize_smpl_pose():
     assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
 
     pred_cam = torch.ones(10, 4)
-    visualize_part_silhouette(
+    visualize_smpl_pred(
         poses=pose_dict,
         model_type='smplx',
         pred_cam=pred_cam,
@@ -207,14 +206,14 @@ def test_visualize_smpl_pose():
         overwrite=True)
     assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
 
-    pred_cam = torch.ones(10, 4)
-    visualize_smpl_pred(
-        poses=pose_dict,
+    visualize_T_pose(
+        poses=torch.zeros(10, 165),
         model_type='smplx',
-        pred_cam=pred_cam,
+        orbit_speed=(1.0, 0.5),
         body_model_dir=body_model_dir,
         output_path='/tmp/1.mp4',
         resolution=(1024, 1024),
+        batch_size=5,
         overwrite=True)
     assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
 
@@ -238,23 +237,25 @@ def test_visualize_smpl_pose():
 
 
 def test_neural_render():
-    poses = torch.zeros(3, 72)
+    poses = torch.zeros(1, 72)
     poses.requires_grad = True
-    pred_cam = torch.ones(3, 4)
-    res_tensor = neural_render_silhouette(
-        poses=torch.zeros(3, 72),
+    pred_cam = torch.ones(1, 4)
+    res_tensor = neural_render_smpl(
+        poses=torch.zeros(1, 72),
         model_type='smpl',
+        render_choice='silhouette',
         pred_cam=pred_cam,
         body_model_dir=body_model_dir,
-        resolution=(1024, 1024))
-    assert res_tensor.shape == (3, 1024, 1024)
+        resolution=(512, 512))
+    assert res_tensor.shape == (1, 512, 512)
     assert res_tensor.requires_grad
 
-    res_tensor = neural_render_part_silhouette(
-        poses=torch.zeros(3, 72),
+    res_tensor = neural_render_smpl(
+        poses=torch.zeros(1, 72),
         model_type='smpl',
+        render_choice='part_silhouette',
         pred_cam=pred_cam,
         body_model_dir=body_model_dir,
-        resolution=(1024, 1024))
-    assert res_tensor.shape == (3, 1024, 1024, 24)
+        resolution=(512, 512))
+    assert res_tensor.shape == (1, 512, 512, 24)
     assert res_tensor.requires_grad

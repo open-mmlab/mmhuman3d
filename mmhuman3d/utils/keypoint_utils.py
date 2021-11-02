@@ -4,9 +4,9 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 from mmhuman3d.core.conventions.keypoints_mapping import KEYPOINTS_FACTORY
-from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
-    SMPLX_LIMBS_INDEX,
-    SMPLX_PALETTE,
+from mmhuman3d.core.conventions.keypoints_mapping.human_data import (
+    HUMAN_DATA_LIMBS_INDEX,
+    HUMAN_DATA_PALETTE,
 )
 
 
@@ -14,8 +14,8 @@ def search_limbs(
         data_source: str,
         mask: Optional[Union[np.ndarray, tuple, list]] = None,
         keypoints_factory: dict = KEYPOINTS_FACTORY) -> Tuple[dict, dict]:
-    """Search the corresponding limbs following the basis smplx limbs. The mask
-    could mask out the incorrect keypoints.
+    """Search the corresponding limbs following the basis human_data limbs. The
+    mask could mask out the incorrect keypoints.
 
     Args:
         data_source (str): data source type.
@@ -26,9 +26,9 @@ def search_limbs(
     Returns:
         Tuple[dict, dict]: (limbs_target, limbs_palette).
     """
-    limbs_source = SMPLX_LIMBS_INDEX
-    limbs_palette = SMPLX_PALETTE
-    keypoints_source = keypoints_factory['smplx']
+    limbs_source = HUMAN_DATA_LIMBS_INDEX
+    limbs_palette = HUMAN_DATA_PALETTE
+    keypoints_source = keypoints_factory['human_data']
     keypoints_target = keypoints_factory[data_source]
     limbs_target = {}
     for k, part_limbs in limbs_source.items():

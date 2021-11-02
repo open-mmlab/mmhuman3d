@@ -11,9 +11,9 @@ import numpy as np
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import KEYPOINTS_FACTORY
-from mmhuman3d.core.conventions.keypoints_mapping.smplx import (
-    SMPLX_LIMBS_INDEX,
-    SMPLX_PALETTE,
+from mmhuman3d.core.conventions.keypoints_mapping.human_data import (
+    HUMAN_DATA_LIMBS_INDEX,
+    HUMAN_DATA_PALETTE,
 )
 from mmhuman3d.utils.ffmpeg_utils import images_to_video, video_to_images
 from mmhuman3d.utils.keypoint_utils import get_different_colors, search_limbs
@@ -26,13 +26,15 @@ from mmhuman3d.utils.path_utils import (
 )
 
 
-def plot_kp2d_frame(kp2d_person: np.ndarray,
-                    canvas: np.ndarray,
-                    limbs: Union[list, dict, np.ndarray] = SMPLX_LIMBS_INDEX,
-                    palette: Optional[Union[dict, np.ndarray]] = None,
-                    draw_bbox: bool = False,
-                    with_number: bool = False,
-                    font_size: Union[float, int] = 0.5) -> np.ndarray:
+def _plot_kp2d_frame(kp2d_person: np.ndarray,
+                     canvas: np.ndarray,
+                     limbs: Union[list, dict,
+                                  np.ndarray] = HUMAN_DATA_LIMBS_INDEX,
+                     palette: Optional[Union[dict, np.ndarray]] = None,
+                     draw_bbox: bool = False,
+                     with_number: bool = False,
+                     font_size: Union[float, int] = 0.5,
+                     disable_limbs: bool = False) -> np.ndarray:
     """Plot a single frame(array) with keypoints, limbs, bbox, index.
 
     Args:
@@ -43,7 +45,7 @@ def plot_kp2d_frame(kp2d_person: np.ndarray,
             (num_limb, 2).
             `dict` is used mainly for function `visualize_kp2d`, you can also
             get the limbs by function `search_limbs`.
-            Defaults to `SMPLX_LIMBS_INDEX`.
+            Defaults to `HUMAN_DATA_LIMBS_INDEX`.
         palette (Optional[Union[dict, np.ndarray, list]], optional):
             Pass an (1, 3) `np.ndarray` or `list` [B, G, R] if want the whole
             limbs and keypoints will be in same color.
@@ -52,13 +54,15 @@ def plot_kp2d_frame(kp2d_person: np.ndarray,
             color.
             `dict` is used mainly for function `visualize_kp2d`, you can also
             get the palette by function `search_limbs`.
-            Defaults to `SMPLX_PALETTE`.
+            Defaults to `HUMAN_DATA_PALETTE`.
         draw_bbox (bool, optional): whether need to draw bounding boxes.
             Defaults to False.
         with_number (bool, optional): whether need to draw index numbers.
             Defaults to False.
         font_size (Union[float, int], optional): the font size of the index.
             Defaults to 0.5.
+        disable_limbs (bool, optional): whether need to disable drawing limbs.
+            Defaults to False.
 
     Returns:
         np.ndarray: opencv image of shape (H * W * 3).
@@ -83,26 +87,34 @@ def plot_kp2d_frame(kp2d_person: np.ndarray,
         bbox = None
 
     # determine the limb connections and palette
-    if isinstance(limbs, list):
-        limbs = {'body': limbs}
-    elif isinstance(limbs, np.ndarray):
-        limbs = {'body': limbs.reshape(-1, 2).astype(np.int32).tolist()}
+    if not disable_limbs:
+        if isinstance(limbs, list):
+            limbs = {'body': limbs}
+        elif isinstance(limbs, np.ndarray):
+            limbs = {'body': limbs.reshape(-1, 2).astype(np.int32).tolist()}
+        else:
+            assert set(limbs.keys()).issubset(HUMAN_DATA_LIMBS_INDEX)
+
+        if palette is None:
+            palette = {'body': None}
+        elif isinstance(palette, dict):
+            assert set(palette.keys()) == set(limbs.keys())
     else:
-        assert set(limbs.keys()).issubset(SMPLX_LIMBS_INDEX)
-
-    if palette is None:
-        palette = {'body': None}
-    elif isinstance(palette, dict):
-        assert set(palette.keys()) == set(limbs.keys())
-
+        limbs = {'body': None}
     # draw by part to specify the thickness and color
     for part_name, part_limbs in limbs.items():
         # scatter_points_index means the limb end points
-        scatter_points_index = list(
-            set(np.array([part_limbs]).reshape(-1).tolist()))
+        if not disable_limbs:
+            scatter_points_index = list(
+                set(np.array([part_limbs]).reshape(-1).tolist()))
+        else:
+            scatter_points_index = list(range(len(kp2d_person)))
         if isinstance(palette, dict) and part_name == 'body':
             thickness = 2
             radius = 3
+            color = get_different_colors(len(scatter_points_index))
+        elif disable_limbs and palette is None:
+            radius = 2
             color = get_different_colors(len(scatter_points_index))
         else:
             thickness = 2
@@ -113,25 +125,32 @@ def plot_kp2d_frame(kp2d_person: np.ndarray,
                 color = np.array(palette[part_name]).astype(np.int32)
             elif isinstance(palette, list):
                 color = np.array(palette).reshape(-1, 3).astype(np.int32)
-        for limb_index, limb in enumerate(part_limbs):
-            limb_index = min(limb_index, len(color) - 1)
-            cv2.line(
-                canvas,
-                tuple(kp2d_person[limb[0]].astype(np.int32)),
-                tuple(kp2d_person[limb[1]].astype(np.int32)),
-                color=tuple(color[limb_index].tolist()),
-                thickness=thickness)
+        if not disable_limbs:
+            for limb_index, limb in enumerate(part_limbs):
+                limb_index = min(limb_index, len(color) - 1)
+                cv2.line(
+                    canvas,
+                    tuple(kp2d_person[limb[0]].astype(np.int32)),
+                    tuple(kp2d_person[limb[1]].astype(np.int32)),
+                    color=tuple(color[limb_index].tolist()),
+                    thickness=thickness)
         # draw the points inside the image region
         for index in scatter_points_index:
             x, y = kp2d_person[index, :2]
             if np.isnan(x) or np.isnan(y):
                 continue
             if 0 <= x < canvas.shape[1] and 0 <= y < canvas.shape[0]:
+                if disable_limbs:
+                    point_color = color[index].tolist()
+                else:
+                    point_color = color[min(color.shape[0] - 1,
+                                            len(scatter_points_index) -
+                                            1)].tolist()
+
                 cv2.circle(
                     canvas, (int(x), int(y)),
                     radius,
-                    color[min(color.shape[0] - 1,
-                              len(scatter_points_index) - 1)].tolist(),
+                    point_color,
                     thickness=-1)
                 if with_number:
                     cv2.putText(
@@ -206,8 +225,9 @@ def _prepare_limb_palette(limbs,
 
     # check and pop the pop_parts
     assert set(pop_parts).issubset(
-        SMPLX_PALETTE), f'wrong part_names in pop_parts, supported parts are\
-            {set(SMPLX_PALETTE.keys())}'
+        HUMAN_DATA_PALETTE
+    ), f'wrong part_names in pop_parts, supported parts are\
+            {set(HUMAN_DATA_PALETTE.keys())}'
 
     for part_name in pop_parts:
         if part_name in limbs_target:
@@ -229,8 +249,8 @@ def _prepare_output_path(output_path, overwrite):
         os.makedirs(temp_folder, exist_ok=True)
     else:
         temp_folder = output_path + '_temp_images'
-        if check_path_existence(temp_folder, 'directory') in [
-                Existence.FolderExistNotEmpty, Existence.FolderExistEmpty
+        if check_path_existence(temp_folder, 'dir') in [
+                Existence.DirectoryExistNotEmpty, Existence.DirectoryExistEmpty
         ]:
             shutil.rmtree(temp_folder)
         os.makedirs(temp_folder, exist_ok=True)
@@ -255,55 +275,72 @@ def _check_temp_path(temp_folder, frame_list, overwrite):
 
 class _CavasProducer:
 
-    def __init__(self, frame_list, resolution, kp2d, default_scale=1.5):
+    def __init__(self,
+                 frame_list,
+                 resolution,
+                 kp2d,
+                 image_array=None,
+                 default_scale=1.5):
         # check the origin background frames
         if frame_list is not None:
             _check_frame_path(frame_list)
             self.frame_list = frame_list
         else:
             self.frame_list = []
-        self.frame_list = frame_list
         self.resolution = resolution
         self.kp2d = kp2d
-        self.resolution = resolution
-        if len(self.frame_list) > 1 and \
+        # with numpy array frames
+        self.image_array = image_array
+        if self.image_array is not None:
+            self.auto_resolution = self.image_array.shape[1:3]
+        elif len(self.frame_list) > 1 and \
                 check_path_existence(
                     self.frame_list[0], 'file') == Existence.FileExist:
             tmp_image_array = cv2.imread(self.frame_list[0])
-            self.auto_resolution = \
-                [tmp_image_array.shape[1], tmp_image_array.shape[0]]
+            self.auto_resolution = tmp_image_array.shape[:2]
         else:
-            self.auto_resolution = \
-                [np.max(kp2d) * default_scale, np.max(kp2d) * default_scale]
+            self.auto_resolution = [
+                int(np.max(kp2d) * default_scale),
+                int(np.max(kp2d) * default_scale)
+            ]
+        if self.image_array is None:
+            self.len = len(self.frame_list)
+        else:
+            self.len = self.image_array.shape[0]
 
     def get_data(self, frame_index):
         # frame file exists, resolution not set
-        if frame_index < len(self.frame_list) and self.resolution is None:
-            image_array = cv2.imread(self.frame_list[frame_index])
+        if frame_index < self.len and self.resolution is None:
+            if self.image_array is not None:
+                canvas = self.image_array[frame_index]
+            else:
+                canvas = cv2.imread(self.frame_list[frame_index])
             kp2d_frame = self.kp2d[frame_index]
         # no frame file, resolution has been set
-        elif frame_index >= len(self.frame_list) and \
-                self.resolution is not None:
-            image_array = np.ones((self.resolution[1], self.resolution[0], 3),
-                                  dtype=np.uint8) * 255
+        elif frame_index >= self.len and self.resolution is not None:
+            canvas = np.ones((self.resolution[0], self.resolution[1], 3),
+                             dtype=np.uint8) * 255
             kp2d_frame = self.kp2d[frame_index]
         # frame file exists, resolution has been set
-        elif frame_index < len(self.frame_list) and \
-                self.resolution is not None:
-            image_array = cv2.imread(self.frame_list[frame_index])
-            w_scale = self.resolution[0] / image_array.shape[1]
-            h_scale = self.resolution[1] / image_array.shape[0]
-            image_array = \
-                cv2.resize(image_array, self.resolution, cv2.INTER_CUBIC)
-            kp2d_frame = \
-                np.array([[w_scale, h_scale]]) * self.kp2d[frame_index]
+        elif frame_index < self.len and self.resolution is not None:
+            if self.image_array is not None:
+                canvas = self.image_array[frame_index]
+            else:
+                canvas = cv2.imread(self.frame_list[frame_index])
+            w_scale = self.resolution[1] / canvas.shape[1]
+            h_scale = self.resolution[0] / canvas.shape[0]
+            canvas = cv2.resize(canvas,
+                                (self.resolution[1], self.resolution[0]),
+                                cv2.INTER_CUBIC)
+            kp2d_frame = np.array([[w_scale, h_scale]
+                                   ]) * self.kp2d[frame_index]
         # no frame file, no resolution
         else:
-            image_array = \
-                np.ones((self.auto_resolution[1], self.auto_resolution[0], 3),
-                        dtype=np.uint8) * 255
+            canvas = np.ones(
+                (self.auto_resolution[0], self.auto_resolution[1], 3),
+                dtype=np.uint8) * 255
             kp2d_frame = self.kp2d[frame_index]
-        return image_array, kp2d_frame
+        return canvas, kp2d_frame
 
 
 def update_frame_list(frame_list, origin_frames, start, end):
@@ -314,7 +351,6 @@ def update_frame_list(frame_list, origin_frames, start, end):
     elif frame_list is not None and origin_frames is not None:
         warnings.warn('Redundant input, will only use frame_list.')
         origin_frames = None
-
     if origin_frames is not None:
         check_input_path(
             input_path=origin_frames,
@@ -326,33 +362,40 @@ def update_frame_list(frame_list, origin_frames, start, end):
             video_to_images(
                 origin_frames, input_temp_folder, start=start, end=end)
             frame_list = glob.glob(osp.join(input_temp_folder, '*.png'))
+            frame_list.sort()
         else:
             frame_list = []
             for im_name in os.listdir(origin_frames):
                 if Path(im_name).suffix.lower() in ['.png', '.jpg', 'jpeg']:
                     frame_list.append(osp.join(origin_frames, im_name))
+            frame_list.sort()
     return frame_list, input_temp_folder
 
 
-def visualize_kp2d(kp2d: np.ndarray,
-                   output_path: str,
-                   frame_list: Optional[List[str]] = None,
-                   origin_frames: Optional[str] = None,
-                   limbs: Optional[Union[np.ndarray, List[int]]] = None,
-                   palette: Optional[Iterable[int]] = None,
-                   data_source: str = 'mmpose',
-                   mask: Optional[Union[list, np.ndarray]] = None,
-                   start: int = 0,
-                   end: int = -1,
-                   overwrite: bool = False,
-                   with_file_name: bool = True,
-                   resolution: Optional[Union[Tuple[int, int], list]] = None,
-                   fps: Union[float, int] = 30,
-                   draw_bbox: bool = False,
-                   with_number: bool = False,
-                   pop_parts: Iterable[str] = [],
-                   disable_tqdm: bool = False,
-                   keypoints_factory: dict = KEYPOINTS_FACTORY) -> None:
+def visualize_kp2d(
+        kp2d: np.ndarray,
+        output_path: Optional[str] = None,
+        frame_list: Optional[List[str]] = None,
+        origin_frames: Optional[str] = None,
+        image_array: Optional[np.ndarray] = None,
+        limbs: Optional[Union[np.ndarray, List[int]]] = None,
+        palette: Optional[Iterable[int]] = None,
+        data_source: str = 'coco',
+        mask: Optional[Union[list, np.ndarray]] = None,
+        start: int = 0,
+        end: int = -1,
+        overwrite: bool = False,
+        with_file_name: bool = True,
+        resolution: Optional[Union[Tuple[int, int], list]] = None,
+        fps: Union[float, int] = 30,
+        draw_bbox: bool = False,
+        with_number: bool = False,
+        pop_parts: Iterable[str] = None,
+        disable_tqdm: bool = False,
+        disable_limbs: bool = False,
+        return_array: Optional[bool] = None,
+        keypoints_factory: dict = KEYPOINTS_FACTORY
+) -> Union[None, np.ndarray]:
     """Visualize 2d keypoints to a video or into a folder of frames.
 
     Args:
@@ -376,7 +419,7 @@ def visualize_kp2d(kp2d: np.ndarray,
         palette (Iterable, optional): specified palette, three int represents
                 (B, G, R). Should be tuple or list.
                 Defaults to None.
-        data_source (str, optional): data source type. Defaults to 'mmpose'.
+        data_source (str, optional): data source type. Defaults to 'coco'.
         mask (Optional[Union[list, np.ndarray]], optional):
                 mask to mask out the incorrect point.
                 Pass a `np.ndarray` of shape (J,) or `list` of length J.
@@ -388,7 +431,7 @@ def visualize_kp2d(kp2d: np.ndarray,
         with_file_name (bool, optional): whether write origin frame name on
                 the images. Defaults to True.
         resolution (Optional[Union[Tuple[int, int], list]], optional):
-                (width, height) of the output video
+                (height, width) of the output video
                 will be the same size as the original images if not specified.
                 Defaults to None.
         fps (Union[float, int], optional): fps. Defaults to 30.
@@ -399,10 +442,15 @@ def visualize_kp2d(kp2d: np.ndarray,
         pop_parts (Iterable[str], optional): The body part names you do not
                 want to visualize. Supported parts are ['left_eye','right_eye'
                 ,'nose', 'mouth', 'face', 'left_hand', 'right_hand'].
-                Defaults to [].
+                Defaults to [].frame_list
         disable_tqdm (bool, optional):
             Whether to disable the entire progressbar wrapper.
             Defaults to False.
+        disable_limbs (bool, optional): whether need to disable drawing limbs.
+            Defaults to False.
+        return_array (bool, optional): Whether to return images as opencv array
+            .If None, an array will be returned when frame number is below 100.
+            Defaults to None.
         keypoints_factory (dict, optional): Dict of all the conventions.
             Defaults to KEYPOINTS_FACTORY.
 
@@ -411,16 +459,23 @@ def visualize_kp2d(kp2d: np.ndarray,
         FileNotFoundError: check input frame paths.
 
     Returns:
-        None.
+        Union[None, np.ndarray].
     """
+    if image_array is not None:
+        origin_frames = None
+        frame_list = None
+        return_array = True
+        input_temp_folder = None
+    else:
+        frame_list, input_temp_folder = update_frame_list(
+            frame_list, origin_frames, start, end)
     # check output path
-    temp_folder = _prepare_output_path(output_path, overwrite)
-
-    frame_list, input_temp_folder = update_frame_list(frame_list,
-                                                      origin_frames, start,
-                                                      end)
-    # check whether temp_folder will overwrite frame_list by accident
-    _check_temp_path(temp_folder, frame_list, overwrite)
+    if output_path is not None:
+        output_temp_folder = _prepare_output_path(output_path, overwrite)
+        # check whether temp_folder will overwrite frame_list by accident
+        _check_temp_path(output_temp_folder, frame_list, overwrite)
+    else:
+        output_temp_folder = None
 
     # check the input array shape, reshape to (num_frame, num_person, J, 2)
     kp2d = kp2d[..., :2].copy()
@@ -428,6 +483,12 @@ def visualize_kp2d(kp2d: np.ndarray,
         kp2d = kp2d[:, np.newaxis]
     assert kp2d.ndim == 4
     num_frame, num_person = kp2d.shape[0], kp2d.shape[1]
+
+    if return_array is None:
+        if num_frame > 100:
+            return_array = False
+        else:
+            return_array = True
 
     # check data_source & mask
     if data_source not in keypoints_factory:
@@ -443,8 +504,14 @@ def visualize_kp2d(kp2d: np.ndarray,
 
     # search the limb connections and palettes from superset smplx
     # check and pop the pop_parts
-    limbs_target, limbs_palette = _prepare_limb_palette(
-        limbs, palette, pop_parts, data_source, mask)
+    if pop_parts is None:
+        pop_parts = []
+
+    if disable_limbs:
+        limbs_target, limbs_palette = None, None
+    else:
+        limbs_target, limbs_palette = _prepare_limb_palette(
+            limbs, palette, pop_parts, data_source, mask)
 
     # slice the input array temporally
     num_frame = min(len(frame_list),
@@ -452,45 +519,58 @@ def visualize_kp2d(kp2d: np.ndarray,
     end = (min(num_frame - 1, end) + num_frame) % num_frame
     kp2d = kp2d[start:end + 1]
 
-    canvas_producer = _CavasProducer(frame_list, resolution, kp2d)
+    canvas_producer = _CavasProducer(frame_list, resolution, kp2d, image_array)
 
+    out_image_array = []
     # start plotting by frame
     for frame_index in tqdm(range(kp2d.shape[0]), disable=disable_tqdm):
-        image_array, kp2d_frame = canvas_producer.get_data(frame_index)
+        canvas, kp2d_frame = canvas_producer.get_data(frame_index)
         # start plotting by person
         for person_index in range(num_person):
-            if num_person >= 2:
+            if num_person >= 2 and not disable_limbs:
                 limbs_palette = get_different_colors(
                     num_person)[person_index].reshape(1, 3)
-            image_array = plot_kp2d_frame(
+            canvas = _plot_kp2d_frame(
                 kp2d_person=kp2d_frame[person_index],
-                canvas=image_array,
+                canvas=canvas,
                 limbs=limbs_target,
                 palette=limbs_palette,
                 draw_bbox=draw_bbox,
                 with_number=with_number,
-                font_size=0.5)
+                font_size=0.5,
+                disable_limbs=disable_limbs)
         if with_file_name and frame_list is not None:
-            h, w, _ = image_array.shape
-            cv2.putText(image_array, str(Path(frame_list[frame_index]).name),
+            h, w, _ = canvas.shape
+            cv2.putText(canvas, str(Path(frame_list[frame_index]).name),
                         (w // 2, h // 10), cv2.FONT_HERSHEY_SIMPLEX,
                         0.5 * h / 500,
                         np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
-        # write the frame with opencv
-        if frame_list is not None and check_path_suffix(output_path, []):
-            frame_path = \
-                os.path.join(temp_folder, Path(frame_list[frame_index]).name)
-        else:
-            frame_path = \
-                os.path.join(temp_folder, f'{frame_index:06d}.png')
-        cv2.imwrite(frame_path, image_array)
+        if output_path is not None:
+            # write the frame with opencv
+            if frame_list is not None and check_path_suffix(output_path, ['']):
+                frame_path = os.path.join(output_temp_folder,
+                                          Path(frame_list[frame_index]).name)
+                img_format = None
+            else:
+                frame_path = \
+                    os.path.join(output_temp_folder, f'{frame_index:06d}.png')
+                img_format = '%06d.png'
+            cv2.imwrite(frame_path, canvas)
+        if return_array:
+            out_image_array.append(canvas[None])
 
     if input_temp_folder is not None:
         shutil.rmtree(input_temp_folder)
     # convert frames to video
-    if check_path_suffix(output_path, ['.mp4']):
-        images_to_video(
-            input_folder=temp_folder,
-            output_path=output_path,
-            remove_raw_file=True,
-            fps=fps)
+    if output_path is not None:
+        if check_path_suffix(output_path, ['.mp4']):
+            images_to_video(
+                input_folder=output_temp_folder,
+                output_path=output_path,
+                remove_raw_file=True,
+                img_format=img_format,
+                fps=fps)
+
+    if return_array:
+        out_image_array = np.concatenate(out_image_array)
+        return out_image_array
