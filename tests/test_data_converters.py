@@ -108,6 +108,16 @@ def test_preprocess():
     assert osp.exists(osp.join(output_path, 'posetrack_train.npz'))
     assert osp.exists(osp.join(output_path, 'posetrack_val.npz'))
 
+    EFT_ROOT = os.path.join(root_path, 'eft')
+    cfg = dict(
+        type='EftConverter', modes=['coco_all', 'coco_part', 'mpii', 'lspet'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(EFT_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'eft_coco_all.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'eft_coco_part.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'eft_mpii.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'eft_lspet.npz')
+
     CROWDPOSE_ROOT = os.path.join(root_path, 'Crowdpose')
     cfg = dict(
         type='CrowdposeConverter', modes=['train', 'val', 'test', 'trainval'])
