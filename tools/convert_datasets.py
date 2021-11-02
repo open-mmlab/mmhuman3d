@@ -34,7 +34,8 @@ DATASET_CONFIGS = dict(
         type='PosetrackConverter',
         modes=['train', 'val'],
         prefix='PoseTrack/data'),
-)
+    eft=dict(
+        type='EftConverter', modes=['coco_all', 'coco_part', 'mpii', 'lspet']))
 
 
 def parse_args():
