@@ -4,16 +4,12 @@ import numpy as np
 import pytest
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.core.visualization.visualize_keypoints2d import (
-    plot_kp2d_frame,
-    visualize_kp2d,
-)
+from mmhuman3d.core.visualization.visualize_keypoints2d import visualize_kp2d
 from mmhuman3d.utils.ffmpeg_utils import (
     array_to_images,
     images_to_array,
     video_to_array,
 )
-from mmhuman3d.utils.keypoint_utils import search_limbs
 
 data_root = 'tests/data/test_vis_kp2d'
 os.makedirs(data_root, exist_ok=True)
@@ -72,7 +68,7 @@ def test_vis_kp2d():
                 'tests/data/test_vis_kp2d/%06d.png' % 0,
                 'tests/data/test_vis_kp2d/%06d.png' % 1
             ],
-            data_source='mmpose',
+            data_source='coco_wholebody',
         )
 
     # test shape
@@ -132,52 +128,29 @@ def test_vis_kp2d():
 
     # visualize single frame
     kp2d = np.random.randint(low=0, high=255, size=(1, 17, 2), dtype=np.uint8)
-    limbs_target, limbs_palette = search_limbs(data_source='coco', mask=None)
-    image_array = np.random.randint(
-        low=0, high=255, size=(512, 512, 3), dtype=np.uint8)
-    image_array = plot_kp2d_frame(
-        kp2d[0],
-        image_array,
-        limbs_target,
-        limbs_palette,
+    image_array = visualize_kp2d(
+        kp2d,
+        image_array=image_array,
+        data_source='coco',
         draw_bbox=True,
         with_number=True,
-        font_size=0.5)
+        return_array=True)
     assert isinstance(image_array,
-                      np.ndarray) and image_array.shape == (512, 512, 3)
+                      np.ndarray) and image_array.shape == (1, 512, 512, 3)
 
     # visualize single frame
     kp2d = np.random.randint(low=0, high=255, size=(1, 17, 2), dtype=np.uint8)
-    kp2d, mask = convert_kps(keypoints=kp2d, src='coco', dst='mmpose')
-    limbs_target, limbs_palette = search_limbs(data_source='mmpose', mask=mask)
-    image_array = np.random.randint(
-        low=0, high=255, size=(512, 512, 3), dtype=np.uint8)
-    image_array = plot_kp2d_frame(
-        kp2d[0],
-        image_array,
-        limbs_target,
-        limbs_palette,
+    kp2d, mask = convert_kps(keypoints=kp2d, src='coco', dst='coco_wholebody')
+    image_array = visualize_kp2d(
+        kp2d,
+        image_array=image_array,
+        data_source='coco_wholebody',
+        mask=mask,
         draw_bbox=True,
         with_number=True,
-        font_size=0.5)
+        return_array=True)
     assert isinstance(image_array,
-                      np.ndarray) and image_array.shape == (512, 512, 3)
-
-    # visualize single frame
-    with pytest.raises(IndexError):
-        kp2d = np.random.randint(low=0, high=255, size=(17, 2), dtype=np.uint8)
-        limbs_target, limbs_palette = search_limbs(
-            data_source='mmpose', mask=None)
-        image_array = np.random.randint(
-            low=0, high=255, size=(512, 512, 3), dtype=np.uint8)
-        image_array = plot_kp2d_frame(
-            kp2d,
-            image_array,
-            limbs_target,
-            limbs_palette,
-            draw_bbox=True,
-            with_number=True,
-            font_size=0.5)
+                      np.ndarray) and image_array.shape == (1, 512, 512, 3)
 
     # test output folder
     output_folder = 'tests/data/test_vis_kp2d/1/'

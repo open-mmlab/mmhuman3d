@@ -54,15 +54,15 @@ SMPL_45_KEYPOINTS = SMPL_KEYPOINTS + [
 # the full keypoints produced by the default SMPL J_regressor and
 # extra_J_regressor (provided by SPIN)
 SMPL_54_KEYPOINTS = SMPL_45_KEYPOINTS + [
-    'right_hip_extra',
-    'left_hip_extra',
-    'neck_lsp',
-    'headtop',
-    'pelvis_mpii',
-    'thorax_mpii',
-    'spine_h36m',
-    'jaw_h36m',
-    'head_h36m',
+    'right_hip_extra',  # LSP
+    'left_hip_extra',  # LSP
+    'neck_extra',  # LSP
+    'headtop',  # LSP
+    'pelvis_extra',  # MPII
+    'thorax_extra',  # MPII
+    'spine_extra',  # H36M
+    'jaw_extra',  # H36M
+    'head_extra',  # H36M
 ]
 
 # SMPL keypoint convention used by SPIN, EFT and so on
@@ -96,8 +96,8 @@ SMPL_49_KEYPOINTS = [
     # 24 Keypoints
     'right_ankle',
     'right_knee',
-    'right_hip_extra',
-    'left_hip_extra',
+    'right_hip_extra',  # LSP
+    'left_hip_extra',  # LSP
     'left_knee',
     'left_ankle',
     'right_wrist',
@@ -106,13 +106,13 @@ SMPL_49_KEYPOINTS = [
     'left_shoulder',
     'left_elbow',
     'left_wrist',
-    'neck_lsp',  # LSP
+    'neck_extra',  # LSP
     'headtop',  # LSP mpii peen_action mpi_inf_3dhp
-    'pelvis_mpii',
-    'thorax_mpii',  # MPII
-    'spine_h36m',
-    'jaw_h36m',  # 'jaw'
-    'head_h36m',  # 'head'
+    'pelvis_extra',  # MPII
+    'thorax_extra',  # MPII
+    'spine_extra',  # H36M
+    'jaw_extra',  # H36M
+    'head_extra',  # H36M
     'nose',
     'left_eye',
     'right_eye',
@@ -148,8 +148,10 @@ SMPL_54_TO_SMPL_49 = [
         'right_heel_openpose', 'right_ankle', 'right_knee', 'right_hip_extra',
         'left_hip_extra', 'left_knee', 'left_ankle', 'right_wrist',
         'right_elbow', 'right_shoulder', 'left_shoulder', 'left_elbow',
-        'left_wrist', 'neck_lsp', 'headtop', 'pelvis_mpii', 'thorax_mpii',
-        'spine_h36m', 'jaw_h36m', 'head_h36m', 'nose', 'left_eye', 'right_eye',
-        'left_ear', 'right_ear'
-    ]
+        'left_wrist', 'neck_extra', 'headtop', 'pelvis_extra', 'thorax_extra',
+        'spine_extra', 'jaw_extra', 'head_extra', 'nose', 'left_eye',
+        'right_eye', 'left_ear', 'right_ear'
+    ],
+    # approximate
+    [True]
 ]

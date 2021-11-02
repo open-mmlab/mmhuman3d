@@ -6,7 +6,7 @@ import string
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -21,29 +21,29 @@ except ImportError:
 class video_writer:
 
     def __init__(self,
-                 output_path,
-                 resolution,
-                 fps=30.0,
-                 num_frame=1e9) -> None:
+                 output_path: str,
+                 resolution: Iterable[int],
+                 fps: float = 30.0,
+                 num_frame: int = 1e9,
+                 disable_log: bool = False) -> None:
         prepare_output_path(
             output_path,
             allowed_suffix=['.mp4'],
             tag='output video',
             path_type='file',
             overwrite=True)
-        if resolution:
-            width, height = resolution
-            width += width % 2
-            height += height % 2
+        height, width = resolution
+        width += width % 2
+        height += height % 2
         command = [
             'ffmpeg',
             '-y',  # (optional) overwrite output file if it exists
             '-f',
             'rawvideo',
-            '-s',
-            '%dx%d' % (width, height),  # size of one frame
             '-pix_fmt',
             'bgr24',
+            '-s',
+            f'{width}x{height}',
             '-r',
             f'{fps}',  # frames per second
             '-loglevel',
@@ -57,7 +57,8 @@ class video_writer:
             '-an',  # Tells FFMPEG not to expect any audio
             output_path,
         ]
-        print(f'Running \"{" ".join(command)}\"')
+        if not disable_log:
+            print(f'Running \"{" ".join(command)}\"')
         process = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,
@@ -71,8 +72,11 @@ class video_writer:
 
     def write(self, image_array: np.ndarray):
         if self.len <= self.num_frame:
-            self.process.stdin.write(image_array.tobytes())
-            self.len += 1
+            try:
+                self.process.stdin.write(image_array.tobytes())
+                self.len += 1
+            except KeyboardInterrupt:
+                self.__del__()
 
     def __del__(self):
         self.process.stdin.close()
@@ -84,7 +88,8 @@ def array_to_video(
     image_array: np.ndarray,
     output_path: str,
     fps: Union[int, float] = 30,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    disable_log: bool = False,
 ) -> None:
     """Convert an array to a video directly, gif not supported.
 
@@ -93,7 +98,7 @@ def array_to_video(
         output_path (str): output video file path.
         fps (Union[int, float, optional): fps. Defaults to 30.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of the output video.
+            optional): (height, width) of the output video.
             Defaults to None.
 
     Raises:
@@ -114,7 +119,7 @@ def array_to_video(
         path_type='file',
         overwrite=True)
     if resolution:
-        width, height = resolution
+        height, width = resolution
         width += width % 2
         height += height % 2
     else:
@@ -142,7 +147,8 @@ def array_to_video(
         '-an',  # Tells FFMPEG not to expect any audio
         output_path,
     ]
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     process = subprocess.Popen(
         command,
         stdin=subprocess.PIPE,
@@ -165,7 +171,8 @@ def array_to_images(
     image_array: np.ndarray,
     output_folder: str,
     img_format: str = '%06d.png',
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    disable_log: bool = False,
 ) -> None:
     """Convert an array to images directly.
 
@@ -175,7 +182,7 @@ def array_to_images(
         img_format (str, optional): format of the images.
             Defaults to '%06d.png'.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): resolution(width, height) of output.
+            optional): resolution(height, width) of output.
             Defaults to None.
 
     Raises:
@@ -189,7 +196,7 @@ def array_to_images(
         output_folder,
         allowed_suffix=[],
         tag='output image folder',
-        path_type='directory',
+        path_type='dir',
         overwrite=True)
 
     if not isinstance(image_array, np.ndarray):
@@ -197,7 +204,7 @@ def array_to_images(
     assert image_array.ndim == 4
     assert image_array.shape[-1] == 3
     if resolution:
-        width, height = resolution
+        height, width = resolution
     else:
         height, width = image_array.shape[1], image_array.shape[2]
     command = [
@@ -221,7 +228,8 @@ def array_to_images(
         '0',
         os.path.join(output_folder, img_format),
     ]
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     process = subprocess.Popen(
         command,
         stdin=subprocess.PIPE,
@@ -246,6 +254,7 @@ def video_to_array(
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
     start: int = 0,
     end: int = -1,
+    disable_log: bool = False,
 ) -> np.ndarray:
     """
     Read a video/gif as an array of (f * h * w * 3).
@@ -253,7 +262,7 @@ def video_to_array(
     Args:
         input_path (str): input path.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): resolution(width, height) of output.
+            optional): resolution(height, width) of output.
             Defaults to None.
         start (int, optional): start frame index. Included.
              If < 0, will be converted to frame_index range in [0, frame_num].
@@ -276,7 +285,7 @@ def video_to_array(
 
     info = vid_info_reader(input_path)
     if resolution:
-        width, height = resolution
+        height, width = resolution
     else:
         width, height = int(info['width']), int(info['height'])
     num_frames = int(info['nb_frames'])
@@ -302,7 +311,8 @@ def video_to_array(
         'error',
         'pipe:'
     ]
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     # Execute FFmpeg as sub-process with stdout as a pipe
     process = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=10**8)
     if process.stdout is None:
@@ -324,12 +334,34 @@ def video_to_array(
     return np.concatenate(array)
 
 
+def images_to_sorted_images(input_folder, output_folder, img_format='%06d'):
+    img_format = img_format.split('.')[0]
+    file_list = []
+    os.makedirs(output_folder, exist_ok=True)
+    pngs = glob.glob(os.path.join(input_folder, '*.png'))
+    if pngs:
+        ext = 'png'
+    file_list.extend(pngs)
+    jpgs = glob.glob(os.path.join(input_folder, '*.jpg'))
+    if jpgs:
+        ext = 'jpg'
+    file_list.extend(jpgs)
+    file_list.sort()
+    for index, file_name in enumerate(file_list):
+        shutil.copy(
+            file_name,
+            os.path.join(output_folder, (img_format + '.%s') % (index, ext)))
+    return img_format + '.%s' % ext
+
+
 def images_to_array(
     input_folder: str,
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
     img_format: str = '%06d.png',
     start: int = 0,
     end: int = -1,
+    remove_raw_files: bool = False,
+    disable_log: bool = False,
 ) -> np.ndarray:
     """
     Read a folder of images as an array of (f * h * w * 3).
@@ -337,7 +369,7 @@ def images_to_array(
     Args:
         input_folder (str): folder of input images.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]]:
-            resolution(width, height) of output. Defaults to None.
+            resolution(height, width) of output. Defaults to None.
         img_format (str, optional): format of images to be read.
             Defaults to '%06d.png'.
         start (int, optional): start frame index. Included.
@@ -357,37 +389,25 @@ def images_to_array(
         input_folder,
         allowed_suffix=[''],
         tag='input image folder',
-        path_type='directory')
+        path_type='dir')
 
-    info = vid_info_reader(f'{input_folder}/{img_format}' % 0)
     input_folderinfo = Path(input_folder)
-    width, height = int(info['width']), int(info['height'])
-    if resolution:
-        width, height = resolution
-    else:
-        width, height = int(info['width']), int(info['height'])
-    ext = 'png'
+
     temp_input_folder = None
     if img_format is None:
-        file_list = []
         temp_input_folder = os.path.join(input_folderinfo.parent,
                                          input_folderinfo.name + '_temp')
-        os.makedirs(temp_input_folder, exist_ok=True)
-        pngs = glob.glob(os.path.join(input_folder, '*.png'))
-        if pngs:
-            ext = 'png'
-        file_list.extend(pngs)
-        jpgs = glob.glob(os.path.join(input_folder, '*.jpg'))
-        if jpgs:
-            ext = 'jpg'
-        file_list.extend(jpgs)
-        file_list.sort()
-        for index, file_name in enumerate(file_list):
-            shutil.copy(
-                file_name,
-                os.path.join(temp_input_folder, '%06d.%s' % (index, ext)))
+        img_format = images_to_sorted_images(
+            input_folder=input_folder, output_folder=temp_input_folder)
         input_folder = temp_input_folder
-        img_format = '%06d.' + ext
+
+    info = vid_info_reader(f'{input_folder}/{img_format}' % start)
+    width, height = int(info['width']), int(info['height'])
+    if resolution:
+        height, width = resolution
+    else:
+        width, height = int(info['width']), int(info['height'])
+
     num_frames = len(os.listdir(input_folder))
     start = (min(start, num_frames - 1) + num_frames) % num_frames
     end = (min(end, num_frames - 1) + num_frames) % num_frames
@@ -412,7 +432,8 @@ def images_to_array(
         'error',
         '-'
     ]
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     process = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=10**8)
     if process.stdout is None:
         raise BrokenPipeError('No buffer recieved.')
@@ -431,7 +452,11 @@ def images_to_array(
     process.stdout.close()
     process.wait()
     if temp_input_folder is not None:
-        shutil.rmtree(temp_input_folder)
+        if Path(temp_input_folder).is_dir():
+            shutil.rmtree(temp_input_folder)
+    if remove_raw_files:
+        if Path(input_folder).is_dir():
+            shutil.rmtree(input_folder)
     return np.concatenate(array)
 
 
@@ -495,7 +520,8 @@ class vid_info_reader(object):
 def video_to_gif(
     input_path: str,
     output_path: str,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    disable_log: bool = False,
 ) -> None:
     """Convert a video to a gif file.
 
@@ -503,7 +529,7 @@ def video_to_gif(
         input_path (str): video file path.
         output_path (str): gif file path.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of the output video.
+            optional): (height, width) of the output video.
             Defaults to None.
 
     Raises:
@@ -527,7 +553,7 @@ def video_to_gif(
 
     info = vid_info_reader(input_path)
     if resolution:
-        width, height = resolution
+        height, width = resolution
     else:
         width, height = int(info['width']), int(info['height'])
 
@@ -536,7 +562,8 @@ def video_to_gif(
         '%dx%d' % (width, height), '-loglevel', 'error', '-threads', '4', '-y',
         output_path
     ]
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
 
 
@@ -544,15 +571,19 @@ def video_to_images(input_path: str,
                     output_folder: str,
                     resolution: Optional[Union[Tuple[int, int],
                                                Tuple[float, float]]] = None,
+                    img_format: str = '%06d.png',
                     start: int = 0,
-                    end: int = -1) -> None:
+                    end: int = -1,
+                    disable_log: bool = False) -> None:
     """Convert a video to a folder of images.
 
     Args:
         input_path (str): video file path
         output_folder (str): ouput folder to store the images
         resolution (Optional[Tuple[int, int]], optional):
-            (width, height) of output. defaults to None.
+            (height, width) of output. defaults to None.
+        img_format (str, optional): format of images to be read.
+            Defaults to '%06d.png'.
         start (int, optional): start frame index. Included.
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
@@ -576,7 +607,7 @@ def video_to_images(input_path: str,
         output_folder,
         allowed_suffix=[],
         tag='output image folder',
-        path_type='directory',
+        path_type='dir',
         overwrite=True)
     info = vid_info_reader(input_path)
     num_frames = int(info['nb_frames'])
@@ -587,26 +618,27 @@ def video_to_images(input_path: str,
         'ffmpeg', '-i', input_path, '-filter_complex',
         f'[0]trim=start_frame={start}:end_frame={end+1}[v0]', '-map', '[v0]',
         '-f', 'image2', '-v', 'error', '-start_number', '0', '-threads', '1',
-        f'{output_folder}/%06d.png'
+        f'{output_folder}/{img_format}'
     ]
     if resolution:
-        width, height = resolution
+        height, width = resolution
         command.insert(3, '-s')
         command.insert(4, '%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
 
 
-def images_to_video(
-    input_folder: str,
-    output_path: str,
-    remove_raw_file: bool = False,
-    img_format: str = '%06d.png',
-    fps: Union[int, float] = 30,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
-    start: int = 0,
-    end: int = -1,
-) -> None:
+def images_to_video(input_folder: str,
+                    output_path: str,
+                    remove_raw_file: bool = False,
+                    img_format: str = '%06d.png',
+                    fps: Union[int, float] = 30,
+                    resolution: Optional[Union[Tuple[int, int],
+                                               Tuple[float, float]]] = None,
+                    start: int = 0,
+                    end: int = -1,
+                    disable_log: bool = False) -> None:
     """Convert a folder of images to a video.
 
     Args:
@@ -618,7 +650,7 @@ def images_to_video(
             Defaults to '%06d.png'.
         fps (Union[int, float], optional): output video fps. Defaults to 30.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of output.
+            optional): (height, width) of output.
             defaults to None.
         start (int, optional): start frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
@@ -638,7 +670,7 @@ def images_to_video(
         input_folder,
         allowed_suffix=[],
         tag='input image folder',
-        path_type='directory')
+        path_type='dir')
     prepare_output_path(
         output_path,
         allowed_suffix=['.mp4'],
@@ -651,26 +683,9 @@ def images_to_video(
     end = (min(end, num_frames - 1) + num_frames) % num_frames
     temp_input_folder = None
     if img_format is None:
-        ext = 'png'
-        file_list = []
         temp_input_folder = os.path.join(input_folderinfo.parent,
                                          input_folderinfo.name + '_temp')
-        os.makedirs(temp_input_folder, exist_ok=True)
-        pngs = glob.glob(os.path.join(input_folder, '*.png'))
-        if pngs:
-            ext = 'png'
-        file_list.extend(pngs)
-        jpgs = glob.glob(os.path.join(input_folder, '*.jpg'))
-        if jpgs:
-            ext = 'jpg'
-        file_list.extend(jpgs)
-        file_list.sort()
-        for index, file_name in enumerate(file_list):
-            shutil.copy(
-                file_name,
-                os.path.join(temp_input_folder, '%06d.%s' % (index + 1, ext)))
-        input_folder = temp_input_folder
-        img_format = '%06d.' + ext
+        img_format = images_to_sorted_images(input_folder, temp_input_folder)
 
     command = [
         'ffmpeg',
@@ -701,17 +716,20 @@ def images_to_video(
         output_path,
     ]
     if resolution:
-        width, height = resolution
+        height, width = resolution
         width += width % 2
         height += height % 2
         command.insert(1, '-s')
         command.insert(2, '%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
     if remove_raw_file:
-        shutil.rmtree(input_folder)
+        if Path(input_folder).is_dir():
+            shutil.rmtree(input_folder)
     if temp_input_folder is not None:
-        shutil.rmtree(temp_input_folder)
+        if Path(temp_input_folder).is_dir():
+            shutil.rmtree(temp_input_folder)
 
 
 def images_to_gif(
@@ -723,6 +741,7 @@ def images_to_gif(
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
     start: int = 0,
     end: int = -1,
+    disable_log: bool = False,
 ) -> None:
     """Convert series of images to a video, similar to images_to_video, but
     provide more suitable parameters.
@@ -736,7 +755,7 @@ def images_to_gif(
             Defaults to '%06d.png'.
         fps (int, optional): output video fps. Defaults to 15.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of output. Defaults to None.
+            optional): (height, width) of output. Defaults to None.
         start (int, optional): start frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
@@ -756,7 +775,7 @@ def images_to_gif(
         input_folder,
         allowed_suffix=[],
         tag='input image folder',
-        path_type='directory')
+        path_type='dir')
     prepare_output_path(
         output_path,
         allowed_suffix=['.gif'],
@@ -809,10 +828,11 @@ def images_to_gif(
         output_path,
     ]
     if resolution:
-        width, height = resolution
+        height, width = resolution
         command.insert(1, '-s')
         command.insert(2, '%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
     if remove_raw_file:
         shutil.rmtree(input_folder)
@@ -820,13 +840,13 @@ def images_to_gif(
         shutil.rmtree(temp_input_folder)
 
 
-def gif_to_video(
-    input_path: str,
-    output_path: str,
-    fps: int = 30,
-    remove_raw_file: bool = False,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> None:
+def gif_to_video(input_path: str,
+                 output_path: str,
+                 fps: int = 30,
+                 remove_raw_file: bool = False,
+                 resolution: Optional[Union[Tuple[int, int],
+                                            Tuple[float, float]]] = None,
+                 disable_log: bool = False) -> None:
     """Convert a gif file to a video.
 
     Args:
@@ -838,7 +858,7 @@ def gif_to_video(
         down_sample_scale (Union[int, float], optional): down sample scale.
             Defaults to 1.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of output. Defaults to None.
+            optional): (height, width) of output. Defaults to None.
 
     Raises:
         FileNotFoundError: check the input path.
@@ -860,22 +880,23 @@ def gif_to_video(
         output_path, '-threads', '4'
     ]
     if resolution:
-        width, height = resolution
+        height, width = resolution
         command.insert(3, '-s')
         command.insert(4, '%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
     if remove_raw_file:
         subprocess.call(['rm', '-f', input_path])
 
 
-def gif_to_images(
-    input_path: str,
-    output_folder: str,
-    fps: int = 30,
-    img_format: str = '%06d.png',
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> None:
+def gif_to_images(input_path: str,
+                  output_folder: str,
+                  fps: int = 30,
+                  img_format: str = '%06d.png',
+                  resolution: Optional[Union[Tuple[int, int],
+                                             Tuple[float, float]]] = None,
+                  disable_log: bool = False) -> None:
     """Convert a gif file to a folder of images.
 
     Args:
@@ -885,7 +906,7 @@ def gif_to_images(
         img_format (str, optional): output image name format.
             Defaults to '%06d.png'.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of output.
+            optional): (height, width) of output.
             Defaults to None.
 
     Raises:
@@ -901,7 +922,7 @@ def gif_to_images(
         output_folder,
         allowed_suffix=[],
         tag='output image folder',
-        path_type='directory',
+        path_type='dir',
         overwrite=True)
     command = [
         'ffmpeg', '-i', input_path, '-r',
@@ -910,10 +931,11 @@ def gif_to_images(
         f'{output_folder}/{img_format}'
     ]
     if resolution:
-        width, height = resolution
+        height, width = resolution
         command.insert(3, '-s')
         command.insert(4, '%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
 
 
@@ -921,9 +943,8 @@ def crop_video(
     input_path: str,
     output_path: str,
     box: Optional[Union[List[int], Tuple[int, int, int, int]]] = None,
-    start: int = 0,
-    end: int = -1,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
+    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    disable_log: bool = False,
 ) -> None:
     """Spatially or temporally crop a video or gif file.
 
@@ -932,14 +953,8 @@ def crop_video(
         output_path (str): output video or gif file path.
         box (Iterable[int], optional): [x, y of the crop region left.
             corner and width and height]. Defaults to [0, 0, 100, 100].
-        start (int, optional): start frame index. Included.
-            If < 0, will be converted to frame_index range in [0, frame_num].
-            Defaults to 0.
-        end (int, optional): end frame index. Included.
-            If < 0, will be converted to frame_index range in [0, frame_num].
-            Defaults to -1.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of output. Defaults to None.
+            optional): (height, width) of output. Defaults to None.
 
     Raises:
         FileNotFoundError: check the input path.
@@ -975,22 +990,23 @@ def crop_video(
         output_path
     ]
     if resolution:
-        width, height = resolution
+        height, width = resolution
         width += width % 2
         height += height % 2
         command.insert(-1, '-s')
         command.insert(-1, '%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
 
 
-def slice_video(
-    input_path: str,
-    output_path: str,
-    start: int = 0,
-    end: int = -1,
-    resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None
-) -> None:
+def slice_video(input_path: str,
+                output_path: str,
+                start: int = 0,
+                end: int = -1,
+                resolution: Optional[Union[Tuple[int, int],
+                                           Tuple[float, float]]] = None,
+                disable_log: bool = False) -> None:
     """Temporally crop a video/gif into another video/gif.
 
     Args:
@@ -999,7 +1015,7 @@ def slice_video(
         start (int, optional): start frame index. Defaults to 0.
         end (int, optional): end frame index. Defaults to -1.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of output. Defaults to None.
+            optional): (height, width) of output. Defaults to None.
 
     Raises:
         FileNotFoundError: check the input path.
@@ -1018,24 +1034,26 @@ def slice_video(
         '-loglevel', 'error', '-vcodec', 'libx264', output_path
     ]
     if resolution:
-        width, height = resolution
+        height, width = resolution
         width += width % 2
         height += height % 2
         command.insert(1, '-s')
         command.insert(2, '%dx%d' % (width, height))
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
 
 
 def spatial_concat_video(input_path_list: List[str],
                          output_path: str,
                          array: List[int] = [1, 1],
-                         direction='h',
+                         direction: Literal['h', 'w'] = 'h',
                          resolution: Union[Tuple[int,
                                                  int], List[int], List[float],
                                            Tuple[float, float]] = (512, 512),
                          remove_raw_files: bool = False,
-                         padding: int = 0) -> None:
+                         padding: int = 0,
+                         disable_log: bool = False) -> None:
     """Spatially concat some videos as an array video.
 
     Args:
@@ -1047,7 +1065,7 @@ def spatial_concat_video(input_path_list: List[str],
             horizontal and vertical separately].
             Defaults to 'h'.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
-            optional): (width, height) of output.
+            optional): (height, width) of output.
             Defaults to (512, 512).
         remove_raw_files (bool, optional): whether remove raw images.
             Defaults to False.
@@ -1078,7 +1096,7 @@ def spatial_concat_video(input_path_list: List[str],
         overwrite=True)
 
     command = ['ffmpeg']
-    width, height = resolution
+    height, width = resolution
     scale_command = []
     for index, vid_file in enumerate(input_path_list):
         command.append('-i')
@@ -1110,7 +1128,8 @@ def spatial_concat_video(input_path_list: List[str],
         '%s%s' % (scale_command, pad_command), '-loglevel', 'error', '-y',
         output_path
     ]
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
 
     if remove_raw_files:
@@ -1122,7 +1141,8 @@ def temporal_concat_video(input_path_list: List[str],
                           output_path: str,
                           resolution: Union[Tuple[int, int],
                                             Tuple[float, float]] = (512, 512),
-                          remove_raw_files: bool = False) -> None:
+                          remove_raw_files: bool = False,
+                          disable_log: bool = False) -> None:
     """Concat no matter videos or gifs into a temporal sequence, and save as a
     new video or gif file.
 
@@ -1130,7 +1150,7 @@ def temporal_concat_video(input_path_list: List[str],
         input_path_list (List[str]): list of input video paths.
         output_path (str): output video file path.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]]
-            , optional): (width, height) of output].
+            , optional): (height, width) of output].
             Defaults to (512,512).
         remove_raw_files (bool, optional): whether remove the input videos.
             Defaults to False.
@@ -1155,7 +1175,7 @@ def temporal_concat_video(input_path_list: List[str],
         path_type='file',
         overwrite=True)
 
-    width, height = resolution
+    height, width = resolution
     command = ['ffmpeg']
     concat_command = []
     scale_command = []
@@ -1174,7 +1194,8 @@ def temporal_concat_video(input_path_list: List[str],
         (scale_command, concat_command, len(input_path_list)), '-loglevel',
         'error', '-map', '[v]', '-c:v', 'libx264', '-y', output_path
     ]
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
 
     if remove_raw_files:
@@ -1186,7 +1207,8 @@ def compress_video(input_path: str,
                    output_path: str,
                    compress_rate: int = 1,
                    down_sample_scale: Union[float, int] = 1,
-                   fps: int = 30) -> None:
+                   fps: int = 30,
+                   disable_log: bool = False) -> None:
     """Compress a video file.
 
     Args:
@@ -1242,7 +1264,8 @@ def compress_video(input_path: str,
         str(duration), '-s',
         '%dx%d' % (new_width, new_height), temp_outpath
     ]
-    print(f'Running \"{" ".join(command)}\"')
+    if not disable_log:
+        print(f'Running \"{" ".join(command)}\"')
     subprocess.call(command)
     if (output_path == input_path) or (not output_path):
         subprocess.call(['mv', '-f', temp_outpath, input_path])

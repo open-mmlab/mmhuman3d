@@ -199,10 +199,10 @@ def get_keypoints(args):
     for pose_det_results in pose_det_results_list:
         for res in pose_det_results:
             if args.keypoint2d_type != args.keypoint3d_type:
-                keypoints = res['keypoints']
-                res['keypoints'], _ = convert_kps(keypoints,
-                                                  args.keypoint2d_type,
-                                                  args.keypoint3d_type)
+                keypoints = res['keypoints'][None]
+                res['keypoints'] = convert_kps(
+                    keypoints, args.keypoint2d_type,
+                    args.keypoint3d_type)[0].squeeze()
     bbox_xywh = []
     kp2d = []
     kp3d = []
@@ -528,12 +528,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--keypoint2d_type',
         type=str,
-        default='mmpose',
+        default='coco',
         help='The source type of 2D keypoints')
     parser.add_argument(
         '--keypoint3d_type',
         type=str,
-        default='mmpose',
+        default='h36m',
         help='The source type of 3D keypoints')
     # smooth config
     parser.add_argument(

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from mmhuman3d.core.cameras.camera_parameter import CameraParameter
-from mmhuman3d.core.cameras.cameras import WeakPerspectiveCamerasVibe
+from mmhuman3d.core.cameras.cameras import WeakPerspectiveCameras
 from mmhuman3d.utils.path_utils import Existence, check_path_existence
 
 chessboard_path = 'tests/data/camera/' +\
@@ -58,7 +58,7 @@ def test_vibe_camera():
     cam_para.load_from_dict(dumped_dict)
     vibe_cam_arg = cam_para.get_vibe_dict()
     assert len(vibe_cam_arg) > 0
-    vibe_cam = WeakPerspectiveCamerasVibe(**vibe_cam_arg)
+    vibe_cam = WeakPerspectiveCameras(**vibe_cam_arg)
     empty_para = CameraParameter(name='dst_cam')
     empty_para.load_from_vibe(vibe_cam, name='dst_cam', batch_index=0)
     src_mat = cam_para.get_mat_np('in_mat')

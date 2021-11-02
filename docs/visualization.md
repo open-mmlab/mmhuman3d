@@ -1,4 +1,4 @@
-## Visualization (version 0.2.0)
+## Visualize Keypoints (version 0.2.0)
 
 ### Visualize 2d keypoints  
 - **simple example for visualize 2d keypoints:**
@@ -23,60 +23,44 @@
     ```
     mask is `None` by default. This is the same as all ones mask, then no keypoints will be excluded. Ignore it when you are sure that all the keypoints are valid.
 
-- **plot on a numpy array image:**
 
-    It is easy to plot single frame.
-    Or maybe you want to use numpy input frames.
+- **whether plot on backgrounds:**
 
-    E.g., you want to visualize you mmpose kp2d as smpl convention.
+    Maybe you want to use numpy input backgrounds.
+
+    E.g., you want to visualize you mmpose kp2d as smpl convention. You have 2d mmpose keypoints of shape(10, 133, 2).
     ```python
     from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-    from mmhuman3d.core.visualization.visualize_keypoints2d import plot_kp2d_frame
-    from mmhuman3d.utils.keypoint_utils import search_limbs
+    from mmhuman3d.core.visualization.visualize_keypoints2d import visualize_kp2d
 
-    kp2d_smpl, mask = convert_kps(kp2d_mmpose, src='mmpose', dst='smpl')
-    limbs, palette = search_limbs(data_source='smpl', mask=mask)
-
-    canvas = np.zeros((1024, 1024, 3))
-
+    background = np.random.randint(low=0, high=255, shape=(10, 1024, 1024, 4))
     # multi_person, shape is (num_person, num_joints, 2)
-    if kp2d_smpl.ndim == 3:
-        num_person, num_joints, _ = kp2d_smpl.shape
-        for i in range(num_person):
-            kp2d_person = kp2d_smpl[i]
-            canvas = plot_kp2d_frame(kp2d_person=kp2d_person, canvas=canvas, limbs=limbs, palette=palette)
-
-    # singe_person, shape is (num_joints, 2)
-    elif kp2d_smpl.ndim == 2:
-        canvas = plot_kp2d_frame(kp2d_person=kp2d_smpl,canvas=canvas, limbs=limbs, palette=palette)
+    out_image = visualize_kp2d(kp2d=kp2d, image_array=background, data_source='mmpose', return_array=True)
     ```
     This is just an example, you can use this function flexibly.
 
-- **whether plot on original frames:**
-
-    If want to plot keypoints on original frames, you should provide `frame_list`. **Be ware that the order of the frame should correspond with your keypoints.**
-
-    If you have an original mp4 video, you can slice the images then visualize the images with the `frame_list`:
+    If want to plot keypoints on frame files, you could provide `frame_list`(list of image path). **Be ware that the order of the frame will be sorted by name.
+    or `origin_frames`(mp4 path or image folder path), **Be aware that you should provide the correct `img_format` for `ffmpeg` to read the images.**.
     ```python
-    import glob
-    from mmhuman3d.utils.ffmpeg_utils import video_to_images
-
-    video_to_images(input_path='some_video.mp4', output_folder='some_new_folder', img_format='%06d.png')
-
-    frame_list = glob.glob('some_new_folder/*.png')
-    frame_list.sort()
-
+    frame_list = ['im1.png', 'im2.png', ...]
     visualize_kp2d(kp2d_mmpose, data_source='mmpose', output_path='some_video.mp4', resolution=(1024, 1024),
     frame_list=frame_list)
-    ```
 
-    `frame_list` is `None` by default. In this circumstance, the output video would self-ajust by the margin of keypoint coordinates `if resolution is None`.
+    origin_frames = 'some_folder'
+    visualize_kp2d(kp2d_mmpose, data_source='mmpose', output_path='some_video.mp4', resolution=(1024, 1024),
+    origin_frames=origin_frames)
+
+    origin_frames = 'some.mp4'
+    array = visualize_kp2d(kp2d_mmpose, data_source='mmpose', output_path='some_video.mp4', resolution=(1024, 1024), return_array=True,
+    origin_frames=origin_frames)
+    ```
+    The superiorty of background images: `frame_list`
 
 - **output a video or frames:**
 
     If `output_path` is a folder, this function will output frames.
     If `output_path` is a '.mp4' path, this function will output a video.
-
+    `output_path` could be set as `None` when `return_array` is True. The function will return an array of shape (frame, width, height, 3).
 
 - **whether plot origin file name on images:**
 
@@ -120,44 +104,15 @@
 
     The same as [visualize_kp2d](#visualize_kp2d)
 
+- **output:**
+    If `output_path` is a folder, this function will output frames.
+    If `output_path` is a '.mp4' path, this function will output a video.
+    `output_path` could be set as `None` when `return_array` is True. The function will return an array of shape (frame, width, height, 3).
+
 - **other parameters:**
 
     Easy to understand, please read the doc strings in the function.
 
-### Visualize smpl mesh
-- **fast visualize smpl(x) pose:**
-
-    You have smpl pose tensor or array which shape is (frame, 72)
-    ```python
-    from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_pose
-    visualize_smpl_pose(poses=poses, body_model_dir=body_model_dir, output_path='some_video.mp4', model_type='smpl', render_choice='hq', resolution=(1024, 1024))
-    ```
-
-    Or you have smplx pose tensor or array which shape is (frame, 165)
-    ```python
-    visualize_smpl_pose(poses=poses, body_model_dir=body_model_dir, output_path='some_video.mp4', model_type='smplx', render_choice='hq', resolution=(1024, 1024))
-    ```
-    You could also feed dict tensor of smplx definitions. You could check that in [visualize_smpl](mmhuman3d/core/visualization/visualize_smpl.py#L166-211) or [original smplx](https://github.com/vchoutas/smplx/blob/master/smplx/body_models.py).
-
-
-- **visualize T-pose:**
-
-    ```TODO```
-
-- **visualize smpl with predicted camera:**
-
-
-- **visualize smpl with opencv camera:**
-
-    ```TODO```
-
-- **visualize binary silhouettes:**
-
-    ```TODO```
-
-- **visualize body part silhouette:**
-
-    ```TODO```
 
 ### About ffmpeg_utils
 - In [ffmpeg_utils](mmhuman3d/utils/ffmpeg_utils.py) , each function has abundant doc strings, and the semantically defined function names could be easily understood.
@@ -176,20 +131,12 @@
 
 - **temporally crop/concat:**
 
-    temporal_crop_video, temporal_concat_video
+    slice_video, temporal_concat_video
 
 - **spatially crop/concat:**
 
-    spatial_crop_video, spatial_concat_video
+    crop_video, spatial_concat_video
 
 - **compress:**
 
     compress_gif, compress_video
-
-### Cameras(for v0.3.0)
-- **WeakPerspectiveCameras:**
-
-    ```TODO```
-- **Convert cameras:**
-
-    ```TODO```

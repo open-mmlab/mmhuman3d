@@ -61,31 +61,44 @@ def test_conventions():
     # test original_mask
     keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
     original_mask = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
-    original_mask[KEYPOINTS_FACTORY['smpl'].index('left_hip')] = 0
+    original_mask[KEYPOINTS_FACTORY['smpl'].index('right_ankle')] = 0
     _, mask_coco = convert_kps(
         keypoints=keypoints, mask=original_mask, src='smpl', dst='coco')
     _, mask_coco_full = convert_kps(
         keypoints=keypoints, src='smpl', dst='coco')
-    assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] == 0
-    mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] = 1
+    assert mask_coco[KEYPOINTS_FACTORY['coco'].index('right_ankle')] == 0
+    mask_coco[KEYPOINTS_FACTORY['coco'].index('right_ankle')] = 1
     assert (mask_coco == mask_coco_full).all()
+
+    # test approximate mapping
+    keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
+    _, mask_coco = convert_kps(
+        keypoints=keypoints, src='smpl', dst='coco', approximate=False)
+    _, approximate_mask_coco = convert_kps(
+        keypoints=keypoints, src='smpl', dst='coco', approximate=True)
+    assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip_extra')] == 0
+    assert approximate_mask_coco[KEYPOINTS_FACTORY['coco'].index(
+        'left_hip_extra')] == 1
+
+    assert len(KEYPOINTS_FACTORY['human_data']) == len(
+        set(KEYPOINTS_FACTORY['human_data']))
 
 
 def test_cache():
-    mmpose_keypoints2d = np.ones((1, 133, 3))
-    mmpose_mask = np.ones((133, ))
+    coco_wb_keypoints2d = np.ones((1, 133, 3))
+    coco_wb_mask = np.ones((133, ))
     start_time = time.time()
     convert_kps(
-        keypoints=mmpose_keypoints2d,
-        mask=mmpose_mask,
-        src='mmpose',
+        keypoints=coco_wb_keypoints2d,
+        mask=coco_wb_mask,
+        src='coco_wholebody',
         dst='smpl')
     without_cache_time = time.time() - start_time
     start_time = time.time()
     convert_kps(
-        keypoints=mmpose_keypoints2d,
-        mask=mmpose_mask,
-        src='mmpose',
+        keypoints=coco_wb_keypoints2d,
+        mask=coco_wb_mask,
+        src='coco_wholebody',
         dst='smpl')
     with_cache_time = time.time() - start_time
     assert with_cache_time < without_cache_time

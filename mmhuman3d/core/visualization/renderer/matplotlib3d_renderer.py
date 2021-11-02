@@ -5,13 +5,16 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Union
 
 import cv2
+import mmcv
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
 
+from mmhuman3d.core.conventions.cameras import enc_camera_convention
 from mmhuman3d.utils.ffmpeg_utils import images_to_video
 from mmhuman3d.utils.keypoint_utils import get_different_colors
+from mmhuman3d.utils.path_utils import check_path_suffix
 
 
 class Axes3dBaseRenderer(object):
@@ -117,7 +120,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
         self.cam_vector_list = None
         self.if_connection_setup = False
         self.if_frame_updated = False
-        self.frames_dir_path = ''
+        self.temp_path = ''
 
     def set_connections(self, limbs_connection, limbs_palette):
         self.limbs_connection = limbs_connection
@@ -127,20 +130,21 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
     def render_kp3d_to_video(
         self,
         keypoints_np: np.ndarray,
-        export_path: str,
-        sign: Iterable[int] = (1, 1, 1),
-        axis: str = 'xzy',
+        output_path: Optional[str] = None,
+        convention='opencv',
         fps: Union[float, int] = 30,
         resolution: Iterable[int] = (720, 720),
         visual_range: Iterable[int] = (-100, 100),
         frame_names: Optional[List[str]] = None,
+        disable_limbs: bool = False,
+        return_array: bool = False,
     ) -> None:
         """Render 3d keypoints to a video.
 
         Args:
             keypoints_np (np.ndarray): shape of input array should be
                     (f * n * J * 3).
-            export_path (str): output video path.
+            output_path (str): output video path or frame folder.
             sign (Iterable[int], optional): direction of the axis.
                     Defaults to (1, 1, 1).
             axis (str, optional): axis convention.
@@ -154,22 +158,30 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     Defaults to (-100, 100).
             frame_names (Optional[List[str]], optional):  List of string
                     for frame title, no title if None. Defaults to None.
+            disable_limbs (bool, optional): whether need to disable drawing
+                limbs.
+                Defaults to False.
         Returns:
             None.
         """
         assert self.if_camera_init is True
         assert self.if_connection_setup is True
-        if not Path(export_path).parent.is_dir():
-            raise FileNotFoundError('Wrong output video path.')
-        temp_dir = os.path.join(
-            Path(export_path).parent,
-            Path(export_path).name + '_temp')
-        self.frames_dir_path = temp_dir
+        sign, axis = enc_camera_convention(convention)
+        if output_path is not None:
+            if check_path_suffix(output_path, ['.mp4', '.gif']):
+                self.temp_path = os.path.join(
+                    Path(output_path).parent,
+                    Path(output_path).name + '_output_temp')
+                mmcv.mkdir_or_exist(self.temp_path)
+                print('make dir', self.temp_path)
+                self.remove_temp = True
+            else:
+                self.temp_path = output_path
+                self.remove_temp = False
+        else:
+            self.temp_path = None
         keypoints_np = _set_new_pose(keypoints_np, sign, axis)
         if not self.if_frame_updated:
-            if not os.path.exists(temp_dir) or\
-                    not os.path.isdir(temp_dir):
-                os.makedirs(temp_dir)
             if self.cam_vector_list is None:
                 self._get_camera_vector_list(
                     frame_number=keypoints_np.shape[0])
@@ -181,18 +193,26 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                 if len(visual_range.shape) == 1:
                     one_dim_visual_range = np.expand_dims(visual_range, 0)
                     visual_range = one_dim_visual_range.repeat(3, axis=0)
-            self._export_frames(keypoints_np, temp_dir, resolution,
-                                visual_range, self.cam_vector_list,
-                                frame_names)
+            image_array = self._export_frames(keypoints_np, resolution,
+                                              visual_range, frame_names,
+                                              disable_limbs, return_array)
             self.if_frame_updated = True
-        images_to_video(
-            temp_dir, export_path, img_format='frame_%06d.png', fps=fps)
 
-    def _export_frames(self, keypoints_np, temp_dir, resolution, visual_range,
-                       cam_vector_list, frame_names):
+        if output_path is not None:
+            if check_path_suffix(output_path, '.mp4'):
+                images_to_video(
+                    self.temp_path,
+                    output_path,
+                    img_format='frame_%06d.png',
+                    fps=fps)
+        return image_array
+
+    def _export_frames(self, keypoints_np, resolution, visual_range,
+                       frame_names, disable_limbs, return_array):
+        image_array = []
         for frame_index in range(keypoints_np.shape[0]):
             keypoints_frame = keypoints_np[frame_index]
-            cam_ele, cam_hor = cam_vector_list[frame_index]
+            cam_ele, cam_hor = self.cam_vector_list[frame_index]
             fig, ax = \
                 self._draw_scene(visual_range=visual_range, axis_len=0.5,
                                  cam_elev_angle=cam_ele,
@@ -203,26 +223,27 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                 if num_person >= 2:
                     self.limbs_palette = get_different_colors(
                         num_person)[person_index].reshape(-1, 3)
-                for part_name, limbs in self.limbs_connection.items():
-                    if part_name == 'body':
-                        linewidth = 2
-                    else:
-                        linewidth = 1
-                    if isinstance(self.limbs_palette, np.ndarray):
-                        color = self.limbs_palette.astype(np.int32).reshape(
-                            -1, 3)
-                    elif isinstance(self.limbs_palette, dict):
-                        color = np.array(self.limbs_palette[part_name]).astype(
-                            np.int32)
-                    for limb_index, limb in enumerate(limbs):
-                        limb_index = min(limb_index, len(color) - 1)
+                if not disable_limbs:
+                    for part_name, limbs in self.limbs_connection.items():
+                        if part_name == 'body':
+                            linewidth = 2
+                        else:
+                            linewidth = 1
+                        if isinstance(self.limbs_palette, np.ndarray):
+                            color = self.limbs_palette.astype(
+                                np.int32).reshape(-1, 3)
+                        elif isinstance(self.limbs_palette, dict):
+                            color = np.array(
+                                self.limbs_palette[part_name]).astype(np.int32)
+                        for limb_index, limb in enumerate(limbs):
+                            limb_index = min(limb_index, len(color) - 1)
 
-                        ax = _plot_line_on_fig(
-                            ax,
-                            keypoints_person[limb[0]],
-                            keypoints_person[limb[1]],
-                            color=np.array(color[limb_index]) / 255.0,
-                            linewidth=linewidth)
+                            ax = _plot_line_on_fig(
+                                ax,
+                                keypoints_person[limb[0]],
+                                keypoints_person[limb[1]],
+                                color=np.array(color[limb_index]) / 255.0,
+                                linewidth=linewidth)
                 scatter_points_index = list(
                     set(
                         np.array(self.limbs_connection['body']).reshape(
@@ -267,30 +288,41 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
                     (resolution[0] // 10, resolution[1] // 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5 * resolution[0] / 500,
                     np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
-
-            frame_path = os.path.join(temp_dir, 'frame_%06d.png' % frame_index)
-            cv2.imwrite(frame_path, resized_mat)
+            if self.temp_path is not None:
+                frame_path = os.path.join(self.temp_path,
+                                          'frame_%06d.png' % frame_index)
+                cv2.imwrite(frame_path, resized_mat)
+            if return_array:
+                image_array.append(resized_mat[None])
+        if return_array:
+            image_array = np.concatenate(image_array)
+            return image_array
+        else:
+            return None
 
     def __del__(self):
         self.remove_temp_frames()
 
     def remove_temp_frames(self):
-        if len(self.frames_dir_path) > 0 and \
-                os.path.exists(self.frames_dir_path) and \
-                os.path.isdir(self.frames_dir_path):
-            shutil.rmtree(self.frames_dir_path)
+        if self.temp_path is not None:
+            if Path(self.temp_path).is_dir() and self.remove_temp:
+                shutil.rmtree(self.temp_path)
 
 
 def _set_new_pose(pose_np, sign, axis):
-    for dim_index in range(pose_np.shape[-1]):
-        pose_np[..., dim_index] = \
-            sign[dim_index] * pose_np[..., dim_index]
-    pose_rearrange_axis_result = pose_np.copy()
+    target_sign = [-1, 1, 1]
     target_axis = ['x', 'y', 'z']
+
+    pose_rearrange_axis_result = pose_np.copy()
     for axis_index, axis_name in enumerate(target_axis):
         src_axis_index = axis.index(axis_name)
         pose_rearrange_axis_result[..., axis_index] = \
             pose_np[..., src_axis_index]
+
+    for dim_index in range(pose_rearrange_axis_result.shape[-1]):
+        pose_rearrange_axis_result[
+            ..., dim_index] = sign[dim_index] / target_sign[
+                dim_index] * pose_rearrange_axis_result[..., dim_index]
     return pose_rearrange_axis_result
 
 

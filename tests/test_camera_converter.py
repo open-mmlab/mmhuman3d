@@ -21,35 +21,35 @@ def check_isclose(K,
                   T,
                   src,
                   dst,
-                  projection='perspective',
+                  is_perspective=True,
                   in_ndc_src=True,
                   in_ndc_dst=True,
-                  image_size_src=None,
-                  image_size_dst=None,
+                  resolution_src=None,
+                  resolution_dst=None,
                   use_numpy=True,
                   eps=1e-2):
     K1, R1, T1 = convert_cameras(
         K=K,
         R=R,
         T=T,
-        projection=projection,
+        is_perspective=is_perspective,
         convention_src=src,
         convention_dst=dst,
         in_ndc_src=in_ndc_src,
         in_ndc_dst=in_ndc_dst,
-        image_size_src=image_size_src,
-        image_size_dst=image_size_dst)
+        resolution_src=resolution_src,
+        resolution_dst=resolution_dst)
     K2, R2, T2 = convert_cameras(
         K=K1,
         R=R1,
         T=T1,
-        projection=projection,
+        is_perspective=is_perspective,
         convention_src=dst,
         convention_dst=src,
         in_ndc_src=in_ndc_dst,
         in_ndc_dst=in_ndc_src,
-        image_size_src=image_size_dst,
-        image_size_dst=image_size_src)
+        resolution_src=resolution_dst,
+        resolution_dst=resolution_src)
     if use_numpy:
         assert np.isclose(K.all(), K2.all(), rtol=0, atol=eps)
         assert np.isclose(R.all(), R2.all(), rtol=0, atol=eps)
@@ -77,10 +77,8 @@ def test_convert_cameras():
             K_[:, 0, 2] = px
             K_[:, 1, 2] = py
 
-            for projection in [
-                    'perspective', 'orthographics', 'weakperspective'
-            ]:
-                K = convert_K_3x3_to_4x4(K_, projection=projection)
+            for is_perspective in [True, False]:
+                K = convert_K_3x3_to_4x4(K_, is_perspective=is_perspective)
 
                 check_isclose(
                     K=torch.Tensor(K),
@@ -116,7 +114,7 @@ def test_convert_cameras():
                     dst=dst,
                     in_ndc_src=True,
                     in_ndc_dst=False,
-                    image_size_dst=(1080, 1920),
+                    resolution_dst=(1080, 1920),
                 )
 
                 check_isclose(
@@ -127,7 +125,7 @@ def test_convert_cameras():
                     dst=dst,
                     in_ndc_src=False,
                     in_ndc_dst=True,
-                    image_size_src=(1080, 1920),
+                    resolution_src=(1080, 1920),
                     eps=1e-1)
 
                 check_isclose(
@@ -138,8 +136,8 @@ def test_convert_cameras():
                     dst=dst,
                     in_ndc_src=False,
                     in_ndc_dst=False,
-                    image_size_src=(1080, 1920),
-                    image_size_dst=(1080, 1920),
+                    resolution_src=(1080, 1920),
+                    resolution_dst=(1080, 1920),
                     eps=1e-1)
 
 
@@ -185,22 +183,31 @@ def test_convert_ndc_screen():
     K_[:, 0, 2] = px
     K_[:, 1, 2] = py
     sign = [-1, 1, -1]
-    for projection in ['perspective', 'orthographics']:
-        K = convert_K_3x3_to_4x4(K_, projection=projection)
+    for is_perspective in [True, False]:
+        K = convert_K_3x3_to_4x4(K_, is_perspective=is_perspective)
 
         K1 = convert_ndc_to_screen(
-            K, projection=projection, sign=sign, image_size=(1080, 1920))
+            K,
+            is_perspective=is_perspective,
+            sign=sign,
+            resolution=(1080, 1920))
         K2 = convert_screen_to_ndc(
-            K1, projection=projection, sign=sign, image_size=(1080, 1920))
+            K1,
+            is_perspective=is_perspective,
+            sign=sign,
+            resolution=(1080, 1920))
         assert np.isclose(K.all(), K2.all(), rtol=0, atol=eps)
 
         K1 = convert_ndc_to_screen(
             torch.Tensor(K),
-            projection=projection,
+            is_perspective=is_perspective,
             sign=sign,
-            image_size=(1080, 1920))
+            resolution=(1080, 1920))
         K2 = convert_screen_to_ndc(
-            K1, projection=projection, sign=sign, image_size=(1080, 1920))
+            K1,
+            is_perspective=is_perspective,
+            sign=sign,
+            resolution=(1080, 1920))
         assert torch.isclose(torch.Tensor(K), K2, rtol=0, atol=eps).all()
 
 

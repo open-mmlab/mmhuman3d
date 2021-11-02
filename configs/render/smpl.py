@@ -1,6 +1,6 @@
 base_directional_light = {
     'light_type': 'directional',
-    'direction': [[10.0, 10.0, -10.0]],
+    'direction': [[10.0, 10.0, 10.0]],
     'ambient_color': [[0.5, 0.5, 0.5]],
     'diffuse_color': [[0.5, 0.5, 0.5]],
     'specular_color': [[0.5, 0.5, 0.5]],
@@ -15,11 +15,11 @@ base_point_light = {
 }
 
 base_ambient_light = {
-    'light_type': 'point',
+    'light_type': 'directional',
     'ambient_color': [[1.0, 1.0, 1.0]],
     'diffuse_color': [[0, 0, 0]],
     'specular_color': [[0, 0, 0]],
-    'location': [[0.0, 0.0, -3.0]],
+    'direction': [[10.0, 10.0, -10.0]],
 }
 
 base_material = {
@@ -36,10 +36,6 @@ silhouete_material = {
     'shininess': 1.0,
 }
 
-base_camera = {
-    'camera_type': 'weakpespective',
-}
-
 white_blend_params = {'background_color': (1.0, 1.0, 1.0)}
 
 black_blend_params = {'background_color': (0.0, 0.0, 0.0)}
@@ -47,7 +43,6 @@ black_blend_params = {'background_color': (0.0, 0.0, 0.0)}
 RENDER_CONFIGS = {
     'lq': {
         'light': base_directional_light,
-        'camera': base_camera,
         'material': base_material,
         'raster': {
             'resolution': [256, 256],
@@ -63,7 +58,6 @@ RENDER_CONFIGS = {
     },
     'mq': {
         'light': base_directional_light,
-        'camera': base_camera,
         'material': base_material,
         'raster': {
             'resolution': [512, 512],
@@ -79,14 +73,13 @@ RENDER_CONFIGS = {
     },
     'hq': {
         'light': base_directional_light,
-        'camera': base_camera,
         'material': base_material,
         'raster': {
             'resolution': [1024, 1024],
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
-            'cull_to_frustum': True,
-            'cull_backfaces': True,
+            'cull_to_frustum': False,
+            'cull_backfaces': False,
         },
         'shader': {
             'shader_type': 'phong',
@@ -95,7 +88,6 @@ RENDER_CONFIGS = {
     },
     'silhouette': {
         'light': base_ambient_light,
-        'camera': base_camera,
         'material': silhouete_material,
         'raster': {
             'resolution': None,
@@ -111,7 +103,6 @@ RENDER_CONFIGS = {
     },
     'part_silhouette': {
         'light': base_ambient_light,
-        'camera': base_camera,
         'material': silhouete_material,
         'raster': {
             'resolution': None,
