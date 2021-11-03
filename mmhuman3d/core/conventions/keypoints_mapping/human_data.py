@@ -201,7 +201,7 @@ APPROXIMATE_MAPPING_LIST = [
     ['right_hip', 'right_hip_openpose', 'right_hip_extra'],
     ['neck', 'neck_openpose', 'neck_extra'],
     ['jaw', 'jaw_extra'],
-    ['head', 'head_extra', 'head_h36m'],
+    ['head_extra', 'head_h36m'],
     ['headtop', 'headtop_h36m'],
     # 3dhp
     ['left_hand', 'left_hand_3dhp'],

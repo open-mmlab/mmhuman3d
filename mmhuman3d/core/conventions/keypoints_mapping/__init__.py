@@ -51,7 +51,7 @@ __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
 
 # TODO: temporary solution
 # duplicates in SMPL_49 requires special treatment
-__KEYPOINTS_MAPPING_CACHE__['smpl_54']['smpl_49'] = smpl.SMPL_54_TO_SMPL_49
+# __KEYPOINTS_MAPPING_CACHE__['smpl_54']['smpl_49'] = smpl.SMPL_54_TO_SMPL_49
 
 
 def convert_kps(
