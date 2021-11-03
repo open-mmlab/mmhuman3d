@@ -9,6 +9,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_flip_pairs,
     get_keypoint_idxs_by_part,
+    get_mapping,
 )
 
 
@@ -84,6 +85,69 @@ def test_conventions():
         set(KEYPOINTS_FACTORY['human_data']))
 
 
+def test_duplicate_name():
+    for data_name in KEYPOINTS_FACTORY:
+        assert len(KEYPOINTS_FACTORY[data_name]) == len(
+            set(KEYPOINTS_FACTORY[data_name]))
+
+
+def test_approximate_mapping():
+
+    # test SMPL_49 to SMPL_54
+    SMPL_49_TO_SMPL_54 = [
+        [
+            0, 1, 2, 4, 5, 7, 8, 12, 16, 17, 18, 19, 20, 21, 24, 25, 26, 27,
+            28, 29, 30, 31, 32, 33, 34, 45, 46, 47, 48, 49, 50, 51, 52, 53
+        ],
+        [
+            8, 12, 9, 29, 26, 30, 25, 1, 34, 33, 35, 32, 36, 31, 44, 46, 45,
+            48, 47, 19, 20, 21, 22, 23, 24, 27, 28, 37, 38, 39, 40, 41, 42, 43
+        ],
+        [
+            'pelvis', 'left_hip', 'right_hip', 'left_knee', 'right_knee',
+            'left_ankle', 'right_ankle', 'neck', 'left_shoulder',
+            'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist',
+            'right_wrist', 'nose', 'right_eye', 'left_eye', 'right_ear',
+            'left_ear', 'left_bigtoe', 'left_smalltoe', 'left_heel',
+            'right_bigtoe', 'right_smalltoe', 'right_heel', 'right_hip_extra',
+            'left_hip_extra', 'neck_extra', 'headtop', 'pelvis_extra',
+            'thorax_extra', 'spine_extra', 'jaw_extra', 'head_extra'
+        ],
+    ]
+    mapped_result = get_mapping(src='smpl_49', dst='smpl_54', approximate=True)
+    assert SMPL_49_TO_SMPL_54 == mapped_result
+
+    # test SMPL_54 to SMPL_49
+    SMPL_54_TO_SMPL_49 = [
+        [i for i in range(49)],
+        [
+            24, 12, 17, 19, 21, 16, 18, 20, 0, 2, 5, 8, 1, 4, 7, 25, 26, 27,
+            28, 29, 30, 31, 32, 33, 34, 8, 5, 45, 46, 4, 7, 21, 19, 17, 16, 18,
+            20, 47, 48, 49, 50, 51, 52, 53, 24, 26, 25, 28, 27
+        ],
+        [
+            'nose_openpose', 'neck_openpose', 'right_shoulder_openpose',
+            'right_elbow_openpose', 'right_wrist_openpose',
+            'left_shoulder_openpose', 'left_elbow_openpose',
+            'left_wrist_openpose', 'pelvis_openpose', 'right_hip_openpose',
+            'right_knee_openpose', 'right_ankle_openpose', 'left_hip_openpose',
+            'left_knee_openpose', 'left_ankle_openpose', 'right_eye_openpose',
+            'left_eye_openpose', 'right_ear_openpose', 'left_ear_openpose',
+            'left_bigtoe_openpose', 'left_smalltoe_openpose',
+            'left_heel_openpose', 'right_bigtoe_openpose',
+            'right_smalltoe_openpose', 'right_heel_openpose', 'right_ankle',
+            'right_knee', 'right_hip_extra', 'left_hip_extra', 'left_knee',
+            'left_ankle', 'right_wrist', 'right_elbow', 'right_shoulder',
+            'left_shoulder', 'left_elbow', 'left_wrist', 'neck_extra',
+            'headtop', 'pelvis_extra', 'thorax_extra', 'spine_extra',
+            'jaw_extra', 'head_extra', 'nose', 'left_eye', 'right_eye',
+            'left_ear', 'right_ear'
+        ],
+    ]
+    mapped_result = get_mapping(src='smpl_54', dst='smpl_49', approximate=True)
+    assert SMPL_54_TO_SMPL_49 == mapped_result
+
+
 def test_cache():
     coco_wb_keypoints2d = np.ones((1, 133, 3))
     coco_wb_mask = np.ones((133, ))
@@ -131,3 +195,7 @@ def test_get_keypoint_idxs_by_part():
         assert len(head_idxs) == head_len[idx]
         for head_idx in head_idxs:
             assert type(head_idx) is int
+
+
+if __name__ == '__main__':
+    test_approximate_mapping()
