@@ -89,6 +89,7 @@ class HumanData(dict):
         ret_human_data = super().__new__(cls, args, kwargs)
         setattr(ret_human_data, '__temporal_len__', -1)
         setattr(ret_human_data, '__key_strict__', False)
+        setattr(ret_human_data, '__keypoints_compressed__', False)
         return ret_human_data
 
     @classmethod
@@ -159,6 +160,9 @@ class HumanData(dict):
                 value is True:
             self.pop_unsupported_items()
 
+    def check_keypoints_compressed(self) -> bool:
+        return self.__keypoints_compressed__
+
     def load(self, npz_path: str):
         """Load data from npz_path and update them to self.
 
@@ -175,6 +179,10 @@ class HumanData(dict):
                     value = value.item()
                 if value is None:
                     tmp_data_dict.pop(key)
+                elif key == '__key_strict__' or \
+                        key == '__temporal_len__' or\
+                        key == '__keypoints_compressed__':
+                    self.__setattr__(key, value)
                 elif key == 'bbox_xywh' and value.shape[1] == 4:
                     value = np.hstack([value, np.ones([value.shape[0], 1])])
                     tmp_data_dict[key] = value
@@ -203,7 +211,13 @@ class HumanData(dict):
         if not overwrite:
             if check_path_existence(npz_path, 'file') == Existence.FileExist:
                 raise FileExistsError
-        np.savez_compressed(npz_path, **self)
+        dict_to_dump = {
+            '__key_strict__': self.__key_strict__,
+            '__temporal_len__': self.__temporal_len__,
+            '__keypoints_compressed__': self.__keypoints_compressed__,
+        }
+        dict_to_dump.update(self)
+        np.savez_compressed(npz_path, **dict_to_dump)
 
     def to(self,
            device: Optional[Union[torch.device, str]] = _CPU_DEVICE,
@@ -266,9 +280,9 @@ class HumanData(dict):
 
     def __getitem__(self, key: _KT) -> _VT:
         """Get value defined by HumanData. This function will be called by
-        self[key]. If the key is among ['keypoints2d', 'keypoints3d'], An array
-        with zero-padding at absent keypoint will be returned. Call
-        self.get_raw_value(k) to get value without padding.
+        self[key]. In keypoints_compressed mode, if the key contains
+        'keypoints', an array with zero-padding at absent keypoint will be
+        returned. Call self.get_raw_value(k) to get value without padding.
 
         Args:
             key (_KT):
@@ -279,17 +293,16 @@ class HumanData(dict):
                 Value to the key.
         """
         value = super().__getitem__(key)
-        mask_key = f'{key}_mask'
-        if key in self and \
-                isinstance(value, np.ndarray) and \
-                'keypoints' in key and \
-                mask_key in self:
-            mask_array = np.asarray(super().__getitem__(mask_key))
-            ret_value = \
-                self.__class__.__add_zero_pad__(value, mask_array)
-            return ret_value
-        else:
-            return value
+        if self.__keypoints_compressed__:
+            mask_key = f'{key}_mask'
+            if key in self and \
+                    isinstance(value, np.ndarray) and \
+                    'keypoints' in key and \
+                    mask_key in self:
+                mask_array = np.asarray(super().__getitem__(mask_key))
+                value = \
+                    self.__class__.__add_zero_pad__(value, mask_array)
+        return value
 
     def get_raw_value(self, key: _KT) -> _VT:
         """Get raw value from the dict. It acts the same as
@@ -415,15 +428,20 @@ class HumanData(dict):
                         slice_list.append(slice(None))
                 raw_value = self.get_raw_value(key)
                 sliced_value = raw_value[tuple(slice_list)]
-                ret_human_data[key] = sliced_value
+                ret_human_data.set_raw_value(key, sliced_value)
+            elif key == 'image_path' and \
+                    len(self[key]) == self.__temporal_len__:
+                ret_human_data.set_raw_value(
+                    key,
+                    self.get_raw_value(key)[slice_index])
             else:
-                ret_human_data[key] = self.get_raw_value(key)
+                ret_human_data.set_raw_value(key, self.get_raw_value(key))
         return ret_human_data
 
     def __setitem__(self, key: _KT, val: _VT):
         """Set self[key] to value. Only be called when using
         human_data[key] = val. Methods like update won't call __setitem__.
-        If the key is among ['keypoints2d', 'keypoints3d'],
+        In keypoints_compressed mode, if the key contains 'keypoints',
         and f'{key}_mask' is in self.keys(), invalid zeros
         will be removed before setting value.
 
@@ -442,17 +460,35 @@ class HumanData(dict):
                 HumanData.SUPPORTED_KEYS.
             ValueError:
                 Value is supported but doesn't match definition.
+            ValueError:
+                self.check_keypoints_compressed() is True and
+                mask of a keypoint item is missing.
         """
         self.__check_key__(key)
         self.__check_value__(key, val)
         # if it can be compressed by mask
-        mask_key = f'{key}_mask'
-        if isinstance(val, np.ndarray) and \
-                'keypoints' in key and \
-                mask_key in self:
-            mask_array = np.asarray(super().__getitem__(mask_key))
-            val = \
-                self.__class__.__remove_zero_pad__(val, mask_array)
+        if self.__keypoints_compressed__:
+            class_logger = self.__class__.logger
+            if 'keypoints' in key and \
+                    '_mask' in key:
+                msg = 'Mask cannot be modified ' +\
+                      'in keypoints_compressed mode.'
+                print_log(msg=msg, logger=class_logger, level=logging.WARN)
+                return
+            elif isinstance(val, np.ndarray) and \
+                    'keypoints' in key and \
+                    '_mask' not in key:
+                mask_key = f'{key}_mask'
+                if mask_key in self:
+                    mask_array = np.asarray(super().__getitem__(mask_key))
+                    val = \
+                        self.__class__.__remove_zero_pad__(val, mask_array)
+                else:
+                    msg = f'Mask for {key} has not been set.' +\
+                        f' Please set {mask_key} before compression.'
+                    print_log(
+                        msg=msg, logger=class_logger, level=logging.ERROR)
+                    raise ValueError
         dict.__setitem__(self, key, val)
 
     def set_raw_value(self, key: _KT, val: _VT) -> None:
@@ -675,6 +711,78 @@ class HumanData(dict):
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
+
+    def compress_keypoints_by_mask(self):
+        """If a key contains 'keypoints', and f'{key}_mask' is in self.keys(),
+        invalid zeros will be removed and f'{key}_mask' will be locked.
+
+        Raises:
+            ValueError:
+                A key contains 'keypoints' has been found
+                but its corresponding mask is missing.
+        """
+        assert self.__keypoints_compressed__ is False
+        key_pairs = []
+        for key in self.keys():
+            mask_key = f'{key}_mask'
+            val = self.get_raw_value(key)
+            if isinstance(val, np.ndarray) and \
+                    'keypoints' in key and \
+                    '_mask' not in key:
+                if mask_key in self:
+                    key_pairs.append([key, mask_key])
+                else:
+                    msg = f'Mask for {key} has not been set.' +\
+                        f'Please set {mask_key} before compression.'
+                    raise KeyError(msg)
+        compressed_dict = {}
+        for kpt_key, mask_key in key_pairs:
+            kpt_array = self.get_raw_value(kpt_key)
+            mask_array = np.asarray(self.get_raw_value(mask_key))
+            compressed_kpt = \
+                self.__class__.__remove_zero_pad__(kpt_array, mask_array)
+            compressed_dict[kpt_key] = compressed_kpt
+        # set value after all pairs are compressed
+        self.update(compressed_dict)
+        self.__keypoints_compressed__ = True
+
+    def decompress_keypoints(self):
+        """If a key contains 'keypoints', and f'{key}_mask' is in self.keys(),
+        invalid zeros will be inserted to the right places and f'{key}_mask'
+        will be unlocked.
+
+        Raises:
+            ValueError:
+                A key contains 'keypoints' has been found
+                but its corresponding mask is missing.
+        """
+        assert self.__keypoints_compressed__ is True
+        key_pairs = []
+        for key in self.keys():
+            mask_key = f'{key}_mask'
+            val = self.get_raw_value(key)
+            if isinstance(val, np.ndarray) and \
+                    'keypoints' in key and \
+                    '_mask' not in key:
+                if mask_key in self:
+                    key_pairs.append([key, mask_key])
+                else:
+                    class_logger = self.__class__.logger
+                    msg = f'Mask for {key} has not been found.' +\
+                        f'Please remove {key} before decompression.'
+                    print_log(
+                        msg=msg, logger=class_logger, level=logging.ERROR)
+                    raise KeyError
+        decompressed_dict = {}
+        for kpt_key, mask_key in key_pairs:
+            mask_array = np.asarray(self.get_raw_value(mask_key))
+            compressed_kpt = self.get_raw_value(kpt_key)
+            kpt_array = \
+                self.__class__.__add_zero_pad__(compressed_kpt, mask_array)
+            decompressed_dict[kpt_key] = kpt_array
+        # set value after all pairs are decompressed
+        self.update(decompressed_dict)
+        self.__keypoints_compressed__ = False
 
     @classmethod
     def __add_zero_pad__(cls, compressed_array: np.ndarray,
