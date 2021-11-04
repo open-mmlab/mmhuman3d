@@ -148,7 +148,8 @@ def test_preprocessed_npz():
             N = npfile['video_path'].shape[0]
 
         for k in npfile.files:
-            assert (k in all_keys)
+            if not (k.startswith('__') and k.endswith('__')):
+                assert (k in all_keys)
             assert isinstance(npfile[k], np.ndarray)
 
             # check shape of every attributes

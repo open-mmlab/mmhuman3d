@@ -23,25 +23,25 @@ def test_set():
     # set item correctly
     human_data = HumanData()
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
-    human_data['keypoints2d'] = sample_keypoints2d
-    # set item with mask
-    human_data = HumanData()
-    sample_keypoints2d = np.zeros(shape=[3, 144, 3])
-    sample_keypoints2d_mask = np.zeros(shape=[144])
-    sample_keypoints2d_mask[0:4] = 1
+    sample_keypoints2d_mask = np.ones(shape=[144])
     human_data['keypoints2d_mask'] = sample_keypoints2d_mask
     human_data['keypoints2d'] = sample_keypoints2d
-    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
-    non_zero_padding_kp2d = human_data.get_raw_value('keypoints2d')
-    assert non_zero_padding_kp2d.shape[1] == 4
-    human_data.set_raw_value('keypoints2d', non_zero_padding_kp2d)
-    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
+    # set item without mask
+    human_data = HumanData()
+    sample_keypoints2d = np.zeros(shape=[3, 144, 3])
+    human_data['keypoints2d'] = sample_keypoints2d
     # strict==True does not allow unsupported keys
     human_data.set_key_strict(True)
     with pytest.raises(KeyError):
+        human_data['keypoints4d_mask'] = np.ones(shape=[
+            144,
+        ])
         human_data['keypoints4d'] = np.zeros(shape=[3, 144, 5])
     # strict==False allows unsupported keys
     human_data = HumanData.new(key_strict=False)
+    human_data['keypoints4d_mask'] = np.ones(shape=[
+        144,
+    ])
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     # test wrong value type
     with pytest.raises(ValueError):
@@ -68,21 +68,82 @@ def test_set():
     human_data = HumanData()
     human_data['bbox_xywh'] = np.zeros(shape=[2, 5])
     with pytest.raises(ValueError):
+        human_data['keypoints2d_mask'] = np.ones(shape=[
+            144,
+        ])
         human_data['keypoints2d'] = np.zeros(shape=[3, 144, 3])
     # test everything is right
     human_data = HumanData()
     human_data['bbox_xywh'] = np.zeros(shape=[2, 5])
+    human_data['keypoints2d_mask'] = np.ones(shape=[
+        144,
+    ])
     human_data['keypoints2d'] = np.zeros(shape=[2, 144, 3])
+
+
+def test_compression():
+    # set item with mask
+    human_data = HumanData.new(key_strict=False)
+    sample_keypoints2d = np.zeros(shape=[3, 144, 3])
+    sample_keypoints2d_mask = np.zeros(shape=[144], dtype=np.uint8)
+    sample_keypoints2d_mask[:5] += 1
+    human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data['keypoints2d'] = sample_keypoints2d
+    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
+    assert shape_equal(
+        human_data.get_raw_value('keypoints2d'), sample_keypoints2d)
+    human_data.set_raw_value('keypoints2d', sample_keypoints2d)
+    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
+    # compress when mask is missing
+    human_data.pop('keypoints2d_mask')
+    with pytest.raises(KeyError):
+        human_data.compress_keypoints_by_mask()
+    # compress correctly
+    human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data.compress_keypoints_by_mask()
+    non_zero_padding_kp2d = human_data.get_raw_value('keypoints2d')
+    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
+    assert non_zero_padding_kp2d.shape[1] < sample_keypoints2d.shape[1]
+    # re-compress a compressed humandata
+    with pytest.raises(AssertionError):
+        human_data.compress_keypoints_by_mask()
+    # modify mask when compressed
+    human_data['keypoints2d_mask'] = np.ones([
+        144,
+    ])
+    assert np.sum(human_data['keypoints2d_mask']) < 144
+    # modify keypoints by set_raw_value
+    human_data.set_raw_value('keypoints2d', non_zero_padding_kp2d)
+    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
+    # modify keypoints by setitem
+    human_data['keypoints2d'] = sample_keypoints2d
+    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
+    # test set new key after compression
+    with pytest.raises(ValueError):
+        human_data['keypoints3d'] = np.zeros(shape=[3, 144, 4])
+    human_data.decompress_keypoints()
+    assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
+    assert shape_equal(
+        human_data.get_raw_value('keypoints2d'), sample_keypoints2d)
+    # decompress a not compressed humandata
+    with pytest.raises(AssertionError):
+        human_data.decompress_keypoints()
 
 
 def test_pop_unsupported_items():
     # directly pop them
     human_data = HumanData.new(key_strict=False)
+    human_data['keypoints4d_mask'] = np.ones(shape=[
+        144,
+    ])
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     human_data.pop_unsupported_items()
     assert 'keypoints4d' not in human_data
     # pop when switching strict mode
     human_data = HumanData.new(key_strict=False)
+    human_data['keypoints4d_mask'] = np.ones(shape=[
+        144,
+    ])
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     human_data.set_key_strict(True)
     assert 'keypoints4d' not in human_data
@@ -154,6 +215,16 @@ def test_temporal_slice():
     assert \
         sliced_human_data.get_raw_value('keypoints2d')[1, 0, 0] == \
         raw_value[2, 0, 0]
+    # do not slice image_path when it has a wrong length
+    human_data.__temporal_len__ = 199
+    human_data['image_path'] = ['1.jpg', '2.jpg']
+    sliced_human_data = human_data.get_temporal_slice(1)
+    assert len(sliced_human_data['image_path']) == 2
+    # slice image_path when it is correct
+    image_list = [f'{index:04d}.jpg' for index in range(199)]
+    human_data['image_path'] = image_list
+    sliced_human_data = human_data.get_temporal_slice(0, 5, 2)
+    assert len(sliced_human_data['image_path']) == 3
 
 
 def test_load():
@@ -187,9 +258,16 @@ def test_construct_from_file():
 
 
 def test_dump():
-    human_data_load_path = 'tests/data/human_data/human_data_00.npz'
+    # set item with mask
     human_data = HumanData()
-    human_data.load(human_data_load_path)
+    sample_keypoints2d = np.zeros(shape=[3, 144, 3])
+    sample_keypoints2d_mask = np.zeros(shape=[144])
+    sample_keypoints2d_mask[:4] = 1
+    human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data['keypoints2d'] = sample_keypoints2d
+    # 3 frames before dump
+    assert human_data.__temporal_len__ == 3
+
     human_data_dump_path = 'tests/data/human_data/human_data_00_dump.npz'
     if check_path_existence(human_data_dump_path,
                             'file') == Existence.FileExist:
@@ -197,6 +275,11 @@ def test_dump():
     human_data.dump(human_data_dump_path, overwrite=True)
     assert check_path_existence(human_data_dump_path, 'file') == \
         Existence.FileExist
+    human_data_load = HumanData()
+    human_data_load.load(human_data_dump_path)
+    # 3 frames after load
+    assert human_data_load.__temporal_len__ == 3
+
     # wrong file extension
     with pytest.raises(ValueError):
         human_data.dump(
