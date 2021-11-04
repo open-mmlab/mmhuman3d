@@ -8,49 +8,49 @@ from mmhuman3d.utils.transforms import ee_to_rotmat, rotmat_to_ee
 
 CAMERA_CONVENTIONS = {
     'pytorch3d': {
-        'axis': '-xzy',
+        'axis': '-xyz',
         'left_mm_extrinsic': False,
         'view_to_world': False,
         'left_mm_intrinsic': True,
     },
     'pyrender': {
-        'axis': 'x-zy',
+        'axis': 'xy-z',
         'left_mm_extrinsic': True,
         'view_to_world': False,
         'left_mm_intrinsic': True,
     },
     'opengl': {
-        'axis': 'x-zy',
+        'axis': 'xy-z',
         'left_mm_extrinsic': True,
         'view_to_world': False,
         'left_mm_intrinsic': True,
     },
     'open3d': {
-        'axis': 'xz-y',
+        'axis': 'x-yz',
         'left_mm_extrinsic': False,
         'view_to_world': False,
         'left_mm_intrinsic': False,
     },
     'opencv': {
-        'axis': 'xz-y',
+        'axis': 'x-yz',
         'left_mm_extrinsic': True,
         'view_to_world': True,
         'left_mm_intrinsic': True,
     },
     'unity': {
-        'axis': 'xzy',
+        'axis': 'xyz',
         'left_mm_extrinsic': True,
         'view_to_world': False,
         'left_mm_intrinsic': True,
     },
     'blender': {
-        'axis': 'x-zy',
+        'axis': 'xy-z',
         'left_mm_extrinsic': True,
         'view_to_world': False,
         'left_mm_intrinsic': True,
     },
     'maya': {
-        'axis': 'x-zy',
+        'axis': 'xy-z',
         'left_mm_extrinsic': True,
         'view_to_world': False,
         'left_mm_intrinsic': True,
