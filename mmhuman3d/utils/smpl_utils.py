@@ -23,6 +23,8 @@ class SMPL_(smplx.SMPL):
         'global_orient',
         'body_pose',
     }
+    NUM_VERTS = 6890
+    NUM_FACES = 13776
 
     @classmethod
     def tensor2dict(cls,
@@ -45,6 +47,9 @@ class SMPL_(smplx.SMPL):
     @classmethod
     def dict2tensor(cls, smpl_dict):
         assert cls.body_pose_keys.issubset(smpl_dict)
+        for k in smpl_dict:
+            if isinstance(smpl_dict[k], np.ndarray):
+                smpl_dict[k] = torch.Tensor(smpl_dict[k])
         global_orient = smpl_dict['global_orient'].view(-1, 3)
         body_pose = smpl_dict['body_pose'].view(-1, 3 * cls.NUM_BODY_JOINTS)
         full_pose = torch.cat([global_orient, body_pose], dim=1)
@@ -57,6 +62,8 @@ class SMPLX_(smplx.SMPLX):
         'global_orient', 'body_pose', 'left_hand_pose', 'right_hand_pose',
         'jaw_pose', 'leye_pose', 'reye_pose'
     }
+    NUM_VERTS = 10475
+    NUM_FACES = 20908
 
     @classmethod
     def tensor2dict(cls,
@@ -108,6 +115,9 @@ class SMPLX_(smplx.SMPLX):
     @classmethod
     def dict2tensor(cls, smplx_dict):
         assert cls.body_pose_keys.issubset(smplx_dict)
+        for k in smplx_dict:
+            if isinstance(smplx_dict[k], np.ndarray):
+                smplx_dict[k] = torch.Tensor(smplx_dict[k])
         NUM_BODY_JOINTS = cls.NUM_BODY_JOINTS
         NUM_HAND_JOINTS = cls.NUM_HAND_JOINTS
         NUM_FACE_JOINTS = cls.NUM_FACE_JOINTS

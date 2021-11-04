@@ -363,7 +363,7 @@ class SMPLRenderer(MeshBaseRenderer):
                             torch.tensor([0.0, 1.0, 0.0, 1.0]).view(1, 1, 4))
                         joints_rgb_gt = torch.ones(
                             num_frame, num_joints_gt, 4) * (
-                                torch.tensor([0.0, 0.0, 1.0, 1.0]).view(
+                                torch.tensor([1.0, 0.0, 0.0, 1.0]).view(
                                     1, 1, 4))
                         joints_rgb_padded = torch.cat(
                             [joints_rgb, joints_rgb_gt], dim=1)

@@ -7,13 +7,14 @@ from functools import partial
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
+import mmcv
 import numpy as np
 import torch
 import torch.nn as nn
-from configs.render.smpl import RENDER_CONFIGS
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+import mmhuman3d
 from mmhuman3d.core.cameras import (
     WeakPerspectiveCameras,
     compute_orbit_cameras,
@@ -357,7 +358,10 @@ def render_smpl(
         poses = None
         transl = None
         betas = None
-
+    RENDER_CONFIGS = mmcv.Config.fromfile(
+        os.path.join(
+            Path(mmhuman3d.__file__).parents[1],
+            'configs/render/smpl.py'))['RENDER_CONFIGS']
     if isinstance(verts, np.ndarray):
         verts = torch.Tensor(verts)
         num_frame = verts.shape[0]

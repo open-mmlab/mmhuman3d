@@ -22,10 +22,10 @@ class NewAttributeCameras(cameras.CamerasBase):
         self.convention = convention
         in_ndc = kwargs.pop('_in_ndc')
         is_perspective = kwargs.pop('_is_perspective')
-        if self.__class__.__name__ in ('PerspectiveCameras',
-                                       'OrthographicCameras'):
-            kwargs.update(_in_ndc=in_ndc)
-        image_size = kwargs.get('image_size', None)
+
+        kwargs.update(_in_ndc=in_ndc)
+        image_size = kwargs.get('image_size', kwargs.get('resolution', None))
+        kwargs.update(image_size=image_size)
         if image_size is not None:
             if isinstance(image_size, (int, float)):
                 image_size = (image_size, image_size)
@@ -62,21 +62,22 @@ class NewAttributeCameras(cameras.CamerasBase):
                 convention_dst=convention,
                 in_ndc_src=in_ndc,
                 in_ndc_dst=in_ndc,
-                resolution_dst=kwargs.get('image_size'),
-                resolution_src=kwargs.get('image_size'))
+                resolution_dst=image_size,
+                resolution_src=image_size)
             kwargs.update(K=K)
 
         K, R, T = convert_cameras(
             K=kwargs.get('K'),
             R=kwargs.get('R', None),
             T=kwargs.get('T', None),
-            convention_src='pytorch3d',
-            convention_dst=convention,
+            convention_src=convention,
+            convention_dst='pytorch3d',
             is_perspective=is_perspective,
             in_ndc_src=in_ndc,
             in_ndc_dst=in_ndc,
-            resolution_src=kwargs.get('image_size', None),
-            resolution_dst=kwargs.get('image_size', None))
+            resolution_src=image_size,
+            resolution_dst=image_size)
+
         kwargs.update(K=K, R=R, T=T)
         super().__init__(**kwargs)
 
@@ -172,7 +173,8 @@ class NewAttributeCameras(cameras.CamerasBase):
                 is_perspective=self.is_perspective())
 
 
-@CAMERAS.register_module()
+@CAMERAS.register_module(
+    name=('WeakPerspectiveCameras', 'WeakPerspective', 'weakperspective'))
 class WeakPerspectiveCameras(NewAttributeCameras):
     """Inherited from (pytorch3d cameras)[https://github.com/facebookresearch/
     pytorch3d/blob/main/pytorch3d/renderer/cameras.py] and mimiced the code
@@ -434,7 +436,8 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         raise NotImplementedError()
 
 
-@CAMERAS.register_module()
+@CAMERAS.register_module(
+    name=('PerspectiveCameras', 'perspective', 'Perspective'))
 class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
 
     def __init__(
@@ -488,7 +491,8 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
             orthographic=False)
 
 
-@CAMERAS.register_module()
+@CAMERAS.register_module(
+    name=('FoVPerspectiveCameras', 'FoVPerspective', 'fovperspective'))
 class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
                             NewAttributeCameras):
 
@@ -568,7 +572,8 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
         raise NotImplementedError()
 
 
-@CAMERAS.register_module()
+@CAMERAS.register_module(
+    name=('OrthographicCameras', 'Orthographic', 'orthographic'))
 class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
 
     def __init__(
@@ -623,7 +628,8 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
             orthographic=True)
 
 
-@CAMERAS.register_module()
+@CAMERAS.register_module(
+    name=('FoVOrthographicCameras', 'FoVOrthographic', 'fovorthographic'))
 class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
                              NewAttributeCameras):
 

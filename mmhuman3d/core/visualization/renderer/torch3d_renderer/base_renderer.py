@@ -103,7 +103,7 @@ class MeshBaseRenderer(nn.Module):
         self.device = device
         self.output_path = output_path
 
-        print('output_path=', output_path, '/n')
+        print('output_path=', output_path)
         self.return_tensor = return_tensor
         self.resolution = resolution
         self.projection = projection

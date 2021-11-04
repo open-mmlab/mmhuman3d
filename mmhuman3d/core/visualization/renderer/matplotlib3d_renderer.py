@@ -310,8 +310,8 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
 
 
 def _set_new_pose(pose_np, sign, axis):
-    target_sign = [-1, 1, 1]
-    target_axis = ['x', 'y', 'z']
+    target_sign = [-1, 1, -1]
+    target_axis = ['x', 'z', 'y']
 
     pose_rearrange_axis_result = pose_np.copy()
     for axis_index, axis_name in enumerate(target_axis):
