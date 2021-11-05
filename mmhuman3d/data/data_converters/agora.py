@@ -191,6 +191,7 @@ class AgoraConverter(BaseModeConverter):
             human_data['smplx'] = smplx
         else:
             human_data['smpl'] = smpl
+        human_data.compress_keypoints_by_mask()
 
         # store data
         if not os.path.isdir(out_path):
