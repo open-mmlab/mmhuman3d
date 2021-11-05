@@ -163,6 +163,7 @@ class H36mConverter(BaseModeConverter):
         human_data['keypoints2d'] = keypoints2d_
         human_data['keypoints3d'] = keypoints3d_
         human_data['config'] = 'h36m'
+        human_data.compress_keypoints_by_mask()
 
         # store the data struct
         if not os.path.isdir(out_path):

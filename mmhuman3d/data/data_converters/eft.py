@@ -88,6 +88,7 @@ class EftConverter(BaseModeConverter):
         human_data['keypoints2d'] = keypoints2d_
         human_data['smpl'] = smpl
         human_data['config'] = 'eft'
+        human_data.compress_keypoints_by_mask()
 
         # store the data struct
         if not os.path.isdir(out_path):
