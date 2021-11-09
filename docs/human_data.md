@@ -143,6 +143,8 @@ another_human_data = HumanData()
 another_human_data.load('./dumped_human_data.npz')
 ```
 
+Sometimes a HumanData instanse is too large to dump, an error will be raised by `numpy.savez_compressed()`. In this case, call `dump_by_pickle`  and `load_by_pickle` for file operation.
+
 #### Compression by key
 
 If a HumanData instance is in not in key_strict mode, it may contains unsupported items which are not necessary. Call `pop_unsupported_items()` to remove those items will save space for you:

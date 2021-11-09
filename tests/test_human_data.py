@@ -289,6 +289,39 @@ def test_dump():
         human_data.dump(human_data_dump_path, overwrite=False)
 
 
+def test_dump_by_pickle():
+    # set item with mask
+    human_data = HumanData()
+    sample_keypoints2d = np.zeros(shape=[3, 144, 3])
+    sample_keypoints2d_mask = np.zeros(shape=[144])
+    sample_keypoints2d_mask[:4] = 1
+    human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data['keypoints2d'] = sample_keypoints2d
+    human_data.compress_keypoints_by_mask()
+    # 3 frames before dump
+    assert human_data.__temporal_len__ == 3
+
+    human_data_dump_path = 'tests/data/human_data/human_data_00_dump.pkl'
+    if check_path_existence(human_data_dump_path,
+                            'file') == Existence.FileExist:
+        os.remove(human_data_dump_path)
+    human_data.dump_by_pickle(human_data_dump_path, overwrite=True)
+    assert check_path_existence(human_data_dump_path, 'file') == \
+        Existence.FileExist
+    human_data_load = HumanData()
+    human_data_load.load_by_pickle(human_data_dump_path)
+    # 3 frames after load
+    assert human_data_load.__temporal_len__ == 3
+
+    # wrong file extension
+    with pytest.raises(ValueError):
+        human_data.dump_by_pickle(
+            human_data_dump_path.replace('.pkl', '.jpg'), overwrite=True)
+    # file exists
+    with pytest.raises(FileExistsError):
+        human_data.dump_by_pickle(human_data_dump_path, overwrite=False)
+
+
 def test_log():
     HumanData.set_logger('silent')
     test_set()

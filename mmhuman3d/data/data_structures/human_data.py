@@ -1,4 +1,5 @@
 import logging
+import pickle
 from enum import Enum
 from typing import Any, Optional, Type, TypeVar, Union, overload
 
@@ -783,6 +784,64 @@ class HumanData(dict):
         # set value after all pairs are decompressed
         self.update(decompressed_dict)
         self.__keypoints_compressed__ = False
+
+    def dump_by_pickle(self, pkl_path: str, overwrite: bool = True):
+        """Dump keys and items to a pickle file. It's a secondary dump method,
+        when a HumanData instance is too large to be dumped by self.dump()
+
+        Args:
+            pkl_path (str):
+                Path to a dumped pickle file.
+            overwrite (bool, optional):
+                Whether to overwrite if there is already a file.
+                Defaults to True.
+
+        Raises:
+            ValueError:
+                npz_path does not end with '.pkl'.
+            FileExistsError:
+                When overwrite is False and file exists.
+        """
+        if not check_path_suffix(pkl_path, ['.pkl']):
+            raise ValueError('Not an pkl file.')
+        if not overwrite:
+            if check_path_existence(pkl_path, 'file') == Existence.FileExist:
+                raise FileExistsError
+        dict_to_dump = {
+            '__key_strict__': self.__key_strict__,
+            '__temporal_len__': self.__temporal_len__,
+            '__keypoints_compressed__': self.__keypoints_compressed__,
+        }
+        dict_to_dump.update(self)
+        with open(pkl_path, 'wb') as f_writeb:
+            pickle.dump(
+                dict_to_dump, f_writeb, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load_by_pickle(self, pkl_path: str):
+        """Load data from pkl_path and update them to self.
+
+        When a HumanData Instance was dumped by
+        self.dump_by_pickle(), use this to load.
+        Args:
+            npz_path (str):
+                Path to a dumped npz file.
+        """
+        with open(pkl_path, 'rb') as f_readb:
+            tmp_data_dict = pickle.load(f_readb)
+            for key, value in list(tmp_data_dict.items()):
+                if value is None:
+                    tmp_data_dict.pop(key)
+                elif key == '__key_strict__' or \
+                        key == '__temporal_len__' or\
+                        key == '__keypoints_compressed__':
+                    self.__setattr__(key, value)
+                    tmp_data_dict.pop(key)
+                elif key == 'bbox_xywh' and value.shape[1] == 4:
+                    value = np.hstack([value, np.ones([value.shape[0], 1])])
+                    tmp_data_dict[key] = value
+                else:
+                    tmp_data_dict[key] = value
+            self.update(tmp_data_dict)
 
     @classmethod
     def __add_zero_pad__(cls, compressed_array: np.ndarray,
