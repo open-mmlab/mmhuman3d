@@ -14,7 +14,8 @@ def get_affine_transform(center,
                          rot,
                          output_size,
                          shift=(0., 0.),
-                         inv=False):
+                         inv=False,
+                         pixel_std=200.0):
     """Get the affine transform matrix, given the center/scale/rot/output_size.
 
     Args:
@@ -37,7 +38,7 @@ def get_affine_transform(center,
     assert len(shift) == 2
 
     # pixel_std is 200.
-    scale_tmp = scale * 200.0
+    scale_tmp = scale * pixel_std
 
     shift = np.array(shift)
     src_w = scale_tmp[0]

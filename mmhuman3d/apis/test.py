@@ -26,7 +26,10 @@ def single_gpu_test(model,
             result = model(return_loss=False, **data)
 
         batch_size = len(result)
-        results.extend(result)
+        if isinstance(result, list):
+            results.extend(result)
+        else:
+            results.append(result)
 
         if show or out_dir:
             scores = np.vstack(result)
