@@ -35,7 +35,18 @@ DATASET_CONFIGS = dict(
         modes=['train', 'val'],
         prefix='PoseTrack/data'),
     eft=dict(
-        type='EftConverter', modes=['coco_all', 'coco_part', 'mpii', 'lspet']))
+        type='EftConverter', modes=['coco_all', 'coco_part', 'mpii', 'lspet']),
+    coco_hybrik=dict(type='CocoHybrIKConverter', prefix='coco/train_2017'),
+    pw3d_hybrik=dict(type='Pw3dHybrIKConverter', prefix='hybrik_data'),
+    h36m_hybrik=dict(
+        type='H36mHybrIKConverter',
+        modes=['train', 'test'],
+        prefix='hybrik_data'),
+    mpi_inf_3dhp_hybrik=dict(
+        type='MpiInf3dhpHybrIKConverter',
+        modes=['train', 'test'],
+        prefix='hybrik_data'),
+)
 
 
 def parse_args():

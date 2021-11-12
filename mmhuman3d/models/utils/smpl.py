@@ -1,18 +1,19 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 # TODO:
 # 1. the use of mask in output
-
 import numpy as np
 import torch
 from smplx import SMPL as _SMPL
 from smplx import SMPLX as _SMPLX
-from smplx.lbs import vertices2joints
+from smplx.lbs import batch_rigid_transform, blend_shapes, vertices2joints
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_num,
 )
 from mmhuman3d.models.builder import BODY_MODELS
+from mmhuman3d.utils.transforms import quat_to_rotmat, rotmat_to_quat
+from .inverse_kinematics import batch_inverse_kinematics_transform
 
 
 @BODY_MODELS.register_module()
@@ -483,3 +484,237 @@ J24_FLIP_PERM = [
 J49_FLIP_PERM = [0, 1, 5, 6, 7, 2, 3, 4, 8, 12, 13, 14, 9, 10, 11, 16, 15,
                  18, 17, 22, 23, 24, 19, 20, 21] + \
                 [25+i for i in J24_FLIP_PERM]
+
+
+def to_tensor(array, dtype=torch.float32):
+    if 'torch.tensor' not in str(type(array)):
+        return torch.tensor(array, dtype=dtype)
+
+
+def to_np(array, dtype=np.float32):
+    if 'scipy.sparse' in str(type(array)):
+        array = array.todense()
+    return np.array(array, dtype=dtype)
+
+
+@BODY_MODELS.register_module()
+class HybrIKSMPL(SMPL):
+
+    NUM_JOINTS = 23
+    NUM_BODY_JOINTS = 23
+    NUM_BETAS = 10
+    JOINT_NAMES = [
+        'pelvis',
+        'left_hip',
+        'right_hip',  # 2
+        'spine1',
+        'left_knee',
+        'right_knee',  # 5
+        'spine2',
+        'left_ankle',
+        'right_ankle',  # 8
+        'spine3',
+        'left_foot',
+        'right_foot',  # 11
+        'neck',
+        'left_collar',
+        'right_collar',  # 14
+        'jaw',  # 15
+        'left_shoulder',
+        'right_shoulder',  # 17
+        'left_elbow',
+        'right_elbow',  # 19
+        'left_wrist',
+        'right_wrist',  # 21
+        'left_thumb',
+        'right_thumb',  # 23
+        'head',
+        'left_middle',
+        'right_middle',  # 26
+        'left_bigtoe',
+        'right_bigtoe'  # 28
+    ]
+    LEAF_NAMES = [
+        'head', 'left_middle', 'right_middle', 'left_bigtoe', 'right_bigtoe'
+    ]
+    root_idx_17 = 0
+    root_idx_smpl = 0
+
+    def __init__(self, *args, extra_joints_regressor=None, **kwargs):
+
+        super(HybrIKSMPL, self).__init__(
+            *args,
+            extra_joints_regressor=extra_joints_regressor,
+            create_betas=False,
+            create_global_orient=False,
+            create_body_pose=False,
+            create_transl=False,
+            **kwargs)
+
+        self.dtype = torch.float32
+        self.num_joints = 29
+
+        self.ROOT_IDX = self.JOINT_NAMES.index('pelvis')
+        self.LEAF_IDX = [
+            self.JOINT_NAMES.index(name) for name in self.LEAF_NAMES
+        ]
+        self.SPINE3_IDX = 9
+        # # indices of parents for each joints
+        parents = torch.zeros(len(self.JOINT_NAMES), dtype=torch.long)
+        # extend kinematic tree
+        parents[:24] = self.parents
+        parents[24] = 15
+        parents[25] = 22
+        parents[26] = 23
+        parents[27] = 10
+        parents[28] = 11
+        if parents.shape[0] > self.num_joints:
+            parents = parents[:24]
+        self.register_buffer('children_map',
+                             self._parents_to_children(parents))
+        self.parents = parents
+
+    def _parents_to_children(self, parents):
+        children = torch.ones_like(parents) * -1
+        for i in range(self.num_joints):
+            if children[parents[i]] < 0:
+                children[parents[i]] = i
+        for i in self.LEAF_IDX:
+            if i < children.shape[0]:
+                children[i] = -1
+
+        children[self.SPINE3_IDX] = -3
+        children[0] = 3
+        children[self.SPINE3_IDX] = self.JOINT_NAMES.index('neck')
+
+        return children
+
+    def forward(self,
+                pose_skeleton,
+                betas,
+                phis,
+                global_orient,
+                transl=None,
+                return_verts=True,
+                leaf_thetas=None):
+        """Inverse pass for the SMPL model.
+
+        Parameters
+        ----------
+        pose_skeleton: torch.tensor, optional, shape Bx(J*3)
+            It should be a tensor that contains joint locations in
+            (img, Y, Z) format. (default=None)
+        betas: torch.tensor, optional, shape Bx10
+            It can used if shape parameters
+            `betas` are predicted from some external model.
+            (default=None)
+        global_orient: torch.tensor, optional, shape Bx3
+            Global Orientations.
+        transl: torch.tensor, optional, shape Bx3
+            Global Translations.
+        return_verts: bool, optional
+            Return the vertices. (default=True)
+
+        Returns
+        -------
+        """
+        batch_size = pose_skeleton.shape[0]
+
+        if leaf_thetas is not None:
+            leaf_thetas = leaf_thetas.reshape(batch_size * 5, 4)
+            leaf_thetas = quat_to_rotmat(leaf_thetas)
+
+        batch_size = max(betas.shape[0], pose_skeleton.shape[0])
+        device = betas.device
+
+        # 1. Add shape contribution
+        v_shaped = self.v_template + blend_shapes(betas, self.shapedirs)
+
+        # 2. Get the rest joints
+        # NxJx3 array
+        if leaf_thetas is not None:
+            rest_J = vertices2joints(self.J_regressor, v_shaped)
+        else:
+            rest_J = torch.zeros((v_shaped.shape[0], 29, 3),
+                                 dtype=self.dtype,
+                                 device=device)
+            rest_J[:, :24] = vertices2joints(self.J_regressor, v_shaped)
+
+            leaf_number = [411, 2445, 5905, 3216, 6617]
+            leaf_vertices = v_shaped[:, leaf_number].clone()
+            rest_J[:, 24:] = leaf_vertices
+
+        # 3. Get the rotation matrics
+        rot_mats, rotate_rest_pose = batch_inverse_kinematics_transform(
+            pose_skeleton,
+            global_orient,
+            phis,
+            rest_J.clone(),
+            self.children_map,
+            self.parents,
+            dtype=self.dtype,
+            train=self.training,
+            leaf_thetas=leaf_thetas)
+
+        test_joints = True
+        if test_joints:
+            new_joints, A = batch_rigid_transform(
+                rot_mats,
+                rest_J[:, :24].clone(),
+                self.parents[:24],
+                dtype=self.dtype)
+        else:
+            new_joints = None
+
+        # assert torch.mean(torch.abs(rotate_rest_pose - new_joints)) < 1e-5
+        # 4. Add pose blend shapes
+        # rot_mats: N x (J + 1) x 3 x 3
+        ident = torch.eye(3, dtype=self.dtype, device=device)
+        pose_feature = (rot_mats[:, 1:] - ident).view([batch_size, -1])
+        pose_offsets = torch.matmul(pose_feature, self.posedirs) \
+            .view(batch_size, -1, 3)
+
+        v_posed = pose_offsets + v_shaped
+
+        # 5. Do skinning:
+        # W is N x V x (J + 1)
+        W = self.lbs_weights.unsqueeze(dim=0).expand([batch_size, -1, -1])
+        # (N x V x (J + 1)) x (N x (J + 1) x 16)
+        num_joints = self.J_regressor.shape[0]
+        T = torch.matmul(W, A.view(batch_size, num_joints, 16)) \
+            .view(batch_size, -1, 4, 4)
+
+        homogen_coord = torch.ones([batch_size, v_posed.shape[1], 1],
+                                   dtype=self.dtype,
+                                   device=device)
+        v_posed_homo = torch.cat([v_posed, homogen_coord], dim=2)
+        v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, dim=-1))
+
+        vertices = v_homo[:, :, :3, 0]
+        joints_from_verts = vertices2joints(self.joints_regressor_extra,
+                                            vertices)
+
+        rot_mats = rot_mats.reshape(batch_size * 24, 3, 3)
+        rot_mats = rotmat_to_quat(rot_mats).reshape(batch_size, 24 * 4)
+
+        if transl is not None:
+            new_joints += transl.unsqueeze(dim=1)
+            vertices += transl.unsqueeze(dim=1)
+            joints_from_verts += transl.unsqueeze(dim=1)
+        else:
+            vertices = vertices - joints_from_verts[:, self.
+                                                    root_idx_17, :].unsqueeze(
+                                                        1).detach()
+            new_joints = new_joints - new_joints[:, self.
+                                                 root_idx_smpl, :].unsqueeze(
+                                                     1).detach()
+            joints_from_verts = joints_from_verts - \
+                joints_from_verts[:, self.root_idx_17, :].unsqueeze(1).detach()
+
+        output = {
+            'vertices': vertices,
+            'joints': new_joints,
+            'rot_mats': rot_mats,
+            'joints_from_verts': joints_from_verts,
+        }
+        return output

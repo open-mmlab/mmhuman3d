@@ -12,6 +12,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     crowdpose,
     h36m,
     human_data,
+    hybrik,
     lsp,
     mpi_inf_3dhp,
     mpii,
@@ -46,6 +47,8 @@ KEYPOINTS_FACTORY = {
     'posetrack': posetrack.POSETRACK_KEYPOINTS,
     'openpose_25': openpose.OPENPOSE_25_KEYPOINTS,
     'openpose_135': openpose.OPENPOSE_135_KEYPOINTS,
+    'hybrik_29': hybrik.HYBRIK_29_KEYPOINTS,
+    'hybrik_hp3d': mpi_inf_3dhp.HYBRIK_MPI_INF_3DHP_KEYPOINTS,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
