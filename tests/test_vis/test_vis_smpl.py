@@ -13,7 +13,7 @@ from mmhuman3d.core.visualization import (
 )
 from mmhuman3d.utils.ffmpeg_utils import array_to_video, video_to_array
 
-body_model_dir = 'body_models'
+body_model_dir = 'data/body_models'
 
 
 def test_visualize_smpl_pose():

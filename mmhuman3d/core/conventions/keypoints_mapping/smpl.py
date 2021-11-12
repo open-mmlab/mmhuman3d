@@ -120,6 +120,34 @@ SMPL_49_KEYPOINTS = [
     'right_ear'
 ]
 
+SMPL_24_KEYPOINTS = [
+    # 24 Keypoints
+    'right_ankle',
+    'right_knee',
+    'right_hip_extra',
+    'left_hip_extra',
+    'left_knee',
+    'left_ankle',
+    'right_wrist',
+    'right_elbow',
+    'right_shoulder',
+    'left_shoulder',
+    'left_elbow',
+    'left_wrist',
+    'neck_lsp',  # LSP
+    'headtop',  # LSP mpii peen_action mpi_inf_3dhp
+    'pelvis_mpii',
+    'thorax_mpii',  # MPII
+    'spine_h36m',
+    'jaw_h36m',  # 'jaw'
+    'head_h36m',  # 'head'
+    'nose',
+    'left_eye',
+    'right_eye',
+    'left_ear',
+    'right_ear'
+]
+
 # TODO: temporary solution
 # duplicates in SMPL_49 requires special treatment
 SMPL_54_TO_SMPL_49 = [
@@ -154,4 +182,19 @@ SMPL_54_TO_SMPL_49 = [
     ],
     # approximate
     [True]
+]
+
+SMPL_54_TO_SMPL_24 = [
+
+    # dst
+    [i for i in range(24)],
+
+    # src
+    [
+        8, 5, 45, 46, 4, 7, 21, 19, 17, 16, 18, 20, 47, 48, 49, 50, 51, 52, 53,
+        24, 26, 25, 28, 27
+    ],
+
+    # intersection
+    []
 ]

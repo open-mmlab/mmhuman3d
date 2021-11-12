@@ -5,9 +5,13 @@
 import numpy as np
 import torch
 from smplx import SMPL as _SMPL
+from smplx import SMPLX as _SMPLX
 from smplx.lbs import vertices2joints
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_keypoint_num,
+)
 from mmhuman3d.models.builder import BODY_MODELS
 
 
@@ -18,7 +22,8 @@ class SMPL(_SMPL):
     def __init__(self,
                  *args,
                  keypoint_src='smpl_45',
-                 keypoint_dst='human_data_1.0',
+                 keypoint_dst='human_data',
+                 keypoint_approximate=False,
                  joints_regressor=None,
                  extra_joints_regressor=None,
                  **kwargs):
@@ -26,23 +31,23 @@ class SMPL(_SMPL):
         # joints = [JOINT_MAP[i] for i in JOINT_NAMES]
         self.keypoint_src = keypoint_src
         self.keypoint_dst = keypoint_dst
+        self.keypoint_approximate = keypoint_approximate
 
-        # update the default SMPL joint regressor if available
+        # override the default SMPL joint regressor if available
         if joints_regressor is not None:
             joints_regressor = torch.tensor(
-                np.load(joints_regressor), dtype=torch.float)[None, ...]
-            self.register_buffer('J_regressor', joints_regressor)
+                np.load(joints_regressor), dtype=torch.float)
+            self.register_buffer('joints_regressor', joints_regressor)
 
         # allow for extra joints to be regressed if available
         if extra_joints_regressor is not None:
-            J_regressor_extra = np.load(extra_joints_regressor)
-            self.register_buffer(
-                'J_regressor_extra',
-                torch.tensor(J_regressor_extra, dtype=torch.float32))
+            joints_regressor_extra = torch.tensor(
+                np.load(extra_joints_regressor), dtype=torch.float)
+            self.register_buffer('joints_regressor_extra',
+                                 joints_regressor_extra)
 
-        # self.joint_map = torch.tensor(joints, dtype=torch.long)
         self.num_verts = self.get_num_verts()
-        self.num_joints = self.J_regressor.shape[1]
+        self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
 
     def forward(self,
                 *args,
@@ -51,16 +56,26 @@ class SMPL(_SMPL):
                 **kwargs):
         kwargs['get_skin'] = True
         smpl_output = super(SMPL, self).forward(*args, **kwargs)
-        joints = smpl_output.joints
 
-        if hasattr(self, 'J_regressor_extra'):
-            extra_joints = vertices2joints(self.J_regressor_extra,
+        if not hasattr(self, 'joints_regressor'):
+            joints = smpl_output.joints
+        else:
+            joints = vertices2joints(self.joints_regressor,
+                                     smpl_output.vertices)
+
+        if hasattr(self, 'joints_regressor_extra'):
+            extra_joints = vertices2joints(self.joints_regressor_extra,
                                            smpl_output.vertices)
             joints = torch.cat([joints, extra_joints], dim=1)
 
-        # convert keypoints if needed
         joints, joint_mask = convert_kps(
-            joints, src=self.keypoint_src, dst=self.keypoint_dst)
+            joints,
+            src=self.keypoint_src,
+            dst=self.keypoint_dst,
+            approximate=self.keypoint_approximate)
+        if isinstance(joint_mask, np.ndarray):
+            joint_mask = torch.tensor(
+                joint_mask, dtype=torch.uint8, device=joints.device)
 
         output = dict(
             global_orient=smpl_output.global_orient,
@@ -78,7 +93,83 @@ class SMPL(_SMPL):
 
 
 @BODY_MODELS.register_module()
-class GenderedSMPL(SMPL):
+class SMPLX(_SMPLX):
+
+    def __init__(self,
+                 *args,
+                 keypoint_src='smplx',
+                 keypoint_dst='human_data',
+                 keypoint_approximate=False,
+                 joints_regressor=None,
+                 extra_joints_regressor=None,
+                 **kwargs):
+        super(SMPLX, self).__init__(*args, **kwargs)
+        # joints = [JOINT_MAP[i] for i in JOINT_NAMES]
+        self.keypoint_src = keypoint_src
+        self.keypoint_dst = keypoint_dst
+        self.keypoint_approximate = keypoint_approximate
+
+        # override the default SMPL joint regressor if available
+        if joints_regressor is not None:
+            joints_regressor = torch.tensor(
+                np.load(joints_regressor), dtype=torch.float)
+            self.register_buffer('joints_regressor', joints_regressor)
+
+        # allow for extra joints to be regressed if available
+        if extra_joints_regressor is not None:
+            joints_regressor_extra = torch.tensor(
+                np.load(extra_joints_regressor), dtype=torch.float)
+            self.register_buffer('joints_regressor_extra',
+                                 joints_regressor_extra)
+
+        self.num_verts = self.get_num_verts()
+        self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
+
+    def forward(self,
+                *args,
+                return_verts=True,
+                return_full_pose=False,
+                **kwargs):
+        kwargs['get_skin'] = True
+        smplx_output = super(SMPLX, self).forward(*args, **kwargs)
+
+        if not hasattr(self, 'joints_regressor'):
+            joints = smplx_output.joints
+        else:
+            joints = vertices2joints(self.joints_regressor,
+                                     smplx_output.vertices)
+
+        if hasattr(self, 'joints_regressor_extra'):
+            extra_joints = vertices2joints(self.joints_regressor_extra,
+                                           smplx_output.vertices)
+            joints = torch.cat([joints, extra_joints], dim=1)
+
+        joints, joint_mask = convert_kps(
+            joints,
+            src=self.keypoint_src,
+            dst=self.keypoint_dst,
+            approximate=self.keypoint_approximate)
+        if isinstance(joint_mask, np.ndarray):
+            joint_mask = torch.tensor(
+                joint_mask, dtype=torch.uint8, device=joints.device)
+
+        output = dict(
+            global_orient=smplx_output.global_orient,
+            body_pose=smplx_output.body_pose,
+            joints=joints,
+            joint_mask=joint_mask,
+            betas=smplx_output.betas)
+
+        if return_verts:
+            output['vertices'] = smplx_output.vertices
+        if return_full_pose:
+            output['full_pose'] = smplx_output.full_pose
+
+        return output
+
+
+@BODY_MODELS.register_module()
+class GenderedSMPL(torch.nn.Module):
     """SMPL 3d human mesh model of paper ref: Matthew Loper.
 
     ``SMPL: A skinned
@@ -96,10 +187,12 @@ class GenderedSMPL(SMPL):
     def __init__(self,
                  *args,
                  keypoint_src='smpl_45',
-                 keypoint_dst='human_data_1.0',
+                 keypoint_dst='human_data',
+                 keypoint_approximate=False,
                  joints_regressor=None,
                  extra_joints_regressor=None,
                  **kwargs):
+        super(GenderedSMPL, self).__init__()
 
         assert 'gender' not in kwargs, \
             self.__class__.__name__ + \
@@ -110,6 +203,7 @@ class GenderedSMPL(SMPL):
             gender='neutral',
             keypoint_src=keypoint_src,
             keypoint_dst=keypoint_dst,
+            keypoint_approximate=keypoint_approximate,
             joints_regressor=joints_regressor,
             extra_joints_regressor=extra_joints_regressor,
             **kwargs)
@@ -119,6 +213,7 @@ class GenderedSMPL(SMPL):
             gender='male',
             keypoint_src=keypoint_src,
             keypoint_dst=keypoint_dst,
+            keypoint_approximate=keypoint_approximate,
             joints_regressor=joints_regressor,
             extra_joints_regressor=extra_joints_regressor,
             **kwargs)
@@ -128,23 +223,25 @@ class GenderedSMPL(SMPL):
             gender='female',
             keypoint_src=keypoint_src,
             keypoint_dst=keypoint_dst,
+            keypoint_approximate=keypoint_approximate,
             joints_regressor=joints_regressor,
             extra_joints_regressor=extra_joints_regressor,
             **kwargs)
 
-        self.num_verts = self.smpl_neutral.get_num_verts()
-        self.num_joints = self.smpl_neutral.J_regressor.shape[1]
+        self.num_verts = self.smpl_neutral.num_verts
+        self.num_joints = self.smpl_neutral.num_joints
         self.faces = self.smpl_neutral.faces
 
     def forward(self,
                 *args,
-                betas,
-                body_pose,
-                global_orient,
+                betas=None,
+                body_pose=None,
+                global_orient=None,
                 transl=None,
                 return_verts=True,
                 return_full_pose=False,
                 gender=None,
+                device=None,
                 **kwargs):
         """Forward function.
         Note:
@@ -162,6 +259,7 @@ class GenderedSMPL(SMPL):
             transl: Tensor([B, 3]), global translation of human body.
             gender: Tensor([B]), gender parameters of human body. -1 for
                 neutral, 0 for male , 1 for female.
+            device: the device of the output
         Returns:
             outputs (dict): Dict with mesh vertices and joints.
                 - vertices: Tensor([B, V, 3]), mesh vertices
@@ -169,40 +267,59 @@ class GenderedSMPL(SMPL):
                     mesh vertices.
         """
 
-        batch_size = betas.shape[0]
+        batch_size = None
+        for attr in [betas, body_pose, global_orient, transl]:
+            if attr is not None:
+                if device is None:
+                    device = attr.device
+                if batch_size is None:
+                    batch_size = attr.shape[0]
+                else:
+                    assert batch_size == attr.shape[0]
+
         if gender is not None:
             output = {
-                'vertices': betas.new_zeros([batch_size, self.num_verts, 3]),
-                'joints': betas.new_zeros([batch_size, self.num_joints, 3]),
-                'joint_mask': betas.new_zeros([batch_size, self.num_joints])
+                'vertices':
+                torch.zeros([batch_size, self.num_verts, 3], device=device),
+                'joints':
+                torch.zeros([batch_size, self.num_joints, 3], device=device),
+                'joint_mask':
+                torch.zeros([batch_size, self.num_joints],
+                            dtype=torch.uint8,
+                            device=device)
             }
 
-            for body_model, gender_idx in \
+            for body_model, gender_label in \
                     [(self.smpl_neutral, -1),
                      (self.smpl_male, 0),
                      (self.smpl_female, 1)]:
-
-                mask = gender == gender_idx
+                gender_idxs = gender == gender_label
 
                 # skip if no such gender is present
-                if mask.sum() == 0:
+                if gender_idxs.sum() == 0:
                     continue
 
                 output_model = body_model(
-                    betas=betas[mask],
-                    body_pose=body_pose[mask],
-                    global_orient=global_orient[mask],
-                    transl=transl[mask] if transl is not None else None,
+                    betas=betas[gender_idxs] if betas is not None else None,
+                    body_pose=body_pose[gender_idxs]
+                    if body_pose is not None else None,
+                    global_orient=global_orient[gender_idxs]
+                    if global_orient is not None else None,
+                    transl=transl[gender_idxs] if transl is not None else None,
                     **kwargs)
 
-                output['joints'][mask] = output_model['joints']
-                output['joint_mask'][mask] = output_model['joint_mask']
+                output['joints'][gender_idxs] = output_model['joints']
+
+                # TODO: quick fix
+                if 'joint_mask' in output_model:
+                    output['joint_mask'][gender_idxs] = output_model[
+                        'joint_mask']
 
                 if return_verts:
-                    output['vertices'][mask] = output_model['vertices']
+                    output['vertices'][gender_idxs] = output_model['vertices']
                 if return_full_pose:
-                    output['full_pose'][mask] = output_model['full_pose']
-
+                    output['full_pose'][gender_idxs] = output_model[
+                        'full_pose']
         else:
             output = self.smpl_neutral(
                 betas=betas,

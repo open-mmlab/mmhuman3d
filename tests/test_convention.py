@@ -8,7 +8,9 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     KEYPOINTS_FACTORY,
     convert_kps,
     get_flip_pairs,
+    get_keypoint_idx,
     get_keypoint_idxs_by_part,
+    get_keypoint_num,
     get_mapping,
 )
 
@@ -197,5 +199,30 @@ def test_get_keypoint_idxs_by_part():
             assert type(head_idx) is int
 
 
-if __name__ == '__main__':
-    test_approximate_mapping()
+def test_get_keypoint_idx():
+    keypoint_names = \
+        ['neck_openpose',
+         'left_shoulder_openpose', 'right_shoulder_openpose',
+         'left_hip_openpose', 'right_hip_openpose']
+
+    smpl_49_idxs = [
+        get_keypoint_idx(keypoint_name, 'smpl_49')
+        for keypoint_name in keypoint_names
+    ]
+
+    assert smpl_49_idxs == [1, 5, 2, 12, 9]
+
+    smpl_45_idxs = [
+        get_keypoint_idx(keypoint_name, 'smpl_45', approximate=True)
+        for keypoint_name in keypoint_names
+    ]
+
+    assert smpl_45_idxs == [12, 16, 17, 1, 2]
+
+
+def test_get_keypoint_num():
+    assert get_keypoint_num('smpl') == 24
+    assert get_keypoint_num('smpl_24') == 24
+    assert get_keypoint_num('smpl_45') == 45
+    assert get_keypoint_num('smpl_49') == 49
+    assert get_keypoint_num('smpl_54') == 54
