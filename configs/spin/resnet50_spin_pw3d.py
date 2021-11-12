@@ -1,13 +1,61 @@
 _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
+body_model = dict(
+    type='SMPL',
+    keypoint_src='smpl_54',
+    keypoint_dst='smpl_49',
+    keypoint_approximate=True,
+    model_path='data/body_models/smpl',
+    extra_joints_regressor='data/J_regressor_extra.npy')
+
+registrant = dict(
+    type='SMPLify',
+    body_model=body_model,
+    num_epochs=1,
+    stages=[
+        # stage 1
+        dict(
+            num_iter=50,
+            fit_global_orient=True,
+            fit_transl=True,
+            fit_body_pose=False,
+            fit_betas=False),
+        # stage 2
+        dict(
+            num_iter=50,
+            fit_global_orient=True,
+            fit_transl=False,
+            fit_body_pose=True,
+            fit_betas=True),
+    ],
+    optimizer=dict(type='Adam', lr=1e-2, betas=(0.9, 0.999)),
+    keypoints2d_loss=dict(
+        type='KeypointMSELoss', loss_weight=1.0, reduction='sum', sigma=100),
+    shape_prior_loss=dict(
+        type='ShapePriorLoss', loss_weight=5.0**2, reduction='sum'),
+    joint_prior_loss=dict(
+        type='JointPriorLoss', loss_weight=15.2**2, reduction='sum'),
+    pose_prior_loss=dict(
+        type='MaxMixturePrior',
+        prior_folder='data',
+        num_gaussians=8,
+        loss_weight=4.78**2,
+        reduction='sum'),
+    ignore_keypoints=[
+        'neck_openpose', 'right_hip_openpose', 'left_hip_openpose',
+        'right_hip_extra', 'left_hip_extra'
+    ])
+
 # optimizer
 optimizer = dict(
-    backbone=dict(type='Adam', lr=3e-5), head=dict(type='Adam', lr=3e-5))
+    backbone=dict(type='Adam', lr=2.5e-4),
+    head=dict(type='Adam', lr=2.5e-4))  # using 3e-5 actually, see lr_config
 optimizer_config = dict(grad_clip=None)
 # learning policy
-lr_config = dict(policy='Fixed', by_epoch=False)
-runner = dict(type='EpochBasedRunner', max_epochs=50)
+lr_config = dict(
+    policy='step', gamma=0.12, step=[50])  # effectively turn it into 3e-5
+runner = dict(type='EpochBasedRunner', max_epochs=60)  # 10 epochs are enough
 
 log_config = dict(
     interval=50,
@@ -25,40 +73,18 @@ model = dict(
         type='ResNet',
         depth=50,
         out_indices=[3],
+        norm_eval=False,
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     head=dict(
         type='HMRHead',
         feat_dim=2048,
         smpl_mean_params='data/body_models/smpl_mean_params.npz'),
-    body_model=dict(
-        # type='SMPL49',
-        # model_path='data/body_models/smpl',
-        # gender='neutral',
-        # create_transl=False,
-        # extra_joints_regressor='data/J_regressor_extra.npy'),
-        type='SMPL',
-        keypoint_src='smpl_54',
-        keypoint_dst='smpl_49',
-        model_path='data/body_models/smpl',
-        extra_joints_regressor='data/J_regressor_extra.npy'),
-    registrant=dict(),
-    # loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=1000),
-    # loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=100),
-    # loss_vertex=dict(type='L1Loss', loss_weight=20),
-    # loss_smpl_pose=dict(type='MSELoss', loss_weight=30),
-    # loss_smpl_betas=dict(type='MSELoss', loss_weight=0.2),
+    body_model=body_model,
+    registrant=registrant,
     loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=5. * 60),
     loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=5. * 60),
-    # loss_vertex=dict(type='L1Loss', loss_weight=20),
     loss_smpl_pose=dict(type='MSELoss', loss_weight=1.0 * 60),
     loss_smpl_betas=dict(type='MSELoss', loss_weight=0.001 * 60),
-    # loss_adv=dict(
-    #     type='GANLoss',
-    #     gan_type='lsgan',
-    #     real_label_val=1.0,
-    #     fake_label_val=0.0,
-    #     loss_weight=1),
-    # disc=dict(type='SMPLDiscriminator')
 )
 # dataset settings
 dataset_type = 'HumanImageDataset'
@@ -72,8 +98,6 @@ data_keys = [
 ]
 meta_data_keys = ['dataset_name', 'image_path']
 keypoints_index = [_ for _ in range(49)]
-# flip_pairs = [[0, 5], [1, 4], [2, 3], [6, 11], [7, 10], [8, 9], [20, 21],
-#               [22, 23]]
 flip_pairs = [[2, 5], [3, 6], [4, 7], [9, 12], [10, 13], [11, 14], [15, 16],
               [17, 18], [19, 22], [20, 23], [21, 24], [25, 30], [26, 29],
               [27, 28], [31, 36], [32, 35], [33, 34], [45, 46], [47, 48]]
@@ -89,10 +113,6 @@ train_pipeline = [
     dict(type='ToTensor', keys=data_keys),
     dict(type='Collect', keys=['img', *data_keys], meta_keys=meta_data_keys)
 ]
-# adv_data_keys = [
-#     'smpl_body_pose', 'smpl_global_orient', 'smpl_betas', 'smpl_transl'
-# ]
-# train_adv_pipeline = [dict(type='Collect', keys=adv_data_keys, meta_keys=[])]
 data_keys.remove('is_flipped')
 test_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -108,8 +128,6 @@ data = dict(
     samples_per_gpu=64,
     workers_per_gpu=1,
     train=dict(
-        # type='AdversarialDataset',
-        # train_dataset=dict(
         type='MixedDataset',
         configs=[
             dict(
@@ -149,27 +167,14 @@ data = dict(
                 pipeline=train_pipeline,
                 ann_file='spin_coco_2014_train.npz'),
         ],
-        partition=[0.3, 0.6, 0.6, 0.6, 0.6, 0.1],
-        # ),
-        # adv_dataset=dict(
-        #     type='MeshDataset',
-        #     dataset_name='cmu_mosh',
-        #     data_prefix='data',
-        #     pipeline=train_adv_pipeline,
-        #     ann_file='cmu_mosh.npz')
-        # ),
-    ),
+        partition=[0.3, 0.6, 0.6, 0.6, 0.6, 0.1]),
     test=dict(
         type=dataset_type,
         body_model=dict(
-            # type='SMPL49',
-            # model_path='data/body_models/smpl',
-            # gender='neutral',
-            # create_transl=False,
-            # extra_joints_regressor='data/J_regressor_extra.npy'),
             type='GenderedSMPL',
             keypoint_src='smpl_54',
             keypoint_dst='smpl_49',
+            keypoint_approximate=True,
             model_path='data/body_models/smpl',
             extra_joints_regressor='data/J_regressor_extra.npy'),
         dataset_name='pw3d',

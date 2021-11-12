@@ -3,8 +3,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
 
-# TODO: temp solution
-from mmhuman3d.core.parametric_model.smplify_spin import SMPLify
+from mmhuman3d.core.parametric_model.builder import build_registrant
 from mmhuman3d.models.utils.fits_dict import FitsDict
 from mmhuman3d.utils.geometry import (
     batch_rodrigues,
@@ -80,6 +79,8 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         self.head = build_head(head)
         self.disc = build_discriminator(disc)
 
+        self.smpl = build_body_model(body_model)
+
         # TODO: temp solution
         if registrant is None:
             self.registrant = None
@@ -87,19 +88,18 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             # train with static fits, wo registration
             self.fits = 'static_fits'
             self.fits_dict = FitsDict(fits='static')
-            self.registrant = SMPLify()
+            self.registrant = build_registrant(registrant)
         elif registrant == 'final_fits':
             # train with final fits, wo registration
             self.fits = 'final_fits'
             self.fits_dict = FitsDict(fits='final')
-            self.registrant = SMPLify()
+            self.registrant = build_registrant(registrant)
         else:
             # train with static fits as initial fits, with registration
             self.fits = 'registration'
-            self.registrant = SMPLify()
             self.fits_dict = FitsDict(fits='static')
+            self.registrant = build_registrant(registrant)
 
-        self.smpl = build_body_model(body_model)
         self.loss_keypoints2d = build_loss(loss_keypoints2d)
         self.loss_keypoints3d = build_loss(loss_keypoints3d)
         self.loss_vertex = build_loss(loss_vertex)
@@ -183,6 +183,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
     def run_registration(self, predictions, targets):
         """Generates pseudo labels."""
+
         img_metas = targets['img_metas']
         dataset_name = [meta['dataset_name'] for meta in img_metas
                         ]  # name of the dataset the image comes from
@@ -197,12 +198,12 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         gt_global_orient = targets['smpl_global_orient'].float()
         gt_pose = targets['smpl_body_pose'].float().view(-1, 69)
 
-        pred_rotmat = predictions['pred_pose']
-        pred_betas = predictions['pred_shape']
-        pred_cam_t = predictions['pred_cam']
+        pred_rotmat = predictions['pred_pose'].detach().clone()
+        pred_betas = predictions['pred_shape'].detach().clone()
+        pred_cam_t = predictions['pred_cam'].detach().clone()
 
-        keypoints2d = targets['keypoints2d']
-        keypoints2d_mask = targets['keypoints2d_mask']
+        keypoints2d = targets['keypoints2d'].float()
+        keypoints2d_mask = targets['keypoints2d_mask'].float()
 
         try:
             gt_keypoints_2d = torch.cat(
@@ -217,9 +218,10 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         batch_size = has_smpl.shape[0]
         device = has_smpl.device
 
-        # TODO: temp solution,  hard code
+        # TODO: temp solution, hard code
         img_res = 224
-        smplify_threshold = 100.0
+        # smplify_threshold = 100.0
+        smplify_threshold = 10.0  # our implementation uses 10.0
         focal_length = 5000.0
 
         # Get GT vertices and model joints
@@ -241,6 +243,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         opt_pose, opt_betas = self.fits_dict[(dataset_name, indices.cpu(),
                                               rot_angle.cpu(),
                                               is_flipped.cpu())]
+
         opt_pose = opt_pose.to(device)
         opt_betas = opt_betas.to(device)
         opt_output = self.smpl(
@@ -275,42 +278,20 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             focal_length=focal_length,
             img_size=img_res)
 
-        opt_joint_loss = self.registrant.get_fitting_loss(
-            opt_pose, opt_betas, opt_cam_t,
-            0.5 * img_res * torch.ones(batch_size, 2, device=device),
-            gt_keypoints_2d_orig).mean(dim=-1)
-
-        # # Feed images in the network to predict camera and SMPL parameters
-        # pred_rotmat, pred_betas, pred_camera = self.model(images)
-        #
-        # pred_output = self.smpl(betas=pred_betas,
-        # body_pose=pred_rotmat[:, 1:],
-        # global_orient=pred_rotmat[:, 0].unsqueeze(1), pose2rot=False)
-        # pred_vertices = pred_output.vertices
-        # pred_joints = pred_output.joints
-        #
-        # # Convert Weak Perspective Camera [s, tx, ty] to
-        # # camera translation [tx, ty, tz] in 3D given the bounding box size
-        # # This camera translation can be used in a full
-        # # perspective projection
-        # pred_cam_t = torch.stack([pred_camera[:, 1],
-        #                           pred_camera[:, 2],
-        #                           2 * self.focal_length /
-        #                           (self.options.img_res *
-        #                           pred_camera[:, 0] + 1e-9)], dim=-1)
-        #
-        # camera_center = torch.zeros(batch_size, 2, device=self.device)
-        # pred_keypoints_2d = perspective_projection(
-        #  pred_joints,
-        #  rotation=torch.eye(3, device=self.device).unsqueeze(0).expand(
-        #  batch_size, -1, -1),
-        #  translation=pred_cam_t,
-        #  focal_length=self.focal_length,
-        #  camera_center=camera_center)
-        # # Normalize keypoints to [-1,1]
-        # pred_keypoints_2d = pred_keypoints_2d / (self.options.img_res / 2.)
-
-        # if self.options.run_smplify:
+        # opt_joint_loss = self.registrant.compute_loss(
+        #     opt_pose, opt_betas, opt_cam_t,
+        #     0.5 * img_res * torch.ones(batch_size, 2, device=device),
+        #     gt_keypoints_2d_orig).mean(dim=-1)
+        with torch.no_grad():
+            loss_dict = self.registrant.evaluate(
+                global_orient=opt_pose[:, :3],
+                body_pose=opt_pose[:, 3:],
+                betas=opt_betas,
+                transl=opt_cam_t,
+                keypoints2d=gt_keypoints_2d_orig[:, :, :2],
+                keypoints2d_conf=gt_keypoints_2d_orig[:, :, 2],
+                reduction_override='none')
+        opt_joint_loss = loss_dict['keypoint2d_loss'].sum(dim=-1).sum(dim=-1)
 
         # Convert predicted rotation matrices to axis-angle
         pred_rotmat_hom = torch.cat([
@@ -329,16 +310,36 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         if self.fits in ['static_fits', 'final_fits']:
             pass
         elif self.fits == 'registration':
+
             # Run SMPLify optimization starting from the network prediction
-            new_opt_vertices, new_opt_joints, \
-                new_opt_pose, new_opt_betas, \
-                new_opt_cam_t, new_opt_joint_loss = \
-                self.registrant(
-                    pred_pose.detach(), pred_betas.detach(),
-                    pred_cam_t.detach(),
-                    0.5 * img_res * torch.ones(batch_size, 2, device=device),
-                    gt_keypoints_2d_orig)
-            new_opt_joint_loss = new_opt_joint_loss.mean(dim=-1)
+            # new_opt_vertices, new_opt_joints, \
+            #     new_opt_pose, new_opt_betas, \
+            #     new_opt_cam_t, new_opt_joint_loss = \
+            registrant_output = self.registrant(
+                keypoints2d=gt_keypoints_2d_orig[:, :, :2],
+                keypoints2d_conf=gt_keypoints_2d_orig[:, :, 2],
+                init_global_orient=pred_pose[:, :3],
+                init_transl=pred_cam_t,
+                init_body_pose=pred_pose[:, 3:],
+                init_betas=pred_betas,
+                return_joints=True,
+                return_verts=True,
+                return_losses=True)
+
+            new_opt_vertices = registrant_output['vertices']
+            new_opt_joints = registrant_output['joints']
+
+            new_opt_global_orient = registrant_output['global_orient']
+            new_opt_body_pose = registrant_output['body_pose']
+            new_opt_pose = torch.cat(
+                [new_opt_global_orient, new_opt_body_pose], dim=1)
+
+            new_opt_betas = registrant_output['betas']
+            new_opt_cam_t = registrant_output['transl']
+            new_opt_joint_loss = registrant_output['keypoint2d_loss'].sum(
+                dim=-1).sum(dim=-1)
+
+            # new_opt_joint_loss = new_opt_joint_loss.mean(dim=-1)
 
             # Will update the dictionary for the examples where the new loss
             # is less than the current one
@@ -378,15 +379,6 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         valid_fit = valid_fit | has_smpl
         targets['valid_fit'] = valid_fit
-
-        # opt_keypoints_2d = perspective_projection(opt_joints,
-        #  rotation=torch.eye(3, device=self.device).unsqueeze(0).expand(
-        #      batch_size, -1, -1),
-        #  translation=opt_cam_t,
-        #  focal_length=self.focal_length,
-        #  camera_center=camera_center)
-        #
-        # opt_keypoints_2d = opt_keypoints_2d / (self.options.img_res / 2.)
 
         targets['opt_vertices'] = opt_vertices
         targets['opt_cam_t'] = opt_cam_t
@@ -566,6 +558,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         if self.loss_smpl_betas is not None:
             losses['smpl_betas_loss'] = self.compute_smpl_betas_loss(
                 pred_betas, gt_betas, has_smpl)
+
         return losses
 
     @abstractmethod

@@ -34,6 +34,7 @@ KEYPOINTS_FACTORY = {
     'smpl_45': smpl.SMPL_45_KEYPOINTS,
     'smpl_54': smpl.SMPL_54_KEYPOINTS,
     'smpl_49': smpl.SMPL_49_KEYPOINTS,
+    'smpl_24': smpl.SMPL_24_KEYPOINTS,
     'mpi_inf_3dhp': mpi_inf_3dhp.MPI_INF_3DHP_KEYPOINTS,
     'mpi_inf_3dhp_test': mpi_inf_3dhp.MPI_INF_3DHP_TEST_KEYPOINTS,
     'penn_action': penn_action.PENN_ACTION_KEYPOINTS,
@@ -49,16 +50,11 @@ KEYPOINTS_FACTORY = {
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
 
-# TODO: temporary solution
-# duplicates in SMPL_49 requires special treatment
-# __KEYPOINTS_MAPPING_CACHE__['smpl_54']['smpl_49'] = smpl.SMPL_54_TO_SMPL_49
-
 
 def convert_kps(
     keypoints: Union[np.ndarray, torch.Tensor],
     src: str,
     dst: str,
-    compress: bool = False,
     approximate: bool = False,
     mask: Optional[Union[np.ndarray, torch.Tensor]] = None,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
@@ -268,3 +264,58 @@ def get_keypoint_idxs_by_part(
     part_keypoints = list(set(humandata_parts[part]) & set(keypoints))
     part_keypoints_idx = [keypoints.index(kp) for kp in part_keypoints]
     return part_keypoints_idx
+
+
+def get_keypoint_idx(name: str,
+                     convention: str = 'smplx',
+                     approximate: bool = False,
+                     keypoints_factory: dict = KEYPOINTS_FACTORY) -> List[int]:
+    """Get keypoint index from specified convention with keypoint name.
+
+    Args:
+        name (str): keypoint name
+        convention (str): data type from keypoints_factory.
+        approximate (bool): control whether approximate mapping is allowed.
+        keypoints_factory (dict, optional): A class to store the attributes.
+            Defaults to keypoints_factory.
+    Returns:
+        List[int]: keypoint index
+    """
+    keypoints = keypoints_factory[convention]
+    try:
+        idx = keypoints.index(name)
+    except ValueError:
+        idx = -1  # not matched
+    if approximate and idx == -1:
+        approximate_matched = False
+        for part_list in human_data.APPROXIMATE_MAPPING_LIST:
+            if name in part_list:
+                for approximate_name in part_list:
+                    if approximate_name != name:
+                        try:
+                            idx = keypoints.index(approximate_name)
+                        except ValueError:
+                            idx = -1  # still not matched
+                        if idx >= 0:
+                            approximate_matched = True
+                            break
+
+            if approximate_matched:
+                break
+
+    return idx
+
+
+def get_keypoint_num(convention: str = 'smplx',
+                     keypoints_factory: dict = KEYPOINTS_FACTORY) -> List[int]:
+    """Get number of keypoints of specified convention.
+
+    Args:
+        convention (str): data type from keypoints_factory.
+        keypoints_factory (dict, optional): A class to store the attributes.
+            Defaults to keypoints_factory.
+    Returns:
+        List[int]: part keypoint indices
+    """
+    keypoints = keypoints_factory[convention]
+    return len(keypoints)

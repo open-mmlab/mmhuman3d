@@ -154,7 +154,6 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         # save memory
         del data
-        print('data deleted.')
 
         return data_infos
 
@@ -224,8 +223,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 body_pose=body_pose,
                 global_orient=global_orient,
                 gender=gender)
-            gt_keypoints3d = gt_output['joints'].numpy()
-            gt_keypoints3d_mask = np.ones((len(preds), 24))
+            gt_keypoints3d = gt_output['joints'].detach().cpu().numpy()
+            gt_keypoints3d_mask = np.ones((len(preds), 24))  # TODO: hard-code
         elif self.dataset_name == 'h36m':
             gt_keypoints3d = [item['keypoints3d'] for item in self.data_infos]
             gt_keypoints3d_mask = \
@@ -235,15 +234,57 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         else:
             raise NotImplementedError()
 
-        # we only evaluate on 14 lsp joints
-        joint_mapper = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18]
-        pred_keypoints3d = pred_keypoints3d[:, joint_mapper, :]
-        pred_pelvis = (pred_keypoints3d[:, 2] + pred_keypoints3d[:, 3]) / 2
-        pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
+        # SMPL_49 only!
+        if gt_keypoints3d.shape[1] == 49:
+            assert pred_keypoints3d.shape[1] == 49
+            print('49 keypoints!')
 
-        gt_keypoints3d = gt_keypoints3d[:, joint_mapper, :]
-        gt_pelvis = (gt_keypoints3d[:, 2] + gt_keypoints3d[:, 3]) / 2
+            gt_keypoints3d = gt_keypoints3d[:, 25:, :]
+            pred_keypoints3d = pred_keypoints3d[:, 25:, :]
+
+            joint_mapper = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18]
+            gt_keypoints3d = gt_keypoints3d[:, joint_mapper, :]
+            pred_keypoints3d = pred_keypoints3d[:, joint_mapper, :]
+
+            # we only evaluate on 14 lsp joints
+            pred_pelvis = (pred_keypoints3d[:, 2] + pred_keypoints3d[:, 3]) / 2
+            gt_pelvis = (gt_keypoints3d[:, 2] + gt_keypoints3d[:, 3]) / 2
+
+        # H36M for testing!
+        elif gt_keypoints3d.shape[1] == 17:
+            assert pred_keypoints3d.shape[1] == 17
+            print('17 keypoints!')
+
+            H36M_TO_J17 = [
+                6, 5, 4, 1, 2, 3, 16, 15, 14, 11, 12, 13, 8, 10, 0, 7, 9
+            ]
+            H36M_TO_J14 = H36M_TO_J17[:14]
+            joint_mapper = H36M_TO_J14
+
+            pred_pelvis = pred_keypoints3d[:, 0]
+            gt_pelvis = gt_keypoints3d[:, 0]
+
+            gt_keypoints3d = gt_keypoints3d[:, joint_mapper, :]
+            pred_keypoints3d = pred_keypoints3d[:, joint_mapper, :]
+
+        # keypoint 24
+        elif gt_keypoints3d.shape[1] == 24:
+            assert pred_keypoints3d.shape[1] == 24
+
+            joint_mapper = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18]
+            gt_keypoints3d = gt_keypoints3d[:, joint_mapper, :]
+            pred_keypoints3d = pred_keypoints3d[:, joint_mapper, :]
+
+            # we only evaluate on 14 lsp joints
+            pred_pelvis = (pred_keypoints3d[:, 2] + pred_keypoints3d[:, 3]) / 2
+            gt_pelvis = (gt_keypoints3d[:, 2] + gt_keypoints3d[:, 3]) / 2
+
+        else:
+            pass
+
+        pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
         gt_keypoints3d = gt_keypoints3d - gt_pelvis[:, None, :]
+
         gt_keypoints3d_mask = gt_keypoints3d_mask[:, joint_mapper] > 0
 
         mpjpe = keypoint_mpjpe(pred_keypoints3d, gt_keypoints3d,

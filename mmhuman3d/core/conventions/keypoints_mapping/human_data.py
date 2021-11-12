@@ -230,46 +230,77 @@ APPROXIMATE_MAPPING_LIST = [
     ['right_heel', 'right_heel_openpose'],
 ]
 
+HUMAN_DATA_HEAD = [
+    'head', 'jaw', 'left_eyeball', 'right_eyeball', 'nose', 'right_eye',
+    'left_eye', 'right_ear', 'left_ear', 'right_eyebrow_1', 'right_eyebrow_2',
+    'right_eyebrow_3', 'right_eyebrow_4', 'right_eyebrow_5', 'left_eyebrow_5',
+    'left_eyebrow_4', 'left_eyebrow_3', 'left_eyebrow_2', 'left_eyebrow_1',
+    'nosebridge_1', 'nosebridge_2', 'nosebridge_3', 'nosebridge_4', 'nose_1',
+    'nose_2', 'nose_3', 'nose_4', 'nose_5', 'right_eye_1', 'right_eye_2',
+    'right_eye_3', 'right_eye_4', 'right_eye_5', 'right_eye_6', 'left_eye_4',
+    'left_eye_3', 'left_eye_2', 'left_eye_1', 'left_eye_6', 'left_eye_5',
+    'mouth_1', 'mouth_2', 'mouth_3', 'mouth_4', 'mouth_5', 'mouth_6',
+    'mouth_7', 'mouth_8', 'mouth_9', 'mouth_10', 'mouth_11', 'mouth_12',
+    'lip_1', 'lip_2', 'lip_3', 'lip_4', 'lip_5', 'lip_6', 'lip_7', 'lip_8',
+    'face_contour_1', 'face_contour_2', 'face_contour_3', 'face_contour_4',
+    'face_contour_5', 'face_contour_6', 'face_contour_7', 'face_contour_8',
+    'face_contour_9', 'face_contour_10', 'face_contour_11', 'face_contour_12',
+    'face_contour_13', 'face_contour_14', 'face_contour_15', 'face_contour_16',
+    'face_contour_17', 'headtop', 'jaw_extra', 'head_extra', 'nose_openpose',
+    'right_eye_openpose', 'left_eye_openpose', 'right_ear_openpose',
+    'left_ear_openpose', 'headtop_h36m', 'head_bottom_pt', 'head_h36m'
+]
+
+HUMAN_DATA_LEFT_HAND = [
+    'left_index_1', 'left_index_2', 'left_index_3', 'left_middle_1',
+    'left_middle_2', 'left_middle_3', 'left_pinky_1', 'left_pinky_2',
+    'left_pinky_3', 'left_ring_1', 'left_ring_2', 'left_ring_3',
+    'left_thumb_1', 'left_thumb_2', 'left_thumb_3', 'left_thumb', 'left_index',
+    'left_middle', 'left_ring', 'left_pinky', 'left_hand_3dhp', 'left_hand'
+]
+
+HUMAN_DATA_RIGHT_HAND = [
+    'right_index_1', 'right_index_2', 'right_index_3', 'right_middle_1',
+    'right_middle_2', 'right_middle_3', 'right_pinky_1', 'right_pinky_2',
+    'right_pinky_3', 'right_ring_1', 'right_ring_2', 'right_ring_3',
+    'right_thumb_1', 'right_thumb_2', 'right_thumb_3', 'right_thumb',
+    'right_index', 'right_middle', 'right_ring', 'right_pinky',
+    'right_hand_3dhp', 'right_hand'
+]
+
+HUMAN_DATA_SHOULDER = [
+    'left_shoulder', 'left_shoulder_openpose', 'right_shoulder',
+    'right_shoulder_openpose'
+]
+
+HUMAN_DATA_HIP = [
+    'left_hip', 'left_hip_openpose', 'left_hip_extra', 'right_hip',
+    'right_hip_openpose', 'right_hip_extra'
+]
+
+HUMAN_DATA_BODY = HUMAN_DATA_SHOULDER + HUMAN_DATA_HIP + [
+    'pelvis', 'spine_1', 'left_knee', 'right_knee', 'spine_2', 'left_ankle',
+    'right_ankle', 'spine_3', 'left_foot', 'right_foot', 'neck', 'left_collar',
+    'right_collar', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist',
+    'left_bigtoe', 'left_smalltoe', 'left_heel', 'right_bigtoe',
+    'right_smalltoe', 'right_heel', 'neck_extra', 'pelvis_extra',
+    'thorax_extra', 'spine_extra', 'neck_openpose', 'right_elbow_openpose',
+    'right_wrist_openpose', 'left_elbow_openpose', 'left_wrist_openpose',
+    'pelvis_openpose', 'right_knee_openpose', 'right_ankle_openpose',
+    'left_knee_openpose', 'left_ankle_openpose', 'left_bigtoe_openpose',
+    'left_smalltoe_openpose', 'left_heel_openpose', 'right_bigtoe_openpose',
+    'right_smalltoe_openpose', 'right_heel_openpose', 'spine_4_3dhp',
+    'left_clavicle_3dhp', 'right_clavicle_3dhp', 'left_toe_3dhp',
+    'right_toe_3dhp'
+]
+
 HUMAN_DATA_PARTS = {
-    'head': [
-        'head', 'jaw', 'left_eyeball', 'right_eyeball', 'nose', 'right_eye',
-        'left_eye', 'right_ear', 'left_ear', 'right_eyebrow_1',
-        'right_eyebrow_2', 'right_eyebrow_3', 'right_eyebrow_4',
-        'right_eyebrow_5', 'left_eyebrow_5', 'left_eyebrow_4',
-        'left_eyebrow_3', 'left_eyebrow_2', 'left_eyebrow_1', 'nosebridge_1',
-        'nosebridge_2', 'nosebridge_3', 'nosebridge_4', 'nose_1', 'nose_2',
-        'nose_3', 'nose_4', 'nose_5', 'right_eye_1', 'right_eye_2',
-        'right_eye_3', 'right_eye_4', 'right_eye_5', 'right_eye_6',
-        'left_eye_4', 'left_eye_3', 'left_eye_2', 'left_eye_1', 'left_eye_6',
-        'left_eye_5', 'mouth_1', 'mouth_2', 'mouth_3', 'mouth_4', 'mouth_5',
-        'mouth_6', 'mouth_7', 'mouth_8', 'mouth_9', 'mouth_10', 'mouth_11',
-        'mouth_12', 'lip_1', 'lip_2', 'lip_3', 'lip_4', 'lip_5', 'lip_6',
-        'lip_7', 'lip_8', 'face_contour_1', 'face_contour_2', 'face_contour_3',
-        'face_contour_4', 'face_contour_5', 'face_contour_6', 'face_contour_7',
-        'face_contour_8', 'face_contour_9', 'face_contour_10',
-        'face_contour_11', 'face_contour_12', 'face_contour_13',
-        'face_contour_14', 'face_contour_15', 'face_contour_16',
-        'face_contour_17', 'headtop', 'jaw_extra', 'head_extra',
-        'nose_openpose', 'right_eye_openpose', 'left_eye_openpose',
-        'right_ear_openpose', 'left_ear_openpose', 'headtop_h36m',
-        'head_bottom_pt', 'head_h36m'
-    ],
-    'left_hand': [
-        'left_wrist', 'left_index_1', 'left_index_2', 'left_index_3',
-        'left_middle_1', 'left_middle_2', 'left_middle_3', 'left_pinky_1',
-        'left_pinky_2', 'left_pinky_3', 'left_ring_1', 'left_ring_2',
-        'left_ring_3', 'left_thumb_1', 'left_thumb_2', 'left_thumb_3',
-        'left_thumb', 'left_index', 'left_middle', 'left_ring', 'left_pinky',
-        'left_wrist_openpose', 'left_hand_3dhp', 'left_hand'
-    ],
-    'right_hand': [
-        'right_wrist', 'right_index_1', 'right_index_2', 'right_index_3',
-        'right_middle_1', 'right_middle_2', 'right_middle_3', 'right_pinky_1',
-        'right_pinky_2', 'right_pinky_3', 'right_ring_1', 'right_ring_2',
-        'right_ring_3', 'right_thumb_1', 'right_thumb_2', 'right_thumb_3',
-        'right_thumb', 'right_index', 'right_middle', 'right_ring',
-        'right_pinky', 'right_wrist_openpose', 'right_hand_3dhp', 'right_hand'
-    ],
+    'head': HUMAN_DATA_HEAD,
+    'left_hand': HUMAN_DATA_LEFT_HAND,
+    'right_hand': HUMAN_DATA_RIGHT_HAND,
+    'shoulder': HUMAN_DATA_SHOULDER,
+    'hip': HUMAN_DATA_HIP,
+    'body': HUMAN_DATA_BODY
 }
 
 HUMAN_DATA_LIMBS = {
