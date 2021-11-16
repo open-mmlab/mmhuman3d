@@ -52,6 +52,7 @@ def check_path_suffix(path_str: str,
 
 
 class Existence(Enum):
+    """State of file existence."""
     FileExist = 0
     DirectoryExistEmpty = 1
     DirectoryExistNotEmpty = 2

@@ -225,39 +225,6 @@ class CameraParameter:
             dumped_dict = json.load(f_read)
         self.load_from_dict(dumped_dict)
 
-    def load_from_smc(self, smc_reader, kinect_id: int) -> None:
-        """Load name and parameters from an SmcReader instance.
-
-        Args:
-            smc_reader (mocap.data_collection.smc_reader.SMCReader):
-                An SmcReader instance containing kinect camera parameters.
-            kinect_id (int):
-                Id of the target kinect.
-        """
-        name = kinect_id
-        extrinsics_dict = \
-            smc_reader.get_kinect_color_extrinsics(
-                kinect_id, homogeneous=False
-            )
-        rot_np = extrinsics_dict['R']
-        trans_np = extrinsics_dict['T']
-        intrinsics_np = \
-            smc_reader.get_kinect_color_intrinsics(
-                kinect_id
-            )
-        resolution = \
-            smc_reader.get_kinect_color_resolution(
-                kinect_id
-            )
-        rmatrix = np.linalg.inv(rot_np).reshape(3, 3)
-        tvec = -np.dot(rmatrix, trans_np)
-        self.name = name
-        self.set_mat_np('in_mat', intrinsics_np)
-        self.set_mat_np('rotation_mat', rmatrix)
-        self.set_value('translation', tvec.tolist())
-        self.set_value('H', resolution[1])
-        self.set_value('W', resolution[0])
-
     def load_from_dict(self, json_dict: dict) -> None:
         """Load name and parameters from a dict.
 
@@ -378,6 +345,22 @@ class CameraParameter:
 
 
 def __parse_chessboard_param__(chessboard_camera_param, name, inverse=True):
+    """Parse a dict loaded from chessboard file into another dict needed by
+    CameraParameter.
+
+    Args:
+        chessboard_camera_param (dict):
+            A dict loaded from json.load(chessboard_file).
+        name (str):
+            Name of this camera.
+        inverse (bool, optional):
+            Whether to inverse rotation and translation mat.
+            Defaults to True.
+
+    Returns:
+        dict:
+            A dict of parameters in CameraParameter.to_dict() format.
+    """
     camera_param_dict = {}
     camera_param_dict['H'] = chessboard_camera_param['imgSize'][1]
     camera_param_dict['W'] = chessboard_camera_param['imgSize'][0]
@@ -408,5 +391,16 @@ __distort_coefficient_names__ = [
 
 
 def __zero_mat_list__(n=3):
+    """Return a zero mat in list format.
+
+    Args:
+        n (int, optional):
+            Length of the edge.
+            Defaults to 3.
+
+    Returns:
+        list:
+            List[List[int]]
+    """
     ret_list = [[0] * n for _ in range(n)]
     return ret_list
