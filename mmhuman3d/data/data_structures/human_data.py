@@ -145,6 +145,12 @@ class HumanData(dict):
         return ret_human_data
 
     def get_key_strict(self) -> bool:
+        """Get value of attribute key_strict.
+
+        Returns:
+            bool:
+                Whether to raise error when setting unsupported keys.
+        """
         return self.__key_strict__
 
     def set_key_strict(self, value: bool):
@@ -162,6 +168,12 @@ class HumanData(dict):
             self.pop_unsupported_items()
 
     def check_keypoints_compressed(self) -> bool:
+        """Check whether the keypoints are compressed.
+
+        Returns:
+            bool:
+                Whether the keypoints are compressed.
+        """
         return self.__keypoints_compressed__
 
     def load(self, npz_path: str):
@@ -378,14 +390,17 @@ class HumanData(dict):
 
     @overload
     def get_temporal_slice(self, stop: int):
+        """Slice [0, stop, 1] of all temporal values."""
         ...
 
     @overload
     def get_temporal_slice(self, start: int, stop: int):
+        """Slice [start, stop, 1] of all temporal values."""
         ...
 
     @overload
     def get_temporal_slice(self, start: int, stop: int, step: int):
+        """Slice [start, stop, step] of all temporal values."""
         ...
 
     def get_temporal_slice(self,
@@ -667,11 +682,23 @@ class HumanData(dict):
         return ret_bool
 
     @property
-    def temporal_len(self):
+    def temporal_len(self) -> int:
+        """Get the temporal length of this HumanData instance.
+
+        Returns:
+            int:
+                Number of frames related to this instance.
+        """
         return self.__temporal_len__
 
     @temporal_len.setter
     def temporal_len(self, value: int):
+        """Set the temporal length of this HumanData instance.
+
+        Args:
+            value (int):
+                Number of frames related to this instance.
+        """
         self.__temporal_len__ = value
 
     def __check_value_temporal__(self, key: Any, val: Any) -> bool:
@@ -846,6 +873,18 @@ class HumanData(dict):
     @classmethod
     def __add_zero_pad__(cls, compressed_array: np.ndarray,
                          mask_array: np.ndarray) -> np.ndarray:
+        """Pad zeros to a compressed keypoints array.
+
+        Args:
+            compressed_array (np.ndarray):
+                A compressed keypoints array.
+            mask_array (np.ndarray):
+                The mask records compression relationship.
+
+        Returns:
+            np.ndarray:
+                A keypoints array in full-size.
+        """
         assert mask_array.sum() == compressed_array.shape[1]
         temporal_len, _, dim = compressed_array.shape
         mask_len = mask_array.shape[0]
@@ -858,6 +897,18 @@ class HumanData(dict):
     @classmethod
     def __remove_zero_pad__(cls, zero_pad_array: np.ndarray,
                             mask_array: np.ndarray) -> np.ndarray:
+        """Remove zero-padding from a full-size keypoints array.
+
+        Args:
+            zero_pad_array (np.ndarray):
+                A keypoints array in full-size.
+            mask_array (np.ndarray):
+                The mask records compression relationship.
+
+        Returns:
+            np.ndarray:
+                A compressed keypoints array.
+        """
         assert mask_array.shape[0] == zero_pad_array.shape[1]
         valid_mask_index = np.where(mask_array == 1)[0]
         ret_value = np.take(zero_pad_array, valid_mask_index, axis=1)
@@ -865,6 +916,16 @@ class HumanData(dict):
 
     @classmethod
     def __get_key_warn_msg__(cls, key: Any) -> str:
+        """Get the warning message when a key fails the check.
+
+        Args:
+            key (Any):
+                The key with wrong.
+
+        Returns:
+            str:
+                The warning message.
+        """
         class_name = cls.__name__
         warn_message = \
             f'{key} is absent in' +\
@@ -878,6 +939,16 @@ class HumanData(dict):
 
     @classmethod
     def __get_key_error_msg__(cls, key: Any) -> str:
+        """Get the error message when a key fails the check.
+
+        Args:
+            key (Any):
+                The key with wrong.
+
+        Returns:
+            str:
+                The error message.
+        """
         class_name = cls.__name__
         absent_message = \
             f'{key} is absent in' +\
@@ -889,6 +960,12 @@ class HumanData(dict):
 
     @classmethod
     def __get_value_error_msg__(cls) -> str:
+        """Get the error message when a value fails the check.
+
+        Returns:
+            str:
+                The error message.
+        """
         error_message = \
             'An supported value doesn\'t ' +\
             'match definition.\n'

@@ -4,6 +4,7 @@ from scipy.spatial.transform import Rotation as scipy_Rotation
 
 
 class VedoRenderer(object):
+    """An interactive renderer for camera visualization."""
 
     def __init__(self, scale=0.03):
         """Visualize cameras in an interactive scene supported by vedo.
@@ -19,6 +20,17 @@ class VedoRenderer(object):
         self.y_reverse = False
 
     def __init_axis(self, axis_len=80):
+        """Prepare arrows for axis.
+
+        Args:
+            axis_len (int, optional):
+                Length of each axis.
+                Defaults to 80.
+
+        Returns:
+            List[Arrows]:
+                A list of three arrows.
+        """
         arrow_end_np = np.eye(3) * axis_len * self.scale
         colors = ['r', 'g', 'b']  # r-x, g-y, b-z
         ret_list = []
@@ -43,8 +55,7 @@ class VedoRenderer(object):
         """Add an camera to the scene.
 
         Args:
-            camera_parameter (mocap.multi_view_3d_keypoint.\
-                    camera_parameters.CameraParameter):
+            camera_parameter (CameraParameter):
                 An instance of class CameraParameter which stores
                 rotation, translation and name of a camera.
             arrow_len (int, optional):
