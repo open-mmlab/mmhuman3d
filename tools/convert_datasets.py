@@ -46,7 +46,11 @@ DATASET_CONFIGS = dict(
         type='MpiInf3dhpHybrIKConverter',
         modes=['train', 'test'],
         prefix='hybrik_data'),
-)
+    surreal=dict(
+        type='SurrealConverter',
+        models=['train', 'val', 'test'],
+        run=0,
+        prefix='SURREAL/cmu'))
 
 
 def parse_args():

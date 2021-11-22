@@ -17,6 +17,7 @@ from .penn_action import PennActionConverter
 from .posetrack import PosetrackConverter
 from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
+from .surreal import SurrealConverter
 from .up3d import Up3dConverter
 
 __all__ = [
@@ -26,5 +27,5 @@ __all__ = [
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
     'CocoHybrIKConverter', 'H36mHybrIKConverter', 'MpiInf3dhpHybrIKConverter',
-    'Pw3dHybrIKConverter'
+    'Pw3dHybrIKConverter', 'SurrealConverter'
 ]
