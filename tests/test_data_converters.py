@@ -128,6 +128,14 @@ def test_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_test.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_trainval.npz')
 
+    SURREAL_ROOT = os.path.join(root_path, 'SURREAL/cmu')
+    cfg = dict(type='SurrealConverter', modes=['train', 'val', 'test'], run=0)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(SURREAL_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'surreal_val_run0.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'surreal_train_run0.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'surreal_test_run0.npz')
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'
