@@ -34,6 +34,7 @@ DATASET_CONFIGS = dict(
         type='PosetrackConverter',
         modes=['train', 'val'],
         prefix='PoseTrack/data'),
+    instavariety_vibe=dict(type='InstaVibeConverter', prefix='vibe_data'),
     eft=dict(
         type='EftConverter', modes=['coco_all', 'coco_part', 'mpii', 'lspet']),
     coco_hybrik=dict(type='CocoHybrIKConverter', prefix='coco/train_2017'),
