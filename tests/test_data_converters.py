@@ -135,7 +135,7 @@ def test_preprocessed_npz():
     all_keys = [
         'image_path', 'bbox_xywh', 'config', 'keypoints2d', 'keypoints3d',
         'smpl', 'smplx', 'smplh', 'meta', 'keypoints2d_mask', 'video_path',
-        'frame_idx', 'keypoints3d_mask'
+        'frame_idx', 'keypoints3d_mask', 'cam_param'
     ]
 
     for npf in os.listdir(npz_folder):
