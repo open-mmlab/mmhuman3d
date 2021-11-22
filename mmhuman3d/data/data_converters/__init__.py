@@ -8,6 +8,7 @@ from .crowdpose import CrowdposeConverter
 from .eft import EftConverter
 from .h36m import H36mConverter
 from .h36m_hybrik import H36mHybrIKConverter
+from .insta_vibe import InstaVibeConverter
 from .lsp import LspConverter
 from .lsp_extended import LspExtendedConverter
 from .mpi_inf_3dhp import MpiInf3dhpConverter
@@ -27,5 +28,5 @@ __all__ = [
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
     'CocoHybrIKConverter', 'H36mHybrIKConverter', 'MpiInf3dhpHybrIKConverter',
-    'Pw3dHybrIKConverter', 'SurrealConverter'
+    'Pw3dHybrIKConverter', 'SurrealConverter', 'InstaVibeConverter'
 ]
