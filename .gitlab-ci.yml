@@ -10,7 +10,6 @@ before_script:
   - python --version
   - pip --version
   - nvcc --version
-  - nvidia-smi
   - python -c "import torch; print(torch.__version__)"
   - ffmpeg -version
   - export http_proxy=http://172.16.1.135:3128/
@@ -31,6 +30,7 @@ test:
   tags:
     - gpu
   script:
+    - nvidia-smi
     - echo "Start building..."
     - pip install -e .
     - python -c "import mmhuman3d; print(mmhuman3d.__version__)"

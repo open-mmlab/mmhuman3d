@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
+from mmhuman3d.core.cameras.camera_parameter import CameraParameter
 from mmhuman3d.data.data_converters.builder import DATA_CONVERTERS
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
@@ -28,12 +29,18 @@ class Pw3dConverter(BaseModeConverter):
         h = bbox_xywh[3] * scale_factor * scale_factor
         return [x, y, w, h]
 
+    @staticmethod
+    def get_rt_from_extrinsic(extrinsics):
+        R = extrinsics[:3, :3]
+        T = extrinsics[:3, 3]
+        return R, T
+
     def convert_by_mode(self, dataset_path, out_path, mode):
         # use HumanData to store all data
         human_data = HumanData()
 
         # structs we use
-        image_path_, bbox_xywh_ = [], []
+        image_path_, bbox_xywh_, cam_param_ = [], [], []
         smpl = {}
         smpl['body_pose'] = []
         smpl['global_orient'] = []
@@ -41,6 +48,7 @@ class Pw3dConverter(BaseModeConverter):
         meta = {}
         meta['gender'] = []
 
+        root_path = dataset_path
         # get a list of .pkl files in the directory
         dataset_path = os.path.join(dataset_path, 'sequenceFiles', mode)
         files = [
@@ -58,12 +66,12 @@ class Pw3dConverter(BaseModeConverter):
                 global_poses = data['cam_poses']
                 genders = data['genders']
                 valid = np.array(data['campose_valid']).astype(np.bool)
+                K = np.array(data['cam_intrinsics'])
                 num_people = len(smpl_pose)
                 num_frames = len(smpl_pose[0])
                 seq_name = str(data['sequence'])
                 img_names = np.array([
-                    'imageFiles/' + seq_name +
-                    '/image_%s.jpg' % str(i).zfill(5)
+                    'imageFiles/' + seq_name + f'/image_{str(i).zfill(5)}.jpg'
                     for i in range(num_frames)
                 ])
                 # get through all the people in the sequence
@@ -76,6 +84,7 @@ class Pw3dConverter(BaseModeConverter):
                     valid_img_names = img_names[valid[i]]
                     valid_global_poses = global_poses[valid[i]]
                     gender = genders[i]
+
                     # consider only valid frames
                     for valid_i in range(valid_pose.shape[0]):
                         keypoints2d = valid_keypoints_2d[valid_i, :, :].T
@@ -88,8 +97,19 @@ class Pw3dConverter(BaseModeConverter):
                         ]
                         bbox_xywh = self.bbox_expand(bbox_xywh)
 
+                        image_path = valid_img_names[valid_i]
+                        image_abs_path = os.path.join(root_path, image_path)
+                        h, w, _ = cv2.imread(image_abs_path).shape
+
                         # transform global pose
                         pose = valid_pose[valid_i]
+                        extrinsic_param = valid_global_poses[valid_i]
+                        R, T = self.get_rt_from_extrinsic(extrinsic_param)
+
+                        camera = CameraParameter(H=h, W=w)
+                        camera.set_K_R_T(K, R, T)
+                        parameter_dict = camera.to_dict()
+
                         extrinsics = valid_global_poses[valid_i][:3, :3]
                         pose[:3] = cv2.Rodrigues(
                             np.dot(extrinsics,
@@ -101,6 +121,7 @@ class Pw3dConverter(BaseModeConverter):
                         smpl['global_orient'].append(pose[:3])
                         smpl['betas'].append(valid_betas[valid_i])
                         meta['gender'].append(gender)
+                        cam_param_.append(parameter_dict)
 
         # change list to np array
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
@@ -115,6 +136,7 @@ class Pw3dConverter(BaseModeConverter):
         human_data['bbox_xywh'] = bbox_xywh_
         human_data['smpl'] = smpl
         human_data['meta'] = meta
+        human_data['cam_param'] = cam_param_
         human_data['config'] = '3dpw'
 
         # store data
