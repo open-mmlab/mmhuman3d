@@ -1,5 +1,6 @@
 import os
 import pickle
+from typing import List
 
 import cv2
 import numpy as np
@@ -13,13 +14,26 @@ from .base_converter import BaseModeConverter
 
 @DATA_CONVERTERS.register_module()
 class Pw3dConverter(BaseModeConverter):
+    """3D Poses in the Wild dataset `Recovering Accurate 3D Human Pose in The
+    Wild Using IMUs and a Moving Camera' ECCV'2018 More details can be found in
+    the `paper.
+
+    <https://virtualhumans.mpi-inf.mpg.de/papers/vonmarcardECCV18/
+    vonmarcardECCV18.pdf>`__ .
+
+    Args:
+        modes (list): 'test' and/or 'train' for accepted modes
+    """
 
     ACCEPTED_MODES = ['train', 'test']
 
-    def __init__(self, modes=[]):
+    def __init__(self, modes: List = []) -> None:
         super(Pw3dConverter, self).__init__(modes)
 
-    def bbox_expand(self, bbox_xywh, scale_factor=1.2):
+    def bbox_expand(self,
+                    bbox_xywh: List[float],
+                    scale_factor: float = 1.2) -> List[float]:
+        """Obtain bbox in xywh format."""
         center = [
             bbox_xywh[0] + bbox_xywh[2] / 2, bbox_xywh[1] + bbox_xywh[3] / 2
         ]
@@ -29,13 +43,20 @@ class Pw3dConverter(BaseModeConverter):
         h = bbox_xywh[3] * scale_factor * scale_factor
         return [x, y, w, h]
 
-    @staticmethod
-    def get_rt_from_extrinsic(extrinsics):
-        R = extrinsics[:3, :3]
-        T = extrinsics[:3, 3]
-        return R, T
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, smpl, meta
+                stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 
@@ -104,7 +125,8 @@ class Pw3dConverter(BaseModeConverter):
                         # transform global pose
                         pose = valid_pose[valid_i]
                         extrinsic_param = valid_global_poses[valid_i]
-                        R, T = self.get_rt_from_extrinsic(extrinsic_param)
+                        R = extrinsic_param[:3, :3]
+                        T = extrinsic_param[:3, 3]
 
                         camera = CameraParameter(H=h, W=w)
                         camera.set_K_R_T(K, R, T)

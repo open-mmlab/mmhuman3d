@@ -16,13 +16,32 @@ from mmhuman3d.data.datasets.pipelines.hybrik_transforms import (
 
 @DATA_CONVERTERS.register_module()
 class MpiInf3dhpHybrIKConverter(BaseModeConverter):
+    """MPI-INF-3DHP dataset for HybrIK `Monocular 3D Human Pose Estimation In
+    The Wild Using Improved CNN Supervision' 3DC`2017 More details can be found
+    in the `paper.
+
+    <https://arxiv.org/pdf/1611.09813.pdf>`__.
+
+    Args:
+        modes (list): 'test' or 'train' for accepted modes
+    """
     ACCEPTED_MODES = ['test', 'train']
 
     def __init__(self, modes=[]):
         super(MpiInf3dhpHybrIKConverter, self).__init__(modes)
 
     @staticmethod
-    def cam2pixel_matrix(cam_coord, intrinsic_param):
+    def cam2pixel_matrix(cam_coord: np.ndarray,
+                         intrinsic_param: np.ndarray) -> np.ndarray:
+        """Convert coordinates from camera to image frame given intrinsic
+        matrix
+        Args:
+            cam_coord (np.ndarray): Coordinates in camera frame
+            intrinsic_param (np.ndarray): 3x3 Intrinsic matrix
+
+        Returns:
+            img_coord (np.ndarray): Coordinates in image frame
+        """
         cam_coord = cam_coord.transpose(1, 0)
         cam_homogeneous_coord = np.concatenate(
             (cam_coord, np.ones((1, cam_coord.shape[1]), dtype=np.float32)),
@@ -33,7 +52,22 @@ class MpiInf3dhpHybrIKConverter(BaseModeConverter):
                                    axis=0)
         return img_coord.transpose(1, 0)
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where hybrik preprocessed
+            json files are stored
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, image_height, image_width,
+                bbox_xywh, cam_param, root_cam, depth_factor, keypoints3d,
+                keypoints3d_mask, keypoints3d_cam, keypoints3d_cam_mask
+                stored in HumanData() format
+        """
         if mode == 'train':
             ann_file = os.path.join(dataset_path,
                                     'annotation_mpi_inf_3dhp_train_v2.json')

@@ -29,8 +29,24 @@ all_sequences = [
 
 @DATA_CONVERTERS.register_module()
 class AmassConverter(BaseConverter):
+    """AMASS dataset
+    `AMASS: Archive of Motion Capture as Surface Shapes' ICCV`2019
+    More details can be found in the `paper
+    <https://files.is.tue.mpg.de/black/papers/amass.pdf>`__.
+    """
 
-    def convert(self, dataset_path, out_path):
+    def convert(self, dataset_path: str, out_path: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+
+        Returns:
+            dict:
+                A dict containing keys video_path, smplh, meta, frame_idx
+                stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

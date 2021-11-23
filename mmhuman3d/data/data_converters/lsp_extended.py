@@ -14,9 +14,25 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class LspExtendedConverter(BaseConverter):
+    """Leeds Sports Pose Extended Training Dataset `Learning Effective Human
+    Pose Estimation from Inaccurate Annotation' CVPR'2011 More details can be
+    found in the `paper.
 
-    def convert(self, dataset_path, out_path):
+    <http://sam.johnson.io/research/publications/johnson11cvpr.pdf>`__ .
+    """
 
+    def convert(self, dataset_path: str, out_path: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

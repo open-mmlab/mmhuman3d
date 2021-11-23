@@ -1,5 +1,6 @@
 import json
 import os
+from typing import List
 
 import numpy as np
 from tqdm import tqdm
@@ -12,13 +13,35 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class CrowdposeConverter(BaseModeConverter):
+    """CrowdPose dataset
+    `CrowdPose: Efficient Crowded Scenes Pose Estimation and A New
+    Benchmark' arXiv'2018
+    More details can be found in the `paper
+    <https://arxiv.org/pdf/1812.00324.pdf>`__ .
 
+    Args:
+        modes (list): 'val', 'train', 'trainval' and/or 'test' for
+        accepted modes
+    """
     ACCEPTED_MODES = ['val', 'train', 'trainval', 'test']
 
-    def __init__(self, modes=[]):
+    def __init__(self, modes: List = []) -> None:
         super(CrowdposeConverter, self).__init__(modes)
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

@@ -13,9 +13,17 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class PennActionConverter(BaseConverter):
+    """Penn Action dataset `From Actemes to Action: A Strongly-supervised
+    Representation for Detailed Action Understanding' ICCV'2012 More details
+    can be found in the `paper.
+
+    <https://openaccess.thecvf.com/content_iccv_2013/papers/
+        Zhang_From_Actemes_to_2013_ICCV_paper.pdf>`__ .
+    """
 
     @staticmethod
-    def load_mat(path):
+    def load_mat(path: str) -> dict:
+        """Filter keys from mat file."""
         mat = loadmat(path)
         del mat['pose'], mat['__header__'], mat['__globals__'], \
             mat['__version__'], mat['train'], mat['action']
@@ -23,7 +31,18 @@ class PennActionConverter(BaseConverter):
 
         return mat
 
-    def convert(self, dataset_path, out_path):
+    def convert(self, dataset_path: str, out_path: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

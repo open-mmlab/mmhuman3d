@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 import cv2
 import numpy as np
@@ -13,13 +14,34 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class LspConverter(BaseModeConverter):
+    """Leeds Sports Pose Dataset `Clustered Pose and Nonlinear Appearance
+    Models for Human Pose Estimation' BMVC'2010 More details can be found in
+    the `paper.
 
+    <http://sam.johnson.io/research/publications/johnson10bmvc.pdf>`__ .
+
+    Args:
+        modes (list): 'test' and/or 'train' for accepted modes
+    """
     ACCEPTED_MODES = ['test', 'train']
 
-    def __init__(self, modes=[]):
+    def __init__(self, modes: List = []) -> None:
         super(LspConverter, self).__init__(modes)
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

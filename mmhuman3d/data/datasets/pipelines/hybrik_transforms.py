@@ -15,6 +15,18 @@ from .transforms import (
 
 
 def get_bbox(bbox_xywh, w, h):
+    """Obtain bbox in xyxy format given bbox in xywh format and applying
+    clipping to ensure bbox is within image bounds.
+
+    Args:
+        xywh (list): bbox in format (x, y, w, h).
+        w (int): image width
+        h (int): image height
+
+    Returns:
+        xyxy (numpy.ndarray): Converted bboxes in format (xmin, ymin,
+         xmax, ymax).
+    """
     bbox_xywh = bbox_xywh.reshape(1, 4)
     xmin, ymin, xmax, ymax = bbox_clip_xyxy(bbox_xywh_to_xyxy(bbox_xywh), w, h)
     bbox = np.array([xmin, ymin, xmax, ymax])
@@ -27,7 +39,7 @@ def heatmap2coord(pred_jts,
                   bbox,
                   output_3d=False,
                   mean_bbox_scale=None):
-    # TODO: This cause imbalanced GPU useage, implement cpu version
+    """Retrieve predicted keypoints and scores from heatmap."""
     hm_width, hm_height = hm_shape
 
     ndims = pred_jts.dim()
@@ -69,6 +81,7 @@ def heatmap2coord(pred_jts,
 
 
 def transform_preds(coords, center, scale, output_size):
+    """Transform heatmap coordinates to image coordinates."""
     target_coords = np.zeros(coords.shape)
     trans = get_affine_transform(
         center, scale, 0, output_size, inv=1, pixel_std=1)
@@ -80,18 +93,14 @@ def bbox_xywh_to_xyxy(xywh):
     """Convert bounding boxes from format (x, y, w, h) to (xmin, ymin, xmax,
     ymax)
 
-    Parameters
-    ----------
-    xywh : list, tuple or numpy.ndarray
-        The bbox in format (x, y, w, h).
+    Args:
+        xywh (list, tuple or numpy.ndarray): bbox in format (x, y, w, h).
         If numpy.ndarray is provided, we expect multiple bounding boxes with
         shape `(N, 4)`.
 
-    Returns
-    -------
-    tuple or numpy.ndarray
-        The converted bboxes in format (xmin, ymin, xmax, ymax).
-        If input is numpy.ndarray, return is numpy.ndarray correspondingly.
+    Returns:
+        xyxy (tuple or numpy.ndarray): Converted bboxes in format (xmin, ymin,
+         xmax, ymax). Return numpy.ndarray if input is in the same format.
     """
     if isinstance(xywh, (tuple, list)):
         if not len(xywh) == 4:
@@ -115,27 +124,19 @@ def bbox_xywh_to_xyxy(xywh):
 
 
 def bbox_clip_xyxy(xyxy, width, height):
-    """Clip bounding box with format (xmin, ymin, xmax, ymax) to specified
-    boundary.
+    """Clip bounding box with format (xmin, ymin, xmax, ymax) to `(0, 0, width,
+    height)`.
 
-    All bounding boxes will be clipped to the new region
-     `(0, 0, width, height)`.
+    Args:
+    xyxy (list, tuple or numpy.ndarray): bbox in format (xmin, ymin,
+     xmax, ymax). If numpy.ndarray is provided, we expect multiple bounding
+     boxes with shape `(N, 4)`.
+    width (int or float): Boundary width.
+    height (int or float): Boundary height.
 
-    Parameters
-    ----------
-    xyxy : list, tuple or numpy.ndarray
-        The bbox in format (xmin, ymin, xmax, ymax).
-        If numpy.ndarray is provided, we expect multiple bounding boxes with
-        shape `(N, 4)`.
-    width : int or float
-        Boundary width.
-    height : int or float
-        Boundary height.
-
-    Returns
-    -------
-    type
-        Description of returned object.
+    Returns:
+    xyxy (list, tuple or numpy.ndarray): clipped bbox in format (xmin, ymin,
+     xmax, ymax) and input type
     """
     if isinstance(xyxy, (tuple, list)):
         if not len(xyxy) == 4:
@@ -167,6 +168,17 @@ def box2cs(x, y, w, h, aspect_ratio=1.0, scale_mult=1.25):
     """Convert box coordinates to center and scale.
 
     adapted from https://github.com/Microsoft/human-pose-estimation.pytorch
+
+    Args:
+    xyxy (list, tuple or numpy.ndarray): bbox in format (xmin, ymin,
+     xmax, ymax). If numpy.ndarray is provided, we expect multiple bounding
+     boxes with shape `(N, 4)`.
+    width (int or float): Boundary width.
+    height (int or float): Boundary height.
+
+    Returns:
+    xyxy (list, tuple or numpy.ndarray): clipped bbox in format (xmin, ymin,
+     xmax, ymax) and input type
     """
     pixel_std = 1
     center = np.zeros((2), dtype=np.float32)
@@ -185,6 +197,16 @@ def box2cs(x, y, w, h, aspect_ratio=1.0, scale_mult=1.25):
 
 
 def cam2pixel(cam_coord, f, c):
+    """Convert coordinates from camera to image frame given f and c
+    Args:
+        cam_coord (np.ndarray): Coordinates in camera frame
+        f (list): focal length, fx, fy
+        c (list): principal point offset, x0, y0
+
+    Returns:
+        img_coord (np.ndarray): Coordinates in image frame
+    """
+
     x = cam_coord[:, 0] / (cam_coord[:, 2] + 1e-8) * f[0] + c[0]
     y = cam_coord[:, 1] / (cam_coord[:, 2] + 1e-8) * f[1] + c[1]
     z = cam_coord[:, 2]
@@ -193,6 +215,15 @@ def cam2pixel(cam_coord, f, c):
 
 
 def get_intrinsic_matrix(f, c, inv=False):
+    """Get intrisic matrix (or its inverse) given f and c.
+    Args:
+        f (list): focal length, fx, fy
+        c (list): principal point offset, x0, y0
+        inv (bool): Store True to get inverse. Default: False.
+
+    Returns:
+        intrinsic matrix (np.ndarray): 3x3 intrinsic matrix or its inverse
+    """
     intrinsic_metrix = np.zeros((3, 3)).astype(np.float32)
     intrinsic_metrix[0, 0] = f[0]
     intrinsic_metrix[0, 2] = c[0]
@@ -206,6 +237,14 @@ def get_intrinsic_matrix(f, c, inv=False):
 
 
 def get_fc_from_intrinsic(intrinsics):
+    """Get f and c from intrisic matrix
+    Args:
+        intrinsics (np.ndarray): 3x3 intrinsic matrix
+
+    Returns:
+        f (np.ndarray): focal length, fx, fy
+        c (np.ndarray): principal point offset, x0, y0
+    """
     f = np.array([intrinsics[0, 0], intrinsics[1, 1]])
     c = np.array([intrinsics[0, 2], intrinsics[1, 2]])
     return f, c
@@ -288,17 +327,12 @@ def rotmat_to_quat_numpy(matrix: np.ndarray) -> np.ndarray:
 def flip_thetas(thetas, theta_pairs):
     """Flip thetas.
 
-    Parameters
-    ----------
-    thetas : numpy.ndarray
-        Joints in shape (num_thetas, 3)
-    theta_pairs : list
-        List of theta pairs.
+    Args:
+        thetas (np.ndarray): joints in shape (num_thetas, 3)
+        theta_pairs (list): flip pairs for thetas
 
-    Returns
-    -------
-    numpy.ndarray
-        Flipped thetas with shape (num_thetas, 3)
+    Returns:
+        thetas_flip (np.ndarray): flipped thetas with shape (num_thetas, 3)
     """
     thetas_flip = thetas.copy()
     # reflect horizontally
@@ -315,19 +349,14 @@ def flip_thetas(thetas, theta_pairs):
 def flip_joints_3d(joints_3d, joints_3d_visible, width, flip_pairs):
     """Flip 3d joints.
 
-    Parameters
-    ----------
-    joints_3d : numpy.ndarray
-        Joints in shape (num_joints, 3, 2)
-    width : int
-        Image width.
-    joint_pairs : list
-        List of joint pairs.
+    Args:
+        joints_3d (np.ndarray): joints in shape (N, 3, 2)
+        width (int): Image width
+        joint_pairs (list): flip pairs for joints
 
-    Returns
-    -------
-    numpy.ndarray
-        Flipped 3d joints with shape (num_joints, 3, 2)
+    Returns:
+        joints_3d_flipped (np.ndarray): flipped joints with shape (N, 3, 2)
+        joints_3d_visible_flipped (np.ndarray): visibility of (N, 3, 2)
     """
 
     assert len(joints_3d) == len(joints_3d_visible)
@@ -351,18 +380,14 @@ def flip_joints_3d(joints_3d, joints_3d_visible, width, flip_pairs):
 def flip_xyz_joints_3d(joints_3d, flip_pairs):
     """Flip 3d xyz joints.
 
-    Parameters
-    ----------
-    joints_3d : numpy.ndarray
-        Joints in shape (num_joints, 3)
-    joint_pairs : list
-        List of joint pairs.
+    Args:
+        joints_3d (np.ndarray): Joints in shape (N, 3)
+        joint_pairs (list): flip pairs for joints
 
-    Returns
-    -------
-    numpy.ndarray
-        Flipped 3d joints with shape (num_joints, 3)
+    Returns:
+        joints_3d_flipped (np.ndarray): flipped joints with shape (N, 3)
     """
+
     joints_3d[:, 0] = -1 * joints_3d[:, 0]
     joints_3d_flipped = joints_3d.copy()
     # change left-right parts
@@ -374,6 +399,17 @@ def flip_xyz_joints_3d(joints_3d, flip_pairs):
 
 
 def flip_twist(twist_phi, twist_weight, twist_pairs):
+    """Flip twist and weight.
+
+    Args:
+        twist_phi (np.ndarray): twist in shape (num_twist, 2)
+        twist_weight (np.ndarray): weight in shape (num_twist, 2)
+        twist_pairs (list): flip pairs for twist
+
+    Returns:
+        twist_flip (np.ndarray): flipped twist with shape (num_twist, 2)
+        weight_flip (np.ndarray): flipped weights with shape (num_twist, 2)
+    """
     # twist_flip = -1 * twist_phi.copy() # 23 x 2
     twist_flip = np.zeros_like(twist_phi)
     weight_flip = twist_weight.copy()
@@ -393,6 +429,15 @@ def flip_twist(twist_phi, twist_weight, twist_pairs):
 
 
 def _center_scale_to_box(center, scale):
+    """Flip twist and weight.
+
+    Args:
+        joints_3d (np.ndarray): Joints in shape (N, 3)
+        joint_pairs (list): flip pairs for joints
+
+    Returns:
+        joints_3d_flipped (np.ndarray): flipped joints with shape (N, 3)
+    """
     pixel_std = 1.0
     w = scale[0] * pixel_std
     h = scale[1] * pixel_std

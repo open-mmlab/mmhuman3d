@@ -18,7 +18,23 @@ from mmhuman3d.data.datasets.pipelines.hybrik_transforms import (
 @DATA_CONVERTERS.register_module()
 class Pw3dHybrIKConverter(BaseConverter):
 
-    def convert(self, dataset_path, out_path):
+    def convert(self, dataset_path: str, out_path: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where hybrik preprocessed
+            json files are stored
+            out_path (str): Path to directory to save preprocessed npz file
+
+        Returns:
+            dict:
+                A dict containing keys image_path, image_height, image_width,
+                bbox_xywh, smpl, cam_param, root_cam, depth_factor,
+                keypoints3d, keypoints3d_mask, keypoints3d17_cam_mask,
+                keypoints3d_cam_mask, keypoints3d17_relative_mask,
+                keypoints3d_relative_mask, keypoints3d17_cam, keypoints3d17,
+                keypoints3d17_relative, keypoints3d_cam
+                stored in HumanData() format
+        """
         ann_file = os.path.join(dataset_path, '3DPW_test_new.json')
 
         with open(ann_file, 'r') as fid:
