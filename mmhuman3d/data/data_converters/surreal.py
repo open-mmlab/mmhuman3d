@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 import cv2
 import numpy as np
@@ -14,10 +15,23 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class SurrealConverter(BaseModeConverter):
+    """SURREAL dataset `Learning from Synthetic Humans' CVPR`2017 More details
+    can be found in the `paper.
 
+    <https://arxiv.org/pdf/1701.01370.pdf>`__.
+
+    Args:
+        modes (list): 'val', 'test' or 'train' for accepted modes
+        run (int): 0, 1, 2 for available runs
+        extract_img (bool): Store True to extract images from video.
+        Default: False.
+    """
     ACCEPTED_MODES = ['val', 'train', 'test']
 
-    def __init__(self, modes=[], run=0, extract_img=False):
+    def __init__(self,
+                 modes: List = [],
+                 run: int = 0,
+                 extract_img: bool = False) -> None:
         super(SurrealConverter, self).__init__(modes)
         accepted_runs = [0, 1, 2]
         if run not in accepted_runs:
@@ -29,10 +43,14 @@ class SurrealConverter(BaseModeConverter):
         self.image_width = 320
 
     @staticmethod
-    def get_intrinsic():
+    def get_intrinsic() -> np.ndarray:
         """Blender settings obtained from https://github.com/gulvarol/surreal/
         blob/45a90f3987b1347f0560daf1a69e22b2b7d0270c/datageneration/misc/
-        smpl_relations/smpl_relations.py#L79 specific to SURREAL."""
+        smpl_relations/smpl_relations.py#L79 specific to SURREAL.
+
+        Returns:
+            K (np.ndarray): 3x3 intrinsic matrix
+        """
         res_x_px = 320  # scn.render.resolution_x
         res_y_px = 240  # scn.render.resolution_y
         f_mm = 60  # cam_ob.data.lens
@@ -60,12 +78,15 @@ class SurrealConverter(BaseModeConverter):
 
     @staticmethod
     def get_extrinsic(T):
-        """
-        Obtained from https://github.com/gulvarol/surreal/blob/
+        """Obtained from https://github.com/gulvarol/surreal/blob/
         45a90f3987b1347f0560daf1a69e22b2b7d0270c/datageneration/misc/
-        smpl_relations/smpl_relations.py#L109 specific to SURREAL
-        T : translation vector from Blender (*cam_ob.location)
-        RT: extrinsic computer vision camera matrix
+        smpl_relations/smpl_relations.py#L109 specific to SURREAL.
+
+        Args:
+            T : translation vector from Blender (*cam_ob.location)
+
+        Returns:
+            RT: extrinsic matrix
         """
         # transpose of the first 3 columns of matrix_world in Blender
         # hard-coded for SURREAL images
@@ -86,7 +107,21 @@ class SurrealConverter(BaseModeConverter):
         RT = np.concatenate([R_world2cv, T_world2cv], axis=1)
         return RT, R_world2cv, T_world2cv.reshape(-1)
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask, keypoints3d, keypoints3d_mask, video_path,
+                smpl, meta, cam_param stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

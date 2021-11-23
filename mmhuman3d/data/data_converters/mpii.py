@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 import h5py
 import numpy as np
@@ -12,14 +13,31 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class MpiiConverter(BaseConverter):
+    """MPII Dataset `2D Human Pose Estimation: New Benchmark and State of the
+    Art Analysis' CVPR'2014. More details can be found in the `paper.
+
+    <http://human-pose.mpi-inf.mpg.de/contents/andriluka14cvpr.pdf>`__ .
+    """
 
     @staticmethod
-    def center_scale_to_bbox(center, scale):
+    def center_scale_to_bbox(center: float, scale: float) -> List[float]:
+        """Obtain bbox given center and scale."""
         w, h = scale * 200, scale * 200
         x, y = center[0] - w / 2, center[1] - h / 2
         return [x, y, w, h]
 
-    def convert(self, dataset_path, out_path):
+    def convert(self, dataset_path: str, out_path: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

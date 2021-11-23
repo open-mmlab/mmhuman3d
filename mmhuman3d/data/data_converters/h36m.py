@@ -1,6 +1,7 @@
 import glob
 import os
 import xml.etree.ElementTree as ET
+from typing import List
 
 import cdflib
 import cv2
@@ -16,8 +17,13 @@ from .builder import DATA_CONVERTERS
 
 
 class H36mCamera():
+    """Extract camera information from Human3.6M Metadata.
 
-    def __init__(self, metadata):
+    Args:
+        metadata (str): path to metadata.xml file
+    """
+
+    def __init__(self, metadata: str):
         self.subjects = []
         self.sequence_mappings = {}
         self.action_names = {}
@@ -43,7 +49,7 @@ class H36mCamera():
             }
         }
 
-    def _load_metadata(self):
+    def _load_metadata(self) -> None:
         """Load meta data from metadata.xml."""
 
         assert os.path.exists(self.metadata)
@@ -73,7 +79,10 @@ class H36mCamera():
         self.cameras_raw = [float(num) for num in w0.text[1:-1].split()]
 
     @staticmethod
-    def get_intrinsic_matrix(f, c, inv=False):
+    def get_intrinsic_matrix(f: List[float],
+                             c: List[float],
+                             inv: bool = False) -> np.ndarray:
+        """Get intrisic matrix (or its inverse) given f and c."""
         intrinsic_metrix = np.zeros((3, 3)).astype(np.float32)
         intrinsic_metrix[0, 0] = f[0]
         intrinsic_metrix[0, 2] = c[0]
@@ -86,7 +95,7 @@ class H36mCamera():
                 np.float32)
         return intrinsic_metrix
 
-    def _get_camera_params(self, camera, subject):
+    def _get_camera_params(self, camera: int, subject: str) -> dict:
         """Get camera parameters given camera id and subject id."""
         metadata_slice = np.zeros(15)
         start = 6 * (camera * 11 + (subject - 1))
@@ -131,7 +140,7 @@ class H36mCamera():
         camera_params.set_value('p2', p[1])
         return camera_params.to_dict()
 
-    def generate_cameras_dict(self):
+    def generate_cameras_dict(self) -> dict:
         """Generate dictionary of camera params which contains camera
         parameters for 11 subjects each with 4 cameras."""
         cameras = {}
@@ -145,10 +154,24 @@ class H36mCamera():
 
 @DATA_CONVERTERS.register_module()
 class H36mConverter(BaseModeConverter):
+    """Human3.6M dataset
+    `Human3.6M: Large Scale Datasets and Predictive Methods for 3D Human
+    Sensing in Natural Environments' TPAMI`2014
+    More details can be found in the `paper
+    <http://vision.imar.ro/human3.6m/pami-h36m.pdf>`__.
 
+    Args:
+        modes (list): 'valid' or 'train' for accepted modes
+        protocol (int): 1 or 2 for available protocols
+        extract_img (bool): Store True to extract images into a separate
+        folder. Default: False.
+    """
     ACCEPTED_MODES = ['valid', 'train']
 
-    def __init__(self, modes=[], protocol=1, extract_img=False):
+    def __init__(self,
+                 modes: List = [],
+                 protocol: int = 1,
+                 extract_img: bool = False) -> None:
         super(H36mConverter, self).__init__(modes)
         accepted_protocol = [1, 2]
         if protocol not in accepted_protocol:
@@ -163,7 +186,21 @@ class H36mConverter(BaseModeConverter):
             '60457274': 3,
         }
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask, keypoints3d, keypoints3d_mask, cam_param
+                stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

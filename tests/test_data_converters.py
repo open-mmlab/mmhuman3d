@@ -136,6 +136,40 @@ def test_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'surreal_train_run0.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'surreal_test_run0.npz')
 
+    HYBRIK_ROOT = os.path.join(root_path, 'hybrik_data')
+    cfg = dict(type='Pw3dHybrIKConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(HYBRIK_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + '3dpw_hybrik_test.npz')
+
+    cfg = dict(type='H36mHybrIKConverter', modes=['train', 'test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(HYBRIK_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'h36m_hybrik_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'h36m_hybrik_valid_protocol2.npz')
+
+    cfg = dict(type='MpiInf3dhpHybrIKConverter', modes=['train', 'test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(HYBRIK_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'mpi_inf_3dhp_hybrik_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'mpi_inf_3dhp_hybrik_test.npz')
+
+    COCO_2017_ROOT = os.path.join(root_path, 'coco_2017')
+    cfg = dict(type='CocoHybrIKConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(COCO_2017_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'coco_2017_hybrik_train.npz')
+
+    INSTA_VIBE_ROOT = os.path.join(root_path, 'vibe_data')
+    cfg = dict(type='InstaVibeConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(INSTA_VIBE_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'insta_variety.npz')
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'
@@ -143,7 +177,13 @@ def test_preprocessed_npz():
     all_keys = [
         'image_path', 'bbox_xywh', 'config', 'keypoints2d', 'keypoints3d',
         'smpl', 'smplx', 'smplh', 'meta', 'keypoints2d_mask', 'video_path',
-        'frame_idx', 'keypoints3d_mask', 'cam_param'
+        'frame_idx', 'keypoints3d_mask', 'cam_param', 'image_height',
+        'image_width', 'root_cam', 'depth_factor', 'keypoints3d17_cam_mask',
+        'keypoints3d_cam_mask', 'keypoints3d17_mask',
+        'keypoints3d17_relative_mask', 'keypoints3d_relative',
+        'keypoints3d17_cam', 'keypoints3d17', 'keypoints3d17_relative',
+        'keypoints3d_cam', 'keypoints3d_relative_mask', 'phi', 'phi_weight',
+        'features'
     ]
 
     for npf in os.listdir(npz_folder):
@@ -186,7 +226,9 @@ def test_preprocessed_npz():
 
             elif k == 'smpl':
                 assert isinstance(npfile[k].item(), dict)
-                smpl_keys = ['body_pose', 'global_orient', 'betas', 'transl']
+                smpl_keys = [
+                    'body_pose', 'global_orient', 'betas', 'transl', 'thetas'
+                ]
                 smpl_dict = npfile[k].item()
                 for smpl_key in smpl_dict.keys():
                     assert smpl_key in smpl_keys
@@ -198,6 +240,8 @@ def test_preprocessed_npz():
                         assert smpl_dict[smpl_key].shape == (N, 10)
                     elif smpl_key == 'transl':
                         assert smpl_dict[smpl_key].shape == (N, 3)
+                    elif smpl_key == 'thetas':
+                        assert smpl_dict[smpl_key].shape == (N, 24, 3)
 
             elif k == 'smplh':
                 smplh_keys = [
@@ -257,8 +301,27 @@ def test_preprocessed_npz():
                     assert meta_key in meta_keys
                     assert meta_dict['gender'].shape == (N, )
 
-            elif k == 'mask':
+            elif 'mask' in k:
                 assert npfile[k].shape == (190, )
+
+            elif 'keypoints3d' in k and 'mask' not in k:
+                N_keypoints = npfile[k].shape[1]
+                assert npfile[k].shape == (N, N_keypoints, 4)
+
+            elif k == 'image_height' or k == 'image_width':
+                assert isinstance(npfile[k][0], np.int64)
+
+            elif k == 'root_cam':
+                assert npfile[k].shape == (N, 3)
+
+            elif k == 'depth_factor':
+                assert isinstance(npfile[k][0], np.float64)
+
+            elif k == 'phi' or k == 'phi_weight':
+                assert npfile[k].shape == (N, 23, 2)
+
+            elif k == 'features':
+                assert npfile[k].shape == (N, 2048)
 
 
 if __name__ == '__main__':

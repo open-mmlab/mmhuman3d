@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 import numpy as np
 import pickle5 as pickle
@@ -12,10 +13,18 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class AgoraConverter(BaseModeConverter):
+    """AGORA dataset
+    `AGORA: Avatars in Geography Optimized for Regression Analysis' CVPR`2021
+    More details can be found in the `paper
+    <https://arxiv.org/pdf/2104.14643.pdf>`__.
 
+    Args:
+        modes (list): 'validation' or 'train' for accepted modes
+        fit (str): 'smpl' or 'smplx for available body model fits
+    """
     ACCEPTED_MODES = ['validation', 'train']
 
-    def __init__(self, modes=[], fit='smpl'):
+    def __init__(self, modes: List = [], fit: str = 'smpl') -> None:
         super(AgoraConverter, self).__init__(modes)
         accepted_fits = ['smpl', 'smplx']
         if fit not in accepted_fits:
@@ -23,7 +32,21 @@ class AgoraConverter(BaseModeConverter):
                 Use either smpl or smplx')
         self.fit = fit
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints3d, keypoints2d_mask, keypoints3d_mask, meta
+                stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

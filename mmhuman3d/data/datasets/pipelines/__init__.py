@@ -24,6 +24,7 @@ from .transforms import (
     KeypointsSelection,
     Lighting,
     MeshAffine,
+    Normalize,
     RandomChannelNoise,
     RandomHorizontalFlip,
 )

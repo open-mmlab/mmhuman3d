@@ -1,5 +1,6 @@
 import json
 import os
+from typing import List
 
 import numpy as np
 from tqdm import tqdm
@@ -13,10 +14,19 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class EftConverter(BaseModeConverter):
+    """Eft dataset `Exemplar Fine-Tuning for 3D Human Pose Fitting Towards In-
+    the-Wild 3D Human Pose Estimation' arXiv'2020 More details can be found in
+    the `paper.
 
+    <https://arxiv.org/pdf/2004.03686.pdf>`__ .
+
+    Args:
+        modes (list): 'coco_all', 'coco_part', 'mpii' and/or 'lspet' for
+        accepted modes
+    """
     ACCEPTED_MODES = ['coco_all', 'coco_part', 'mpii', 'lspet']
 
-    def __init__(self, modes=[]):
+    def __init__(self, modes: List = []) -> None:
         super(EftConverter, self).__init__(modes)
         self.json_mapping_dict = {
             'coco_all': 'coco_2014_train_fit/COCO2014-All-ver01.json',
@@ -26,12 +36,26 @@ class EftConverter(BaseModeConverter):
         }
 
     @staticmethod
-    def center_scale_to_bbox(center, scale):
+    def center_scale_to_bbox(center: List[float], scale: float) -> List[float]:
+        """obtain bbox from center and scale with pixel_std=200."""
         w, h = scale * 200, scale * 200
         x, y = center[0] - w / 2, center[1] - h / 2
         return [x, y, w, h]
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask, smpl stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
         image_path_, bbox_xywh_, keypoints2d_ = [], [], []

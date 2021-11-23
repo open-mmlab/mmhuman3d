@@ -13,10 +13,28 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class PosetrackConverter(BaseModeConverter):
+    """PoseTrack18 dataset
+    `Posetrack: A benchmark for human pose estimation and tracking' CVPR'2018
+    More details can be found in the `paper
+    <https://arxiv.org/abs/1710.10000>`_ .
+    """
 
     ACCEPTED_MODES = ['val', 'train']
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

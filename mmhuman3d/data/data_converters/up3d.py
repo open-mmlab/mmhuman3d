@@ -1,5 +1,6 @@
 import os
 import pickle
+from typing import List
 
 import cv2
 import numpy as np
@@ -13,13 +14,34 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class Up3dConverter(BaseModeConverter):
+    """Unite the People dataset `Unite the People – Closing the Loop Between 3D
+    and 2D Human Representations' CVPR'2017 More details can be found in the
+    `paper.
 
+    <https://arxiv.org/pdf/1701.02468.pdf>`__ .
+
+    Args:
+        modes (list): 'test' and/or 'trainval' for accepted modes
+    """
     ACCEPTED_MODES = ['test', 'trainval']
 
-    def __init__(self, modes=[]):
+    def __init__(self, modes: List = []) -> None:
         super(Up3dConverter, self).__init__(modes)
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask, smpl stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

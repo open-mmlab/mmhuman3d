@@ -1,5 +1,6 @@
 import glob
 import os
+from typing import List, Tuple
 
 import cv2
 import h5py
@@ -15,13 +16,28 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class MpiInf3dhpConverter(BaseModeConverter):
+    """MPI-INF-3DHP dataset `Monocular 3D Human Pose Estimation In The Wild
+    Using Improved CNN Supervision' 3DC`2017 More details can be found in the
+    `paper.
+
+    <https://arxiv.org/pdf/1611.09813.pdf>`__.
+
+    Args:
+        modes (list): 'test' or 'train' for accepted modes
+        extract_img (bool): Store True to extract images into a separate
+        folder. Default: False.
+    """
     ACCEPTED_MODES = ['test', 'train']
 
-    def __init__(self, modes=[], extract_img=False):
+    def __init__(self, modes: List = [], extract_img: bool = False) -> None:
         super(MpiInf3dhpConverter, self).__init__(modes)
         self.extract_img = extract_img
 
-    def extract_keypoints(self, keypoints2d, keypoints3d, num_keypoints):
+    def extract_keypoints(
+        self, keypoints2d: np.ndarray, keypoints3d: np.ndarray,
+        num_keypoints: int
+    ) -> Tuple[bool, np.ndarray, np.ndarray, List[float]]:
+        """Check keypoints validiy and add confidence and bbox."""
 
         bbox_xyxy = [
             min(keypoints2d[:, 0]),
@@ -46,8 +62,21 @@ class MpiInf3dhpConverter(BaseModeConverter):
 
         return valid, keypoints2d, keypoints3d, bbox_xywh
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
 
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask, keypoints3d, keypoints3d_mask stored in
+                HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 

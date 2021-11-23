@@ -24,6 +24,11 @@ CAMERA_IDX_TO_NAME = {
 
 
 class H36M_Metadata:
+    """Extract sequence mappings from Human3.6M Metadata.
+
+    Args:
+        metadata_file (str): path to metadata.xml file
+    """
 
     def __init__(self, metadata_file):
         self.subjects = []
@@ -62,13 +67,39 @@ class H36M_Metadata:
 
 @DATA_CONVERTERS.register_module()
 class H36mHybrIKConverter(BaseModeConverter):
+    """Human3.6M dataset for HybrIK
+    `Human3.6M: Large Scale Datasets and Predictive Methods for 3D Human
+    Sensing in Natural Environments' TPAMI`2014
+    More details can be found in the `paper
+    <http://vision.imar.ro/human3.6m/pami-h36m.pdf>`__.
 
+    Args:
+        modes (list): 'test' or 'train' for accepted modes
+    """
     ACCEPTED_MODES = ['test', 'train']
 
     def __init__(self, modes=[]):
         super(H36mHybrIKConverter, self).__init__(modes)
 
-    def convert_by_mode(self, dataset_path, out_path, mode):
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where hybrik preprocessed
+            json files are stored
+            out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
+
+        Returns:
+            dict:
+                A dict containing keys image_path, image_height, image_width,
+                bbox_xywh, smpl, cam_param, root_cam, depth_factor,
+                keypoints3d, keypoints3d_mask, keypoints3d17_cam_mask,
+                keypoints3d_cam_mask, keypoints3d17_relative_mask,
+                keypoints3d_relative_mask, keypoints3d17_cam, keypoints3d17,
+                keypoints3d17_relative, keypoints3d_cam, phi, phi weight
+                stored in HumanData() format
+        """
         if mode == 'train':
             ann_file = os.path.join(
                 dataset_path,

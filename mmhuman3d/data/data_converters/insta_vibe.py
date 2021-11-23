@@ -12,8 +12,25 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class InstaVibeConverter(BaseConverter):
+    """Instavariety dataset `Learning 3D Human Dynamics from Video' CVPR'2019
+    More details can be found in the `paper.
 
-    def convert(self, dataset_path, out_path):
+    <https://arxiv.org/pdf/1812.01601.pdf>`__ .
+    """
+
+    def convert(self, dataset_path: str, out_path: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask, video_path, frame_idx, features stored in
+                HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 
@@ -53,6 +70,7 @@ class InstaVibeConverter(BaseConverter):
             frame_idx_.append(frame_id)
             keypoints2d_.append(keypoints2d)
             bbox_xywh_.append(bbox_xywh)
+            features_.append(features_list[i])
 
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
@@ -60,6 +78,7 @@ class InstaVibeConverter(BaseConverter):
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 25, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'instavariety',
                                          'human_data')
+        features_ = np.array(features_).reshape((-1, 2048))
 
         human_data['image_path'] = image_path_
         human_data['video_path'] = vid_path_

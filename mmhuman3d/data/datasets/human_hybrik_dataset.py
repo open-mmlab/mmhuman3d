@@ -16,6 +16,21 @@ from .builder import DATASETS
 
 @DATASETS.register_module()
 class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
+    """Dataset for HybrIK training. The dataset loads raw features and apply
+    specified transforms to return a dict containing the image tensors and
+    other information.
+
+    Args:
+
+        data_prefix (str): Path to a directory where preprocessed datasets are
+         held.
+        pipeline (list[dict | callable]): A sequence of data transforms.
+        dataset_name (str): accepted names include 'h36m', '3dpw',
+         'mpi_inf_3dhp', 'coco'
+        ann_file (str): Name of annotation file.
+        test_mode (bool): Store True when building test dataset.
+         Default: False.
+    """
 
     def __init__(self,
                  data_prefix,
@@ -30,12 +45,22 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                                                       ann_file, test_mode)
 
     def get_annotation_file(self):
+        """Obtain annotation file path from data prefix."""
         ann_prefix = os.path.join(self.data_prefix, 'preprocessed_datasets')
         self.ann_file = os.path.join(ann_prefix, self.ann_file)
 
     @staticmethod
     def get_3d_keypoints_vis(keypoints):
+        """Get 3d keypoints and visibility mask
+        Args:
+            keypoints (np.ndarray): 2d (NxKx3) or 3d (NxKx4) keypoints with
+             visibility. N refers to number of datapoints, K refers to number
+             of keypoints.
 
+        Returns:
+            joint_img (np.ndarray): (NxKx3) 3d keypoints
+            joint_vis (np.ndarray): (NxKx3) visibility mask for keypoints
+        """
         keypoints, keypoints_vis = keypoints[:, :, :-1], keypoints[:, :, -1]
         num_datapoints, num_keypoints, dim = keypoints.shape
         joint_img = np.zeros((num_datapoints, num_keypoints, 3),
@@ -48,7 +73,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         return joint_img, joint_vis
 
     def load_annotations(self):
-
+        """Load annotations."""
         self.get_annotation_file()
         data = HumanData()
         data.load(self.ann_file)
@@ -162,14 +187,11 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 if self.test_mode:
                     info['joint_relative_17'] = self.keypoints3d17_relative[
                         idx].astype(np.float32)
-                    info['joint_cam_29'] = self.keypoints3d_cam[idx].astype(
-                        np.float32)
 
             else:
                 if self.test_mode:
                     info['joint_relative_17'] = self.keypoints3d_cam[
                         idx].astype(np.float32)
-                    info['joint_cam_29'] = np.zeros((29, 2)).astype(np.float32)
 
             data_infos.append(info)
 
@@ -255,7 +277,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             pred_keypoints3d = pred_keypoints3d[:, joint_mapper, :]
             gt_keypoints3d = gt_keypoints3d[:, joint_mapper, :]
 
-        gt_keypoints3d_mask = gt_keypoints3d_mask[:, joint_mapper] > 0
+        gt_keypoints3d_mask = gt_keypoints3d_mask > 0
 
         mpjpe = keypoint_mpjpe(pred_keypoints3d, gt_keypoints3d,
                                gt_keypoints3d_mask)

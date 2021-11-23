@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import List
 
 
 class BaseConverter(metaclass=ABCMeta):
@@ -23,7 +24,16 @@ class BaseConverter(metaclass=ABCMeta):
         pass
 
     @staticmethod
-    def _bbox_expand(bbox_xyxy, scale_factor):
+    def _bbox_expand(bbox_xyxy: List[float],
+                     scale_factor: float) -> List[float]:
+        """Obtain bbox in xywh format given bbox in xyxy format
+        Args:
+            bbox_xyxy (List[float]): Bounding box in xyxy format
+            scale_factor (float): Scale factor to expand bbox
+
+        Returns:
+            bbox_xywh (List[float]): Bounding box in xywh format
+        """
         center = [(bbox_xyxy[0] + bbox_xyxy[2]) / 2,
                   (bbox_xyxy[1] + bbox_xyxy[3]) / 2]
         x1 = scale_factor * (bbox_xyxy[0] - center[0]) + center[0]
@@ -41,7 +51,7 @@ class BaseModeConverter(BaseConverter):
         modes (list): the modes of data for converter
     """
 
-    def convert(self, dataset_path, out_path):
+    def convert(self, dataset_path: str, out_path: str):
         for mode in self.modes:
             self.convert_by_mode(dataset_path, out_path, mode)
 

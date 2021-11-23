@@ -12,8 +12,24 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class CocoConverter(BaseConverter):
+    """CocoDataset dataset `Microsoft COCO: Common Objects in Context'
+    ECCV'2014 More details can be found in the `paper.
 
-    def convert(self, dataset_path, out_path):
+    <https://arxiv.org/abs/1405.0312>`__ .
+    """
+
+    def convert(self, dataset_path: str, out_path: str) -> dict:
+        """
+        Args:
+            dataset_path (str): Path to directory where raw images and
+            annotations are stored.
+            out_path (str): Path to directory to save preprocessed npz file
+
+        Returns:
+            dict:
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask stored in HumanData() format
+        """
         # use HumanData to store all data
         human_data = HumanData()
 
