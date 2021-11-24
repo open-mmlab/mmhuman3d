@@ -228,14 +228,12 @@ SMPL_SEGMENTATION_DICT = {
              [6549, 6551], [6557, 6573]]
 }
 
-
-def smpl_part_segmentation(key):
-    part_segmentation = []
-    raw_segmentation = SMPL_SEGMENTATION_DICT[key]
-    for continous in raw_segmentation:
-        if len(continous) == 2:
-            part_segmentation.extend(
-                list(range(continous[0], continous[1] + 1)))
-        elif len(continous) == 1:
-            part_segmentation.extend(continous)
-    return part_segmentation
+SMPL_SUPER_SET = {
+    'FOOT': ['leftFoot', 'leftToeBase', 'rightFoot', 'rightToeBase'],
+    'HAND': ['leftHand', 'rightHand', 'leftHandIndex1', 'rightHandIndex1'],
+    'LEG': ['rightUpLeg', 'leftUpLeg', 'leftLeg', 'rightLeg'],
+    'ARM': ['leftForeArm', 'rightForeArm', 'leftArm', 'rightArm'],
+    'HEAD': ['neck', 'eyeballs', 'head'],
+    'UPBODY': ['spine1', 'spine2', 'leftShoulder', 'rightShoulder'],
+    'DOWNBODY': ['spine', 'hips']
+}

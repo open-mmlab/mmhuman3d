@@ -1,12 +1,9 @@
 from typing import Iterable, Optional, Union
 
 import torch
-from pytorch3d.renderer import BlendParams, Materials, RasterizationSettings
-from pytorch3d.renderer.lighting import DirectionalLights
 from pytorch3d.structures import Meshes
 
 from .base_renderer import MeshBaseRenderer
-from .shader import NoLightShader
 
 try:
     from typing import Literal
@@ -15,6 +12,7 @@ except ImportError:
 
 
 class SilhouetteRenderer(MeshBaseRenderer):
+    """Silhouette renderer."""
 
     def __init__(
         self,
@@ -26,6 +24,7 @@ class SilhouetteRenderer(MeshBaseRenderer):
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
+        in_ndc: bool = True,
         **kwargs,
     ) -> None:
         """SilhouetteRenderer for neural rendering and visualization.
@@ -57,19 +56,8 @@ class SilhouetteRenderer(MeshBaseRenderer):
             return_tensor=return_tensor,
             img_format=img_format,
             projection=projection,
+            in_ndc=in_ndc,
             **kwargs)
-
-    def set_render_params(self):
-        self.shader = NoLightShader
-        self.materials = Materials(device=self.device)
-        self.raster_settings = RasterizationSettings(
-            image_size=self.resolution)
-        self.lights = DirectionalLights(
-            ambient_color=((1.0, 1.0, 1.0)),
-            diffuse_color=((.0, .0, .0)),
-            specular_color=((.0, .0, .0)),
-            device=self.device)
-        self.blend_params = BlendParams(background_color=(1.0, 1.0, 1.0))
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
@@ -79,6 +67,7 @@ class SilhouetteRenderer(MeshBaseRenderer):
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
                 indexs: Iterable[str] = None):
+        """The params are the same as MeshBaseRenderer."""
         rendered_images = super().forward(
             meshes=meshes,
             vertices=vertices,

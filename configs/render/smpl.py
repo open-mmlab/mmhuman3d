@@ -1,5 +1,5 @@
 base_directional_light = {
-    'light_type': 'directional',
+    'type': 'directional',
     'direction': [[10.0, 10.0, 10.0]],
     'ambient_color': [[0.5, 0.5, 0.5]],
     'diffuse_color': [[0.5, 0.5, 0.5]],
@@ -7,7 +7,7 @@ base_directional_light = {
 }
 
 base_point_light = {
-    'light_type': 'point',
+    'type': 'point',
     'ambient_color': [[0.5, 0.5, 0.5]],
     'diffuse_color': [[0.3, 0.3, 0.3]],
     'specular_color': [[0.5, 0.5, 0.5]],
@@ -15,7 +15,7 @@ base_point_light = {
 }
 
 base_ambient_light = {
-    'light_type': 'directional',
+    'type': 'directional',
     'ambient_color': [[1.0, 1.0, 1.0]],
     'diffuse_color': [[0, 0, 0]],
     'specular_color': [[0, 0, 0]],
@@ -116,4 +116,53 @@ RENDER_CONFIGS = {
         },
         'blend': black_blend_params,
     },
+    'depth': {
+        'light': base_directional_light,
+        'material': base_material,
+        'raster': {
+            'resolution': [512, 512],
+            'blur_radius': 0.0,
+            'faces_per_pixel': 1,
+            'cull_to_frustum': False,
+            'cull_backfaces': False,
+        },
+        'shader': {
+            'shader_type': 'nolight',
+        },
+        'blend': white_blend_params,
+    },
+    'normal': {
+        'light': base_directional_light,
+        'material': base_material,
+        'raster': {
+            'resolution': [512, 512],
+            'blur_radius': 0.0,
+            'faces_per_pixel': 1,
+            'cull_to_frustum': False,
+            'cull_backfaces': False,
+        },
+        'shader': {
+            'shader_type': 'nolight',
+        },
+        'blend': white_blend_params,
+    },
+    'pointcloud': {
+        'light': base_directional_light,
+        'material': base_material,
+        'raster': {
+            'resolution': [512, 512]
+        },
+        'shader': {
+            'shader_type': 'nolight',
+        },
+        'blend': white_blend_params,
+        'bg_color': [
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+        ],
+        'points_per_pixel': 10,
+        'radius': 0.008
+    }
 }

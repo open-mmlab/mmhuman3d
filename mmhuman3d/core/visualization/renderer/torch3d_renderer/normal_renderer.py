@@ -7,7 +7,6 @@ import numpy as np
 import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.structures import Meshes
-from skimage import exposure
 
 from .base_renderer import MeshBaseRenderer
 
@@ -17,7 +16,7 @@ except ImportError:
     from typing_extensions import Literal
 
 
-class DepthRenderer(MeshBaseRenderer):
+class NormalRenderer(MeshBaseRenderer):
     """Render depth map with the help of camera system."""
 
     def __init__(
@@ -33,7 +32,7 @@ class DepthRenderer(MeshBaseRenderer):
         in_ndc: bool = True,
         **kwargs,
     ) -> None:
-        """Renderer for depth map of meshes.
+        """Renderer for normal map of meshes.
 
         Args:
             resolution (Iterable[int]):
@@ -73,7 +72,7 @@ class DepthRenderer(MeshBaseRenderer):
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
                 indexs: Optional[Iterable[int]] = None):
-        """Render depth map.
+        """Render normal map.
 
         The params are the same as MeshBaseRenderer.
         """
@@ -89,27 +88,25 @@ class DepthRenderer(MeshBaseRenderer):
         else:
             if (vertices is not None) or (faces is not None):
                 warnings.warn('Redundant input, will only use meshes.')
-            vertices = meshes.verts_padded()
-        verts_depth = cameras.compute_depth_of_points(vertices)
-        verts_depth_rgb = verts_depth.repeat(1, 1, 3)
-        norm_scale = torch.max(verts_depth).clone()
-        verts_depth_rgb /= norm_scale
+            meshes = meshes.to(self.device)
+        verts_normals = cameras.compute_normal_of_meshes(meshes)
+        verts_depth_rgb = verts_normals.clone()
         meshes.textures = TexturesVertex(verts_features=verts_depth_rgb)
         renderer = self.init_renderer(cameras, self.lights)
-
         rendered_images = renderer(meshes)
-        rgbs, _ = rendered_images[
+        rgbs, valid_mask = rendered_images[
             ..., :3], (rendered_images[..., 3:] > 0) * 1.0
         if self.output_path is not None:
-            output_images = rgbs.detach().cpu().numpy()
-            p2, p98 = np.percentile(output_images, (2, 98))
-            img_rescale = exposure.rescale_intensity(
-                output_images, in_range=(p2, p98))
-
-            # Adaptive Equalization
-            output_images = (
-                exposure.equalize_adapthist(img_rescale, clip_limit=0.03) *
-                255).astype(np.uint8)
+            scene = rgbs * valid_mask
+            R, G, B = torch.unbind(scene, -1)
+            scene = torch.cat(
+                [R.unsqueeze(-1),
+                 G.unsqueeze(-1),
+                 B.unsqueeze(-1)], -1)
+            scene = (scene + 1) / 2
+            output_images = (scene - scene.min()) / (scene.max() - scene.min())
+            output_images = (output_images.detach().cpu().numpy() *
+                             255).astype(np.uint8)
 
             for idx, real_idx in enumerate(indexs):
                 folder = self.temp_path if self.temp_path is not None else\
@@ -117,8 +114,7 @@ class DepthRenderer(MeshBaseRenderer):
                 cv2.imwrite(
                     osp.join(folder, self.img_format % real_idx),
                     output_images[idx])
-
         if self.return_tensor:
-            return rendered_images * norm_scale
+            return rendered_images
         else:
             return None

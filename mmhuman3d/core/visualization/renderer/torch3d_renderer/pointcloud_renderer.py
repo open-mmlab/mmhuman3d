@@ -12,7 +12,6 @@ from pytorch3d.renderer import (
 from pytorch3d.structures import Pointclouds
 
 from mmhuman3d.core.cameras import build_cameras
-from .render_factory import CAMERA_FACTORY
 
 try:
     from typing import Literal
@@ -27,25 +26,47 @@ class PointCloudRenderer(nn.Module):
                  device: Union[torch.device, str] = 'cpu',
                  ply_path: Optional[str] = None,
                  return_tensor: bool = False,
-                 frames_folder: Optional[str] = None,
                  img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
                                      'fovorthographics'] = 'weakperspective',
+                 in_ndc: bool = True,
                  radius: float = 0.008,
                  **kwargs) -> None:
+        """PointCloud renderer.
+
+        Args:
+            resolution (Iterable[int]):
+                (width, height) of the rendered images resolution.
+            device (Union[torch.device, str], optional):
+                You can pass a str or torch.device for cpu or gpu render.
+                Defaults to 'cpu'.
+            ply_path (Optional[str], optional): output .ply file path.
+                Defaults to None.
+            return_tensor (bool, optional):
+                Boolean of whether return the rendered tensor.
+                Defaults to False.
+            img_format (str, optional): name format for temp images.
+                Defaults to '%06d.png'.
+            projection (Literal[, optional): projection type of camera.
+                Defaults to 'weakperspective'.
+            in_ndc (bool, optional): cameras whether defined in NDC.
+                Defaults to True.
+            radius (float, optional): radius of points. Defaults to 0.008.
+        """
         self.device = device
         self.resolution = resolution
         self.ply_path = ply_path
         self.return_tensor = return_tensor
         self.img_format = img_format
         self.radius = radius
-        self.frames_folder = frames_folder
         self.projection = projection
         self.set_render_params(**kwargs)
+        self.in_ndc = in_ndc
         super().__init__()
 
     def set_render_params(self, **kwargs):
+        """Set render params."""
         self.bg_color = torch.tensor(
             kwargs.get('bg_color', [
                 1.0,
@@ -57,8 +78,21 @@ class PointCloudRenderer(nn.Module):
             device=self.device)
         self.raster_settings = PointsRasterizationSettings(
             image_size=self.resolution,
-            radius=kwargs.get('radius', self.radius),
+            radius=self.radius
+            if kwargs.get('radius') is None else kwargs.get('radius'),
             points_per_pixel=kwargs.get('points_per_pixel', 10))
+
+    def init_cameras(self, K, R, T):
+        """Initialize cameras."""
+        cameras = build_cameras(
+            dict(
+                type=self.projection,
+                K=K,
+                R=R,
+                T=T,
+                image_size=self.resolution,
+                _in_ndc=self.in_ndc)).to(self.device)
+        return cameras
 
     def forward(
         self,
@@ -68,7 +102,28 @@ class PointCloudRenderer(nn.Module):
         K: Optional[torch.Tensor] = None,
         R: Optional[torch.Tensor] = None,
         T: Optional[torch.Tensor] = None,
-    ):
+    ) -> Union[None, torch.Tensor]:
+        """Render pointclouds.
+
+        Args:
+            pointclouds (Optional[Pointclouds], optional): pytorch3d data
+                structure. If not None, `vertices` and `verts_rgba` will
+                be ignored.
+                Defaults to None.
+            vertices (Optional[Union[torch.Tensor, List[torch.Tensor]]],
+                optional): coordinate tensor of points. Defaults to None.
+            verts_rgba (Optional[Union[torch.Tensor, List[torch.Tensor]]],
+                optional): color tensor of points. Defaults to None.
+            K (Optional[torch.Tensor], optional): Camera intrinsic matrix.
+                Defaults to None.
+            R (Optional[torch.Tensor], optional): Camera rotation matrix.
+                Defaults to None.
+            T (Optional[torch.Tensor], optional): Camera translation matrix.
+                Defaults to None.
+
+        Returns:
+            Union[None, torch.Tensor]: Return tensor or None.
+        """
         if pointclouds is None:
             assert vertices is not None
             if isinstance(vertices, torch.Tensor):
@@ -83,10 +138,7 @@ class PointCloudRenderer(nn.Module):
                 warnings.warn(
                     'Redundant input, will ignore `vertices` and `verts_rgb`.')
         pointclouds = pointclouds.to(self.device)
-        cameras = build_cameras(
-            dict(type=CAMERA_FACTORY[self.projection], K=K, R=R,
-                 T=T)).to(self.device)
-
+        cameras = self.init_cameras(K=K, R=R, T=T)
         renderer = PointsRenderer(
             rasterizer=PointsRasterizer(
                 cameras=cameras, raster_settings=self.raster_settings),

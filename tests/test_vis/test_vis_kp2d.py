@@ -3,8 +3,10 @@ import os
 import numpy as np
 import pytest
 
+from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.visualization.visualize_keypoints2d import visualize_kp2d
+from mmhuman3d.utils.camera_utils import project_points
 from mmhuman3d.utils.ffmpeg_utils import (
     array_to_images,
     images_to_array,
@@ -126,6 +128,15 @@ def test_vis_kp2d():
     )
     assert video_to_array('tests/data/test_vis_kp2d/test_confidence.mp4').shape
 
+    visualize_kp2d(
+        kp2d,
+        output_path='tests/data/test_vis_kp2d/test_confidence1.mp4',
+        origin_frames='tests/data/test_vis_kp2d/test_confidence.mp4',
+        overwrite=True,
+    )
+    assert video_to_array(
+        'tests/data/test_vis_kp2d/test_confidence1.mp4').shape
+
     # visualize single frame
     kp2d = np.random.randint(low=0, high=255, size=(1, 17, 2), dtype=np.uint8)
     image_array = visualize_kp2d(
@@ -183,3 +194,21 @@ def test_vis_kp2d():
             ],
             overwrite=False,
         )
+
+    # test project kp3d to kp2d
+    output_folder = 'tests/data/test_vis_kp2d/1/'
+    kp3d = np.random.uniform(size=(10, 133, 3), low=0, high=10)
+    cameras = build_cameras(dict(type='perspective'))
+    kp2d = project_points(kp3d, cameras, resolution=(1000, 1000))
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+    visualize_kp2d(
+        kp2d,
+        output_path=output_folder,
+        frame_list=[
+            'tests/data/test_vis_kp2d/%06d.png' % 0,
+            'tests/data/test_vis_kp2d/%06d.png' % 1
+        ],
+        overwrite=True,
+    )
+    assert images_to_array(output_folder).shape

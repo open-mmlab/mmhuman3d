@@ -11,6 +11,7 @@ from mmhuman3d.utils.path_utils import prepare_output_path
 
 def _norm_pose(pose_numpy: np.ndarray, min_value: Union[float, int],
                max_value: Union[float, int], mask: Union[np.ndarray, list]):
+    """Normalize the poses and make the center close to axis center."""
     assert max_value > min_value
     pose_np_normed = pose_numpy.copy()
     if not mask:

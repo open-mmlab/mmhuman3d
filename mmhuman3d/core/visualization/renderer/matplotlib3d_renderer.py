@@ -18,6 +18,7 @@ from mmhuman3d.utils.path_utils import check_path_suffix
 
 
 class Axes3dBaseRenderer(object):
+    """Base renderer."""
 
     def init_camera(self,
                     cam_elev_angle=10,
@@ -178,6 +179,7 @@ class Axes3dBaseRenderer(object):
 
 
 class Axes3dJointsRenderer(Axes3dBaseRenderer):
+    """Render of joints."""
 
     def __init__(self):
         self.if_camera_init = False
@@ -187,6 +189,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
         self.temp_path = ''
 
     def set_connections(self, limbs_connection, limbs_palette):
+        """set body limbs."""
         self.limbs_connection = limbs_connection
         self.limbs_palette = limbs_palette
         self.if_connection_setup = True
@@ -273,6 +276,7 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
 
     def _export_frames(self, keypoints_np, resolution, visual_range,
                        frame_names, disable_limbs, return_array):
+        """Write output/temp images."""
         image_array = []
         for frame_index in range(keypoints_np.shape[0]):
             keypoints_frame = keypoints_np[frame_index]
@@ -365,15 +369,18 @@ class Axes3dJointsRenderer(Axes3dBaseRenderer):
             return None
 
     def __del__(self):
+        """remove temp images."""
         self.remove_temp_frames()
 
     def remove_temp_frames(self):
+        """remove temp images."""
         if self.temp_path is not None:
             if Path(self.temp_path).is_dir() and self.remove_temp:
                 shutil.rmtree(self.temp_path)
 
 
 def _set_new_pose(pose_np, sign, axis):
+    """set new pose with axis convention."""
     target_sign = [-1, 1, -1]
     target_axis = ['x', 'z', 'y']
 
@@ -395,6 +402,7 @@ def _plot_line_on_fig(ax,
                       point2_location,
                       color,
                       linewidth=1):
+    """Draw line on fig with matplotlib."""
     ax.plot([point1_location[0], point2_location[0]],
             [point1_location[1], point2_location[1]],
             [point1_location[2], point2_location[2]],
@@ -404,6 +412,7 @@ def _plot_line_on_fig(ax,
 
 
 def _get_cv2mat_from_buf(fig, dpi=180):
+    """Get numpy image from IO."""
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=dpi)
     buf.seek(0)

@@ -1,15 +1,15 @@
 ### Visualize smpl mesh
-- **fast visualize smpl(x) pose:**
+- **fast visualize smpl(x) pose without background images:**
 
-    You have smpl pose tensor or array which shape is (frame, 72)
+    You have smpl pose tensor or array shape of which is (frame, 72)
     ```python
     from mmhuman3d.core.visualization import visualize_smpl_pose
-    visualize_smpl_pose(poses=poses, body_model_dir=body_model_dir, output_path='some_video.mp4', model_type='smpl', resolution=(1024, 1024))
+    visualize_smpl_pose(poses=poses, body_model_dir=body_model_dir, output_path='smpl.mp4', model_type='smpl', resolution=(1024, 1024))
     ```
 
-    Or you have smplx pose tensor or array which shape is (frame, 165)
+    Or you have smplx pose tensor or array shape of which is (frame, 165)
     ```python
-    visualize_smpl_pose(poses=poses, body_model_dir=body_model_dir, output_path='some_video.mp4', model_type='smplx', resolution=(1024, 1024))
+    visualize_smpl_pose(poses=poses, body_model_dir=body_model_dir, output_path='smplx.mp4', model_type='smplx', resolution=(1024, 1024))
     ```
     You could also feed dict tensor of smplx definitions. You could check that in [visualize_smpl](mmhuman3d/core/visualization/visualize_smpl.py#L166-211) or [original smplx](https://github.com/vchoutas/smplx/blob/master/smplx/body_models.py).
 
@@ -19,29 +19,62 @@
     ```python
     import torch
     from mmhuman3d.core.visualization import visualize_T_pose
-    poses = torch.zeros(10, 72)
-    visualize_T_pose(poses=poses, model_type='smpl', body_model_dir=body_model_dir, origin_frames='sample_video.mp4', orbit_speed=(1, 0.5))
+
+    visualize_T_pose(num_frames=100, model_type='smpl', body_model_dir=body_model_dir, output_path='smpl_tpose.mp4', orbit_speed=(1, 0.5), resolution=(1024, 1024))
     ```
 
-- **visualize smpl with predicted camera:**
-    You have poses (numpy/tensor) of shape (frame, 72), betas of shape (frame, 10), transl of shape (frame, 3), pred_cam of shape (10, 4).
+- **visualize smpl with predicted VIBE camera:**
+    You have poses (numpy/tensor) of shape (frame, 72), betas of shape (frame, 10), pred_cam of shape (10, 4).
     E.g., we use vibe sample_video.mp4 as an example.
     ```python
     import pickle
-    from mmhuman3d.core.visualization import visualize_smpl_pred
+    from mmhuman3d.core.visualization import visualize_smpl_vibe
     with open('vibe_output.pkl', 'rb') as f:
         d = pickle.load(f, encoding='latin1')
     poses = d[1]['pose']
-    pred_cam = d[1]['orig_cam']
+    orig_cam = d[1]['orig_cam']
+    pred_cam = d[1]['pred_cam']
+    bbox = d[1]['bboxes']
     gender = 'female'
-    visualize_smpl_pred(poses=poses, betas=betas, gender=gender, pred_cam=pred_cam, model_type='smpl', body_model_dir=body_model_dir, origin_frames='sample_video.mp4')
+
+    visualize_smpl_vibe(poses=poses, betas=betas, gender=gender, pred_cam=pred_cam, bbox=bbox, model_type='smpl', body_model_dir=body_model_dir, output_path='vibe_demo.mp4', origin_frames='sample_video.mp4', resolution=(1024, 1024))
+
+    # or
+
+    visualize_smpl_vibe(verts=verts, orig_cam=orig_cam, model_type='smpl', body_model_dir=body_model_dir, output_path='vibe_demo.mp4', origin_frames='sample_video.mp4', resolution=(1024, 1024))
+    ```
+
+- **visualize smpl with predicted HMR/SPIN camera:**
+    You have poses (numpy/tensor) of shape (frame, 72), betas of shape (frame, 10), cam_translation of shape (10, 4).
+    E.g., we use vibe sample_video.mp4 as an example.
+    ```python
+    import pickle
+    from mmhuman3d.core.visualization import visualize_smpl_hmr
+    gender = 'female'
+    focal_length = 5000
+    det_width = 224
+    det_height = 224
+
+    visualize_smpl_hmr(poses=poses, betas=betas,  bbox=bbox, focal_length=focal_length, det_width=det_width, det_height=det_height, gender=gender, T=cam_translation, model_type='smpl', body_model_dir=body_model_dir, output_path='hmr_demo.mp4', origin_frames=image_folder, resolution=(1024, 1024))
+
+    # or
+
+    visualize_smpl_hmr(verts=verts, bbox=bbox, focal_length=focal_length, det_width=det_width, det_height=det_height, T=cam_translation, model_type='smpl', body_model_dir=body_model_dir, output_path='hmr_demo.mp4', origin_frames=image_folder, resolution=(1024, 1024))
+
+    # or
+    visualize_smpl_hmr(verts=verts, kp2d=kp2d, focal_length=focal_length, det_width=det_width, det_height=det_height, T=cam_translation, model_type='smpl', body_model_dir=body_model_dir, output_path='hmr_demo.mp4', origin_frames=image_folder, resolution=(1024, 1024))
     ```
 
 - **visualize smpl with opencv camera:**
     You should pass the opencv defined intrinsic matrix K and extrinsic matrix R, T.
     ```python
-    from mmhuman3d.core.visualization import visualize_smpl_opencv
-    visualize_smpl_opencv(poses=poses, betas=betas, gender=gender, model_type='smpl', K=K, R=R, T=T, body_model_dir=body_model_dir, origin_frames='sample_video.mp4')
+    from mmhuman3d.core.visualization import visualize_smpl_calibration
+
+    visualize_smpl_calibration(poses=poses, betas=betas, gender=gender, model_type='smpl', K=K, R=R, T=T, body_model_dir=body_model_dir, output_path='opencv.mp4',origin_frames='bg_video.mp4', resolution=(1024, 1024))
+
+    # or
+
+    visualize_smpl_calibration(verts=verts, model_type='smpl', K=K, R=R, T=T, body_model_dir=body_model_dir, output_path='opencv.mp4', origin_frames='bg_video.mp4', resolution=(1024, 1024))
     ```
 
 ### Different render_choice:
@@ -58,15 +91,20 @@
     This is independent of cameras and you could directly set `render_choice` as `depth`.
     The output video/images will be gray depth maps.
 
+- **visualize normal map:**
+    This is independent of cameras and you could directly set `render_choice` as `normal`.
+    The output video/images will be colorful normal maps.
+
 - **visualize point clouds:**
     This is independent of cameras and you could directly set `render_choice` as `pointcloud`.
     The output video/images will be point clouds with keypoints.
 
-### Differentiable render
+-**Choose your color:**
+    Set palette as 'white', 'black', 'blue', 'green', 'red', 'yellow', and pass a list of string with the length of num_person.
+    Or send a numpy.ndarray of shape (num_person, 3). Should be normalized color: (1.0, 1.0, 1.0) represents white.
 
--**Differentiable render with different choice:**
-    You can set `render_choice` as former, this requires larger GPU memory and the render choice will be returned as a requires_grad `Tensor` of shape (frames, h, w, n_class) for `part_silhouette`, of shape (frames, h, w) for `silhouette`, and of shape (frames, h, w, 4) for others.
-    `neural_render_smpl` could recieve the same parameters as the above but will return a `tensor`.
+-**Differentiable render:**
+    Set `no_grad=False` and `return_tensor=True`.
 
 ### Important parameters:
 -**background images:**
@@ -79,7 +117,7 @@
     2). You pass `verts` directly and the above three will be ignored. The `body_model` or `body_model_dir` is still required if you pass`verts` since we need to get the `faces`.
     The priority order is `verts` > (`poses` & `betas` & `transl` & `gender`).
     Check the docstring for details.
-
+    3) for multi-person, you should have an extra dim for num_person. E.g., shape of smpl `verts` should be (num_frame, num_person, 6890, 3), shape of smpl `poses` should be (num_frame, num_person, 72), shape of smpl `betas` should be (num_frame, num_person, 10), shape of vibe `pred_cam` should be (num_frame, num_person, 3). This doesn't have influence on `K`, `R`, `T` since they are for every frame.
 
 -**body model:**
     There area two ways to pass body model:
