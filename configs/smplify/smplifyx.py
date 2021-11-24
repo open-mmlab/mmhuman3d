@@ -8,7 +8,7 @@ body_model = dict(
     keypoint_src='smplx',
     keypoint_dst='smplx',
     model_path='data/body_models/smplx',
-)
+    batch_size=1)
 
 stages = [
     # stage 1
