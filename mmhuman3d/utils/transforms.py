@@ -59,7 +59,8 @@ class Compose:
 def aa_to_rotmat(
     axis_angle: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert axis_angle to rotation matrixs.
+    """
+    Convert axis_angle to rotation matrixs.
     Args:
         axis_angle (Union[torch.Tensor, numpy.ndarray]): input shape
                 should be (..., 3). ndim of input is unlimited.
@@ -77,7 +78,8 @@ def aa_to_rotmat(
 def aa_to_quat(
     axis_angle: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert axis_angle to quaternions.
+    """
+    Convert axis_angle to quaternions.
     Args:
         axis_angle (Union[torch.Tensor, numpy.ndarray]): input shape
                 should be (..., 3). ndim of input is unlimited.
@@ -93,7 +95,7 @@ def aa_to_quat(
 
 def ee_to_rotmat(euler_angle: Union[torch.Tensor, numpy.ndarray],
                  convention='xyz') -> Union[torch.Tensor, numpy.ndarray]:
-    """convert euler angle to rotation matrixs.
+    """Convert euler angle to rotation matrixs.
 
     Args:
         euler_angle (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -113,7 +115,7 @@ def ee_to_rotmat(euler_angle: Union[torch.Tensor, numpy.ndarray],
 def rotmat_to_ee(
         matrix: Union[torch.Tensor, numpy.ndarray],
         convention: str = 'xyz') -> Union[torch.Tensor, numpy.ndarray]:
-    """convert rotation matrixs to euler angle.
+    """Convert rotation matrixs to euler angle.
 
     Args:
         matrix (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -132,7 +134,7 @@ def rotmat_to_ee(
 def rotmat_to_quat(
     matrix: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert rotation matrixs to quaternions.
+    """Convert rotation matrixs to quaternions.
 
     Args:
         matrix (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -149,7 +151,7 @@ def rotmat_to_quat(
 def rotmat_to_rot6d(
     matrix: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert rotation matrixs to rotation 6d representations.
+    """Convert rotation matrixs to rotation 6d representations.
 
     Args:
         matrix (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -171,7 +173,7 @@ def rotmat_to_rot6d(
 def quat_to_aa(
     quaternions: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert quaternions to axis angles.
+    """Convert quaternions to axis angles.
 
     Args:
         quaternions (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -188,7 +190,7 @@ def quat_to_aa(
 def quat_to_rotmat(
     quaternions: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert quaternions to rotation matrixs.
+    """Convert quaternions to rotation matrixs.
 
     Args:
         quaternions (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -206,7 +208,7 @@ def quat_to_rotmat(
 def rot6d_to_rotmat(
     rotation_6d: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert rotation 6d representations to rotation matrixs.
+    """Convert rotation 6d representations to rotation matrixs.
 
     Args:
         rotation_6d (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -227,7 +229,7 @@ def rot6d_to_rotmat(
 
 def aa_to_ee(axis_angle: Union[torch.Tensor, numpy.ndarray],
              convention: str = 'xyz') -> Union[torch.Tensor, numpy.ndarray]:
-    """convert axis angles to euler angle.
+    """Convert axis angles to euler angle.
 
     Args:
         axis_angle (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -248,7 +250,7 @@ def aa_to_ee(axis_angle: Union[torch.Tensor, numpy.ndarray],
 def aa_to_rot6d(
     axis_angle: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert axis angles to rotation 6d representations.
+    """Convert axis angles to rotation 6d representations.
 
     Args:
         axis_angle (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -270,7 +272,7 @@ def aa_to_rot6d(
 
 def ee_to_aa(euler_angle: Union[torch.Tensor, numpy.ndarray],
              convention: str = 'xyz') -> Union[torch.Tensor, numpy.ndarray]:
-    """convert euler angles to axis angles.
+    """Convert euler angles to axis angles.
 
     Args:
         euler_angle (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -291,7 +293,7 @@ def ee_to_aa(euler_angle: Union[torch.Tensor, numpy.ndarray],
 
 def ee_to_quat(euler_angle: Union[torch.Tensor, numpy.ndarray],
                convention='xyz') -> Union[torch.Tensor, numpy.ndarray]:
-    """convert euler angles to quaternions.
+    """Convert euler angles to quaternions.
 
     Args:
         euler_angle (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -310,7 +312,7 @@ def ee_to_quat(euler_angle: Union[torch.Tensor, numpy.ndarray],
 
 def ee_to_rot6d(euler_angle: Union[torch.Tensor, numpy.ndarray],
                 convention='xyz') -> Union[torch.Tensor, numpy.ndarray]:
-    """convert euler angles to rotation 6d representation.
+    """Convert euler angles to rotation 6d representation.
 
     Args:
         euler_angle (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -335,7 +337,7 @@ def ee_to_rot6d(euler_angle: Union[torch.Tensor, numpy.ndarray],
 def rotmat_to_aa(
     matrix: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert rotation matrixs to axis angles.
+    """Convert rotation matrixs to axis angles.
 
     Args:
         matrix (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -354,7 +356,7 @@ def rotmat_to_aa(
 
 def quat_to_ee(quaternions: Union[torch.Tensor, numpy.ndarray],
                convention: str = 'xyz') -> Union[torch.Tensor, numpy.ndarray]:
-    """convert quaternions to euler angles.
+    """Convert quaternions to euler angles.
 
     Args:
         quaternions (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -374,7 +376,7 @@ def quat_to_ee(quaternions: Union[torch.Tensor, numpy.ndarray],
 def quat_to_rot6d(
     quaternions: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert quaternions to rotation 6d representations.
+    """Convert quaternions to rotation 6d representations.
 
     Args:
         quaternions (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -397,7 +399,7 @@ def quat_to_rot6d(
 def rot6d_to_aa(
     rotation_6d: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert rotation 6d representations to axis angles.
+    """Convert rotation 6d representations to axis angles.
 
     Args:
         rotation_6d (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -421,7 +423,7 @@ def rot6d_to_aa(
 
 def rot6d_to_ee(rotation_6d: Union[torch.Tensor, numpy.ndarray],
                 convention: str = 'xyz') -> Union[torch.Tensor, numpy.ndarray]:
-    """convert rotation 6d representations to euler angles.
+    """Convert rotation 6d representations to euler angles.
 
     Args:
         rotation_6d (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -444,7 +446,7 @@ def rot6d_to_ee(rotation_6d: Union[torch.Tensor, numpy.ndarray],
 def rot6d_to_quat(
     rotation_6d: Union[torch.Tensor, numpy.ndarray]
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert rotation 6d representations to quaternions.
+    """Convert rotation 6d representations to quaternions.
 
     Args:
         rotation (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -470,7 +472,7 @@ def aa_to_sja(
     R_t: Union[torch.Tensor, numpy.ndarray] = TRANSFORMATION_AA_TO_SJA,
     R_t_inv: Union[torch.Tensor, numpy.ndarray] = TRANSFORMATION_SJA_TO_AA
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert axis-angles to standard joint angles.
+    """Convert axis-angles to standard joint angles.
 
     Args:
         axis_angle (Union[torch.Tensor, numpy.ndarray]): input shape
@@ -512,7 +514,7 @@ def sja_to_aa(
     R_t: Union[torch.Tensor, numpy.ndarray] = TRANSFORMATION_AA_TO_SJA,
     R_t_inv: Union[torch.Tensor, numpy.ndarray] = TRANSFORMATION_SJA_TO_AA
 ) -> Union[torch.Tensor, numpy.ndarray]:
-    """convert standard joint angles to axis angles.
+    """Convert standard joint angles to axis angles.
 
     Args:
         sja (Union[torch.Tensor, numpy.ndarray]): input shape

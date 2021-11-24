@@ -161,9 +161,9 @@ def prepare_output_path(output_path: str,
         os.makedirs(
             Path(output_path).parent.absolute().__str__(), exist_ok=True)
 
-    if exist_result == Existence.DirectoryNotExist:
+    elif exist_result == Existence.DirectoryNotExist:
         os.mkdir(output_path)
-        print(f'Making directory {output_path} for saveing results.')
+        print(f'Making directory {output_path} for saving results.')
     elif exist_result == Existence.FileNotExist:
         suffix_matched = \
             check_path_suffix(output_path, allowed_suffix=allowed_suffix)

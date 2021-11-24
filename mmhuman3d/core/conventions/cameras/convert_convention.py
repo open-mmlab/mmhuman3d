@@ -58,8 +58,8 @@ CAMERA_CONVENTIONS = {
 }
 
 
-# encode convention to sign and axis order
 def enc_camera_convention(convention, camera_conventions=CAMERA_CONVENTIONS):
+    """convert camera convention to axis direction and order."""
     if convention in camera_conventions:
         convention = camera_conventions[convention]['axis']
     else:

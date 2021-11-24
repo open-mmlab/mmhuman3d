@@ -168,6 +168,7 @@ def _plot_kp2d_frame(kp2d_person: np.ndarray,
 def _get_bbox(keypoint_np: np.ndarray,
               img_mat: Optional[np.ndarray] = None,
               expand: bool = False):
+    """get bbox of kp2d."""
     x_max = np.max(keypoint_np[:, 0])
     x_min = np.min(keypoint_np[:, 0])
     y_max = np.max(keypoint_np[:, 1])
@@ -237,6 +238,7 @@ def _prepare_limb_palette(limbs,
 
 
 def _prepare_output_path(output_path, overwrite):
+    """Prepare output path."""
     prepare_output_path(
         output_path,
         allowed_suffix=['.mp4', ''],
@@ -258,6 +260,7 @@ def _prepare_output_path(output_path, overwrite):
 
 
 def _check_frame_path(frame_list):
+    """Check frame path."""
     for frame_path in frame_list:
         if check_path_existence(frame_path, 'file') != Existence.FileExist or \
                  not check_path_suffix(frame_path, ['.png', '.jpg', '.jpeg']):
@@ -274,6 +277,7 @@ def _check_temp_path(temp_folder, frame_list, overwrite):
 
 
 class _CavasProducer:
+    """Prepare background canvas, pure white if not set."""
 
     def __init__(self,
                  frame_list,
@@ -344,6 +348,7 @@ class _CavasProducer:
 
 
 def update_frame_list(frame_list, origin_frames, start, end):
+    """Update frame list if have origin_frames."""
     input_temp_folder = None
     # choose in frame_list or origin_frames
     if frame_list is None and origin_frames is None:

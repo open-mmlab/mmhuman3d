@@ -1,8 +1,10 @@
 import math
 from typing import Iterable, List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 from pytorch3d.renderer import cameras
+from pytorch3d.structures import Meshes
 from pytorch3d.transforms import Transform3d
 
 from mmhuman3d.core.conventions.cameras import convert_cameras
@@ -18,12 +20,34 @@ class NewAttributeCameras(cameras.CamerasBase):
     """Inherited from pytorch3d CamerasBase and provide some new functions."""
 
     def __init__(self, **kwargs) -> None:
+        """Initialize your cameras with `build_cameras` following:
+
+        1): provide K, R, T, resolution/image_size directly.
+            `K` should be shape of (N, 3, 3) or (N, 4, 4).
+            `R` should be shape of (N, 3, 3).
+            `T` should be shape of (N, 3).
+        2): if `K` is not provided, will use `get_default_projection_matrix`
+            to generate K from camera intrinsic parameters. E.g., you can pass
+            `focal_length`, `principal_point` for perspective camers.
+            If these args are not provided, will use default args.
+        3): if `R` is not provided, will use Identity matrix as default.
+        4): if `T` is not provided, will use zeros matrix as default.
+        5): `convention` means your source parameter camera convention. For
+            projection and rendering, the matrixs will be converted to
+            `pytorch3d` finally.
+        6): `image_size` euals `resolution`.
+        7): set `in_ndc` True or False for 'PerspectiveCameras' and
+            'OrthographicCameras', other cameras are fixed.
+        """
+        for k in kwargs:
+            if isinstance(kwargs.get(k), np.ndarray):
+                kwargs.update({k: torch.Tensor(kwargs[k])})
         convention = kwargs.pop('convention', 'pytorch3d')
         self.convention = convention
-        in_ndc = kwargs.pop('_in_ndc')
+        in_ndc = kwargs.pop('in_ndc', kwargs.get('_in_ndc'))
+        kwargs.update(_in_ndc=in_ndc)
         is_perspective = kwargs.pop('_is_perspective')
 
-        kwargs.update(_in_ndc=in_ndc)
         image_size = kwargs.get('image_size', kwargs.get('resolution', None))
         kwargs.update(image_size=image_size)
         if image_size is not None:
@@ -81,11 +105,24 @@ class NewAttributeCameras(cameras.CamerasBase):
         kwargs.update(K=K, R=R, T=T)
         super().__init__(**kwargs)
 
+    def get_camera_plane_normals(self, **kwargs) -> torch.Tensor:
+        """Get the identity normal vector which stretchs out of the camera
+        plane.
+
+        Could pass `R` to override the camera extrinsic rotation matrix.
+        Returns:
+            torch.Tensor: shape will be (N, 3)
+        """
+        normals = torch.Tensor([0, 0, -1]).view(1, 3).to(self.device)
+        w2v_trans = self.get_world_to_view_transform(**kwargs)
+        normals = w2v_trans.inverse().transform_normals(normals)
+        return normals.view(-1, 3)
+
     def compute_depth_of_points(self, points: torch.Tensor) -> torch.Tensor:
         """Compute depth of points to the camera plane.
 
         Args:
-            points ([torch.Tensor]): shape should be (batch_size, 3).
+            points ([torch.Tensor]): shape should be (batch_size, ..., 3).
 
         Returns:
             torch.Tensor: shape will be (batch_size, 1)
@@ -95,7 +132,26 @@ class NewAttributeCameras(cameras.CamerasBase):
             points.to(self.device))
         return world_to_view_points[..., 2:3]
 
+    def compute_normal_of_meshes(self, meshes: Meshes) -> torch.Tensor:
+        """Compute depth of points to the camera plane.
+
+        Args:
+            points ([torch.Tensor]): shape should be (batch_size, 3).
+
+        Returns:
+            torch.Tensor: shape will be (batch_size, 1)
+        """
+        world_to_view_transform = self.get_world_to_view_transform()
+        world_to_view_normals = world_to_view_transform.transform_normals(
+            meshes.verts_normals_padded().to(self.device))
+        return world_to_view_normals
+
     def __repr__(self):
+        """Rewrite __repr__
+
+        Returns:
+            str: print the information of cameras (N, in_ndc, device).
+        """
         main_str = super().__repr__()
         main_str = main_str.split(')')[0]
         main_str += f'N: {self.__len__()}, in_ndc: {self.in_ndc()}, '
@@ -111,20 +167,37 @@ class NewAttributeCameras(cameras.CamerasBase):
         else:
             return None
 
-    def __getitem__(self, idx: Union[slice, int, torch.Tensor, List, Tuple]):
-        if isinstance(idx, int):
-            idx = [idx]
+    def __getitem__(self, index: Union[slice, int, torch.Tensor, List, Tuple]):
+        """Slice the cameras by batch dim.
+
+        Args:
+            index (Union[slice, int, torch.Tensor, List, Tuple]):
+            index for slicing.
+
+        Returns:
+            NewAttributeCameras: sliced cameras.
+        """
+        if isinstance(index, int):
+            index = [index]
         return self.__class__(
-            K=self.K[idx],
-            R=self.R[idx],
-            T=self.T[idx],
-            image_size=self.get_image_size()[idx],
+            K=self.K[index],
+            R=self.R[index],
+            T=self.T[index],
+            image_size=self.get_image_size()[index],
             _in_ndc=self.in_ndc(),
             _is_perspective=self.is_perspective(),
             convention=self.convention,
             device=self.device)
 
     def extend(self, N):
+        """Create new camera class which contains each input camera N times.
+
+        Args:
+            N: number of new copies of each camera.
+
+        Returns:
+            NewAttributeCameras object.
+        """
         return self.__class__(
             K=self.K.repeat(N, 1, 1),
             R=self.R.repeat(N, 1, 1),
@@ -136,20 +209,29 @@ class NewAttributeCameras(cameras.CamerasBase):
             device=self.device)
 
     def extend_(self, N):
+        """extend camera inplace."""
         self.K = self.K.repeat(N, 1, 1)
         self.R = self.R.repeat(N, 1, 1)
         self.T = self.T.repeat(N, 1)
         self._N = self._N * N
 
-    @property
-    def shape(self):
-        return self.K.shape, self.R.shape, self.T.shape
-
     @classmethod
     def get_default_projection_matrix(cls, ):
+        """Class method. Calculate the projective transformation matrix by
+        default parameters.
+
+        Args:
+            **kwargs: parameters for the projection can be passed in as keyword
+                arguments to override the default values set in `__init__`.
+
+        Return:
+            a `torch.Tensor` which represents a batch of projection matrices K
+            of shape (N, 4, 4)
+        """
         raise NotImplementedError()
 
-    def to_screen(self, **kwargs):
+    def to_screen_(self, **kwargs):
+        """Convert to screen inplace."""
         if self.in_ndc():
             if self.get_image_size() is None:
                 self.image_size = kwargs.get('image_size')
@@ -159,17 +241,56 @@ class NewAttributeCameras(cameras.CamerasBase):
                 is_perspective=self.is_perspective())
             self._in_ndc = False
         else:
-            print('Already in screen.')
+            print('Redundant operation, already in screen.')
 
-    def to_ndc(self, **kwargs):
+    def to_ndc_(self, **kwargs):
+        """Convert to ndc inplace."""
         if self.in_ndc():
-            print('Already in ndc.')
+            print('Redundant operation, already in ndc.')
         else:
             if self.get_image_size() is None:
                 self.image_size = kwargs.get('image_size')
             self.K = convert_screen_to_ndc(
                 K=self.K,
                 resolution=self.image_size,
+                is_perspective=self.is_perspective())
+
+    def to_screen(self, **kwargs):
+        """Convert to screen."""
+        if self.in_ndc():
+            if self.get_image_size() is None:
+                image_size = kwargs.get('image_size')
+            K = convert_ndc_to_screen(
+                K=self.K,
+                resolution=self.image_size,
+                is_perspective=self.is_perspective())
+            return self.__class__(
+                K=K,
+                R=self.R,
+                T=self.T,
+                in_ndc=False,
+                resolution=image_size,
+                is_perspective=self.is_perspective())
+        else:
+            print('Redundant operation, already in screen.')
+
+    def to_ndc(self, **kwargs):
+        """Convert to ndc."""
+        if self.in_ndc():
+            print('Redundant operation, already in ndc.')
+        else:
+            if self.get_image_size() is None:
+                image_size = kwargs.get('image_size')
+            K = convert_screen_to_ndc(
+                K=self.K,
+                resolution=self.image_size,
+                is_perspective=self.is_perspective())
+            return self.__class__(
+                K=K,
+                R=self.R,
+                T=self.T,
+                in_ndc=True,
+                resolution=image_size,
                 is_perspective=self.is_perspective())
 
 
@@ -258,13 +379,13 @@ class WeakPerspectiveCameras(NewAttributeCameras):
             **kwargs)
 
     @staticmethod
-    def convert_pred_cam_to_matrix(
-            pred_cam: torch.Tensor,
+    def convert_orig_cam_to_matrix(
+            orig_cam: torch.Tensor,
             **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Compute intrinsic camera matrix from pred camera parameter of smpl.
+        """Compute intrinsic camera matrix from orig_cam parameter of smpl.
 
         Args:
-            pred_cam (torch.Tensor): shape should be (N, 4).
+            orig_cam (torch.Tensor): shape should be (N, 4).
             znear (Union[torch.Tensor, float], optional):
                 near clipping plane of the view frustrum.
                 Defaults to 0.0.
@@ -300,9 +421,9 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         """
         znear = kwargs.get('znear', -1.0)
         aspect_ratio = kwargs.get('aspect_ratio', 1.0)
-        _N = pred_cam.shape[0]
-        scale_x, scale_y, transl_x, transl_y = pred_cam[:, 0], pred_cam[:, 1],\
-            pred_cam[:, 2], pred_cam[:, 3]
+        _N = orig_cam.shape[0]
+        scale_x, scale_y, transl_x, transl_y = orig_cam[:, 0], orig_cam[:, 1],\
+            orig_cam[:, 2], orig_cam[:, 3]
         K = torch.zeros((_N, 4, 4), dtype=torch.float32)
         if aspect_ratio >= 1.0:
             K[:, 0, 0] = scale_x * aspect_ratio
@@ -323,7 +444,7 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         return K, R, T
 
     @staticmethod
-    def convert_K_to_pred_cam(
+    def convert_K_to_orig_cam(
         K: torch.Tensor,
         aspect_ratio: Union[torch.Tensor, float] = 1.0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -344,19 +465,30 @@ class WeakPerspectiveCameras(NewAttributeCameras):
 
         Returns:
 
-            pred_cam (torch.Tensor): shape should be (N, 4).
+            orig_cam (torch.Tensor): shape should be (N, 4).
         """
         _N = K.shape[0]
         s_x = K[:, 0, 0] / aspect_ratio
         s_y = K[:, 1, 1] / aspect_ratio
         t_x = K[:, 0, 3] / (aspect_ratio * s_x)
         t_y = K[:, 1, 3] / s_y
-        pred_cam = torch.cat([s_x, s_y, t_x, t_y], -1).view(_N, 4)
-        return pred_cam
+        orig_cam = torch.cat([s_x, s_y, t_x, t_y], -1).view(_N, 4)
+        return orig_cam
 
     @classmethod
     def get_default_projection_matrix(cls, **args):
-        pred_cam = args.get('pred_cam', None)
+        """Class method. Calculate the projective transformation matrix by
+        default parameters.
+
+        Args:
+            **kwargs: parameters for the projection can be passed in as keyword
+                arguments to override the default values set in `__init__`.
+
+        Return:
+            a `torch.Tensor` which represents a batch of projection matrices K
+            of shape (N, 4, 4)
+        """
+        orig_cam = args.get('orig_cam', None)
         scale_x = args.get('scale_x', 1.0)
         scale_y = args.get('scale_y', 1.0)
         transl_x = args.get('transl_x', 0.0)
@@ -365,8 +497,8 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         batch_size = args.get('batch_size', 1)
         device = args.get('device', 'cpu')
 
-        if pred_cam is not None:
-            K, _, _ = cls.convert_pred_cam_to_matrix(pred_cam, **args)
+        if orig_cam is not None:
+            K, _, _ = cls.convert_orig_cam_to_matrix(orig_cam, **args)
         else:
             K = torch.zeros((1, 4, 4), dtype=torch.float32)
 
@@ -381,6 +513,23 @@ class WeakPerspectiveCameras(NewAttributeCameras):
 
     def compute_projection_matrix(self, scale_x, scale_y, transl_x, transl_y,
                                   aspect_ratio) -> torch.Tensor:
+        """Compute the calibration matrix K of shape (N, 4, 4)
+
+        Args:
+            scale_x (Union[torch.Tensor, float], optional):
+                Scale in x direction.
+            scale_y (Union[torch.Tensor, float], optional):
+                Scale in y direction.
+            transl_x (Union[torch.Tensor, float], optional):
+                Translation in x direction.
+            transl_y (Union[torch.Tensor, float], optional):
+                Translation in y direction.
+            aspect_ratio (Union[torch.Tensor, float], optional):
+                aspect ratio of the image pixels. 1.0 indicates square pixels.
+
+        Returns:
+            torch.FloatTensor of the calibration matrix with shape (N, 4, 4)
+        """
         K = torch.zeros((self._N, 4, 4),
                         dtype=torch.float32,
                         device=self.device)
@@ -394,11 +543,21 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         return K
 
     def get_projection_transform(self, **kwargs) -> Transform3d:
+        """Calculate the orthographic projection matrix. Use column major
+        order.
+
+        Args:
+            **kwargs: parameters for the projection can be passed in to
+                      override the default values set in __init__.
+        Return:
+            a Transform3d object which represents a batch of projection
+               matrices of shape (N, 4, 4)
+        """
         K = kwargs.get('K', self.K)
         if K is not None:
             if K.shape != (self._N, 4, 4):
-                msg = 'Expected K to have shape of (%r, 4, 4)'
-                raise ValueError(msg % (self._N))
+                msg = f'Expected K to have shape of ({self._N}, 4, 4)'
+                raise ValueError(msg)
         else:
             K = self.compute_projection_matrix(
                 kwargs.get('scale_x', self.scale_x),
@@ -415,6 +574,9 @@ class WeakPerspectiveCameras(NewAttributeCameras):
                          xy_depth: torch.Tensor,
                          world_coordinates: bool = True,
                          **kwargs) -> torch.Tensor:
+        """Sends points from camera coordinates (NDC or screen) back to camera
+        view or world coordinates depending on the `world_coordinates` boolean
+        argument of the function."""
         if world_coordinates:
             to_camera_transform = self.get_full_projection_transform(**kwargs)
         else:
@@ -424,21 +586,34 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         return unprojection_transform.transform_points(xy_depth)
 
     def is_perspective(self):
+        """Boolean of whether is perspective."""
         return False
 
     def in_ndc(self):
+        """Boolean of whether in NDC."""
         return True
 
+    def to_ndc_(self, **kwargs):
+        """Not implemented."""
+        raise NotImplementedError()
+
+    def to_screen_(self, **kwargs):
+        """Not implemented."""
+        raise NotImplementedError()
+
     def to_ndc(self, **kwargs):
+        """Not implemented."""
         raise NotImplementedError()
 
     def to_screen(self, **kwargs):
+        """Not implemented."""
         raise NotImplementedError()
 
 
 @CAMERAS.register_module(
     name=('PerspectiveCameras', 'perspective', 'Perspective'))
 class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
+    """Inherited from pytorch3d `PerspectiveCameras`."""
 
     def __init__(
         self,
@@ -453,12 +628,29 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
         image_size: Optional[Union[List, Tuple, torch.Tensor]] = None,
         **kwargs,
     ) -> None:
+        """
+        Args:
+            focal_length (float, optional):  Defaults to 1.0.
+            principal_point (tuple, optional):  Defaults to ((0.0, 0.0), ).
+            R (Optional[torch.Tensor], optional):  Defaults to None.
+            T (Optional[torch.Tensor], optional):  Defaults to None.
+            K (Optional[torch.Tensor], optional):  Defaults to None.
+            device (Union[torch.device, str], optional):  Defaults to 'cpu'.
+            in_ndc (bool, optional):  Defaults to True.
+            convention (str, optional):  Defaults to 'pytorch3d'.
+            image_size (Optional[Union[List, Tuple, torch.Tensor]], optional):
+                 Defaults to None.
+
+        """
         if image_size is not None:
             kwargs.update({'image_size': image_size})
         kwargs.update(
             _in_ndc=in_ndc,
             _is_perspective=True,
         )
+
+        kwargs.pop('in_ndc', None)
+
         super(cameras.PerspectiveCameras, self).__init__(
             device=device,
             focal_length=focal_length,
@@ -475,10 +667,30 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
             self.image_size = None
 
     def __getitem__(self, index: Union[slice, int, torch.Tensor, List, Tuple]):
+        """Slice the cameras by batch dim.
+
+        Args:
+            index (Union[slice, int, torch.Tensor, List, Tuple]):
+            index for slicing.
+
+        Returns:
+            NewAttributeCameras: sliced cameras.
+        """
         return super(cameras.PerspectiveCameras, self).__getitem__(index)
 
     @classmethod
     def get_default_projection_matrix(cls, **args) -> torch.Tensor:
+        """Class method. Calculate the projective transformation matrix by
+        default parameters.
+
+        Args:
+            **kwargs: parameters for the projection can be passed in as keyword
+                arguments to override the default values set in `__init__`.
+
+        Return:
+            a `torch.Tensor` which represents a batch of projection matrices K
+            of shape (N, 4, 4)
+        """
         batch_size = args.get('batch_size', 1)
         device = args.get('device', 'cpu')
         focal_length = args.get('focal_length')
@@ -495,6 +707,7 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
     name=('FoVPerspectiveCameras', 'FoVPerspective', 'fovperspective'))
 class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
                             NewAttributeCameras):
+    """Inherited from pytorch3d `FoVPerspectiveCameras`."""
 
     def __init__(
         self,
@@ -510,6 +723,20 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
         convention: str = 'pytorch3d',
         **kwargs,
     ) -> None:
+        """Initialize a camera.
+
+        Args:
+            znear (float, optional):  Defaults to 1.0.
+            zfar (float, optional):  Defaults to 100.0.
+            aspect_ratio (float, optional):  Defaults to 1.0.
+            fov (float, optional):  Defaults to 60.0.
+            degrees (bool, optional):  Defaults to True.
+            R (Optional[torch.Tensor], optional):  Defaults to None.
+            T (Optional[torch.Tensor], optional):  Defaults to None.
+            K (Optional[torch.Tensor], optional):  Defaults to None.
+            device (Union[torch.device, str], optional):  Defaults to 'cpu'.
+            convention (str, optional):  Defaults to 'pytorch3d'.
+        """
         kwargs.update(
             _in_ndc=True,
             _is_perspective=True,
@@ -528,11 +755,31 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
         )
         self.degrees = degrees
 
-    def __getitem__(self, index: Union[int, slice]):
+    def __getitem__(self, index: Union[slice, int, torch.Tensor, List, Tuple]):
+        """Slice the cameras by batch dim.
+
+        Args:
+            index (Union[slice, int, torch.Tensor, List, Tuple]):
+            index for slicing.
+
+        Returns:
+            NewAttributeCameras: sliced cameras.
+        """
         return super(cameras.FoVPerspectiveCameras, self).__getitem__(index)
 
     @classmethod
     def get_default_projection_matrix(cls, **args) -> torch.Tensor:
+        """Class method. Calculate the projective transformation matrix by
+        default parameters.
+
+        Args:
+            **kwargs: parameters for the projection can be passed in as keyword
+                arguments to override the default values set in `__init__`.
+
+        Return:
+            a `torch.Tensor` which represents a batch of projection matrices K
+            of shape (N, 4, 4)
+        """
         znear = args.get('znear', 1.0)
         zfar = args.get('zfar', 100.0)
         aspect_ratio = args.get('aspect_ratio', 1.0)
@@ -565,16 +812,27 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
         K = K.repeat(batch_size, 1, 1)
         return K
 
+    def to_ndc_(self, **kwargs):
+        """Not implemented."""
+        raise NotImplementedError()
+
+    def to_screen_(self, **kwargs):
+        """Not implemented."""
+        raise NotImplementedError()
+
     def to_ndc(self, **kwargs):
+        """Not implemented."""
         raise NotImplementedError()
 
     def to_screen(self, **kwargs):
+        """Not implemented."""
         raise NotImplementedError()
 
 
 @CAMERAS.register_module(
     name=('OrthographicCameras', 'Orthographic', 'orthographic'))
 class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
+    """Inherited from pytorch3d `OrthographicCameras`."""
 
     def __init__(
         self,
@@ -589,12 +847,29 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
         convention: str = 'pytorch3d',
         **kwargs,
     ) -> None:
+        """Initialize cameras.
+
+        Args:
+            focal_length (float, optional):  Defaults to 1.0.
+            principal_point (tuple, optional):  Defaults to ((0.0, 0.0), ).
+            R (Optional[torch.Tensor], optional):  Defaults to None.
+            T (Optional[torch.Tensor], optional):  Defaults to None.
+            K (Optional[torch.Tensor], optional):  Defaults to None.
+            device (Union[torch.Tensor, str], optional):  Defaults to 'cpu'.
+            in_ndc (bool, optional):  Defaults to True.
+            image_size (Optional[torch.Tensor], optional):  Defaults to None.
+            convention (str, optional):  Defaults to 'pytorch3d'.
+
+        Raises:
+            ValueError: [description]
+        """
         if image_size is not None:
             kwargs.update({'image_size': image_size})
         kwargs.update(
             _is_perspective=False,
             _in_ndc=in_ndc,
         )
+        kwargs.pop('in_ndc', None)
         super(cameras.OrthographicCameras, self).__init__(
             device=device,
             focal_length=focal_length,
@@ -610,11 +885,43 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
         else:
             self.image_size = None
 
-    def __getitem__(self, index: Union[int, slice]):
+    def __getitem__(self, index: Union[slice, int, torch.Tensor, List, Tuple]):
+        """Slice the cameras by batch dim.
+
+        Args:
+            index (Union[slice, int, torch.Tensor, List, Tuple]):
+            index for slicing.
+
+        Returns:
+            NewAttributeCameras: sliced cameras.
+        """
         return super(cameras.OrthographicCameras, self).__getitem__(index)
 
     @classmethod
     def get_default_projection_matrix(cls, **args) -> torch.Tensor:
+        """Class method. Calculate the projective transformation matrix by
+        default parameters.
+
+        Args:
+            **kwargs: parameters for the projection can be passed in as keyword
+                arguments to override the default values.
+
+        Return:
+            a `torch.Tensor` which represents a batch of projection matrices K
+            of shape (N, 4, 4)
+
+            fx = focal_length[:,0]
+            fy = focal_length[:,1]
+            px = principal_point[:,0]
+            py = principal_point[:,1]
+
+            K = [
+                    [fx,   0,    0,  px],
+                    [0,   fy,    0,  py],
+                    [0,    0,    1,   0],
+                    [0,    0,    0,   1],
+            ]
+        """
         batch_size = args.get('batch_size', 1)
         device = args.get('device', 'cpu')
         focal_length = args.get('focal_length')
@@ -632,22 +939,46 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
     name=('FoVOrthographicCameras', 'FoVOrthographic', 'fovorthographic'))
 class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
                              NewAttributeCameras):
+    """Inherited from pytorch3d `FoVOrthographicCameras`."""
 
     def __init__(
             self,
-            znear=1.0,
-            zfar=100.0,
-            max_y=1.0,
-            min_y=-1.0,
-            max_x=1.0,
-            min_x=-1.0,
-            scale_xyz=((1.0, 1.0, 1.0), ),  # (1, 3)
+            znear: Union[torch.Tensor, int, float] = 1.0,
+            zfar: Union[torch.Tensor, int, float] = 100.0,
+            max_y: Union[torch.Tensor, int, float] = 1.0,
+            min_y: Union[torch.Tensor, int, float] = -1.0,
+            max_x: Union[torch.Tensor, int, float] = 1.0,
+            min_x: Union[torch.Tensor, int, float] = -1.0,
+            scale_xyz: Union[Iterable[float],
+                             Iterable[int]] = ((1.0, 1.0, 1.0), ),  # (1, 3)
             R: Optional[torch.Tensor] = None,
             T: Optional[torch.Tensor] = None,
             K: Optional[torch.Tensor] = None,
             device: Union[torch.device, str] = 'cpu',
             convention: str = 'pytorch3d',
             **kwargs):
+        """reimplemented __init__, add `convention`.
+
+        Args:
+            znear (Union[torch.Tensor, int, float], optional):
+                Defaults to 1.0.
+            zfar (Union[torch.Tensor, int, float], optional):
+                Defaults to 100.0.
+            max_y (Union[torch.Tensor, int, float], optional):
+                Defaults to 1.0.
+            min_y (Union[torch.Tensor, int, float], optional):
+                Defaults to -1.0.
+            max_x (Union[torch.Tensor, int, float], optional):
+                Defaults to 1.0.
+            min_x (Union[torch.Tensor, int, float], optional):
+                Defaults to -1.0.
+            scale_xyz (Union[Iterable[float], Iterable[int]], optional):
+                Defaults to ((1.0, 1.0, 1.0), ).
+            T (Optional[torch.Tensor], optional):  Defaults to None.
+            K (Optional[torch.Tensor], optional):  Defaults to None.
+            device (Union[torch.device, str], optional):  Defaults to 'cpu'.
+            convention (str, optional):  Defaults to 'pytorch3d'.
+        """
         kwargs.update(_is_perspective=True, _in_ndc=True)
         super(cameras.FoVOrthographicCameras, self).__init__(
             device=device,
@@ -664,12 +995,31 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
             convention=convention,
             **kwargs)
 
-    def __getitem__(self, index: Union[int, slice]):
+    def __getitem__(self, index: Union[slice, int, torch.Tensor, List, Tuple]):
+        """Slice the cameras by batch dim.
+
+        Args:
+            index (Union[slice, int, torch.Tensor, List, Tuple]):
+            index for slicing.
+
+        Returns:
+            NewAttributeCameras: sliced cameras.
+        """
         return super(cameras.FoVOrthographicCameras, self).__getitem__(index)
 
     @classmethod
     def get_default_projection_matrix(cls, **args) -> torch.Tensor:
-        """
+        """Class method. Calculate the projective transformation matrix by
+        default parameters.
+
+        Args:
+            **kwargs: parameters for the projection can be passed in as keyword
+                arguments to override the default values.
+
+        Return:
+            a `torch.Tensor` which represents a batch of projection matrices K
+            of shape (N, 4, 4)
+
             scale_x = 2 / (max_x - min_x)
             scale_y = 2 / (max_y - min_y)
             scale_z = 2 / (far-near)
@@ -715,10 +1065,20 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
         K = K.repeat(batch_size, 1, 1)
         return K
 
+    def to_ndc_(self, **kwargs):
+        """Not implemented."""
+        raise NotImplementedError()
+
+    def to_screen_(self, **kwargs):
+        """Not implemented."""
+        raise NotImplementedError()
+
     def to_ndc(self, **kwargs):
+        """Not implemented."""
         raise NotImplementedError()
 
     def to_screen(self, **kwargs):
+        """Not implemented."""
         raise NotImplementedError()
 
 

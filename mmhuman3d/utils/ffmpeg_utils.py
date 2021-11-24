@@ -335,7 +335,19 @@ def video_to_array(
 
 
 def images_to_sorted_images(input_folder, output_folder, img_format='%06d'):
-    img_format = img_format.split('.')[0]
+    """Copy and rename a folder of images into a new folder following the
+    `img_format`.
+
+    Args:
+        input_folder (str): input folder.
+        output_folder (str): utput folder.
+        img_format (str, optional): image format name, do not need extension.
+            Defaults to '%06d'.
+
+    Returns:
+        str: image format of the rename images.
+    """
+    img_format = img_format.rsplit('.', 1)[0]
     file_list = []
     os.makedirs(output_folder, exist_ok=True)
     pngs = glob.glob(os.path.join(input_folder, '*.png'))

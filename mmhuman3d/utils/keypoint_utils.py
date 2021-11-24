@@ -61,6 +61,7 @@ def search_limbs(
 
 
 def get_different_colors(number_of_colors, flag=0):
+    """Get a numpy of colors of shape (N, 3)."""
     nst0 = np.random.get_state()
     np.random.seed(flag)
     colors = []

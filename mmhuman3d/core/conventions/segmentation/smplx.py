@@ -30,6 +30,19 @@ SMPLX_SEGMENTATION_DICT = {
                 [4487, 4489], [4492, 4496], [4500, 4501], [4506, 4507], [4510],
                 [4518, 4523], [5397, 5400], [5471, 5479], [5542, 5543],
                 [5572, 5573], [5576, 5595], [5597], [5607], [5628]],
+    'head': [[0, 11], [16, 218], [223, 371], [376, 461], [464,
+                                                          495], [498, 551],
+             [554, 557], [560, 562], [565, 648], [651, 735], [738, 1209],
+             [1214, 1325], [1327, 1358], [1361, 1385], [1387, 1725],
+             [1728, 1758], [1760, 1789], [1791, 1885], [1887, 1897],
+             [1899, 1930], [1935, 1939], [1942, 1947], [1950, 2035],
+             [2037, 2148], [2152, 2217], [2220, 2483], [2485, 2530],
+             [2532, 2869], [2871, 2892], [2894, 2963], [2965, 2975],
+             [2977, 3011], [3014, 3183], [8731, 8810], [8815, 8838],
+             [8926, 8928], [8931, 8933], [8939], [8941, 8987], [8989, 9019],
+             [9028, 9160], [9162, 9164], [9166, 9382]],
+    'leftEye': [[9383, 9928]],
+    'rightEye': [[9929, 10474]],
     'leftLeg': [[3625, 3626], [3629, 3630], [3635, 3637], [3639], [3642, 3644],
                 [3649, 3650], [3675, 3733], [3737, 3769], [3781, 3791],
                 [3809, 3817], [3999, 4001], [4003, 4006], [4098, 4108],
@@ -245,14 +258,12 @@ SMPLX_SEGMENTATION_DICT = {
              [8324, 8325], [8352, 8393], [8397, 8399], [8405, 8421]]
 }
 
-
-def smplx_part_segmentation(key):
-    part_segmentation = []
-    raw_segmentation = SMPLX_SEGMENTATION_DICT[key]
-    for continous in raw_segmentation:
-        if len(continous) == 2:
-            part_segmentation.extend(
-                list(range(continous[0], continous[1] + 1)))
-        elif len(continous) == 1:
-            part_segmentation.extend(continous)
-    return part_segmentation
+SMPLX_SUPER_SET = {
+    'FOOT': ['leftFoot', 'leftToeBase', 'rightFoot', 'rightToeBase'],
+    'HAND': ['leftHand', 'rightHand', 'leftHandIndex1', 'rightHandIndex1'],
+    'LEG': ['rightUpLeg', 'leftUpLeg', 'leftLeg', 'rightLeg'],
+    'ARM': ['leftForeArm', 'rightForeArm', 'leftArm', 'rightArm'],
+    'HEAD': ['neck', 'head', 'leftEye', 'rightEye', 'eyeballs'],
+    'UPBODY': ['spine1', 'spine2', 'leftShoulder', 'rightShoulder'],
+    'LOWBODY': ['spine', 'hips'],
+}

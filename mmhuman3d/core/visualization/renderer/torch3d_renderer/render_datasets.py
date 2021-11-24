@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 
 
 class RenderDataset(Dataset):
+    """Render dataset for smpl renderer."""
 
     def __init__(self, vertices, **kwargs):
         """Prepare the render dataset as for function `render_smpl`.
@@ -65,6 +66,7 @@ class RenderDataset(Dataset):
                 setattr(self, k, v)
 
     def __getitem__(self, index):
+        """clip the index and get item."""
         result_dict = {
             'indexs': index,
         }
@@ -77,4 +79,5 @@ class RenderDataset(Dataset):
         return result_dict
 
     def __len__(self):
+        """get length."""
         return self.len

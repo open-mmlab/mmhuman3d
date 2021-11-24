@@ -4,6 +4,7 @@ from pytorch3d.renderer import TexturesVertex
 
 
 class TexturesClosest(TexturesVertex):
+    """Textures for closest interpolation."""
 
     def sample_textures(self, fragments, faces_packed=None) -> torch.Tensor:
         """Rewrite sample_textures to use the closet interpolation.

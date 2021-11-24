@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 # TODO:
 # 1. the use of mask in output
+from typing import Optional
+
 import numpy as np
 import torch
 from smplx import SMPL as _SMPL
@@ -16,9 +18,19 @@ from mmhuman3d.utils.transforms import quat_to_rotmat, rotmat_to_quat
 from .inverse_kinematics import batch_inverse_kinematics_transform
 
 
-@BODY_MODELS.register_module()
+@BODY_MODELS.register_module(name=['SMPL', 'smpl'])
 class SMPL(_SMPL):
     """Extension of the official SMPL implementation."""
+    body_pose_keys = {
+        'global_orient',
+        'body_pose',
+    }
+    full_pose_keys = {
+        'global_orient',
+        'body_pose',
+    }
+    NUM_VERTS = 6890
+    NUM_FACES = 13776
 
     def __init__(self,
                  *args,
@@ -92,9 +104,69 @@ class SMPL(_SMPL):
 
         return output
 
+    @classmethod
+    def tensor2dict(cls,
+                    full_pose: torch.torch.Tensor,
+                    betas: Optional[torch.torch.Tensor] = None,
+                    transl: Optional[torch.torch.Tensor] = None):
+        """Convert full pose tensor to pose dict.
 
-@BODY_MODELS.register_module()
+        Args:
+            full_pose (torch.torch.Tensor): shape should be (..., 165) or
+                (..., 55, 3). All zeros for T-pose.
+            betas (Optional[torch.torch.Tensor], optional): shape should be
+                (..., 10). The batch num should be 1 or corresponds with
+                full_pose.
+                Defaults to None.
+            transl (Optional[torch.torch.Tensor], optional): shape should be
+                (..., 3). The batch num should be 1 or corresponds with
+                full_pose.
+                Defaults to None.
+        Returns:
+            dict: dict of smpl pose containing transl & betas.
+        """
+        full_pose = full_pose.view(-1, (cls.NUM_BODY_JOINTS + 1) * 3)
+        body_pose = full_pose[:, 3:]
+        global_orient = full_pose[:, :3]
+        batch_size = full_pose.shape[0]
+        betas = betas.view(batch_size, -1) if betas is not None else betas
+        transl = transl.view(batch_size, -1) if transl is not None else transl
+        return {
+            'betas': betas,
+            'body_pose': body_pose,
+            'global_orient': global_orient,
+            'transl': transl,
+        }
+
+    @classmethod
+    def dict2tensor(cls, smpl_dict: dict) -> torch.Tensor:
+        """Convert smpl pose dict to full pose tensor.
+
+        Args:
+            smpl_dict (dict): smpl pose dict.
+
+        Returns:
+            torch: full pose tensor.
+        """
+        assert cls.body_pose_keys.issubset(smpl_dict)
+        for k in smpl_dict:
+            if isinstance(smpl_dict[k], np.ndarray):
+                smpl_dict[k] = torch.Tensor(smpl_dict[k])
+        global_orient = smpl_dict['global_orient'].view(-1, 3)
+        body_pose = smpl_dict['body_pose'].view(-1, 3 * cls.NUM_BODY_JOINTS)
+        full_pose = torch.cat([global_orient, body_pose], dim=1)
+        return full_pose
+
+
+@BODY_MODELS.register_module(name=['SMPLX', 'smplx'])
 class SMPLX(_SMPLX):
+    body_pose_keys = {'global_orient', 'body_pose'}
+    full_pose_keys = {
+        'global_orient', 'body_pose', 'left_hand_pose', 'right_hand_pose',
+        'jaw_pose', 'leye_pose', 'reye_pose'
+    }
+    NUM_VERTS = 10475
+    NUM_FACES = 20908
 
     def __init__(self,
                  *args,
@@ -167,6 +239,116 @@ class SMPLX(_SMPLX):
             output['full_pose'] = smplx_output.full_pose
 
         return output
+
+    @classmethod
+    def tensor2dict(cls,
+                    full_pose: torch.torch.Tensor,
+                    betas: Optional[torch.torch.Tensor] = None,
+                    transl: Optional[torch.torch.Tensor] = None,
+                    expression: Optional[torch.torch.Tensor] = None) -> dict:
+        """Convert full pose tensor to pose dict.
+
+        Args:
+            full_pose (torch.torch.Tensor): shape should be (..., 165) or
+                (..., 55, 3). All zeros for T-pose.
+            betas (Optional[torch.torch.Tensor], optional): shape should be
+                (..., 10). The batch num should be 1 or corresponds with
+                full_pose.
+                Defaults to None.
+            transl (Optional[torch.torch.Tensor], optional): shape should be
+                (..., 3). The batch num should be 1 or corresponds with
+                full_pose.
+                Defaults to None.
+            expression (Optional[torch.torch.Tensor], optional): shape should
+                be (..., 10). The batch num should be 1 or corresponds with
+                full_pose.
+                Defaults to None.
+
+        Returns:
+            dict: dict of smplx pose containing transl & betas.
+        """
+        NUM_BODY_JOINTS = cls.NUM_BODY_JOINTS
+        NUM_HAND_JOINTS = cls.NUM_HAND_JOINTS
+        NUM_FACE_JOINTS = cls.NUM_FACE_JOINTS
+        NUM_JOINTS = NUM_BODY_JOINTS + 2 * NUM_HAND_JOINTS + NUM_FACE_JOINTS
+        full_pose = full_pose.view(-1, (NUM_JOINTS + 1), 3)
+        global_orient = full_pose[:, :1]
+        body_pose = full_pose[:, 1:NUM_BODY_JOINTS + 1]
+        jaw_pose = full_pose[:, NUM_BODY_JOINTS + 1:NUM_BODY_JOINTS + 2]
+        leye_pose = full_pose[:, NUM_BODY_JOINTS + 2:NUM_BODY_JOINTS + 3]
+        reye_pose = full_pose[:, NUM_BODY_JOINTS + 3:NUM_BODY_JOINTS + 4]
+        left_hand_pose = full_pose[:, NUM_BODY_JOINTS + 4:NUM_BODY_JOINTS + 19]
+        right_hand_pose = full_pose[:,
+                                    NUM_BODY_JOINTS + 19:NUM_BODY_JOINTS + 34]
+        batch_size = body_pose.shape[0]
+        betas = betas.view(batch_size, -1) if betas is not None else betas
+        transl = transl.view(batch_size, -1) if transl is not None else transl
+        expression = expression.view(
+            batch_size, -1) if expression is not None else torch.zeros(
+                batch_size, 10)
+        return {
+            'betas':
+            betas,
+            'global_orient':
+            global_orient.view(batch_size, 3),
+            'body_pose':
+            body_pose.view(batch_size, NUM_BODY_JOINTS * 3),
+            'left_hand_pose':
+            left_hand_pose.view(batch_size, NUM_HAND_JOINTS * 3),
+            'right_hand_pose':
+            right_hand_pose.view(batch_size, NUM_HAND_JOINTS * 3),
+            'transl':
+            transl,
+            'expression':
+            expression,
+            'jaw_pose':
+            jaw_pose.view(batch_size, 3),
+            'leye_pose':
+            leye_pose.view(batch_size, 3),
+            'reye_pose':
+            reye_pose.view(batch_size, 3),
+        }
+
+    @classmethod
+    def dict2tensor(cls, smplx_dict: dict) -> torch.Tensor:
+        """Convert smplx pose dict to full pose tensor.
+
+        Args:
+            smplx_dict (dict): smplx pose dict.
+
+        Returns:
+            torch: full pose tensor.
+        """
+        assert cls.body_pose_keys.issubset(smplx_dict)
+        for k in smplx_dict:
+            if isinstance(smplx_dict[k], np.ndarray):
+                smplx_dict[k] = torch.Tensor(smplx_dict[k])
+        NUM_BODY_JOINTS = cls.NUM_BODY_JOINTS
+        NUM_HAND_JOINTS = cls.NUM_HAND_JOINTS
+        NUM_FACE_JOINTS = cls.NUM_FACE_JOINTS
+        NUM_JOINTS = NUM_BODY_JOINTS + 2 * NUM_HAND_JOINTS + NUM_FACE_JOINTS
+        global_orient = smplx_dict['global_orient'].reshape(-1, 1, 3)
+        body_pose = smplx_dict['body_pose'].reshape(-1, NUM_BODY_JOINTS, 3)
+        batch_size = global_orient.shape[0]
+        jaw_pose = smplx_dict.get('jaw_pose', torch.zeros((batch_size, 1, 3)))
+        leye_pose = smplx_dict.get('leye_pose', torch.zeros(
+            (batch_size, 1, 3)))
+        reye_pose = smplx_dict.get('reye_pose', torch.zeros(
+            (batch_size, 1, 3)))
+        left_hand_pose = smplx_dict.get(
+            'left_hand_pose', torch.zeros((batch_size, NUM_HAND_JOINTS, 3)))
+        right_hand_pose = smplx_dict.get(
+            'right_hand_pose', torch.zeros((batch_size, NUM_HAND_JOINTS, 3)))
+        full_pose = torch.cat([
+            global_orient, body_pose,
+            jaw_pose.reshape(-1, 1, 3),
+            leye_pose.reshape(-1, 1, 3),
+            reye_pose.reshape(-1, 1, 3),
+            left_hand_pose.reshape(-1, 15, 3),
+            right_hand_pose.reshape(-1, 15, 3)
+        ],
+                              dim=1).reshape(-1, (NUM_JOINTS + 1) * 3)
+        return full_pose
 
 
 @BODY_MODELS.register_module()
@@ -497,7 +679,8 @@ def to_np(array, dtype=np.float32):
     return np.array(array, dtype=dtype)
 
 
-@BODY_MODELS.register_module()
+@BODY_MODELS.register_module(
+    name=['HybrIKSMPL', 'HybrIKsmpl', 'hybriksmpl', 'hybrik', 'hybrIK'])
 class HybrIKSMPL(SMPL):
 
     NUM_JOINTS = 23

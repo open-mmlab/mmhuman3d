@@ -5,12 +5,13 @@ from typing import Iterable, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import torch
+from colormap import Color
 from pytorch3d.io import save_obj
 from pytorch3d.renderer import TexturesVertex
 from pytorch3d.renderer.lighting import DirectionalLights, PointLights
 from pytorch3d.structures import Meshes
-from pytorch3d.transforms import Rotate, Transform3d, Translate
 
+from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
 from mmhuman3d.utils.keypoint_utils import get_different_colors
 from mmhuman3d.utils.mesh_utils import (
@@ -19,8 +20,8 @@ from mmhuman3d.utils.mesh_utils import (
 )
 from .base_renderer import MeshBaseRenderer
 from .depth_renderer import DepthRenderer
+from .normal_renderer import NormalRenderer
 from .pointcloud_renderer import PointCloudRenderer
-from .render_factory import PALETTE, SMPL_SEGMENTATION
 from .textures import TexturesClosest
 
 try:
@@ -30,6 +31,7 @@ except ImportError:
 
 
 class SMPLRenderer(MeshBaseRenderer):
+    """Render SMPL(X) with different render choices."""
 
     def __init__(self,
                  resolution: Tuple[int, int],
@@ -50,6 +52,7 @@ class SMPLRenderer(MeshBaseRenderer):
                  frames_folder: Optional[str] = None,
                  plot_kps: bool = False,
                  vis_kp_index: bool = False,
+                 in_ndc: bool = True,
                  **kwargs) -> None:
         if plot_kps:
             self.alpha = max(min(0.8, alpha), 0.1)
@@ -73,6 +76,7 @@ class SMPLRenderer(MeshBaseRenderer):
             alpha=alpha,
             img_format=img_format,
             projection=projection,
+            in_ndc=in_ndc,
             **kwargs)
         if plot_kps:
             self.joints_renderer = PointCloudRenderer(
@@ -80,6 +84,7 @@ class SMPLRenderer(MeshBaseRenderer):
                 device=device,
                 return_tensor=True,
                 projection=projection,
+                in_ndc=in_ndc,
                 radius=0.008)
         if self.render_choice == 'pointcloud':
             self.pointcloud_renderer = PointCloudRenderer(
@@ -87,13 +92,24 @@ class SMPLRenderer(MeshBaseRenderer):
                 device=device,
                 return_tensor=True,
                 projection=projection,
+                in_ndc=in_ndc,
                 radius=0.003)
         elif self.render_choice == 'depth':
             self.depth_renderer = DepthRenderer(
                 device=device,
                 resolution=resolution,
                 projection=projection,
-                return_tensor=True)
+                in_ndc=in_ndc,
+                return_tensor=True,
+                **kwargs)
+        elif self.render_choice == 'normal':
+            self.normal_renderer = NormalRenderer(
+                device=device,
+                resolution=resolution,
+                projection=projection,
+                in_ndc=in_ndc,
+                return_tensor=True,
+                **kwargs)
         """
         Render Mesh for SMPL and SMPL-X. For function render_smpl.
         2 modes: mesh render with different quality and palette,
@@ -133,14 +149,11 @@ class SMPLRenderer(MeshBaseRenderer):
         """
 
     def set_render_params(self, **kwargs):
+        """update render params."""
         super(SMPLRenderer, self).set_render_params(**kwargs)
         self.Textures = TexturesVertex
+        self.segmentation = body_segmentation(self.model_type)
         if self.render_choice == 'part_silhouette':
-            self.slice_index = {}
-            for k in SMPL_SEGMENTATION[self.model_type]['keys']:
-                self.slice_index[k] = SMPL_SEGMENTATION[
-                    self.model_type]['func'](
-                        k)
             self.Textures = TexturesClosest
 
     def forward(
@@ -223,17 +236,14 @@ class SMPLRenderer(MeshBaseRenderer):
                 verts_rgb = torch.ones(num_frame, num_verts, 1)
             elif self.render_choice == 'part_silhouette':
                 verts_rgb = torch.zeros(num_frame, num_verts, 1)
-                for i, k in enumerate(self.slice_index):
-                    verts_rgb[:, self.slice_index[k]] = 0.01 * (i + 1)
+                for i, k in enumerate(self.segmentation.keys()):
+                    verts_rgb[:, self.segmentation[k]] = 0.01 * (i + 1)
             else:
                 if isinstance(palette, np.ndarray):
                     verts_rgb = torch.tensor(palette).view(1, 1, 3).repeat(
                         num_frame, num_verts, 1)
                 else:
-                    if palette in PALETTE:
-                        verts_rgb = PALETTE[palette][None, None].repeat(
-                            num_frame, num_verts, 1)
-                    elif palette == 'random':
+                    if palette == 'random':
                         color = get_different_colors(num_person)[person_idx]
                         color = torch.tensor(color).float() / 255.0
                         color = torch.clip(color * 1.5, min=0.6, max=1)
@@ -243,17 +253,16 @@ class SMPLRenderer(MeshBaseRenderer):
                         verts_labels = torch.zeros(num_verts)
                         verts_rgb = torch.ones(1, num_verts, 3)
                         color = get_different_colors(
-                            len(
-                                list(SMPL_SEGMENTATION[self.model_type]
-                                     ['keys'])))
-                        for part_idx, k in enumerate(
-                                SMPL_SEGMENTATION[self.model_type]['keys']):
-                            index = SMPL_SEGMENTATION[self.model_type]['func'](
-                                k)
+                            len(list(self.segmentation.keys())))
+                        for part_idx, k in enumerate(self.segmentation.keys()):
+                            index = self.segmentation[k]
                             verts_labels[index] = part_idx
                             verts_rgb[:, index] = torch.tensor(
                                 color[part_idx]).float() / 255
                         verts_rgb = verts_rgb.repeat(num_frame, 1, 1)
+                    elif palette in Color.color_names:
+                        verts_rgb = torch.FloatTensor(Color(palette).rgb).view(
+                            1, 1, 3).repeat(num_frame, num_verts, 1)
                     else:
                         raise ValueError('Wrong palette. Use numpy or str')
             mesh = Meshes(
@@ -264,45 +273,44 @@ class SMPLRenderer(MeshBaseRenderer):
             mesh_list.append(mesh)
         meshes = join_batch_meshes_as_scene(mesh_list)
 
-        # transform lights with camera extrinsic matrix
-        transformation = Transform3d(device=self.device)
-        transformation = transformation.compose(
-            Rotate(R.permute(0, 2, 1), device=self.device))
-        transformation = transformation.compose(
-            Translate(-T, device=self.device))
+        cameras = self.init_cameras(K, R, T)
         if isinstance(self.lights, DirectionalLights):
             lights = self.lights.clone()
-            if self.projection == 'fovperspective':
-                lights.direction[:, 2] *= -1
-            lights.direction = transformation.transform_points(
-                lights.direction)
+            lights.direction = cameras.get_camera_plane_normals()
         elif isinstance(self.lights, PointLights):
             lights = self.lights.clone()
-            if self.projection == 'fovperspective':
-                lights.location[:, 2] *= -1
-            lights.location = transformation.transform_points(lights.location)
+            lights.location = cameras.get_camera_plane_normals(
+            ) + cameras.get_camera_center()
         else:
             raise TypeError(f'Wrong light type: {type(self.lights)}.')
-        cameras = self.init_cameras(K, R, T)
         if self.render_choice == 'pointcloud':
             pointclouds = mesh_to_pointcloud_vc(meshes, alpha=1.0)
             rendered_images = self.pointcloud_renderer(
                 pointclouds=pointclouds, K=K, R=R, T=T)
+            rgbs = rendered_images.clone()[..., :3]
+            rgbs = rgbs / rgbs.max()
             # initial renderer
         elif self.render_choice == 'depth':
             rendered_images = self.depth_renderer(meshes, K=K, R=R, T=T)
+            rgbs = rendered_images.clone()[..., :3]
+            rgbs = rgbs / rgbs.max()
+        elif self.render_choice == 'normal':
+            rendered_images = self.normal_renderer(meshes, K=K, R=R, T=T)
+            rgbs = rendered_images.clone()[..., :3]
+            rgbs = (rgbs + 1) / 2
         else:
             renderer = self.init_renderer(cameras, lights)
 
             # process render tensor and mask
             rendered_images = renderer(meshes)
-        rgbs = rendered_images.clone()[..., :3] / rendered_images[
-            ..., :3].max()
+            rgbs = rendered_images.clone()[..., :3]
+            rgbs = rgbs / rgbs.max()
+
         valid_masks = (rendered_images[..., 3:] > 0) * 1.0
         if self.render_choice == 'part_silhouette':
             rendered_silhouettes = rgbs[None] * 100
             part_silhouettes = []
-            for i in range(len(SMPL_SEGMENTATION[self.model_type]['keys'])):
+            for i in range(len(self.segmentation)):
                 part_silhouettes.append(1.0 *
                                         (rendered_silhouettes == (i + 1)) *
                                         rendered_silhouettes / (i + 1))
