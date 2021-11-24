@@ -159,7 +159,10 @@ class SMPLify(object):
             batch_size = keypoints2d.shape[
                 0] if keypoints2d is not None else keypoints3d.shape[0]
         if num_videos is None:
-            num_videos = batch_size
+            if self.use_one_betas_per_video:
+                num_videos = 1
+            else:
+                num_videos = batch_size
         assert batch_size % num_videos == 0
 
         global_orient = init_global_orient.detach().clone() \
@@ -512,6 +515,7 @@ class SMPLify(object):
     def _expand_betas(self, pose, betas):
         batch_size = pose.shape[0]
         num_video = betas.shape[0]
+
         if batch_size == num_video:
             return betas
 

@@ -1,11 +1,12 @@
 import mmcv
 import numpy as np
-import smplx
 import torch
 
 from mmhuman3d.core.parametric_model.builder import build_registrant
+from mmhuman3d.models.builder import build_body_model
 
 body_model_load_dir = 'data/body_models'
+batch_size = 2
 
 
 def test_smpl():
@@ -14,18 +15,26 @@ def test_smpl():
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+    body_model_config = dict(
+        type='SMPL',
+        gender='neutral',
+        num_betas=10,
+        keypoint_src='smpl_45',
+        keypoint_dst='smpl_45',
+        model_path='data/body_models/smpl',
+        batch_size=batch_size)
+
+    smplify_config['body_model'] = body_model_config
     smplify_config['num_epochs'] = 1
     smplify_config['use_one_betas_per_video'] = True
+    smplify_config['num_videos'] = 1
 
     smplify = build_registrant(smplify_config)
 
     # Generate keypoints
-    body_model = smplx.create(
-        body_model_load_dir, model_type='smpl', gender='neutral', num_betas=10)
-    output = body_model()
-
-    keypoints3d = output.joints.detach().to(device=device)
-    keypoints3d_conf = torch.ones((keypoints3d.shape[1]), device=device)
+    smpl = build_body_model(body_model_config)
+    keypoints3d = smpl()['joints'].detach().to(device=device)
+    keypoints3d_conf = torch.ones(*keypoints3d.shape[:2], device=device)
 
     # Run SMPLify
     smplify_output = smplify(
@@ -43,22 +52,26 @@ def test_smplx():
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+    body_model_config = dict(
+        type='SMPLX',
+        gender='neutral',
+        num_betas=10,
+        use_face_contour=True,
+        keypoint_src='smplx',
+        keypoint_dst='smplx',
+        model_path='data/body_models/smplx',
+        batch_size=batch_size)
+
+    smplifyx_config['body_model'] = body_model_config
     smplifyx_config['num_epochs'] = 1
     smplifyx_config['use_one_betas_per_video'] = True
+    smplifyx_config['num_videos'] = 1
 
     smplifyx = build_registrant(smplifyx_config)
 
-    # Generate keypoints
-    body_model = smplx.create(
-        body_model_load_dir,
-        model_type='smplx',
-        gender='neutral',
-        use_face_contour=True,
-        num_betas=10)
-    output = body_model()
-
-    keypoints3d = output.joints.detach().to(device=device)
-    keypoints3d_conf = torch.ones((keypoints3d.shape[1]), device=device)
+    smplx = build_body_model(body_model_config)
+    keypoints3d = smplx()['joints'].detach().to(device=device)
+    keypoints3d_conf = torch.ones(*keypoints3d.shape[:2], device=device)
 
     # Run SMPLify-X
     smplifyx_output = smplifyx(
