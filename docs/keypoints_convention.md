@@ -1,42 +1,348 @@
-# About convention
+## Keypoints convention
 
-This doc is to help users understand and use our convention tools.
+### Overview
 
-## Keypoints mapping
-- **discription:**
+Our convention tries to consolidate the different keypoints definition across various
+commonly used datasets. Due to differences in data-labelling procedures, keypoints across datasets with the same name might not map to semantically similar locations on the human body. Conversely, keypoints with different names might correspond to the same location on the human body. To unify the different keypoints correspondences across datasets, we adopted the `human_data` convention
+as the base convention for converting and storing our keypoints.
 
-    Our convention means the keypoints definition of human body. The same keypoint names mean that the keypoints are semantically the same location on human body. We can convert keypoints following the mapping correspondence defined by the keypoints names.
+### How to use
 
-    In our project, we use the `smplx` convention as basic convention and named the corresponding keypoint names following [smplx](mmhuman3d/core/conventions/keypoints_mapping/smplx.py). Those keypoints that do not have correspondences to smplx should be inde=icated with an extra prefix (such as COCO_, or GTA_).
+#### Converting between conventions
 
-- **simple example:**
+Keypoints can be converted between different conventions easily using the `convert_kps` function.
 
-    You can convert keypoint between different conventions easily with the help of function `convert_kps`. E.g., you have a `mmpose` keypoints array of shape (100, 133, 2) and you want to convert it to a `coco` convention array, you can do:
-    ```python
-    from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-    keypoints_mmpose = np.zeros((100, 133, 2))
-    keypoints_coco, mask = convert_kps(keypoints_mmpose, src='mmpose', dst='coco')
-    ```
-    The output `mask` should be all ones if the `dst` convention is the subset of the `src` convention.
-    You can use the mask as the confidence of the keypoints since those keypoints with no correspondence are set to a default value with 0 confidence.
-- **original mask:**
+To convert a `agora` keypoints to `coco` convention, specify the source and
+destination convention for conversion.
 
-    If you have occlusion information of your keypoints, you can use an original mask to mark it, then the information will be updated into the returned mask.
-    E.g., you want to convert a `smpl` keypoints to `coco` keypoints, and you know its `left_hip` is occluded. You want to carry forward this information during the converting. So you can set an original_mask and convert it to `coco` by doing:
+```python
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 
-    ```python
-    keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
-    original_mask = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
-    original_mask[KEYPOINTS_FACTORY['smpl'].index('left_hip')] = 0
-    _, mask_coco = convert_kps(
-        keypoints=keypoints, mask=original_mask, src='smpl', dst='coco')
-    _, mask_coco_full = convert_kps(
-        keypoints=keypoints, src='smpl', dst='coco')
-    assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] == 0
-    mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] = 1
-    assert (mask_coco == mask_coco_full).all()
-    ```
+keypoints_agora = np.zeros((100, 127, 3))
+keypoints_coco, mask = convert_kps(keypoints_agora, src='agora', dst='coco')
+```
 
-- **convert with your defined convention:**
+The output `mask` should be all ones if the `dst` convention is the subset of the `src` convention.
+You can use the mask as the confidence of the keypoints since those keypoints with no correspondence are set to a default value with 0 confidence.
 
-    Please refer to [customize_keypoints_convention](docs/customize_keypoints_convention.md).
+
+#### Converting with mask
+
+If you have occlusion information of your keypoints, you can use an original mask to mark it, then the information will be updated into the returned mask.
+E.g., you want to convert a `smpl` keypoints to `coco` keypoints, and you know its `left_hip` is occluded. You want to carry forward this information during the converting. So you can set an original_mask and convert it to `coco` by doing:
+
+```python
+keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
+original_mask = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
+original_mask[KEYPOINTS_FACTORY['smpl'].index('left_hip')] = 0
+
+_, mask_coco = convert_kps(
+    keypoints=keypoints, mask=original_mask, src='smpl', dst='coco')
+_, mask_coco_full = convert_kps(
+    keypoints=keypoints, src='smpl', dst='coco')
+
+assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] == 0
+mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] = 1
+assert (mask_coco == mask_coco_full).all()
+```
+
+### Supported Conventions
+
+
+These are the supported conventions:
+  - [AGORA](#agora)
+  - [COCO](#coco)
+  - [COCO-WHOLEBODY](#coco-wholebody)
+  - [CrowdPose](#crowdpose)
+  - [Human3.6M](#human36m)
+  - human_data
+  - [HybrIK](#hybrik)
+  - [LSP](#lsp)
+  - [MPI-INF-3DHP](#mpi-inf-3dhp)
+  - [MPII](#mpii)
+  - openpose
+  - [PennAction](#pennaction)
+  - [PoseTrack18](#posetrack18)
+  - [PW3D](#pw3d)
+  - [SMPL](#smpl)
+  - [SMPL-X](#smplx)
+
+
+## HUMANDATA
+
+The first 144 keypoints in HumanData correspond to that in `SMPL-X`.
+Keypoints with suffix `_extra` refer to those obtained from Jregressor_extra.
+Keypoints with suffix `_openpose` refer to those obtained from `OpenPose` predictions.
+
+There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` that has the same name but were semantically different from keypoints in `SMPL-X`. As such, we added an extra suffix to differentiate those keypoints i.e. `head_h36m`.
+
+## AGORA
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/2104.14643.pdf">AGORA (CVPR'2021)</a></summary>
+
+```bibtex
+@inproceedings{Patel:CVPR:2021,
+  title = {{AGORA}: Avatars in Geography Optimized for Regression Analysis},
+  author = {Patel, Priyanka and Huang, Chun-Hao P. and Tesch, Joachim and Hoffmann, David T. and Tripathi, Shashank and Black, Michael J.},
+  booktitle = {Proceedings IEEE/CVF Conf.~on Computer Vision and Pattern Recognition ({CVPR})},
+  month = jun,
+  year = {2021},
+  month_numeric = {6}
+}
+```
+
+</details>
+
+## COCO
+
+<details>
+<summary align="right"><a href="https://link.springer.com/chapter/10.1007/978-3-319-10602-1_48">COCO (ECCV'2014)</a></summary>
+
+```bibtex
+@inproceedings{lin2014microsoft,
+  title={Microsoft coco: Common objects in context},
+  author={Lin, Tsung-Yi and Maire, Michael and Belongie, Serge and Hays, James and Perona, Pietro and Ramanan, Deva and Doll{\'a}r, Piotr and Zitnick, C Lawrence},
+  booktitle={European conference on computer vision},
+  pages={740--755},
+  year={2014},
+  organization={Springer}
+}
+```
+
+</details>
+
+
+## COCO-WHOLEBODY
+
+<details>
+<summary align="right"><a href="https://arxiv.org/abs/2007.11858.pdf">COCO-Wholebody (ECCV'2020)</a></summary>
+
+```bibtex
+@inproceedings{jin2020whole,
+  title={Whole-Body Human Pose Estimation in the Wild},
+  author={Jin, Sheng and Xu, Lumin and Xu, Jin and Wang, Can and Liu, Wentao and Qian, Chen and Ouyang, Wanli and Luo, Ping},
+  booktitle={Proceedings of the European Conference on Computer Vision (ECCV)},  
+  year={2020}
+}
+```
+
+</details>
+
+
+## CrowdPose
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1812.00324.pdf">CrowdPose (arKiv'2018)</a></summary>
+
+```bibtex
+@article{li2018crowdpose,
+  title={CrowdPose: Efficient Crowded Scenes Pose Estimation and A New Benchmark},
+  author={Li, Jiefeng and Wang, Can and Zhu, Hao and Mao, Yihuan and Fang, Hao-Shu and Lu, Cewu},
+  journal={arXiv preprint arXiv:1812.00324},
+  year={2018}
+}
+```
+
+</details>
+
+## Human3.6M
+
+
+<details>
+<summary align="right"><a href="https://ieeexplore.ieee.org/abstract/document/6682899/">Human3.6M (TPAMI'2014)</a></summary>
+
+```bibtex
+@article{h36m_pami,
+  author = {Ionescu, Catalin and Papava, Dragos and Olaru, Vlad and Sminchisescu,  Cristian},
+  title = {Human3.6M: Large Scale Datasets and Predictive Methods for 3D Human Sensing in Natural Environments},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  publisher = {IEEE Computer Society},
+  volume = {36},
+  number = {7},
+  pages = {1325-1339},
+  month = {jul},
+  year = {2014}
+}
+```
+
+</details>
+
+
+## HybrIK
+
+
+<details>
+<summary align="right"><a href="https://openaccess.thecvf.com/content/CVPR2021/html/Li_HybrIK_A_Hybrid_Analytical-Neural_Inverse_Kinematics_Solution_for_3D_Human_CVPR_2021_paper.html">HybrIK (CVPR'2021)</a></summary>
+
+```bibtex
+@inproceedings{li2020hybrikg,
+  author = {Li, Jiefeng and Xu, Chao and Chen, Zhicun and Bian, Siyuan and Yang, Lixin and Lu, Cewu},
+  title = {HybrIK: A Hybrid Analytical-Neural Inverse Kinematics Solution for 3D Human Pose and Shape Estimation},
+  booktitle={CVPR 2021},
+  pages={3383--3393},
+  year={2021},
+  organization={IEEE}
+}
+```
+
+</details>
+
+## LSP
+
+
+<details>
+<summary align="right"><a href="http://sam.johnson.io/research/publications/johnson10bmvc.pdf">LSP (BMVC'2010)</a></summary>
+
+```bibtex
+@inproceedings{johnson2010clustered,
+  title={Clustered Pose and Nonlinear Appearance Models for Human Pose Estimation.},
+  author={Johnson, Sam and Everingham, Mark},
+  booktitle={bmvc},
+  volume={2},
+  number={4},
+  pages={5},
+  year={2010},
+  organization={Citeseer}
+}
+```
+</details>
+
+## MPI-INF-3DHP
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1611.09813.pdf">MPI_INF_3DHP (3DV'2017)</a></summary>
+
+```bibtex
+@inproceedings{mono-3dhp2017,
+ author = {Mehta, Dushyant and Rhodin, Helge and Casas, Dan and Fua, Pascal and Sotnychenko, Oleksandr and Xu, Weipeng and Theobalt, Christian},
+ title = {Monocular 3D Human Pose Estimation In The Wild Using Improved CNN Supervision},
+ booktitle = {3D Vision (3DV), 2017 Fifth International Conference on},
+ url = {http://gvv.mpi-inf.mpg.de/3dhp_dataset},
+ year = {2017},
+ organization={IEEE},
+ doi={10.1109/3dv.2017.00064},
+}
+```
+
+</details>
+
+
+## MPII
+
+
+<details>
+<summary align="right"><a href="http://openaccess.thecvf.com/content_cvpr_2014/html/Andriluka_2D_Human_Pose_2014_CVPR_paper.html">MPII (CVPR'2014)</a></summary>
+
+```bibtex
+@inproceedings{andriluka14cvpr,
+  author = {Mykhaylo Andriluka and Leonid Pishchulin and Peter Gehler and Schiele, Bernt},
+  title = {2D Human Pose Estimation: New Benchmark and State of the Art Analysis},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year = {2014},
+  month = {June}
+}
+```
+
+</details>
+
+## PoseTrack18
+
+
+<details>
+<summary align="right"><a href="http://openaccess.thecvf.com/content_cvpr_2018/html/Andriluka_PoseTrack_A_Benchmark_CVPR_2018_paper.html">PoseTrack18 (CVPR'2018)</a></summary>
+
+```bibtex
+@inproceedings{andriluka2018posetrack,
+  title={Posetrack: A benchmark for human pose estimation and tracking},
+  author={Andriluka, Mykhaylo and Iqbal, Umar and Insafutdinov, Eldar and Pishchulin, Leonid and Milan, Anton and Gall, Juergen and Schiele, Bernt},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
+  pages={5167--5176},
+  year={2018}
+}
+```
+
+</details>
+
+## OpenPose
+
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1812.08008v2.pdf">OpenPose(TPMAI'2019)</a></summary>
+
+```bibtex
+@article{8765346,
+  author = {Z. {Cao} and G. {Hidalgo Martinez} and T. {Simon} and S. {Wei} and Y. A. {Sheikh}},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  title = {OpenPose: Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields},
+  year = {2019}
+}
+```
+
+</details>
+
+## PennAction
+
+
+<details>
+<summary align="right"><a href="https://openaccess.thecvf.com/content_iccv_2013/papers/Zhang_From_Actemes_to_2013_ICCV_paper.pdf
+">PennAction(ICCV'2013)</a></summary>
+
+```bibtex
+@inproceedings{zhang2013,
+  title={From Actemes to Action: A Strongly-supervised Representation for Detailed Action Understanding},
+  author={Zhang, Weiyu and Zhu, Menglong and Derpanis, Konstantinos},
+  booktitle={Proceedings of the International Conference on Computer Vision},
+  year={2013}
+}
+```
+
+</details>
+
+
+## SMPL
+
+
+<details>
+<summary align="right"><a href="https://files.is.tue.mpg.de/black/papers/SMPL2015.pdf">SMPL(ACM'2015)</a></summary>
+
+```bibtex
+@article{SMPL:2015,
+      author = {Loper, Matthew and Mahmood, Naureen and Romero, Javier and Pons-Moll, Gerard and Black, Michael J.},
+      title = {{SMPL}: A Skinned Multi-Person Linear Model},
+      journal = {ACM Trans. Graphics (Proc. SIGGRAPH Asia)},
+      month = oct,
+      number = {6},
+      pages = {248:1--248:16},
+      publisher = {ACM},
+      volume = {34},
+      year = {2015}
+    }
+```
+
+</details>
+
+
+## SMPL-X
+
+
+<details>
+<summary align="right"><a href="https://ps.is.tuebingen.mpg.de/uploads_file/attachment/attachment/497/SMPL-X.pdf
+">SMPL-X(CVPR'2019)</a></summary>
+
+```bibtex
+@inproceedings{SMPL-X:2019,
+  title = {Expressive Body Capture: {3D} Hands, Face, and Body from a Single Image},
+  author = {Pavlakos, Georgios and Choutas, Vasileios and Ghorbani, Nima and Bolkart, Timo and Osman, Ahmed A. A. and Tzionas, Dimitrios and Black, Michael J.},
+  booktitle = {Proceedings IEEE Conf. on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {10975--10985},
+  year = {2019}
+}
+```
+
+</details>
+
+
+#### Customizing keypoint convention
+
+Please refer to [customize_keypoints_convention](docs/customize_keypoints_convention.md).

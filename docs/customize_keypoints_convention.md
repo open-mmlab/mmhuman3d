@@ -1,29 +1,95 @@
-# Customize keypoints convention
+## Customize keypoints convention
 
-This doc is about how to add a new set of keypoints (NEW_KEYPOINTS) into use in this project.
+### Overview
 
-**1. Search for keypoint names in smplx.py.** Please follow
-[`mmhuman3d/core/conventions/keypoints_mapping/smplx.py`](mmhuman3d/core/conventions/keypoints_mapping/smplx.py)
-to create a file named NEW_KEYPOINTS.py. In this project, you can find corresponding names in smplx for NEW_KEYPOINTS. We use names to map keypoints. Then list them as smplx.py.
+If your dataset use an unsupported convention, a new convention can be added following this documentation.
 
-**2. Search for keypoint names in other sets of keypoints.** If a keypoint is not in smplx.py, please also go through other sets of keypoints under
-[`mmhuman3d/core/conventions/keypoints_mapping`](mmhuman3d/core/conventions/keypoints_mapping) and change to the same name if you
-found it in the above folder. This is because smplx does contain all the definition of keypoints. For example, smplx does not have 'head_top' while [mpi_inf_3dhp](mmhuman3d/core/conventions/keypoints_mapping/mpi_inf_3dhp.py) does.
-The keypoints in different datasets while sharing the same name should have the
-exactly same semantic definitions in human body.
+These are the conventions that our project currently support:
+  - agora
+  - coco
+  - coco_wholebody
+  - crowdpose
+  - h36m
+  - human_data
+  - hybrik
+  - lsp
+  - mpi_inf_3dhp
+  - mpii
+  - openpose
+  - penn_action
+  - posetrack
+  - pw3d
+  - smpl
+  - smplx
 
-**3. Add a new keypoint name.** If you cannot find an existing keypoint in [existing
-conventions](mmhuman3d/core/conventions/keypoints_mapping) for a keypoint in
-NEW_KEYPOINTS, please list it as well but add a prefix to the original name to differentiate it from those with smplx correspondences.
 
-**4. Modify keypoints mapping code to add new set of keypoints into use.** Add import for NEW_KEYPOINTS.py in
-[`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L6-15), and also add one line
-in dict [KEYPOINTS_FACTORY](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L17-27).
+**1. Create a new convention**
 
-**5. Use new keypoints set for keypoints mapping.** Now you can use convert_kps(both 2d and 3d keypoints are supported) in
-[`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](mmhuman3d/core/conventions/keypoints_mapping/__init__.py) to convert
-NEW_KEYPOINTS to other sets of keypoints like smplx, coco, etc.
-For example, you can convert your smplx keypoints to coco keypoints by running the following code, mask only contains 0 or 1. 0 meaning that the corresponding point should be excluded or not, respectively.
+Please follow
+[`mmhuman3d/core/conventions/keypoints_mapping/human_data.py`](mmhuman3d/core/conventions/keypoints_mapping/human_data.py) to create a file named NEW_CONVENTION.py. In this file,
+`NEW_KEYPOINTS` is a list containing keypoints naming and order specific to the new convention.
+
+For instance, if we want to create a new convention for AGORA dataset, `agora.py` would contain:
 ```
-  new_kps, mask = convert_kps(smplx_keypoints, src='smplx', dst='NEW_KEYPOINT_NAME')
+AGORA_KEYPOINTS = [
+  'pelvis',
+  'left_hip',
+  'right_hip'
+  ...
+]
+```
+
+**2. Search for keypoint names in `human_data`.**
+
+In this project, keypoints that share the same naming across datasets should have the exact same semantic definition in the human body. `human_data` convention has already consolidated the different keypoints naming and correspondences across our supported datasets.
+
+For each keypoint in `NEW_KEYPOINTS`, we have to check (1) if the keypoint name exists in [`mmhuman3d/core/conventions/keypoints_mapping/human_data.py`](mmhuman3d/core/conventions/keypoints_mapping/human_data.py) and (2) if the keypoint has a correspondence i.e. maps to the same
+location as the ones defined in `human_data`.
+
+If both conditions are met, retain the keypoint name in NEW_CONVENTION.py.
+
+
+**3. Search for keypoints correspondence in `human_data`.**
+
+If a keypoint in `NEW_KEYPOINTS` shares the same correspondence as a keypoint that is named differently in the `human_data` convention i.e. `head` in NEW_CONVENTION.py maps to `head_extra`
+in `human_data`, rename the keypoint to follow the new one in our convention i.e. `head`-> `head_extra`.
+
+**3. Add a new keypoint to `human_data`**
+
+If the keypoint has no correspondence nor share an existing name to the ones defined in `human_data`, please list it as well but add a prefix to the original name to differentiate it from those with existing correspondences i.e. `spine_3dhp`
+
+We may expand `human_data` to the new keypoint if necessary. However, this can only be done after checking that the new keypoint do not have a correspondence and there is no conflicting names.
+
+**4. Initialise the new set of keypoint convention**
+
+Add import for NEW_CONVENTION.py in
+[`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L8-25), and add the identifier to dict [KEYPOINTS_FACTORY](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L27-52).
+
+For instance, if our new convention is `agora`:
+```
+# add import
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    agora,
+    ...
+)
+
+# add to factory
+KEYPOINTS_FACTORY = {
+    'agora': agora.AGORA_KEYPOINTS,
+    ...
+}
+```
+
+**5. Using keypoints convention for keypoints mapping**
+
+To convert keypoints from any existing convention to your newly defined convention (or vice versa), you can use the `convert_kps` function [`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](mmhuman3d/core/conventions/keypoints_mapping/__init__.py), which produce a mask containing 0 or 1 indicating if the corresponding point should be filtered or retained.
+
+To convert from coco to new convention:
+```
+  new_kps, mask = convert_kps(smplx_keypoints, src='coco', dst='NEW_CONVENTION')
+```
+
+To convert from new convention to human_data:
+```
+  new_kps, mask = convert_kps(smplx_keypoints, src='NEW_CONVENTION', dst='human_data')
 ```
