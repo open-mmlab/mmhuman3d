@@ -73,3 +73,31 @@ def test_vibe_camera():
     dst_tran = np.asarray(empty_para.get_value('translation'))
     t_diff = (src_tran - dst_tran).sum()
     assert t_diff == 0
+
+
+def test_misc():
+    empty_para = CameraParameter(name='test_misc')
+    mat_3x3 = np.eye(3)
+    vec_3 = np.zeros(shape=[3])
+    empty_para.set_K_R_T(K_mat=mat_3x3, R_mat=mat_3x3, T_vec=vec_3)
+    empty_para.set_value('k1', 1.0)
+    empty_para.reset_distort()
+    distort_vec = empty_para.get_opencv_distort_mat()
+    assert float(np.sum(np.abs(distort_vec))) == 0
+    # set wrong key
+    with pytest.raises(KeyError):
+        empty_para.set_mat_np('intrinsic_mat', mat_3x3)
+    with pytest.raises(KeyError):
+        empty_para.set_mat_list('intrinsic_mat', mat_3x3.tolist())
+    with pytest.raises(KeyError):
+        empty_para.set_value('distortion_k1', 1.0)
+    # correct key
+    empty_para.set_mat_list('in_mat', mat_3x3.tolist())
+    empty_para.set_value('k1', 0.0)
+    # get wrong key
+    with pytest.raises(KeyError):
+        empty_para.get_mat_np('intrinsic_mat')
+    with pytest.raises(KeyError):
+        empty_para.get_value('distortion_k1')
+    dumped_str = empty_para.to_string()
+    assert isinstance(dumped_str, str)

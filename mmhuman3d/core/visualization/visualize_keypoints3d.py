@@ -117,13 +117,13 @@ def visualize_kp3d(
     if kp3d.shape[-1] == 2:
         kp3d = np.concatenate([kp3d, np.zeros_like(kp3d)[..., 0:1]], axis=-1)
         warnings.warn(
-            'The input array is 2-Dimensional coordinates, will concatenate '
+            'The input array is 2-Dimensional coordinates, will concatenate ' +
             f'zeros to the last axis. The new array shape: {kp3d.shape}')
     elif kp3d.shape[-1] >= 4:
         kp3d = kp3d[..., :3]
         warnings.warn(
-            'The input array has more than 3-Dimensional coordinates, will '
-            'keep only the first 3-Dimensions of the last axis. The new '
+            'The input array has more than 3-Dimensional coordinates, will ' +
+            'keep only the first 3-Dimensions of the last axis. The new ' +
             f'array shape: {kp3d.shape}')
     if kp3d.ndim == 3:
         kp3d = np.expand_dims(kp3d, 1)
@@ -139,7 +139,7 @@ def visualize_kp3d(
 
     # check data_source & mask
     if data_source not in keypoints_factory:
-        raise ValueError('Wrong data_source. Should choose in'
+        raise ValueError('Wrong data_source. Should choose in' +
                          f'{list(keypoints_factory.keys())}')
     if mask is not None:
         if not isinstance(mask, np.ndarray):
@@ -199,8 +199,7 @@ def visualize_kp3d(
     if isinstance(frame_names, str):
         if '%' in frame_names:
             frame_names = [
-                frame_names % index
-                for index in range(len(input_pose_np.shape[0]))
+                frame_names % index for index in range(input_pose_np.shape[0])
             ]
         else:
             frame_names = [frame_names] * input_pose_np.shape[0]

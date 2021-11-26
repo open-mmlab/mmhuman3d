@@ -115,9 +115,6 @@ def check_path_existence(
             return Existence.DirectoryNotExist
         else:
             return Existence.FileNotExist
-    else:
-        raise KeyError(f'{path_str} doesn\'t match any expectation '
-                       f'when type is set to: {path_type}')
 
 
 def prepare_output_path(output_path: str,
@@ -156,8 +153,8 @@ def prepare_output_path(output_path: str,
     exist_result = check_path_existence(output_path, path_type=path_type)
     if exist_result == Existence.MissingParent:
         warnings.warn(
-            f'The parent folder of {tag} does not exist: {output_path},'
-            f' will make dir f{Path(output_path).parent.absolute().__str__()}')
+            f'The parent folder of {tag} does not exist: {output_path},' +
+            f' will make dir {Path(output_path).parent.absolute().__str__()}')
         os.makedirs(
             Path(output_path).parent.absolute().__str__(), exist_ok=True)
 
@@ -201,7 +198,7 @@ def check_input_path(
     Args:
         input_path (str): input folder or file path.
         allowed_suffix (List[str], optional):
-            Check the suffix of `output_path`. If folder, should be [] or [''].
+            Check the suffix of `input_path`. If folder, should be [] or [''].
             If could both be folder or file, should be [suffixs..., ''].
             Defaults to [].
         tag (str, optional): The `string` tag to specify the output type.
@@ -229,7 +226,7 @@ def check_input_path(
             check_path_suffix(input_path, allowed_suffix=allowed_suffix)
         if not suffix_matched:
             raise FileNotFoundError(
-                f'The {tag} should be {", ".join(allowed_suffix)}:'
+                f'The {tag} should be {", ".join(allowed_suffix)}:' +
                 f'{input_path}.')
     else:
         raise FileNotFoundError(f'The {tag} does not exist: {input_path}.')

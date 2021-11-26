@@ -196,6 +196,8 @@ class HumanData(dict):
                         key == '__temporal_len__' or\
                         key == '__keypoints_compressed__':
                     self.__setattr__(key, value)
+                    # pop the attributes to keep dict clean
+                    tmp_data_dict.pop(key)
                 elif key == 'bbox_xywh' and value.shape[1] == 4:
                     value = np.hstack([value, np.ones([value.shape[0], 1])])
                     tmp_data_dict[key] = value
@@ -657,11 +659,7 @@ class HumanData(dict):
         if key in supported_keys:
             # check shape
             if 'shape' in supported_keys[key]:
-                try:
-                    val_shape = val.shape
-                except AttributeError:
-                    # no shape attr
-                    val_shape = []
+                val_shape = val.shape
                 for shape_ind in range(len(supported_keys[key]['shape'])):
                     # length not match
                     if shape_ind >= len(val_shape):
@@ -862,6 +860,7 @@ class HumanData(dict):
                         key == '__temporal_len__' or\
                         key == '__keypoints_compressed__':
                     self.__setattr__(key, value)
+                    # pop the attributes to keep dict clean
                     tmp_data_dict.pop(key)
                 elif key == 'bbox_xywh' and value.shape[1] == 4:
                     value = np.hstack([value, np.ones([value.shape[0], 1])])
