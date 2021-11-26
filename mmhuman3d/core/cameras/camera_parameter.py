@@ -53,14 +53,14 @@ class CameraParameter:
                 (k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6) of 8 elements.
         """
         dist_coeffs = [
-            self.getValue('k1'),
-            self.getValue('k2'),
-            self.getValue('p1'),
-            self.getValue('p2'),
-            self.getValue('k3'),
-            self.getValue('k4'),
-            self.getValue('k5'),
-            self.getValue('k6'),
+            self.get_value('k1'),
+            self.get_value('k2'),
+            self.get_value('p1'),
+            self.get_value('p2'),
+            self.get_value('k3'),
+            self.get_value('k4'),
+            self.get_value('k5'),
+            self.get_value('k6'),
         ]
         dist_coeffs = np.array(dist_coeffs)
         return dist_coeffs

@@ -1,6 +1,9 @@
-from typing import Literal
-
 import numpy as np
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 
 def _xyxy2xywh(bbox_xyxy):

@@ -1,3 +1,5 @@
+import os
+
 from mmhuman3d.core.visualization.visualize_cameras import (
     visualize_chessboard_kinects_rgb,
     visualize_dumped_camera_parameter,
@@ -18,5 +20,9 @@ def test_visualize_chessboard_kinects_rgb():
 def test_visualize_dumped_camera_parameter():
     dumped_dir = \
         'tests/data/camera/dumped'
+    non_json_file_path = os.path.join(dumped_dir, 'non_json_file.txt')
+    with open(non_json_file_path, 'w') as f_write:
+        f_write.write('test string\n')
     visualize_dumped_camera_parameter(
         dumped_dir, interactive=False, show=False)
+    os.remove(non_json_file_path)

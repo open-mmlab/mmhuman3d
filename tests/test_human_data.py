@@ -99,8 +99,10 @@ def test_compression():
     with pytest.raises(KeyError):
         human_data.compress_keypoints_by_mask()
     # compress correctly
+    assert human_data.check_keypoints_compressed() is False
     human_data['keypoints2d_mask'] = sample_keypoints2d_mask
     human_data.compress_keypoints_by_mask()
+    assert human_data.check_keypoints_compressed() is True
     non_zero_padding_kp2d = human_data.get_raw_value('keypoints2d')
     assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
     assert non_zero_padding_kp2d.shape[1] < sample_keypoints2d.shape[1]
@@ -121,6 +123,12 @@ def test_compression():
     # test set new key after compression
     with pytest.raises(ValueError):
         human_data['keypoints3d'] = np.zeros(shape=[3, 144, 4])
+    # keypoints without mask is put in a compressed human_data
+    with pytest.raises(KeyError):
+        human_data.update({'keypoints3d': np.zeros(shape=[3, 144, 4])})
+        human_data.decompress_keypoints()
+    if 'keypoints3d' in human_data:
+        human_data.pop('keypoints3d')
     human_data.decompress_keypoints()
     assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
     assert shape_equal(
@@ -280,6 +288,19 @@ def test_dump():
     # 3 frames after load
     assert human_data_load.__temporal_len__ == 3
 
+    # compatibility for old bbox
+    old_version_dict = {
+        'bbox_xywh': np.zeros(shape=(3, 4)),
+        'image_path': None
+    }
+    human_data.update(old_version_dict)
+    human_data.dump(human_data_dump_path, overwrite=True)
+    human_data_load = HumanData()
+    human_data_load.load(human_data_dump_path)
+    # 3 frames after load
+    assert human_data_load['bbox_xywh'].shape[1] == 5
+    assert 'image_path' not in human_data_load
+
     # wrong file extension
     with pytest.raises(ValueError):
         human_data.dump(
@@ -313,6 +334,16 @@ def test_dump_by_pickle():
     # 3 frames after load
     assert human_data_load.__temporal_len__ == 3
 
+    # compatibility for old bbox
+    old_version_dict = {
+        'bbox_xywh': np.zeros(shape=(3, 4)),
+        'image_path': None
+    }
+    human_data.update(old_version_dict)
+    human_data.dump_by_pickle(human_data_dump_path, overwrite=True)
+    human_data_load = HumanData()
+    human_data_load.load_by_pickle(human_data_dump_path)
+
     # wrong file extension
     with pytest.raises(ValueError):
         human_data.dump_by_pickle(
@@ -324,10 +355,11 @@ def test_dump_by_pickle():
 
 def test_log():
     HumanData.set_logger('silent')
-    test_set()
+    logger_human_data = HumanData.new(key_strict=False)
+    logger_human_data['new_key_0'] = 1
     logger = logging.getLogger()
     HumanData.set_logger(logger)
-    test_set()
+    logger_human_data['new_key_1'] = 1
 
 
 def test_to_device():
@@ -338,6 +370,8 @@ def test_to_device():
     default_device = torch.device(device_name)
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
     human_data = HumanData.fromfile(human_data_load_path)
+    human_data.set_key_strict(False)
+    human_data['tensor_value'] = torch.zeros((2, 2))
     tensor_dict = human_data.to(default_device)
     assert tensor_dict['keypoints2d'].size(2) == 3
     # if cuda is available, test whether it is on gpu
