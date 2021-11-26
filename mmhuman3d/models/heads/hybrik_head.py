@@ -10,6 +10,21 @@ from ..builder import HEADS
 
 
 def norm_heatmap(norm_type, heatmap):
+    """Normalize heatmap.
+
+    Args:
+        norm_type (str):
+            type of normalization. Currently only 'softmax' is supported
+        heatmap (torch.Tensor):
+            model output heatmap with shape (Bx29xF^2) where F^2 refers to
+            number of squared feature channels F
+
+    Returns:
+        heatmap (torch.Tensor):
+            normalized heatmap according to specified type with
+            shape (Bx29xF^2)
+    """
+
     # Input tensor shape: [N,C,...]
     shape = heatmap.shape
     if norm_type == 'softmax':
@@ -23,6 +38,24 @@ def norm_heatmap(norm_type, heatmap):
 
 @HEADS.register_module()
 class HybrIKHead(BaseModule):
+    """HybrIK parameters regressor head.
+
+    Args:
+        feature_channel (int):
+            Number of input channels
+        deconv_dim (List[int]):
+            List of deconvolution dimensions
+        num_joints (int):
+            Number of keypoints
+        depth_dim (int):
+            Depth dimension
+        height_dim (int):
+            Height dimension
+        width_dim (int):
+            Width dimension
+        smpl_mean_params (str):
+            file name of the mean SMPL parameters
+    """
 
     def __init__(
         self,
@@ -131,6 +164,27 @@ class HybrIKHead(BaseModule):
                    joint_root,
                    depth_factor,
                    return_relative=True):
+        """Project uvd coordinates to camera frame.
+
+        Args:
+            uvd_jts (torch.Tensor):
+                uvd coordinates with shape (BxNum_jointsx3)
+            trans_inv (torch.Tensor):
+                inverse affine transformation matrix with shape (Bx2x3)
+            intrinsic_param (torch.Tensor):
+                camera intrinsic matrix with shape (Bx3x3)
+            joint_root (torch.Tensor):
+                root joint coordinate with shape (Bx3)
+            depth_factor (float):
+                depth factor with shape (Bx1)
+            return_relative (bool):
+                Store True to return root normalized relative coordinates.
+                Default: True.
+
+        Returns:
+            xyz_jts (torch.Tensor):
+                uvd coordinates in camera frame with shape (BxNum_jointsx3)
+        """
         assert uvd_jts.dim() == 3 and uvd_jts.shape[2] == 3, uvd_jts.shape
         uvd_jts_new = uvd_jts.clone()
         # if torch.sum(torch.isnan(uvd_jts)) > 0:
@@ -173,7 +227,22 @@ class HybrIKHead(BaseModule):
 
         return xyz_jts
 
-    def flip_uvd_coord(self, pred_jts, shift=False, flatten=True):
+    def flip_uvd_coord(self, pred_jts, flip=False, flatten=True):
+        """Flip uvd coordinates.
+
+        Args:
+            pred_jts (torch.Tensor):
+                predicted uvd coordinates with shape (Bx87)
+            flip (bool):
+                Store True to flip uvd coordinates. Default: False.
+            flatten (bool):
+                Store True to reshape uvd_coordinates to shape (Bx29x3)
+                Default: True
+
+        Returns:
+            pred_jts (torch.Tensor):
+                flipped uvd coordinates with shape (Bx29x3)
+        """
         if flatten:
             assert pred_jts.dim() == 2
             num_batches = pred_jts.shape[0]
@@ -183,7 +252,7 @@ class HybrIKHead(BaseModule):
             num_batches = pred_jts.shape[0]
 
         # flip
-        if shift:
+        if flip:
             pred_jts[:, :, 0] = -pred_jts[:, :, 0]
         else:
             pred_jts[:, :, 0] = -1 / self.width_dim - pred_jts[:, :, 0]
@@ -194,12 +263,17 @@ class HybrIKHead(BaseModule):
             inv_idx = torch.Tensor((dim1, dim0)).long()
             pred_jts[:, idx] = pred_jts[:, inv_idx]
 
-        if flatten:
-            pred_jts = pred_jts.reshape(num_batches, self.num_joints * 3)
-
         return pred_jts
 
     def flip_phi(self, pred_phi):
+        """Flip phi.
+
+        Args:
+            pred_phi (torch.Tensor): phi in shape (Num_twistx2)
+
+        Returns:
+            pred_phi (torch.Tensor): flipped phi in shape (Num_twistx2)
+        """
         pred_phi[:, :, 1] = -1 * pred_phi[:, :, 1]
 
         for pair in self.joint_pairs_24:
@@ -219,7 +293,28 @@ class HybrIKHead(BaseModule):
                 smpl_layer,
                 flip_item=None,
                 flip_output=False):
+        """Forward function.
 
+        Args:
+            feature (torch.Tensor): features extracted from backbone
+            trans_inv (torch.Tensor):
+                inverse affine transformation matrix with shape (Bx2x3)
+            intrinsic_param (torch.Tensor):
+                camera intrinsic matrix with shape (Bx3x3)
+            joint_root (torch.Tensor):
+                root joint coordinate with shape (Bx3)
+            depth_factor (float):
+                depth factor with shape (Bx1)
+            smpl_layer (torch.Tensor):
+                smpl body model
+            flip_item (List[torch.Tensor]|None):
+                list containing items to flip
+            flip_output (bool):
+                Store True to flip output. Default: False
+
+        Returns:
+            output (dict): Dict containing model predictions.
+        """
         batch_size = feature.shape[0]
 
         x0 = feature

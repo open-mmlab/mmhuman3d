@@ -142,7 +142,7 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
         return output
 
     def compute_losses(self, predictions, targets):
-
+        """Compute regression losses for beta, theta, twist and uvd."""
         smpl_weight = targets['target_smpl_weight']
 
         losses = {}
@@ -173,6 +173,22 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
         return losses
 
     def forward_test(self, img, img_metas, **kwargs):
+        """Test step function.
+
+        In this function, train step is carried out
+            with following the pipeline:
+        1. extract features with the backbone
+        2. feed the extracted features into the head to
+            predicte beta, theta, twist angle, and heatmap (uvd map)
+        3. store predictions for evaluation
+        Args:
+            img (torch.Tensor): Batch of data as input.
+            img_metas (dict): Dict with image metas i.e. path
+            kwargs (dict): Dict with ground-truth
+        Returns:
+            all_preds (dict): Dict with image_path, vertices, xyz_17, uvd_jts,
+            xyz_24 for predictions.
+        """
         labels = {}
         labels['trans_inv'] = kwargs['trans_inv']
         labels['intrinsic_param'] = kwargs['intrinsic_param']
@@ -200,7 +216,8 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
         intrinsic_param = labels.pop('intrinsic_param')
         joint_root = labels.pop('joint_root')
         depth_factor = labels.pop('depth_factor')
-        depth_factor = torch.unsqueeze(depth_factor, dim=1)
+        if len(depth_factor.shape) != 2:
+            depth_factor = torch.unsqueeze(depth_factor, dim=1)
 
         if self.backbone is not None:
             img = img.cuda().requires_grad_()

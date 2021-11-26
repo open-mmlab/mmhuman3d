@@ -21,32 +21,27 @@ def batch_inverse_kinematics_transform(pose_skeleton,
                                        dtype=torch.float32,
                                        train=False,
                                        leaf_thetas=None):
-    """Applies a batch of inverse kinematics transfoirm to the joints.
+    """Applies inverse kinematics transform to joints in a batch.
 
-    Parameters
-    ----------
-    pose_skeleton : torch.tensor BxNx3
-        Locations of estimated pose skeleton.
-    global_orient : torch.tensor Bx1x3x3
-        Tensor of global rotation matrices
-    phis : torch.tensor BxNx2
-        The rotation on bone axis parameters
-    rest_pose : torch.tensor Bx(N+1)x3
-        Locations of rest_pose. (Template Pose)
-    children: dict
-        The dictionary that describes the kinematic chidrens for the model
-    parents : torch.tensor Bx(N+1)
-        The kinematic tree of each object
-    dtype : torch.dtype, optional:
-        The data type of the created tensors, the default is torch.float32
+    Args:
+        pose_skeleton (torch.tensor):
+            Locations of estimated pose skeleton with shape (Bx29x3)
+        global_orient (torch.tensor|none):
+            Tensor of global rotation matrices with shape (Bx1x3x3)
+        phis (torch.tensor):
+            Rotation on bone axis parameters with shape (Bx23x2)
+        rest_pose (torch.tensor):
+            Locations of rest (Template) pose with shape (Bx29x3)
+        children (List[int]): list of indexes of kinematic chidren with len 29
+        parents (List[int]): list of indexes of kinematic parents with len 29
+        dtype (torch.dtype, optional):
+            Data type of the created tensors, the default is torch.float32
 
-    Returns
-    -------
-    rot_mats: torch.tensor Bx(N+1)x3x3
-        The rotation matrics of each joints
-    rel_transforms : torch.tensor Bx(N+1)x4x4
-        The relative (with respect to the root joint) rigid transformations
-        for all the joints
+    Returns:
+        rot_mats (torch.tensor):
+            Rotation matrics of all joints with shape (Bx29x3x3)
+        rotate_rest_pose (torch.tensor):
+            Locations of rotated rest/ template pose with shape (Bx29x3)
     """
     batch_size = pose_skeleton.shape[0]
     device = pose_skeleton.device
@@ -231,7 +226,22 @@ def batch_inverse_kinematics_transform(pose_skeleton,
 
 def batch_get_pelvis_orient_svd(rel_pose_skeleton, rel_rest_pose, parents,
                                 children, dtype):
+    """Get pelvis orientation svd for batch data.
 
+    Args:
+        rel_pose_skeleton (torch.tensor):
+            Locations of root-normalized pose skeleton with shape (Bx29x3)
+        rel_rest_pose (torch.tensor):
+            Locations of rest/ template pose with shape (Bx29x3)
+        parents (List[int]): list of indexes of kinematic parents with len 29
+        children (List[int]): list of indexes of kinematic chidren with len 29
+        dtype (torch.dtype, optional):
+            Data type of the created tensors, the default is torch.float32
+
+    Returns:
+        rot_mat (torch.tensor):
+            Rotation matrix of pelvis with shape (Bx3x3)
+    """
     pelvis_child = [int(children[0])]
     for i in range(1, parents.shape[0]):
         if parents[i] == 0 and i not in pelvis_child:
@@ -266,6 +276,22 @@ def batch_get_pelvis_orient_svd(rel_pose_skeleton, rel_rest_pose, parents,
 
 def batch_get_pelvis_orient(rel_pose_skeleton, rel_rest_pose, parents,
                             children, dtype):
+    """Get pelvis orientation for batch data.
+
+    Args:
+        rel_pose_skeleton (torch.tensor):
+            Locations of root-normalized pose skeleton with shape (Bx29x3)
+        rel_rest_pose (torch.tensor):
+            Locations of rest/ template pose with shape (Bx29x3)
+        parents (List[int]): list of indexes of kinematic parents with len 29
+        children (List[int]): list of indexes of kinematic chidren with len 29
+        dtype (torch.dtype, optional):
+            Data type of the created tensors, the default is torch.float32
+
+    Returns:
+        rot_mat (torch.tensor):
+            Rotation matrix of pelvis with shape (Bx3x3)
+    """
     batch_size = rel_pose_skeleton.shape[0]
     device = rel_pose_skeleton.device
 
@@ -354,6 +380,23 @@ def batch_get_pelvis_orient(rel_pose_skeleton, rel_rest_pose, parents,
 
 def batch_get_3children_orient_svd(rel_pose_skeleton, rel_rest_pose,
                                    rot_mat_chain_parent, children_list, dtype):
+    """Get pelvis orientation for batch data.
+
+    Args:
+        rel_pose_skeleton (torch.tensor):
+            Locations of root-normalized pose skeleton with shape (Bx29x3)
+        rel_rest_pose (torch.tensor):
+            Locations of rest/ template pose with shape (Bx29x3)
+        rot_mat_chain_parents (torch.tensor):
+            parent's rotation matrix with shape (Bx3x3)
+        children (List[int]): list of indexes of kinematic chidren with len 29
+        dtype (torch.dtype, optional):
+            Data type of the created tensors, the default is torch.float32
+
+    Returns:
+        rot_mat (torch.tensor):
+            Child's rotation matrix with shape (Bx3x3)
+    """
     rest_mat = []
     target_mat = []
     for c, child in enumerate(children_list):

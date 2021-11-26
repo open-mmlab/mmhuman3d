@@ -17,6 +17,16 @@ from mmhuman3d.data.datasets.pipelines.hybrik_transforms import (
 
 @DATA_CONVERTERS.register_module()
 class Pw3dHybrIKConverter(BaseConverter):
+    """3D Poses in the Wild dataset for HybrIK `Recovering Accurate 3D Human
+    Pose in The Wild Using IMUs and a Moving Camera' ECCV'2018 More details can
+    be found in the `paper.
+
+    <https://virtualhumans.mpi-inf.mpg.de/papers/vonmarcardECCV18/
+    vonmarcardECCV18.pdf>`__ .
+
+    Args:
+        modes (list): 'test' and/or 'train' for accepted modes
+    """
 
     def convert(self, dataset_path: str, out_path: str) -> dict:
         """
