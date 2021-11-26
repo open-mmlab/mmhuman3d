@@ -609,6 +609,7 @@ def render_smpl(
             render_param_dict['shader']['shader_type'] = 'flat'
         palette = [palette] * num_person
     elif isinstance(palette, np.ndarray):
+        palette = torch.Tensor(palette)
         palette = palette.view(-1, 3)
         if palette.shape[0] != num_person:
             _times = num_person // palette.shape[0]

@@ -39,7 +39,8 @@ class SMPLRenderer(MeshBaseRenderer):
                  device: Union[torch.device, str] = 'cpu',
                  obj_path: Optional[str] = None,
                  output_path: Optional[str] = None,
-                 palette: Optional[Union[List[str], np.ndarray]] = None,
+                 palette: Optional[Union[List[str], np.ndarray,
+                                         torch.Tensor]] = None,
                  return_tensor: bool = False,
                  alpha: float = 1.0,
                  model_type='smpl',
@@ -62,7 +63,8 @@ class SMPLRenderer(MeshBaseRenderer):
         self.render_choice = render_choice
         self.raw_faces = torch.LongTensor(faces.astype(
             np.int32)) if isinstance(faces, np.ndarray) else faces
-        self.palette = palette
+        self.palette = torch.Tensor(palette) if isinstance(
+            palette, np.ndarray) else palette
         self.frames_folder = frames_folder
         self.plot_kps = plot_kps
         self.vis_kp_index = vis_kp_index
@@ -239,9 +241,9 @@ class SMPLRenderer(MeshBaseRenderer):
                 for i, k in enumerate(self.segmentation.keys()):
                     verts_rgb[:, self.segmentation[k]] = 0.01 * (i + 1)
             else:
-                if isinstance(palette, np.ndarray):
-                    verts_rgb = torch.tensor(palette).view(1, 1, 3).repeat(
-                        num_frame, num_verts, 1)
+                if isinstance(palette, torch.Tensor):
+                    verts_rgb = palette.view(1, 1,
+                                             3).repeat(num_frame, num_verts, 1)
                 else:
                     if palette == 'random':
                         color = get_different_colors(num_person)[person_idx]

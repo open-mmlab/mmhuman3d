@@ -13,6 +13,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_num,
 )
+from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.models.builder import BODY_MODELS
 from mmhuman3d.utils.transforms import quat_to_rotmat, rotmat_to_quat
 from .inverse_kinematics import batch_inverse_kinematics_transform
@@ -61,6 +62,7 @@ class SMPL(_SMPL):
 
         self.num_verts = self.get_num_verts()
         self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
+        self.body_part_segmentation = body_segmentation('smpl')
 
     def forward(self,
                 *args,
@@ -197,6 +199,7 @@ class SMPLX(_SMPLX):
 
         self.num_verts = self.get_num_verts()
         self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
+        self.body_part_segmentation = body_segmentation('smplx')
 
     def forward(self,
                 *args,
