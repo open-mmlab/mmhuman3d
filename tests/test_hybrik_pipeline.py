@@ -367,8 +367,3 @@ def test_human_hybrik_dataset():
         eval_result = custom_dataset.evaluate(outputs, tmpdir)
     assert 'MPJPE' in eval_result
     assert 'MPJPE-PA' in eval_result
-
-
-if __name__ == '__main__':
-    test_hybrik_pipeline()
-    test_human_hybrik_dataset()
