@@ -22,9 +22,17 @@ from mmhuman3d.utils.ffmpeg_utils import (
     video_to_array,
     video_to_gif,
     video_to_images,
+    video_writer,
 )
 
 root = 'tests/data/ffmpeg_test'
+
+
+def test_writer():
+    writer = video_writer(
+        output_path=osp.join(root, 'demo.mp4'), resolution=(512, 512))
+    video_array = np.ones(shape=[512, 512, 3])
+    writer.write(image_array=video_array)
 
 
 def test_pad():
@@ -57,6 +65,10 @@ def test_generate_data():
     array_to_video(v, osp.join(root, 'input_video.mp4'))
     images_to_gif(
         osp.join(root, 'input_images'), osp.join(root, 'input_gif.gif'))
+    images_to_gif(
+        osp.join(root, 'input_images'),
+        osp.join(root, 'input_gif.gif'),
+        img_format=None)
 
 
 def test_array_saver():
@@ -119,7 +131,7 @@ def test_image_reader():
         assert k in vid.video_stream
 
 
-def skip_temporal_c1():
+def skip_temporal_concat_video():
     # temporal_concat_video
     # wrong input/output
     with pytest.raises(FileNotFoundError):
@@ -130,10 +142,13 @@ def skip_temporal_c1():
         ],
                               output_path=osp.join(
                                   root, 'test_temporal_concat_output.mp4'))
+    v = np.random.randint(
+        low=0, high=255, size=(30, 512, 512, 3), dtype=np.uint8)
+    array_to_video(v, osp.join(root, 'input_video.mp4'))
 
     temporal_concat_video(
         [osp.join(root, 'input_video.mp4'),
-         osp.join(root, 'input_gif.gif')],
+         osp.join(root, 'input_video.mp4')],
         output_path=osp.join(root, 'test_temporal_concat_output.mp4'))
     assert os.path.isfile(osp.join(root, 'test_temporal_concat_output.mp4'))
 

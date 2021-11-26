@@ -54,7 +54,7 @@ class body_segmentation(object):
             raise KeyError(f'{key} not in {self.model_type} conventions.')
 
 
-def _process_segmentation_dict(segmentation_dict):
+def _preprocess_segmentation_dict(segmentation_dict):
     """help to preprocess the indexs to list."""
     final_dict = {}
     for k in segmentation_dict:

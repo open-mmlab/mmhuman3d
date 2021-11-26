@@ -256,19 +256,19 @@ def convert_cameras(
 
     # right mm to left mm
     if (not left_mm_ex_src) and left_mm_ex_dst:
-        new_R *= sign
+        new_R *= sign.to(new_R.device)
         new_R = new_R.permute(0, 2, 1)
     # left mm to right mm
     elif left_mm_ex_src and (not left_mm_ex_dst):
         new_R = new_R.permute(0, 2, 1)
-        new_R *= sign
+        new_R *= sign.to(new_R.device)
     # right_mm to right mm
     elif (not left_mm_ex_dst) and (not left_mm_ex_src):
-        new_R *= sign
+        new_R *= sign.to(new_R.device)
     # left mm to left mm
     elif left_mm_ex_src and left_mm_ex_dst:
-        new_R *= sign.view(3, 1)
-    new_T *= sign
+        new_R *= sign.view(3, 1).to(new_R.device)
+    new_T *= sign.to(new_T.device)
 
     # convert extrinsic to as definition
     if view_to_world_dst is True:
@@ -298,29 +298,38 @@ def convert_cameras(
             convert_ndc_to_screen(
                 K=new_K,
                 is_perspective=is_perspective,
-                sign=sign,
+                sign=sign.to(new_K.device),
                 resolution=resolution_dst)
         # src in screen, dst in ndc
         elif in_ndc_src is False and in_ndc_dst is True:
             convert_screen_to_ndc(
                 K=new_K,
                 is_perspective=is_perspective,
-                sign=sign,
+                sign=sign.to(new_K.device),
                 resolution=resolution_src)
         # src in ndc, dst in ndc
         elif in_ndc_src is True and in_ndc_dst is True:
             if is_perspective:
-                new_K[:, 0, 2] *= sign[0]
-                new_K[:, 1, 2] *= sign[1]
+                new_K[:, 0, 2] *= sign[0].to(new_K.device)
+                new_K[:, 1, 2] *= sign[1].to(new_K.device)
             else:
-                new_K[:, 0, 3] *= sign[0]
-                new_K[:, 1, 3] *= sign[1]
+                new_K[:, 0, 3] *= sign[0].to(new_K.device)
+                new_K[:, 1, 3] *= sign[1].to(new_K.device)
         # src in screen, dst in screen
         else:
             pass
 
         if left_mm_in_src is True and left_mm_in_dst is False:
             new_K = new_K.permute(0, 2, 1)
+
+        num_batch = max(new_K.shape[0], new_R.shape[0], new_T.shape[0])
+        if new_K.shape[0] == 1:
+            new_K = new_K.repeat(num_batch, 1, 1)
+        if new_R.shape[0] == 1:
+            new_R = new_R.repeat(num_batch, 1, 1)
+        if new_T.shape[0] == 1:
+            new_T = new_T.repeat(num_batch, 1)
+
     if use_numpy:
         if isinstance(new_K, torch.Tensor):
             new_K = new_K.cpu().numpy()

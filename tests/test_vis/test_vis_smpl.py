@@ -29,6 +29,7 @@ def test_visualize_smpl_pose():
             model_path=model_path,
             output_path='/tmp/1.mp4',
             render_choice='hq',
+            resolution=(128, 128),
             overwrite=True)
     with pytest.raises(ValueError):
         visualize_smpl_pose(
@@ -36,6 +37,7 @@ def test_visualize_smpl_pose():
             model_type='smplx',
             model_path=model_path,
             output_path='/tmp/1.mp4',
+            resolution=(128, 128),
             render_choice='hq',
             overwrite=True)
     with pytest.raises(RuntimeError):
@@ -48,6 +50,7 @@ def test_visualize_smpl_pose():
             model_type='smpl',
             model_path=model_path,
             output_path='/tmp/1.mp4',
+            resolution=(128, 128),
             render_choice='hq',
             overwrite=True)
     with pytest.raises(RuntimeError):
@@ -65,6 +68,7 @@ def test_visualize_smpl_pose():
             model_type='smplx',
             model_path=model_path,
             output_path='/tmp/1.mp4',
+            resolution=(128, 128),
             render_choice='hq',
             overwrite=True)
     # wrong input keys
@@ -78,6 +82,7 @@ def test_visualize_smpl_pose():
             model_type='smpl',
             model_path=model_path,
             output_path='/tmp/1.mp4',
+            resolution=(128, 128),
             render_choice='hq',
             overwrite=True)
 
@@ -96,6 +101,7 @@ def test_visualize_smpl_pose():
             model_type='smplx',
             model_path=model_path,
             output_path='/tmp/1.mp4',
+            resolution=(128, 128),
             render_choice='hq',
             overwrite=True)
     # wrong output path
@@ -107,6 +113,7 @@ def test_visualize_smpl_pose():
             model_type='smpl',
             output_path='/tmp/1.mp4',
             model_path=model_path,
+            resolution=(128, 128),
             render_choice='hq',
             overwrite=False)
 
@@ -118,6 +125,7 @@ def test_visualize_smpl_pose():
             poses=torch.zeros(10, 72),
             model_type='smpl',
             output_path='/tmp/1.mp4',
+            resolution=(128, 128),
             model_path='/312',
             render_choice='hq',
             overwrite=True)
@@ -129,6 +137,7 @@ def test_visualize_smpl_pose():
             poses=torch.zeros(10, 72),
             model_type='smpl',
             output_path='/tmp/1.mp4',
+            resolution=(128, 128),
             model_path='/tmp',
             render_choice='hq',
             overwrite=True)
@@ -140,6 +149,7 @@ def test_visualize_smpl_pose():
             poses=torch.zeros(10, 72),
             model_type='smpl',
             output_path='/tmp/1.mp4',
+            resolution=(128, 128),
             model_path='/123',
             render_choice='hq',
             overwrite=True)
@@ -149,27 +159,27 @@ def test_visualize_smpl_pose():
         model_type='smpl',
         model_path=model_path,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (1, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (1, 128, 128, 3)
 
     visualize_smpl_pose(
         poses=torch.zeros(1, 165),
         model_type='smplx',
         model_path=model_path,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (1, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (1, 128, 128, 3)
 
     visualize_smpl_pose(
         poses=torch.zeros(1, 72),
         model_type='smpl',
         model_path=model_path,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (1, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (1, 128, 128, 3)
 
     pose_dict = {
         'body_pose': torch.zeros(10, 69),
@@ -180,9 +190,9 @@ def test_visualize_smpl_pose():
         model_type='smpl',
         model_path=model_path,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     pose_dict = {
         'body_pose': torch.zeros(10, 63),
@@ -198,9 +208,9 @@ def test_visualize_smpl_pose():
         model_type='smplx',
         model_path=model_path,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     pred_cam = torch.ones(10, 4)
     bbox = torch.tensor([0, 0, 100, 100]).view(1, 4).repeat(10, 1)
@@ -211,9 +221,9 @@ def test_visualize_smpl_pose():
         bbox=bbox,
         model_path=model_path,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -221,10 +231,10 @@ def test_visualize_smpl_pose():
         orbit_speed=(1.0, 0.5),
         model_path=model_path,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -233,10 +243,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         output_path='/tmp/1.mp4',
         palette='segmentation',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -245,10 +255,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         render_choice='normal',
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -257,10 +267,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         render_choice='depth',
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -269,10 +279,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         render_choice='pointcloud',
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -281,10 +291,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         render_choice='silhouette',
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -293,10 +303,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         render_choice='part_silhouette',
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -305,10 +315,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         render_choice='mq',
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -317,10 +327,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         render_choice='lq',
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     visualize_T_pose(
         num_frames=10,
@@ -329,10 +339,10 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         render_choice='hq',
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         batch_size=5,
         overwrite=True)
-    assert video_to_array('/tmp/1.mp4').shape == (10, 1024, 1024, 3)
+    assert video_to_array('/tmp/1.mp4').shape == (10, 128, 128, 3)
 
     K = torch.zeros(1, 4, 4)
     K[:, 0, 0] = 1
@@ -349,7 +359,29 @@ def test_visualize_smpl_pose():
         R=R,
         T=T,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
+        overwrite=True)
+
+    K = torch.zeros(1, 4, 4)
+    K[:, 0, 0] = 1
+    K[:, 1, 1] = 1
+    K[:, 0, 2] = 1
+    K[:, 1, 2] = 1
+    R = torch.eye(3, 3)[None]
+    T = torch.zeros(1, 3)
+    betas = torch.zeros(10, 10)
+    transl = torch.zeros(10, 3)
+    visualize_smpl_calibration(
+        poses=pose_dict,
+        model_type='smplx',
+        model_path=model_path,
+        betas=betas,
+        transl=transl,
+        K=K,
+        R=R,
+        T=T,
+        output_path='/tmp/1.mp4',
+        resolution=(128, 128),
         overwrite=True)
 
     bbox = np.zeros((3, 1, 4))
@@ -361,7 +393,7 @@ def test_visualize_smpl_pose():
         bbox=bbox,
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
 
     bbox = np.zeros((3, 1, 4))
@@ -373,7 +405,7 @@ def test_visualize_smpl_pose():
         bbox=bbox,
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
 
     bbox = np.zeros((3, 1, 4))
@@ -386,12 +418,12 @@ def test_visualize_smpl_pose():
         cam_transl=cam_transl,
         origin_frames='/tmp/1.mp4',
         output_path='/tmp/2.mp4',
-        resolution=(1024, 1024),
+        resolution=(128, 128),
         overwrite=True)
 
     image_array = np.random.randint(
-        low=0, high=255, size=(1, 512, 512, 3), dtype=np.uint8)
-    array_to_images(image_array, '/tmp', img_format='%06d.png')
+        low=0, high=255, size=(1, 128, 128, 3), dtype=np.uint8)
+    array_to_images(image_array, '/tmp/temp_images', img_format='%06d.png')
 
     bbox = np.zeros((3, 1, 4))
     cam_transl = torch.zeros(3, 1, 3)
@@ -402,6 +434,33 @@ def test_visualize_smpl_pose():
         bbox=bbox,
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
-        frame_list=['/tmp/%06d.png' % 0] * 3,
-        resolution=(1024, 1024),
+        frame_list=['/tmp/temp_images/%06d.png' % 0] * 3,
+        resolution=(128, 128),
         overwrite=True)
+
+    bbox = np.zeros((3, 1, 4))
+    cam_transl = torch.zeros(3, 1, 3)
+    visualize_smpl_hmr(
+        poses=torch.zeros(3, 165),
+        model_type='smplx',
+        model_path=model_path,
+        bbox=bbox,
+        cam_transl=cam_transl,
+        output_path='/tmp/1.mp4',
+        img_format='%06d.png',
+        origin_frames='/tmp/temp_images',
+        resolution=(128, 128),
+        overwrite=True)
+
+    visualize_smpl_hmr(
+        poses=torch.zeros(3, 165),
+        model_type='smplx',
+        model_path=model_path,
+        bbox=bbox,
+        cam_transl=cam_transl,
+        output_path='/tmp/1.mp4',
+        origin_frames='/tmp/temp_images',
+        img_format='%06d.png',
+        resolution=(128, 128),
+        overwrite=True,
+        palette=np.ones((1, 3)))

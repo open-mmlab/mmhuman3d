@@ -74,6 +74,7 @@ def test_cameras():
                 R=R_list[idx],
                 T=T_list[idx],
                 image_size=image_size)
+
             check_camera_close(cam1, cam2)
             check_camera_slice(cam1)
 

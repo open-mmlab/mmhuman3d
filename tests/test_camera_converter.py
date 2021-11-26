@@ -13,7 +13,10 @@ from mmhuman3d.core.conventions.cameras import (
     convert_screen_to_ndc,
     convert_world_view,
 )
+from mmhuman3d.utils.camera_utils import convert_smpl_from_opencv_calibration
 from mmhuman3d.utils.transforms import ee_to_rotmat
+
+model_path = 'data/body_models'
 
 
 def check_isclose(K,
@@ -228,3 +231,18 @@ def test_convert_world_view():
 
     with pytest.raises(TypeError):
         R1, T1 = convert_world_view(torch.Tensor(R), T)
+
+
+def test_camera_utils():
+    poses = torch.zeros(10, 72)
+    R = torch.eye(3, 3)[None]
+    T = torch.zeros(1, 3)
+    resolution = (1080, 1920)
+    transl = torch.zeros(10, 3)
+    poses, orig_cam = convert_smpl_from_opencv_calibration(
+        R=R,
+        T=T,
+        transl=transl,
+        poses=poses,
+        resolution=resolution,
+        model_path=model_path)

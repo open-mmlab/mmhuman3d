@@ -1,4 +1,5 @@
 import copy
+import os
 from typing import Iterable, Optional, Union
 
 import numpy as np
@@ -101,7 +102,7 @@ def convert_smpl_from_opencv_calibration(
         body_model = build_body_model(
             dict(
                 type=model_type,
-                model_path=model_path,
+                model_path=os.path.join(model_path, model_type),
                 gender=gender,
                 model_type=model_type))
         if isinstance(poses, dict):
@@ -132,7 +133,7 @@ def convert_smpl_from_opencv_calibration(
     if poses is not None:
         transl = torch.mean(verts_converted - verts_rotated, dim=1)
 
-    pred_cam = None
+    orig_cam = None
     if K is not None:
         zmean = torch.mean(verts_converted, dim=1)[:, 2]
 
@@ -146,17 +147,15 @@ def convert_smpl_from_opencv_calibration(
             resolution_src=resolution)
         K = K.repeat(num_frame, 1, 1)
 
-        # transl_ = torch.zeros_like(ppoi
-        print('transl_added')
-        pred_cam = convert_perspective_to_weakperspective(
+        orig_cam = convert_perspective_to_weakperspective(
             K=K, zmean=zmean, in_ndc=True, resolution=resolution)
         if poses is not None:
-            pred_cam[:, 2] += transl[:, 0]
-            pred_cam[:, 3] += transl[:, 1]
+            orig_cam[:, 2] += transl[:, 0]
+            orig_cam[:, 3] += transl[:, 1]
     if poses is not None:
-        return rotated_pose, pred_cam
+        return rotated_pose, orig_cam
     else:
-        return verts_converted, pred_cam
+        return verts_converted, orig_cam
 
 
 def project_points(points3d: Union[np.ndarray, torch.Tensor],
