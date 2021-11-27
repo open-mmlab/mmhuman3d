@@ -27,7 +27,6 @@ def test_smpl():
     smplify_config['body_model'] = body_model_config
     smplify_config['num_epochs'] = 1
     smplify_config['use_one_betas_per_video'] = True
-    smplify_config['num_videos'] = 1
 
     smplify = build_registrant(smplify_config)
 
@@ -65,7 +64,6 @@ def test_smplx():
     smplifyx_config['body_model'] = body_model_config
     smplifyx_config['num_epochs'] = 1
     smplifyx_config['use_one_betas_per_video'] = True
-    smplifyx_config['num_videos'] = 1
 
     smplifyx = build_registrant(smplifyx_config)
 
