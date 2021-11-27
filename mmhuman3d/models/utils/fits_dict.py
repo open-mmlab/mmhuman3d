@@ -1,75 +1,40 @@
-"""Adapted from https://github.com/nkolot/SPIN/blob/5c796852ca7ca7373e104e8489a
-a5864323fbf84/train/fits_dict.py.
-
-Todos:
-1. flip_pairs should be imported from conventions
-2. improve transform pipeline with J24_FLIP_PERM instead of flip pairs
-2. transformation should reuse pipeline builder
-3. train_datasets from config
-"""
-
 import os
 
 import cv2
 import numpy as np
 import torch
 
-from mmhuman3d.models.utils.smpl import SMPL_POSE_FLIP_PERM
+from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
 from mmhuman3d.utils.transforms import aa_to_rotmat
-
-# import config
-# import constants
 
 train_datasets = [
     'h36m', 'mpi_inf_3dhp', 'lsp_original', 'lspet', 'mpii', 'coco'
 ]
+
 static_fits_load_dir = 'data/static_fits'
-save_dir = 'data/spin_fits'  # TODO: temp solution, hard-coded
+save_dir = 'data/spin_fits'
 
 
 class FitsDict():
-    """Dictionary keeping track of the best fit per image in the training
-    set."""
+    """Dictionary keeping track of the best fit per image in the training set.
 
-    # def __init__(self, options, train_dataset, save_dir):
-    def __init__(self, fits='static'):
+    Ref: https://github.com/nkolot/SPIN/blob/master/train/fits_dict.py
+    """
+
+    def __init__(self, fits='static') -> None:
         assert fits in ['static', 'final']
         self.fits = fits
-        print('====FitsDict===')
-        print(self.fits, 'fits.')
-        print('====FitsDict===')
-
-        # self.options = options
-        # self.train_dataset = train_dataset
         self.fits_dict = {}
 
         # array used to flip SMPL pose parameters
-        # self.flipped_parts = torch.tensor(constants.SMPL_POSE_FLIP_PERM,
-        # dtype=torch.int64)
         self.flipped_parts = torch.tensor(
-            SMPL_POSE_FLIP_PERM, dtype=torch.int64)
+            get_flip_pairs(convention='smpl_49'), dtype=torch.int64)
 
         # Load dictionary state
         # for ds_name, ds in train_dataset.dataset_dict.items():
         for ds_name in train_datasets:
-            # try:
-            #     # dict_file = os.path.join(options.checkpoint_dir,
-            #     ds_name + '_fits.npy')
-            #     dict_file = os.path.join(save_dir, ds_name + '_fits.npy')
-            #     self.fits_dict[ds_name] = \
-            #     torch.from_numpy(np.load(dict_file))
-            # except IOError:
-            #     # Dictionary does not exist, so populate with static fits
-            #     # dict_file = os.path.join(config.STATIC_FITS_DIR,
-            #     ds_name + '_fits.npy')
-            #     dict_file = os.path.join(static_fits_load_dir,
-            #     ds_name + '_fits.npy')
-            #     self.fits_dict[ds_name] = \
-            #     torch.from_numpy(np.load(dict_file))
 
-            # TODO: !!!!! Remember to remove
-            # dict_file = os.path.join(static_fits_load_dir, ds_name +
-            # '_fits.npy')
+            # h36m has gt so no static fits
             if ds_name == 'h36m' or self.fits == 'static':
                 dict_file = os.path.join(static_fits_load_dir,
                                          ds_name + '_fits.npy')
@@ -88,10 +53,6 @@ class FitsDict():
 
     def save(self):
         """Save dictionary state to disk."""
-        # for ds_name in self.train_dataset.dataset_dict.keys():
-        #     dict_file = os.path.join(self.options.checkpoint_dir,
-        #     ds_name + '_fits.npy')
-        #     np.save(dict_file, self.fits_dict[ds_name].cpu().numpy())
         for ds_name in train_datasets:
             dict_file = os.path.join(save_dir, ds_name + '_fits.npy')
             np.save(dict_file, self.fits_dict[ds_name].cpu().numpy())
@@ -107,9 +68,8 @@ class FitsDict():
             pose[n, :] = params[:72]
             betas[n, :] = params[72:]
         pose = pose.clone()
-        # Apply flipping and rotation
 
-        # pose = self.flip_pose(self.rotate_pose(pose, rot), is_flipped)
+        # Apply flipping and rotation
         pose = self.rotate_pose(self.flip_pose(pose, is_flipped), rot)
 
         betas = betas.clone()
@@ -120,9 +80,8 @@ class FitsDict():
         dataset_name, ind, rot, is_flipped, update = x
         pose, betas = val
         batch_size = len(dataset_name)
-        # Undo flipping and rotation
 
-        # pose = self.rotate_pose(self.flip_pose(pose, is_flipped), -rot)
+        # Undo flipping and rotation
         pose = self.flip_pose(self.rotate_pose(pose, -rot), is_flipped)
 
         params = torch.cat((pose, betas), dim=-1).cpu()
@@ -155,18 +114,8 @@ class FitsDict():
         ],
                       dim=1)
         global_pose = pose[:, :3]
-
-        # TODO: original implementation
-        # global_pose_rotmat = angle_axis_to_rotation_matrix(global_pose)
-        # global_pose_rotmat_3b3 = global_pose_rotmat[:, :3, :3]
-        # global_pose_rotmat_3b3 = torch.matmul(R, global_pose_rotmat_3b3)
-        # global_pose_rotmat[:, :3, :3] = global_pose_rotmat_3b3
-        # global_pose_rotmat = global_pose_rotmat[:, :-1, :-1].cpu().numpy()
-
-        # TODO: our implementation
         global_pose_rotmat = R @ aa_to_rotmat(global_pose)
         global_pose_rotmat = global_pose_rotmat.cpu().numpy()
-
         global_pose_np = np.zeros((global_pose.shape[0], 3))
         for i in range(global_pose.shape[0]):
             aa, _ = cv2.Rodrigues(global_pose_rotmat[i])
