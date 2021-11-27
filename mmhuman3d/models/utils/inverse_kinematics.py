@@ -35,7 +35,12 @@ def batch_inverse_kinematics_transform(pose_skeleton,
         children (List[int]): list of indexes of kinematic chidren with len 29
         parents (List[int]): list of indexes of kinematic parents with len 29
         dtype (torch.dtype, optional):
-            Data type of the created tensors, the default is torch.float32
+            Data type of the created tensors. Default: torch.float32
+        train (bool):
+            Store True in train mode. Default: False
+        leaf_thetas (torch.tensor, optional):
+            Rotation matrixes for 5 leaf joints (Bx5x3x3). Default: None
+
 
     Returns:
         rot_mats (torch.tensor):
