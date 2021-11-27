@@ -1,17 +1,4 @@
-""" TODO
-1. hyperparameter tuining: sigma for keypoints 3d
-2. fix default config (smplify use smplify's), also in tests/
-3. do we still need the closure?
-
-optional:
-4. optimize how to get batch_size and num_frames
-5. check if SMPL layer is better
-6. better num_videos handling
-7. step by step visualization
-8. _optimize_stage() inheritance
-9. allow_grad to make .detach().clone() optional at init and ret?
-10. provide a way to check keypoint conventions are aligned
-"""
+from typing import List, Tuple, Union
 
 import torch
 from mmcv.runner import build_optimizer
@@ -23,19 +10,27 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 from mmhuman3d.models.builder import build_body_model, build_loss
 from .builder import REGISTRANTS
 
-# from pytorch3d.renderer import cameras
 
+def perspective_projection(points: torch.Tensor, rotation: torch.Tensor,
+                           translation: torch.Tensor,
+                           focal_length: Union[torch.Tensor, float],
+                           camera_center: Union[torch.Tensor]):
+    """Computes the perspective projection of a set of points.
 
-def perspective_projection(points, rotation, translation, focal_length,
-                           camera_center):
-    """This function computes the perspective projection of a set of points.
+    Notes:
+        B: batch size
+        K: number of keypoints
+        D: shape dimension
 
-    Input:
-        points (bs, N, 3): 3D points
-        rotation (bs, 3, 3): Camera rotation
-        translation (bs, 3): Camera translation
-        focal_length (bs,) or scalar: Focal length
-        camera_center (bs, 2): Camera center
+    Args:
+        points: 3D points of shape (B, K, 3)
+        rotation: Camera rotation of shape (B, 3, 3)
+        translation: Camera translation of shape (B, 3)
+        focal_length: Focal length of shape (B,) or scalar
+        camera_center: Camera center of shape (B, 2)
+
+    Returns:
+        None
     """
     batch_size = points.shape[0]
     K = torch.zeros([batch_size, 3, 3], device=points.device)
@@ -63,11 +58,15 @@ class OptimizableParameters():
     def __init__(self):
         self.opt_params = []
 
-    def set_param(self, fit_param, param):
+    def set_param(self, fit_param: torch.Tensor, param: torch.Tensor) -> None:
         """Set requires_grad and collect parameters for optimization.
 
-        :param fit_param: (bool) True if optimizable parameters
-        :param param: (torch.Tenosr) parameters
+        Args:
+            fit_param: whether to optimize this body model parameter
+            param: body model parameter
+
+        Returns:
+            None
         """
         if fit_param:
             param.requires_grad = True
@@ -75,10 +74,11 @@ class OptimizableParameters():
         else:
             param.requires_grad = False
 
-    def parameters(self):
-        """Returns parameters.
+    def parameters(self) -> List[torch.Tensor]:
+        """Returns parameters. Compatible with mmcv's build_parameters()
 
-        Compatible with mmcv's build_parameters()
+        Returns:
+            opt_params: a list of body model parameters for optimization
         """
         return self.opt_params
 
@@ -87,25 +87,55 @@ class OptimizableParameters():
 class SMPLify(object):
     """Re-implementation of SMPLify with extended features."""
 
-    def __init__(self,
-                 body_model,
-                 num_epochs=20,
-                 camera=None,
-                 img_res=224,
-                 stages=None,
-                 optimizer=None,
-                 keypoints2d_loss=None,
-                 keypoints3d_loss=None,
-                 shape_prior_loss=None,
-                 joint_prior_loss=None,
-                 smooth_loss=None,
-                 pose_prior_loss=None,
-                 use_one_betas_per_video=False,
-                 ignore_keypoints=None,
-                 device=torch.device(
-                     'cuda' if torch.cuda.is_available() else 'cpu'),
-                 verbose=False,
-                 **kwargs):
+    def __init__(
+        self,
+        body_model: dict,
+        num_epochs: int = 20,
+        camera: object = None,
+        img_res: Union[Tuple[int], int] = 224,
+        stages: dict = None,
+        optimizer: dict = None,
+        keypoints2d_loss: dict = None,
+        keypoints3d_loss: dict = None,
+        shape_prior_loss: dict = None,
+        joint_prior_loss: dict = None,
+        smooth_loss: dict = None,
+        pose_prior_loss: dict = None,
+        use_one_betas_per_video: bool = False,
+        ignore_keypoints: List[int] = None,
+        device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+        verbose: bool = False,
+    ) -> None:
+        """
+        Args:
+            body_model: config of body model. Note that the correct batch_size
+                should be included in the config if no initial parameters to
+                provide when calling SMPLify.
+            num_epochs: number of epochs of registration
+            camera: config of camera
+            img_res: image resolution. If tuple, values are (width, height)
+            stages: config of registration stages
+            optimizer: config of optimizer
+            keypoints2d_loss: config of keypoint 2D loss
+            keypoints3d_loss: config of keypoint 3D loss
+            shape_prior_loss: config of shape prior loss.
+                Used to prevent extreme shapes.
+            joint_prior_loss: config of joint prior loss.
+                Used to prevent large joint rotations.
+            smooth_loss: config of smooth loss.
+                Used to prevent jittering by temporal smoothing.
+            pose_prior_loss: config of pose prior loss.
+                Used to prevent
+            use_one_betas_per_video: whether to use the same beta parameters
+                for all frames in a single video sequence.
+            ignore_keypoints: list of keypoint names to ignore in keypoint
+                loss computation
+            device: torch device
+            verbose: whether to print individual losses during registration
+
+        Returns:
+            None
+        """
 
         self.use_one_betas_per_video = use_one_betas_per_video
         self.num_epochs = num_epochs
@@ -136,34 +166,49 @@ class SMPLify(object):
         self._set_keypoint_idxs()
 
     def __call__(self,
-                 keypoints2d=None,
-                 keypoints2d_conf=None,
-                 keypoints3d=None,
-                 keypoints3d_conf=None,
-                 init_global_orient=None,
-                 init_transl=None,
-                 init_body_pose=None,
-                 init_betas=None,
-                 batch_size=None,
-                 num_videos=None,
-                 return_verts=False,
-                 return_joints=False,
-                 return_full_pose=False,
-                 return_losses=False):
+                 keypoints2d: torch.Tensor = None,
+                 keypoints2d_conf: torch.Tensor = None,
+                 keypoints3d: torch.Tensor = None,
+                 keypoints3d_conf: torch.Tensor = None,
+                 init_global_orient: torch.Tensor = None,
+                 init_transl: torch.Tensor = None,
+                 init_body_pose: torch.Tensor = None,
+                 init_betas: torch.Tensor = None,
+                 return_verts: bool = False,
+                 return_joints: bool = False,
+                 return_full_pose: bool = False,
+                 return_losses: bool = False) -> dict:
+        """Run registration.
+
+        Notes:
+            B: batch size
+            K: number of keypoints
+            D: shape dimension
+            Provide only keypoints2d or keypoints3d, not both.
+
+        Args:
+            keypoints2d: 2D keypoints of shape (B, K, 2)
+            keypoints2d_conf: 2D keypoint confidence of shape (B, K)
+            keypoints3d: 3D keypoints of shape (B, K, 3).
+            keypoints3d_conf: 3D keypoint confidence of shape (B, K)
+            init_global_orient: initial global_orient of shape (B, 3)
+            init_transl: initial transl of shape (B, 3)
+            init_body_pose: initial body_pose of shape (B, 69)
+            init_betas: initial betas of shape (B, D)
+            return_verts: whether to return vertices
+            return_joints: whether to return joints
+            return_full_pose: whether to return full pose
+            return_losses: whether to return loss dict
+
+        Returns:
+            ret: a dictionary that includes body model parameters,
+                and optional attributes such as vertices and joints
+        """
 
         assert keypoints2d is not None or keypoints3d is not None, \
             'Neither of 2D nor 3D keypoints are provided.'
         assert not (keypoints2d is not None and keypoints3d is not None), \
             'Do not provide both 2D and 3D keypoints.'
-        if batch_size is None:
-            batch_size = keypoints2d.shape[
-                0] if keypoints2d is not None else keypoints3d.shape[0]
-        if num_videos is None:
-            if self.use_one_betas_per_video:
-                num_videos = 1
-            else:
-                num_videos = batch_size
-        assert batch_size % num_videos == 0
 
         global_orient = init_global_orient.detach().clone() \
             if init_global_orient is not None \
@@ -177,8 +222,8 @@ class SMPLify(object):
         if init_betas is not None:
             betas = init_betas.detach().clone()
         elif self.use_one_betas_per_video:
-            betas = torch.zeros(
-                num_videos, self.body_model.betas.shape[-1]).to(self.device)
+            betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
+                self.device)
         else:
             betas = self.body_model.betas.detach().clone()
 
@@ -239,26 +284,59 @@ class SMPLify(object):
         return ret
 
     def _optimize_stage(self,
-                        global_orient,
-                        transl,
-                        body_pose,
-                        betas,
-                        fit_global_orient=True,
-                        fit_transl=True,
-                        fit_body_pose=True,
-                        fit_betas=True,
-                        keypoints2d=None,
-                        keypoints2d_conf=None,
-                        keypoints2d_weight=None,
-                        keypoints3d=None,
-                        keypoints3d_conf=None,
-                        keypoints3d_weight=None,
-                        shape_prior_weight=None,
-                        joint_prior_weight=None,
-                        smooth_loss_weight=None,
-                        pose_prior_weight=None,
-                        joint_weights={},
-                        num_iter=1):
+                        betas: torch.Tensor,
+                        body_pose: torch.Tensor,
+                        global_orient: torch.Tensor,
+                        transl: torch.Tensor,
+                        fit_global_orient: bool = True,
+                        fit_transl: bool = True,
+                        fit_body_pose: bool = True,
+                        fit_betas: bool = True,
+                        keypoints2d: torch.Tensor = None,
+                        keypoints2d_conf: torch.Tensor = None,
+                        keypoints2d_weight: float = None,
+                        keypoints3d: torch.Tensor = None,
+                        keypoints3d_conf: torch.Tensor = None,
+                        keypoints3d_weight: float = None,
+                        shape_prior_weight: float = None,
+                        joint_prior_weight: float = None,
+                        smooth_loss_weight: float = None,
+                        pose_prior_weight: float = None,
+                        joint_weights: dict = {},
+                        num_iter: int = 1) -> None:
+        """Optimize a stage of body model parameters according to
+        configuration.
+
+        Notes:
+            B: batch size
+            K: number of keypoints
+            D: shape dimension
+
+        Args:
+            betas: shape (B, D)
+            body_pose: shape (B, 69)
+            global_orient: shape (B, 3)
+            transl: shape (B, 3)
+            fit_global_orient: whether to optimize global_orient
+            fit_transl: whether to optimize transl
+            fit_body_pose: whether to optimize body_pose
+            fit_betas: whether to optimize betas
+            keypoints2d: 2D keypoints of shape (B, K, 2)
+            keypoints2d_conf: 2D keypoint confidence of shape (B, K)
+            keypoints2d_weight: weight of 2D keypoint loss
+            keypoints3d: 3D keypoints of shape (B, K, 3).
+            keypoints3d_conf: 3D keypoint confidence of shape (B, K)
+            keypoints3d_weight: weight of 3D keypoint loss
+            shape_prior_weight: weight of shape prior loss
+            joint_prior_weight: weight of joint prior loss
+            smooth_loss_weight: weight of smooth loss
+            pose_prior_weight: weight of pose prior loss
+            joint_weights: per joint weight of shape (K, )
+            num_iter: number of iterations
+
+        Returns:
+            None
+        """
 
         parameters = OptimizableParameters()
         parameters.set_param(fit_global_orient, global_orient)
@@ -272,12 +350,12 @@ class SMPLify(object):
 
             def closure():
                 optimizer.zero_grad()
-                betas_ext = self._expand_betas(body_pose, betas)
+                betas_video = self._expand_betas(body_pose.shape[0], betas)
 
                 loss_dict = self.evaluate(
                     global_orient=global_orient,
                     body_pose=body_pose,
-                    betas=betas_ext,
+                    betas=betas_video,
                     transl=transl,
                     keypoints2d=keypoints2d,
                     keypoints2d_conf=keypoints2d_conf,
@@ -299,27 +377,60 @@ class SMPLify(object):
 
     def evaluate(
         self,
-        global_orient=None,
-        body_pose=None,
-        betas=None,
-        transl=None,
-        keypoints2d=None,
-        keypoints2d_conf=None,
-        keypoints2d_weight=None,
-        keypoints3d=None,
-        keypoints3d_conf=None,
-        keypoints3d_weight=None,
-        shape_prior_weight=None,
-        joint_prior_weight=None,
-        smooth_loss_weight=None,
-        pose_prior_weight=None,
-        joint_weights={},
-        return_verts=False,
-        return_full_pose=False,
-        return_joints=False,
-        reduction_override=None,
-    ):
-        """Evaluate fitted parameters through loss computation."""
+        betas: torch.Tensor = None,
+        body_pose: torch.Tensor = None,
+        global_orient: torch.Tensor = None,
+        transl: torch.Tensor = None,
+        keypoints2d: torch.Tensor = None,
+        keypoints2d_conf: torch.Tensor = None,
+        keypoints2d_weight: float = None,
+        keypoints3d: torch.Tensor = None,
+        keypoints3d_conf: torch.Tensor = None,
+        keypoints3d_weight: float = None,
+        shape_prior_weight: float = None,
+        joint_prior_weight: float = None,
+        smooth_loss_weight: float = None,
+        pose_prior_weight: float = None,
+        joint_weights: dict = {},
+        return_verts: bool = False,
+        return_full_pose: bool = False,
+        return_joints: bool = False,
+        reduction_override: str = None,
+    ) -> dict:
+        """Evaluate fitted parameters through loss computation. This function
+        serves two purposes: 1) internally, for loss backpropagation 2)
+        externally, for fitting quality evaluation.
+
+        Notes:
+            B: batch size
+            K: number of keypoints
+            D: shape dimension
+
+        Args:
+            betas: shape (B, D)
+            body_pose: shape (B, 69)
+            global_orient: shape (B, 3)
+            transl: shape (B, 3)
+            keypoints2d: 2D keypoints of shape (B, K, 2)
+            keypoints2d_conf: 2D keypoint confidence of shape (B, K)
+            keypoints2d_weight: weight of 2D keypoint loss
+            keypoints3d: 3D keypoints of shape (B, K, 3).
+            keypoints3d_conf: 3D keypoint confidence of shape (B, K)
+            keypoints3d_weight: weight of 3D keypoint loss
+            shape_prior_weight: weight of shape prior loss
+            joint_prior_weight: weight of joint prior loss
+            smooth_loss_weight: weight of smooth loss
+            pose_prior_weight: weight of pose prior loss
+            joint_weights: per joint weight of shape (K, )
+            return_verts: whether to return vertices
+            return_joints: whether to return joints
+            return_full_pose: whether to return full pose
+            reduction_override: reduction method, e.g., 'none', 'sum', 'mean'
+
+        Returns:
+            ret: a dictionary that includes body model parameters,
+                and optional attributes such as vertices and joints
+        """
 
         ret = {}
 
@@ -361,22 +472,47 @@ class SMPLify(object):
         return ret
 
     def _compute_loss(self,
-                      model_joints,
-                      keypoints2d=None,
-                      keypoints2d_conf=None,
-                      keypoints3d=None,
-                      keypoints3d_conf=None,
-                      keypoints2d_weight=None,
-                      keypoints3d_weight=None,
-                      shape_prior_weight=None,
-                      joint_prior_weight=None,
-                      smooth_loss_weight=None,
-                      pose_prior_weight=None,
-                      joint_weights={},
-                      reduction_override=None,
-                      body_pose=None,
-                      betas=None):
+                      model_joints: torch.Tensor,
+                      keypoints2d: torch.Tensor = None,
+                      keypoints2d_conf: torch.Tensor = None,
+                      keypoints2d_weight: float = None,
+                      keypoints3d: torch.Tensor = None,
+                      keypoints3d_conf: torch.Tensor = None,
+                      keypoints3d_weight: float = None,
+                      shape_prior_weight: float = None,
+                      joint_prior_weight: float = None,
+                      smooth_loss_weight: float = None,
+                      pose_prior_weight: float = None,
+                      joint_weights: dict = {},
+                      reduction_override: str = None,
+                      body_pose: torch.Tensor = None,
+                      betas: torch.Tensor = None):
+        """Loss computation.
 
+        Notes:
+            B: batch size
+            D: shape dimension
+
+        Args:
+            model_joints: 3D joints regressed from body model
+            keypoints2d: 2D keypoints of shape (B, K, 2)
+            keypoints2d_conf: 2D keypoint confidence of shape (B, K)
+            keypoints2d_weight: weight of 2D keypoint loss
+            keypoints3d: 3D keypoints of shape (B, K, 3).
+            keypoints3d_conf: 3D keypoint confidence of shape (B, K)
+            keypoints3d_weight: weight of 3D keypoint loss
+            shape_prior_weight: weight of shape prior loss
+            joint_prior_weight: weight of joint prior loss
+            smooth_loss_weight: weight of smooth loss
+            pose_prior_weight: weight of pose prior loss
+            joint_weights: per joint weight of shape (K, )
+            reduction_override: reduction method, e.g., 'none', 'sum', 'mean'
+            body_pose: shape (B, 69), for loss computation
+            betas: shape (B, D), for loss computation
+
+        Returns:
+            losses: a dict that contains all losses
+        """
         losses = {}
 
         weight = self._get_weight(**joint_weights)
@@ -468,7 +604,13 @@ class SMPLify(object):
 
         return losses
 
-    def _set_keypoint_idxs(self):
+    def _set_keypoint_idxs(self) -> None:
+        """Set keypoint indices to 1) body parts to be assigned different
+        weights 2) be ignored for keypoint loss computation.
+
+        Returns:
+            None
+        """
         convention = self.body_model.keypoint_dst
 
         # obtain ignore keypoint indices
@@ -489,7 +631,25 @@ class SMPLify(object):
             *shoulder_keypoint_idxs, *hip_keypoint_idxs
         ]
 
-    def _get_weight(self, use_shoulder_hip_only=False, body_weight=1.0):
+    def _get_weight(self,
+                    use_shoulder_hip_only: bool = False,
+                    body_weight: float = 1.0) -> torch.Tensor:
+        """Get per keypoint weight.
+
+        Notes:
+            K: number of keypoints
+
+        Args:
+            use_shoulder_hip_only: whether to use only shoulder and hip
+                keypoints for loss computation. This is useful in the
+                warming-up stage to find a reasonably good initialization.
+            body_weight: weight of body keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+
+        Returns:
+            weight: per keypoint weight tensor of shape (K)
+        """
+
         num_keypoint = self.body_model.num_joints
 
         if use_shoulder_hip_only:
@@ -505,28 +665,33 @@ class SMPLify(object):
 
         return weight
 
-    def _set_param(self, fit_param, param, opt_param):
-        if fit_param:
-            param.requires_grad = True
-            opt_param.append(param)
-        else:
-            param.requires_grad = False
+    def _expand_betas(self, batch_size, betas):
+        """A helper function to expand the betas's first dim to match batch
+        size such that the same beta parameters can be used for all frames in a
+        video sequence.
 
-    def _expand_betas(self, pose, betas):
-        batch_size = pose.shape[0]
-        num_video = betas.shape[0]
+        Notes:
+            B: batch size
+            K: number of keypoints
+            D: shape dimension
 
-        if batch_size == num_video:
+        Args:
+            batch_size: batch size
+            betas: shape (B, D)
+
+        Returns:
+            betas_video: expanded betas
+        """
+        # no expansion needed
+        if batch_size == betas.shape[0]:
             return betas
 
-        feat_dim = betas.shape[-1]
-        video_size = batch_size // num_video
-        betas_ext = betas.\
-            view(num_video, 1, feat_dim).\
-            expand(num_video, video_size, feat_dim).\
-            view(batch_size, feat_dim)
+        # first dim is 1
+        else:
+            feat_dim = betas.shape[-1]
+            betas_video = betas.view(1, feat_dim).expand(batch_size, feat_dim)
 
-        return betas_ext
+        return betas_video
 
 
 @REGISTRANTS.register_module()
@@ -534,33 +699,63 @@ class SMPLifyX(SMPLify):
     """Re-implementation of SMPLify-X with extended features."""
 
     def __call__(self,
-                 keypoints2d=None,
-                 keypoints2d_conf=1.0,
-                 keypoints3d=None,
-                 keypoints3d_conf=1.0,
-                 init_global_orient=None,
-                 init_transl=None,
-                 init_body_pose=None,
-                 init_betas=None,
-                 init_left_hand_pose=None,
-                 init_right_hand_pose=None,
-                 init_expression=None,
-                 init_jaw_pose=None,
-                 init_leye_pose=None,
-                 init_reye_pose=None,
-                 batch_size=None,
-                 num_videos=None):
+                 keypoints2d: torch.Tensor = None,
+                 keypoints2d_conf: torch.Tensor = None,
+                 keypoints3d: torch.Tensor = None,
+                 keypoints3d_conf: torch.Tensor = None,
+                 init_global_orient: torch.Tensor = None,
+                 init_transl: torch.Tensor = None,
+                 init_body_pose: torch.Tensor = None,
+                 init_betas: torch.Tensor = None,
+                 init_left_hand_pose: torch.Tensor = None,
+                 init_right_hand_pose: torch.Tensor = None,
+                 init_expression: torch.Tensor = None,
+                 init_jaw_pose: torch.Tensor = None,
+                 init_leye_pose: torch.Tensor = None,
+                 init_reye_pose: torch.Tensor = None,
+                 return_verts: bool = False,
+                 return_joints: bool = False,
+                 return_full_pose: bool = False,
+                 return_losses: bool = False) -> dict:
+        """Run registration.
+
+        Notes:
+            B: batch size
+            K: number of keypoints
+            D: body shape dimension
+            D_H: hand pose dimension
+            D_E: expression dimension
+            Provide only keypoints2d or keypoints3d, not both.
+
+        Args:
+            keypoints2d: 2D keypoints of shape (B, K, 2)
+            keypoints2d_conf: 2D keypoint confidence of shape (B, K)
+            keypoints3d: 3D keypoints of shape (B, K, 3).
+            keypoints3d_conf: 3D keypoint confidence of shape (B, K)
+            init_global_orient: initial global_orient of shape (B, 3)
+            init_transl: initial transl of shape (B, 3)
+            init_body_pose: initial body_pose of shape (B, 69)
+            init_betas: initial betas of shape (B, D)
+            init_left_hand_pose: initial left hand pose of shape (B, D_H)
+            init_right_hand_pose: initial right hand pose of shape (B, D_H)
+            init_expression: initial left hand pose of shape (B, D_E)
+            init_jaw_pose: initial jaw pose of shape (B, 3)
+            init_leye_pose: initial left eye pose of shape (B, 3)
+            init_reye_pose: initial right eye pose of shape (B, 3)
+            return_verts: whether to return vertices
+            return_joints: whether to return joints
+            return_full_pose: whether to return full pose
+            return_losses: whether to return loss dict
+
+        Returns:
+            ret: a dictionary that includes body model parameters,
+                and optional attributes such as vertices and joints
+        """
 
         assert keypoints2d is not None or keypoints3d is not None, \
             'Neither of 2D nor 3D keypoints are provided.'
         assert not (keypoints2d is not None and keypoints3d is not None), \
             'Do not provide both 2D and 3D keypoints.'
-        if batch_size is None:
-            batch_size = keypoints2d.shape[
-                0] if keypoints2d is not None else keypoints3d.shape[0]
-        if num_videos is None:
-            num_videos = batch_size
-        assert batch_size % num_videos == 0
 
         global_orient = init_global_orient if init_global_orient is not None \
             else self.body_model.global_orient
@@ -591,8 +786,8 @@ class SMPLifyX(SMPLify):
         if init_betas is not None:
             betas = init_betas
         elif self.use_one_betas_per_video:
-            betas = torch.zeros(
-                num_videos, self.body_model.betas.shape[-1]).to(self.device)
+            betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
+                self.device)
         else:
             betas = self.body_model.betas
 
@@ -631,38 +826,77 @@ class SMPLifyX(SMPLify):
         }
 
     def _optimize_stage(self,
-                        global_orient,
-                        transl,
-                        body_pose,
-                        betas,
-                        left_hand_pose,
-                        right_hand_pose,
-                        expression,
-                        jaw_pose,
-                        leye_pose,
-                        reye_pose,
-                        fit_global_orient=True,
-                        fit_transl=True,
-                        fit_body_pose=True,
-                        fit_betas=True,
-                        fit_left_hand_pose=True,
-                        fit_right_hand_pose=True,
-                        fit_expression=True,
-                        fit_jaw_pose=True,
-                        fit_leye_pose=True,
-                        fit_reye_pose=True,
-                        keypoints2d=None,
-                        keypoints2d_conf=None,
-                        keypoints2d_weight=None,
-                        keypoints3d=None,
-                        keypoints3d_conf=None,
-                        keypoints3d_weight=None,
-                        joint_prior_weight=None,
-                        shape_prior_weight=None,
-                        smooth_loss_weight=None,
-                        pose_prior_weight=None,
-                        joint_weights={},
-                        num_iter=1):
+                        betas: torch.Tensor,
+                        body_pose: torch.Tensor,
+                        global_orient: torch.Tensor,
+                        transl: torch.Tensor,
+                        left_hand_pose: torch.Tensor,
+                        right_hand_pose: torch.Tensor,
+                        expression: torch.Tensor,
+                        jaw_pose: torch.Tensor,
+                        leye_pose: torch.Tensor,
+                        reye_pose: torch.Tensor,
+                        fit_global_orient: bool = True,
+                        fit_transl: bool = True,
+                        fit_body_pose: bool = True,
+                        fit_betas: bool = True,
+                        fit_left_hand_pose: bool = True,
+                        fit_right_hand_pose: bool = True,
+                        fit_expression: bool = True,
+                        fit_jaw_pose: bool = True,
+                        fit_leye_pose: bool = True,
+                        fit_reye_pose: bool = True,
+                        keypoints2d: torch.Tensor = None,
+                        keypoints2d_conf: torch.Tensor = None,
+                        keypoints2d_weight: float = None,
+                        keypoints3d: torch.Tensor = None,
+                        keypoints3d_conf: torch.Tensor = None,
+                        keypoints3d_weight: float = None,
+                        shape_prior_weight: float = None,
+                        joint_prior_weight: float = None,
+                        smooth_loss_weight: float = None,
+                        pose_prior_weight: float = None,
+                        joint_weights: dict = {},
+                        num_iter: int = 1) -> None:
+        """Optimize a stage of body model parameters according to
+        configuration.
+
+        Notes:
+            B: batch size
+            K: number of keypoints
+            D: shape dimension
+
+        Args:
+            betas: shape (B, D)
+            body_pose: shape (B, 69)
+            global_orient: shape (B, 3)
+            transl: shape (B, 3)
+            fit_global_orient: whether to optimize global_orient
+            fit_transl: whether to optimize transl
+            fit_body_pose: whether to optimize body_pose
+            fit_betas: whether to optimize betas
+            fit_left_hand_pose: whether to optimize left hand pose
+            fit_right_hand_pose: whether to optimize right hand pose
+            fit_expression: whether to optimize expression
+            fit_jaw_pose: whether to optimize jaw pose
+            fit_leye_pose: whether to optimize left eye pose
+            fit_reye_pose: whether to optimize right eye pose
+            keypoints2d: 2D keypoints of shape (B, K, 2)
+            keypoints2d_conf: 2D keypoint confidence of shape (B, K)
+            keypoints2d_weight: weight of 2D keypoint loss
+            keypoints3d: 3D keypoints of shape (B, K, 3).
+            keypoints3d_conf: 3D keypoint confidence of shape (B, K)
+            keypoints3d_weight: weight of 3D keypoint loss
+            shape_prior_weight: weight of shape prior loss
+            joint_prior_weight: weight of joint prior loss
+            smooth_loss_weight: weight of smooth loss
+            pose_prior_weight: weight of pose prior loss
+            joint_weights: per joint weight of shape (K, )
+            num_iter: number of iterations
+
+        Returns:
+            None
+        """
 
         parameters = OptimizableParameters()
         parameters.set_param(fit_global_orient, global_orient)
@@ -685,12 +919,12 @@ class SMPLifyX(SMPLify):
                 # init_body_pose)
 
                 optimizer.zero_grad()
-                betas_ext = self._expand_betas(body_pose, betas)
+                betas_video = self._expand_betas(body_pose.shape[0], betas)
 
                 loss_dict = self.evaluate(
                     global_orient=global_orient,
                     body_pose=body_pose,
-                    betas=betas_ext,
+                    betas=betas_video,
                     transl=transl,
                     left_hand_pose=left_hand_pose,
                     right_hand_pose=right_hand_pose,
@@ -718,9 +952,9 @@ class SMPLifyX(SMPLify):
 
     def evaluate(
         self,
-        global_orient=None,
-        body_pose=None,
         betas=None,
+        body_pose=None,
+        global_orient=None,
         transl=None,
         left_hand_pose=None,
         right_hand_pose=None,
@@ -744,7 +978,48 @@ class SMPLifyX(SMPLify):
         return_joints=False,
         reduction_override=None,
     ):
-        """Evaluate fitted parameters through loss computation."""
+        """Evaluate fitted parameters through loss computation. This function
+        serves two purposes: 1) internally, for loss backpropagation 2)
+        externally, for fitting quality evaluation.
+
+        Notes:
+            B: batch size
+            K: number of keypoints
+            D: body shape dimension
+            D_H: hand pose dimension
+            D_E: expression dimension
+
+        Args:
+            betas: shape (B, D)
+            body_pose: shape (B, 69)
+            global_orient: shape (B, 3)
+            transl: shape (B, 3)
+            left_hand_pose: shape (B, D_H)
+            right_hand_pose: shape (B, D_H)
+            expression: shape (B, D_E)
+            jaw_pose: shape (B, 3)
+            leye_pose: shape (B, 3)
+            reye_pose: shape (B, 3)
+            keypoints2d: 2D keypoints of shape (B, K, 2)
+            keypoints2d_conf: 2D keypoint confidence of shape (B, K)
+            keypoints2d_weight: weight of 2D keypoint loss
+            keypoints3d: 3D keypoints of shape (B, K, 3).
+            keypoints3d_conf: 3D keypoint confidence of shape (B, K)
+            keypoints3d_weight: weight of 3D keypoint loss
+            shape_prior_weight: weight of shape prior loss
+            joint_prior_weight: weight of joint prior loss
+            smooth_loss_weight: weight of smooth loss
+            pose_prior_weight: weight of pose prior loss
+            joint_weights: per joint weight of shape (K, )
+            return_verts: whether to return vertices
+            return_joints: whether to return joints
+            return_full_pose: whether to return full pose
+            reduction_override: reduction method, e.g., 'none', 'sum', 'mean'
+
+        Returns:
+            ret: a dictionary that includes body model parameters,
+                and optional attributes such as vertices and joints
+        """
 
         ret = {}
 
@@ -791,34 +1066,13 @@ class SMPLifyX(SMPLify):
 
         return ret
 
-    def _get_weight(self,
-                    use_shoulder_hip_only=False,
-                    body_weight=1.0,
-                    hand_weight=1.0,
-                    face_weight=1.0):
-
-        # TODO: accept any convention!
-        num_keypoint = self.body_model.num_joints
-
-        if use_shoulder_hip_only:
-            weight = torch.zeros([num_keypoint]).to(self.device)
-            weight[self.shoulder_hip_keypoint_idxs] = 1.0
-        else:
-            weight = torch.ones([num_keypoint]).to(self.device)
-
-            weight[self.body_keypoint_idxs] = \
-                weight[self.body_keypoint_idxs] * body_weight
-            weight[self.hand_keypoint_idxs] = \
-                weight[self.hand_keypoint_idxs] * hand_weight
-            weight[self.face_keypoint_idxs] = \
-                weight[self.face_keypoint_idxs] * face_weight
-
-        if hasattr(self, 'ignore_keypoint_idxs'):
-            weight[self.ignore_keypoint_idxs] = 0.0
-
-        return weight
-
     def _set_keypoint_idxs(self):
+        """Set keypoint indices to 1) body parts to be assigned different
+        weights 2) be ignored for keypoint loss computation.
+
+        Returns:
+            None
+        """
         convention = self.body_model.keypoint_dst
 
         # obtain ignore keypoint indices
@@ -853,3 +1107,46 @@ class SMPLifyX(SMPLify):
 
         self.body_keypoint_idxs = get_keypoint_idxs_by_part(
             'body', convention=convention)
+
+    def _get_weight(self,
+                    use_shoulder_hip_only: bool = False,
+                    body_weight: float = 1.0,
+                    hand_weight: float = 1.0,
+                    face_weight: float = 1.0):
+        """Get per keypoint weight.
+
+        Notes:
+            K: number of keypoints
+
+        Args:
+            use_shoulder_hip_only: whether to use only shoulder and hip
+                keypoints for loss computation. This is useful in the
+                warming-up stage to find a reasonably good initialization.
+            body_weight: weight of body keypoints. Body part segmentation
+                definition is included in the HumanData convention.
+            hand_weight: weight of hand keypoints.
+            face_weight: weight of face keypoints.
+
+        Returns:
+            weight: per keypoint weight tensor of shape (K)
+        """
+
+        num_keypoint = self.body_model.num_joints
+
+        if use_shoulder_hip_only:
+            weight = torch.zeros([num_keypoint]).to(self.device)
+            weight[self.shoulder_hip_keypoint_idxs] = 1.0
+        else:
+            weight = torch.ones([num_keypoint]).to(self.device)
+
+            weight[self.body_keypoint_idxs] = \
+                weight[self.body_keypoint_idxs] * body_weight
+            weight[self.hand_keypoint_idxs] = \
+                weight[self.hand_keypoint_idxs] * hand_weight
+            weight[self.face_keypoint_idxs] = \
+                weight[self.face_keypoint_idxs] * face_weight
+
+        if hasattr(self, 'ignore_keypoint_idxs'):
+            weight[self.ignore_keypoint_idxs] = 0.0
+
+        return weight
