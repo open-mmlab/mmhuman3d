@@ -244,6 +244,7 @@ class SMPLRenderer(MeshBaseRenderer):
                 if isinstance(palette, torch.Tensor):
                     verts_rgb = palette.view(1, 1,
                                              3).repeat(num_frame, num_verts, 1)
+
                 else:
                     if palette == 'random':
                         color = get_different_colors(num_person)[person_idx]

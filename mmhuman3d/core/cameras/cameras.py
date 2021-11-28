@@ -46,10 +46,12 @@ class NewAttributeCameras(cameras.CamerasBase):
         self.convention = convention
         in_ndc = kwargs.pop('in_ndc', kwargs.get('_in_ndc'))
         kwargs.update(_in_ndc=in_ndc)
-        is_perspective = kwargs.pop('_is_perspective')
+        is_perspective = kwargs.get('_is_perspective')
+        kwargs.pop('is_perspective', None)
 
         image_size = kwargs.get('image_size', kwargs.get('resolution', None))
         kwargs.update(image_size=image_size)
+        kwargs.update(resolution=image_size)
         if image_size is not None:
             if isinstance(image_size, (int, float)):
                 image_size = (image_size, image_size)
@@ -60,6 +62,7 @@ class NewAttributeCameras(cameras.CamerasBase):
                     image_size = image_size.repeat(2)
                 image_size = image_size.view(-1, 2)
             kwargs.update(image_size=image_size)
+            kwargs.update(resolution=image_size)
 
         if kwargs.get('K') is None:
             focal_length = kwargs.get('focal_length', None)
@@ -83,7 +86,7 @@ class NewAttributeCameras(cameras.CamerasBase):
                 K=K,
                 is_perspective=is_perspective,
                 convention_src='pytorch3d',
-                convention_dst=convention,
+                convention_dst='pytorch3d',
                 in_ndc_src=in_ndc,
                 in_ndc_dst=in_ndc,
                 resolution_dst=image_size,
@@ -163,9 +166,14 @@ class NewAttributeCameras(cameras.CamerasBase):
         (height, width) The image size is used for conversion of projected
         points to screen coordinates."""
         if hasattr(self, 'image_size'):
-            return self.image_size
+            image_size = self.image_size
+        if hasattr(self, 'resolution'):
+            if self.resolution is not None:
+                image_size = self.resolution
         else:
-            return None
+            image_size = None
+
+        return image_size
 
     def __getitem__(self, index: Union[slice, int, torch.Tensor, List, Tuple]):
         """Slice the cameras by batch dim.
@@ -185,7 +193,7 @@ class NewAttributeCameras(cameras.CamerasBase):
             T=self.T[index],
             image_size=self.get_image_size()[index],
             _in_ndc=self.in_ndc(),
-            _is_perspective=self.is_perspective(),
+            _is_perspective=self._is_perspective,
             convention=self.convention,
             device=self.device)
 
@@ -204,7 +212,7 @@ class NewAttributeCameras(cameras.CamerasBase):
             T=self.T.repeat(N, 1),
             image_size=self.get_image_size(),
             _in_ndc=self.in_ndc(),
-            _is_perspective=self.is_perspective(),
+            _is_perspective=self._is_perspective,
             convention=self.convention,
             device=self.device)
 
@@ -235,10 +243,12 @@ class NewAttributeCameras(cameras.CamerasBase):
         if self.in_ndc():
             if self.get_image_size() is None:
                 self.image_size = kwargs.get('image_size')
+            else:
+                self.image_size = self.get_image_size()
             self.K = convert_ndc_to_screen(
                 K=self.K,
                 resolution=self.image_size,
-                is_perspective=self.is_perspective())
+                is_perspective=self._is_perspective)
             self._in_ndc = False
         else:
             print('Redundant operation, already in screen.')
@@ -250,27 +260,33 @@ class NewAttributeCameras(cameras.CamerasBase):
         else:
             if self.get_image_size() is None:
                 self.image_size = kwargs.get('image_size')
+            else:
+                self.image_size = self.get_image_size()
             self.K = convert_screen_to_ndc(
                 K=self.K,
                 resolution=self.image_size,
-                is_perspective=self.is_perspective())
+                is_perspective=self._is_perspective)
+            self._in_ndc = True
 
     def to_screen(self, **kwargs):
         """Convert to screen."""
         if self.in_ndc():
             if self.get_image_size() is None:
-                image_size = kwargs.get('image_size')
+                self.image_size = kwargs.get('image_size')
+            else:
+                self.image_size = self.get_image_size()
+
             K = convert_ndc_to_screen(
                 K=self.K,
                 resolution=self.image_size,
-                is_perspective=self.is_perspective())
+                is_perspective=self._is_perspective)
             return self.__class__(
                 K=K,
                 R=self.R,
                 T=self.T,
                 in_ndc=False,
-                resolution=image_size,
-                is_perspective=self.is_perspective())
+                resolution=self.image_size,
+                is_perspective=self._is_perspective)
         else:
             print('Redundant operation, already in screen.')
 
@@ -280,18 +296,20 @@ class NewAttributeCameras(cameras.CamerasBase):
             print('Redundant operation, already in ndc.')
         else:
             if self.get_image_size() is None:
-                image_size = kwargs.get('image_size')
+                self.image_size = kwargs.get('image_size')
+            else:
+                self.image_size = self.get_image_size()
             K = convert_screen_to_ndc(
                 K=self.K,
                 resolution=self.image_size,
-                is_perspective=self.is_perspective())
+                is_perspective=self._is_perspective)
             return self.__class__(
                 K=K,
                 R=self.R,
                 T=self.T,
                 in_ndc=True,
-                resolution=image_size,
-                is_perspective=self.is_perspective())
+                resolution=self.image_size,
+                is_perspective=self._is_perspective)
 
 
 @CAMERAS.register_module(

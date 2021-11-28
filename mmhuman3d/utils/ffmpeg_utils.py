@@ -1195,7 +1195,7 @@ def temporal_concat_video(input_path_list: List[str],
         command.append('-i')
         command.append(vid_file)
         scale_command.append(
-            '[%d:v]scale=%d:%d:overwrite_original_aspect_ratio=0[v%d];' %
+            '[%d:v]scale=%d:%d:force_original_aspect_ratio=0[v%d];' %
             (index, width, height, index))
         concat_command.append('[v%d]' % index)
     concat_command = ''.join(concat_command)

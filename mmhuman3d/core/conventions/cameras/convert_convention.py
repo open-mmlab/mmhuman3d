@@ -1,5 +1,5 @@
 import warnings
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -373,7 +373,12 @@ def convert_K_3x3_to_4x4(
                 [0,    0,    1,    0],
                 [0,    0,    0,    1]]
     """
-    if not isinstance(K, (torch.Tensor, np.ndarray)):
+    if isinstance(K, torch.Tensor):
+        K = K.clone()
+    elif isinstance(K, np.ndarray):
+        K = K.copy()
+
+    else:
         raise TypeError('K should be `torch.Tensor` or `numpy.ndarray`, '
                         f'type(K): {type(K)}.')
     if K.shape[-2:] == (4, 4):
@@ -441,7 +446,12 @@ def convert_K_4x4_to_3x3(
              [0,   fy,   py],
              [0,    0,   1]]
     """
-    if not isinstance(K, (torch.Tensor, np.ndarray)):
+
+    if isinstance(K, torch.Tensor):
+        K = K.clone()
+    elif isinstance(K, np.ndarray):
+        K = K.copy()
+    else:
         raise TypeError('K should be `torch.Tensor` or `numpy.ndarray`, '
                         f'type(K): {type(K)}.')
     if K.shape[-2:] == (3, 3):
@@ -470,7 +480,8 @@ def convert_K_4x4_to_3x3(
 
 def convert_ndc_to_screen(
         K: Union[torch.Tensor, np.ndarray],
-        resolution: Union[int, Tuple[int, int], torch.Tensor, np.ndarray],
+        resolution: Union[int, Tuple[int, int], List[int], torch.Tensor,
+                          np.ndarray],
         sign: Optional[Iterable[int]] = None,
         is_perspective: bool = True) -> Union[torch.Tensor, np.ndarray]:
     """Convert intrinsic matrix from ndc to screen.
@@ -493,7 +504,11 @@ def convert_ndc_to_screen(
         Union[torch.Tensor, np.ndarray]: output intrinsic matrix.
     """
     sign = [1, 1, 1] if sign is None else sign
-    if not isinstance(K, (np.ndarray, torch.Tensor)):
+    if isinstance(K, torch.Tensor):
+        K = K.clone()
+    elif isinstance(K, np.ndarray):
+        K = K.copy()
+    else:
         raise TypeError(
             f'K should be `torch.Tensor` or `np.ndarray`, type(K): {type(K)}')
     if K.ndim == 2:
@@ -505,8 +520,12 @@ def convert_ndc_to_screen(
 
     if isinstance(resolution, (int, float)):
         w_dst = h_dst = resolution
-    else:
+    elif isinstance(resolution, (list, tuple)):
         h_dst, w_dst = resolution
+    elif isinstance(resolution, (torch.Tensor, np.ndarray)):
+        resolution = resolution.reshape(-1, 2)
+        h_dst, w_dst = resolution[:, 0], resolution[:, 1]
+
     aspect_ratio = w_dst / h_dst
     K[:, 0, 0] *= w_dst / 2
     K[:, 1, 1] *= h_dst / 2
@@ -552,7 +571,12 @@ def convert_screen_to_ndc(
     """
     if sign is None:
         sign = [1, 1, 1]
-    if not isinstance(K, (np.ndarray, torch.Tensor)):
+
+    if isinstance(K, torch.Tensor):
+        K = K.clone()
+    elif isinstance(K, np.ndarray):
+        K = K.copy()
+    else:
         raise TypeError(
             f'K should be `torch.Tensor` or `np.ndarray`, type(K): {type(K)}')
     if K.ndim == 2:
@@ -564,8 +588,12 @@ def convert_screen_to_ndc(
 
     if isinstance(resolution, (int, float)):
         w_src = h_src = resolution
-    else:
+    elif isinstance(resolution, (list, tuple)):
         h_src, w_src = resolution
+    elif isinstance(resolution, (torch.Tensor, np.ndarray)):
+        resolution = resolution.reshape(-1, 2)
+        h_src, w_src = resolution[:, 0], resolution[:, 1]
+
     aspect_ratio = w_src / h_src
     K[:, 0, 0] /= w_src / 2
     K[:, 1, 1] /= h_src / 2

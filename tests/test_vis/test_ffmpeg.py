@@ -114,6 +114,8 @@ def test_image_reader():
     # shape should be (f, h, w, 3)
     v = images_to_array(osp.join(root, 'input_images'), resolution=(300, 200))
     assert v.shape[1:] == (300, 200, 3)
+    v = images_to_array(
+        osp.join(root, 'input_images'), resolution=(300, 200), img_format=None)
     v = video_to_array(
         osp.join(root, 'input_video.mp4'), resolution=(300, 200))
     assert v.shape[1:] == (300, 200, 3)
@@ -131,7 +133,7 @@ def test_image_reader():
         assert k in vid.video_stream
 
 
-def skip_temporal_concat_video():
+def test_temporal_concat_video():
     # temporal_concat_video
     # wrong input/output
     with pytest.raises(FileNotFoundError):
@@ -195,6 +197,13 @@ def test_temporal_c2():
         start=0,
         end=10)
 
+    slice_video(
+        osp.join(root, 'input_video.mp4'),
+        osp.join(root, 'test_temporal_crop_output.mp4'),
+        start=0,
+        end=10,
+        resolution=(50, 50))
+
 
 def test_spacial_c2():
     # crop_video
@@ -215,6 +224,13 @@ def test_spacial_c2():
         osp.join(root, 'input_video.mp4'),
         osp.join(root, 'test_spacial_crop_output.mp4'),
         box=[10, 10, 100, 100])
+    assert os.path.isfile(osp.join(root, 'test_spacial_crop_output.mp4'))
+
+    crop_video(
+        osp.join(root, 'input_video.mp4'),
+        osp.join(root, 'test_spacial_crop_output.mp4'),
+        box=[10, 10, 100, 100],
+        resolution=(40, 40))
     assert os.path.isfile(osp.join(root, 'test_spacial_crop_output.mp4'))
 
 
@@ -244,6 +260,16 @@ def test_convert():
     images_to_video(
         osp.join(root, 'input_images'),
         osp.join(root, 'images_to_video_output.mp4'))
+    assert os.path.isfile(osp.join(root, 'images_to_video_output.mp4'))
+    images_to_video(
+        osp.join(root, 'input_images'),
+        osp.join(root, 'images_to_video_output.mp4'),
+        img_format=None)
+    assert os.path.isfile(osp.join(root, 'images_to_video_output.mp4'))
+    images_to_video(
+        osp.join(root, 'input_images'),
+        osp.join(root, 'images_to_video_output.mp4'),
+        resolution=(100, 100))
     assert os.path.isfile(osp.join(root, 'images_to_video_output.mp4'))
 
     # wrong inpath gif_to_video

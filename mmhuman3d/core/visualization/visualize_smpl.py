@@ -213,29 +213,6 @@ def _prepare_input_data(verts, poses, betas, transl):
     if isinstance(transl, np.ndarray):
         transl = torch.Tensor(transl)
 
-    # multi person check
-    if isinstance(poses, torch.Tensor):
-        if poses.ndim == 4 and poses.shape[1] > 1:
-            if betas is not None:
-                betas = betas.view(num_frame, -1, 10)
-                print(f'betas will be repeated by dim 0 for {times} times.')
-                if betas.shape[1] == 1:
-                    warnings.warn(
-                        'Only one betas for multi-person, will all be the '
-                        'same body shape.')
-            else:
-                warnings.warn('None betas for multi-person, will all be the '
-                              'default body shape.')
-
-            if transl is not None:
-                transl = transl.view(poses.shape[0], -1, 10)
-                if transl.shape[1] == 1:
-                    warnings.warn(
-                        'Only one transl for multi-person, will all be the '
-                        'same translation.')
-            else:
-                warnings.warn('None transl for multi-person, will all be the '
-                              'default translation.')
     return verts, poses, betas, transl
 
 
@@ -273,6 +250,53 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
             full_pose = poses[start:end + 1]
         else:
             raise ValueError('Wrong pose type, should be `dict` or `tensor`.')
+
+        # multi person check
+        if num_person > 1:
+            if betas is not None:
+                betas = betas.view(num_frame, -1, 10)
+
+                if betas.shape[1] == 1:
+                    betas = betas.repeat(1, num_person, 1)
+                    warnings.warn(
+                        'Only one betas for multi-person, will all be the '
+                        'same body shape.')
+                elif betas.shape[1] > num_person:
+                    betas = betas[:, :num_person]
+                    warnings.warn(
+                        f'Betas shape exceed, will be sliced as {betas.shape}.'
+                    )
+                elif betas.shape[1] == num_person:
+                    pass
+                else:
+                    raise ValueError(
+                        f'Odd betas shape: {betas.shape}, inconsistent'
+                        f'with poses in num_person: {poses.shape}.')
+            else:
+                warnings.warn('None betas for multi-person, will all be the '
+                              'default body shape.')
+
+            if transl is not None:
+                transl = transl.view(poses.shape[0], -1, 3)
+                if transl.shape[1] == 1:
+                    transl = transl.repeat(1, num_person, 1)
+                    warnings.warn(
+                        'Only one transl for multi-person, will all be the '
+                        'same translation.')
+                elif transl.shape[1] > num_person:
+                    transl = transl[:, :num_person]
+                    warnings.warn(f'Transl shape exceed, will be sliced as'
+                                  f'{transl.shape}.')
+                elif transl.shape[1] == num_person:
+                    pass
+                else:
+                    raise ValueError(
+                        f'Odd transl shape: {transl.shape}, inconsistent'
+                        f'with poses in num_person: {poses.shape}.')
+            else:
+                warnings.warn('None transl for multi-person, will all be the '
+                              'default translation.')
+
         # slice the input poses, betas, and transl.
         betas = betas[start:end + 1] if betas is not None else None
         transl = transl[start:end + 1] if transl is not None else None
@@ -561,7 +585,6 @@ def render_smpl(
 
     verts, poses, betas, transl = _prepare_input_data(verts, poses, betas,
                                                       transl)
-
     body_model = _prepare_body_model(model_type, body_model, model_path,
                                      gender, use_pca)
     vertices, faces, joints, num_frame, num_person, start, end = _prepare_mesh(
@@ -608,12 +631,13 @@ def render_smpl(
                                             not in render_choice.lower()):
             render_param_dict['shader']['shader_type'] = 'flat'
         palette = [palette] * num_person
-    elif isinstance(palette, np.ndarray):
-        palette = torch.Tensor(palette)
+    else:
+        if isinstance(palette, np.ndarray):
+            palette = torch.Tensor(palette)
         palette = palette.view(-1, 3)
         if palette.shape[0] != num_person:
             _times = num_person // palette.shape[0]
-            palette = palette.repeat(_times, 0)[:num_person]
+            palette = palette.repeat(_times, 1)[:num_person]
             if palette.shape[0] == 1:
                 print(f'Same color for all the {num_person} people')
             else:
@@ -936,9 +960,6 @@ def visualize_smpl_pose(poses, **kwargs) -> None:
 
     func = partial(
         render_smpl,
-        betas=None,
-        transl=None,
-        verts=None,
         convention='opencv',
         projection='fovperspective',
         K=None,

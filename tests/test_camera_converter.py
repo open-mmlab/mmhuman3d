@@ -10,7 +10,9 @@ from mmhuman3d.core.conventions.cameras import (
     convert_K_3x3_to_4x4,
     convert_K_4x4_to_3x3,
     convert_ndc_to_screen,
+    convert_perspective_to_weakperspective,
     convert_screen_to_ndc,
+    convert_weakperspective_to_perspective,
     convert_world_view,
 )
 from mmhuman3d.utils.camera_utils import convert_smpl_from_opencv_calibration
@@ -246,3 +248,12 @@ def test_camera_utils():
         poses=poses,
         resolution=resolution,
         model_path=model_path)
+
+
+def test_convert_projection():
+    K = torch.eye(4, 4)[None]
+    K1 = convert_weakperspective_to_perspective(
+        K=K, zmean=10, resolution=(1024, 1024))
+    K2 = convert_perspective_to_weakperspective(
+        K=K1, zmean=10, resolution=(1024, 1024))
+    assert (K == K2).all()

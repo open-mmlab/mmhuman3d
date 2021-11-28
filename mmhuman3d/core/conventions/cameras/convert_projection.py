@@ -18,7 +18,8 @@ def convert_perspective_to_weakperspective(
     Args:
         K (Union[torch.Tensor, np.ndarray]): input intrinsic matrix, shape
             should be (batch, 4, 4) or (batch, 3, 3).
-        zmean (Union[torch.Tensor, np.ndarray, float, int]): zmean for object.
+        zmean (Union[torch.Tensor, np.ndarray, int, float]): zmean for object.
+            shape should be (batch, ) or singleton number.
         resolution (Union[int, Tuple[int, int], torch.Tensor, np.ndarray],
             optional): (height, width) of image. Defaults to None.
         in_ndc (bool, optional): whether defined in ndc. Defaults to False.
@@ -37,6 +38,11 @@ def convert_perspective_to_weakperspective(
         in_ndc_src=in_ndc,
         in_ndc_dst=True,
         resolution_src=resolution)
+    if isinstance(zmean, np.ndarray):
+        zmean = torch.Tensor(zmean)
+    elif isinstance(zmean, (float, int)):
+        zmean = torch.Tensor([zmean])
+    zmean = zmean.view(-1)
     num_frame = max(zmean.shape[0], K.shape[0])
     new_K = torch.eye(4, 4)[None].repeat(num_frame, 1, 1)
     fx = K[:, 0, 0]
@@ -52,7 +58,7 @@ def convert_perspective_to_weakperspective(
 
 def convert_weakperspective_to_perspective(
         K: Union[torch.Tensor, np.ndarray],
-        zmean: Union[torch.Tensor, np.ndarray],
+        zmean: Union[torch.Tensor, np.ndarray, int, float],
         resolution: Union[int, Tuple[int, int], torch.Tensor,
                           np.ndarray] = None,
         in_ndc: bool = False,
@@ -62,7 +68,8 @@ def convert_weakperspective_to_perspective(
     Args:
         K (Union[torch.Tensor, np.ndarray]): input intrinsic matrix, shape
             should be (batch, 4, 4) or (batch, 3, 3).
-        zmean (Union[torch.Tensor, np.ndarray]): zmean for object.
+        zmean (Union[torch.Tensor, np.ndarray, int, float]): zmean for object.
+            shape should be (batch, ) or singleton number.
         resolution (Union[int, Tuple[int, int], torch.Tensor, np.ndarray],
             optional): (height, width) of image. Defaults to None.
         in_ndc (bool, optional): whether defined in ndc. Defaults to False.
@@ -74,6 +81,11 @@ def convert_weakperspective_to_perspective(
     """
     if K.ndim == 2:
         K = K[None]
+    if isinstance(zmean, np.ndarray):
+        zmean = torch.Tensor(zmean)
+    elif isinstance(zmean, (float, int)):
+        zmean = torch.Tensor([zmean])
+    zmean = zmean.view(-1)
     _N = max(K.shape[0], zmean.shape[0])
     s1 = K[:, 0, 0]
     s2 = K[:, 1, 1]
@@ -88,7 +100,7 @@ def convert_weakperspective_to_perspective(
     new_K[:, 3, 2] = 1
 
     new_K, _, _ = convert_cameras(
-        K=K,
+        K=new_K,
         convention_src=convention,
         convention_dst='pytorch3d',
         is_perspective=True,
