@@ -21,6 +21,6 @@ __all__ = [
     'accuracy', 'Accuracy', 'reduce_loss', 'weight_reduce_loss',
     'weighted_loss', 'convert_to_one_hot', 'MSELoss', 'L1Loss', 'SmoothL1Loss',
     'GANLoss', 'JointPriorLoss', 'ShapePriorLoss', 'KeypointMSELoss',
-    'SmoothJointLoss', 'SmoothTranslationLoss', 'SmoothPelvisLoss',
+    'SmoothJointLoss', 'SmoothPelvisLoss', 'SmoothTranslationLoss',
     'MaxMixturePrior'
 ]
