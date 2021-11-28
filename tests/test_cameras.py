@@ -40,6 +40,7 @@ def check_camera_slice(cam1):
     cam2 = cam1[0]
     cam2 = cam2.extend(len(cam1))
     check_camera_close(cam1, cam2)
+    print(cam1.__repr__)
 
 
 def test_cameras():
@@ -142,3 +143,23 @@ def test_cameras():
         check_camera_close(cam1, cam2)
         check_camera_slice(cam1)
         check_camera_slice(cam2)
+
+
+def test_weakperspective():
+    cam = build_cameras(dict(type='weakperspective', resolution=(1024, 1024)))
+    orig_cam = cam.convert_K_to_orig_cam(torch.eye(4, 4)[None])
+    K = cam.compute_projection_matrix(orig_cam[0, 0], orig_cam[0, 1],
+                                      orig_cam[0, 2], orig_cam[0, 3], 1)
+    cam.unproject_points(torch.zeros(1, 3))
+    assert (K == torch.eye(4, 4)[None]).all()
+
+
+def test_perspective():
+    cam = build_cameras(dict(type='perspective', resolution=(1024, 1024)))
+    cam1 = cam.to_screen()
+    cam2 = cam1.to_ndc()
+    check_camera_close(cam, cam2)
+
+    cam2.to_screen_()
+    cam2.to_ndc_()
+    check_camera_close(cam, cam2)
