@@ -45,8 +45,10 @@ def test_HybrIK_head():
     smpl = HybrIKSMPL(
         model_path='data/body_models/smpl',
         extra_joints_regressor=osp.join(tmpdir.name, 'J_regressor_h36m.npy'))
-    head = head.cuda()
-    smpl = smpl.cuda()
+
+    if torch.cuda.is_available():
+        head = head.cuda()
+        smpl = smpl.cuda()
 
     with pytest.raises(TypeError):
         _ = HybrIKHead()

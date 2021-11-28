@@ -51,6 +51,8 @@ def test_data_type_torch_zero():
 
 
 def test_data_type_torch_cuda():
+    if not torch.cuda.is_available():
+        return
     noisy_input = torch.randn((3, 24, 4)).cuda()
     cfg = dict(type='OneEuroFilter', min_cutoff=0.0004, beta=0.7)
     oneeuro = build_filter(cfg)
@@ -76,10 +78,3 @@ def test_data_type_np():
     savgol = build_filter(cfg)
     out_o = savgol(noisy_input)
     assert out_g.shape == noisy_input.shape == out_s.shape == out_o.shape
-
-
-def test_smooth():
-    test_data_type_torch()
-    test_data_type_torch_cuda()
-    test_data_type_np()
-    test_data_type_torch_zero()
