@@ -29,22 +29,34 @@ python tools/convert_datasets.py \
 
 ### Datasets for supported algorithms
 
-For SPIN and HMR training and testing, the following datasets are required:
+For HMR training and testing, the following datasets are required:
   - [COCO](#coco)
   - [Human3.6M](#human36m)
+  - [Human3.6M Mosh](#human36mmosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [MPII](#mpii)
   - [LSP](#lsp)
   - [LSPET](#lspet)
   - [PW3D](#pw3d)
 
+```
+dataset-name: coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
+```
 
-For VIBE training and testing, the following datasets are required:
+For SPIN training, the following datasets are required:
+  - [COCO](#coco)
+  - [Human3.6M](#human36m)
+  - [Human3.6M Mosh](#human36mmosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
-  - [INSTA-VARIETY](#insta-variety)
-  - [AMASS](#amass)
+  - [MPII](#mpii)
+  - [LSP](#lsp)
+  - [LSPET](#lspet)
   - [PW3D](#pw3d)
+  - [SPIN](#spin)
 
+```
+dataset-name: spin, h36m_spin
+```
 
 For HYBRIK training and testing, the following datasets are required:
   - [HybrIK](#hybrik)
@@ -53,6 +65,9 @@ For HYBRIK training and testing, the following datasets are required:
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [PW3D](#pw3d)
 
+```
+dataset-name: h36m_hybrik, pw3d_hybrik, mpi_inf_3dhp_hybrik, coco_hybrik
+```
 
 ## COCO
 
@@ -260,10 +275,60 @@ mmhuman3d
             ├── S7
             ├── S8
             ├── S9
-            `── S11
+            ├── S11
+            `── metadata.xml
 ```
 
+## Human3.6M Mosh
 
+<!-- [DATASET] -->
+
+For data preparation of [Human3.6M](http://vision.imar.ro/human3.6m/description.php) for HMR and SPIN training, we use the [MoShed](https://mosh.is.tue.mpg.de/) data provided in [HMR](https://github.com/akanazawa/hmr) for training. However, due to license limitations, we are not allowed to redistribute the data. Even if you do not have access to these parameters, you can still generate the preprocessed h36m npz file without mosh parameters using our [converter](mmhuman3d/data/data_converters/keypoints_mapping/h36m.py).
+
+Config without mosh:
+```python
+h36m_p1=dict(
+    type='H36mConverter',
+    modes=['train', 'valid'],
+    protocol=1,
+    prefix='h36m'),
+```
+
+Config:
+```python
+h36m_p1=dict(
+    type='H36mConverter',
+    modes=['train', 'valid'],
+    protocol=1,
+    mosh_dir='data/datasets/h36m_mosh', # supply the directory to the mosh if available
+    prefix='h36m'),
+```
+
+If you have MoShed data available, it should have the following structure:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+`── data
+    │── datasets
+        ├── h36m_mosh
+            ├── annot
+            ├── S1
+            |   ├── images
+            |   |    ├── Directions 1_cam0_aligned.pkl
+            |   |    ├── Directions 1_cam1_aligned.pkl
+            |   |    ├── ...
+            ├── S5
+            ├── S6
+            ├── S7
+            ├── S8
+            ├── S9
+            `── S11
+```
 
 ## HybrIK
 
@@ -296,7 +361,7 @@ mmhuman3d
 ├── configs
 `── data
     │── datasets
-        ├── hybrik-data
+        ├── hybrik_data
             ├── Sample_5_train_Human36M_smpl_leaf_twist_protocol_2.json
             ├── Sample_20_test_Human36M_smpl_protocol_2.json
             ├── 3DPW_test_new.json
@@ -616,4 +681,43 @@ mmhuman3d
                     │-- courtyard_basketball_00.pkl
                     │-- ...
 
+```
+
+
+
+## SPIN
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1909.12828.pdf">SPIN (ICCV'2019)</a></summary>
+
+```bibtex
+@inproceedings{kolotouros2019spin,
+  author = {Kolotouros, Nikos and Pavlakos, Georgios and Black, Michael J and Daniilidis, Kostas},
+  title = {Learning to Reconstruct 3D Human Pose and Shape via Model-fitting in the Loop},
+  booktitle={ICCV},
+  year={2019}
+}
+```
+
+</details>
+
+For [SPIN](https://github.com/nkolot/SPIN), please download the [preprocessed npz files] (https://github.com/nkolot/SPIN/blob/master/fetch_data.sh) and place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+`── data
+    │── datasets
+        ├── spin_data
+            ├── coco_2014_train.npz
+            ├── hr-lspet_train.npz
+            ├── lsp_dataset_original_train.npz
+            ├── mpi_inf_3dhp_train.npz
+            `── mpii_train.npz
 ```

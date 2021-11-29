@@ -120,33 +120,7 @@ SMPL_49_KEYPOINTS = [
     'right_ear'
 ]
 
-SMPL_24_KEYPOINTS = [
-    # 24 Keypoints
-    'right_ankle',
-    'right_knee',
-    'right_hip_extra',
-    'left_hip_extra',
-    'left_knee',
-    'left_ankle',
-    'right_wrist',
-    'right_elbow',
-    'right_shoulder',
-    'left_shoulder',
-    'left_elbow',
-    'left_wrist',
-    'neck_lsp',  # LSP
-    'headtop',  # LSP mpii peen_action mpi_inf_3dhp
-    'pelvis_mpii',
-    'thorax_mpii',  # MPII
-    'spine_h36m',
-    'jaw_h36m',  # 'jaw'
-    'head_h36m',  # 'head'
-    'nose',
-    'left_eye',
-    'right_eye',
-    'left_ear',
-    'right_ear'
-]
+SMPL_24_KEYPOINTS = SMPL_49_KEYPOINTS[-24:]
 
 # TODO: temporary solution
 # duplicates in SMPL_49 requires special treatment

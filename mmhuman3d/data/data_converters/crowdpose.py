@@ -15,7 +15,7 @@ from .builder import DATA_CONVERTERS
 class CrowdposeConverter(BaseModeConverter):
     """CrowdPose dataset
     `CrowdPose: Efficient Crowded Scenes Pose Estimation and A New
-    Benchmark' arXiv'2018
+    Benchmark' CVPR'2019
     More details can be found in the `paper
     <https://arxiv.org/pdf/1812.00324.pdf>`__ .
 

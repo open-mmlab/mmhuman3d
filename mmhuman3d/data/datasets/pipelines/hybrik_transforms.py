@@ -236,20 +236,6 @@ def get_intrinsic_matrix(f, c, inv=False):
     return intrinsic_metrix
 
 
-def get_fc_from_intrinsic(intrinsics):
-    """Get f and c from intrisic matrix
-    Args:
-        intrinsics (np.ndarray): 3x3 intrinsic matrix
-
-    Returns:
-        f (np.ndarray): focal length, fx, fy
-        c (np.ndarray): principal point offset, x0, y0
-    """
-    f = np.array([intrinsics[0, 0], intrinsics[1, 1]])
-    c = np.array([intrinsics[0, 2], intrinsics[1, 2]])
-    return f, c
-
-
 def aa_to_quat_numpy(axis_angle):
     """Convert rotations given as axis/angle to quaternions.
 
@@ -277,51 +263,6 @@ def aa_to_quat_numpy(axis_angle):
         [np.cos(half_angles), axis_angle * sin_half_angles_over_angles],
         axis=-1)
     return quaternions
-
-
-def rotmat_to_quat_numpy(matrix: np.ndarray) -> np.ndarray:
-    """Convert rotations given as rotation matrices to quaternions.
-
-    Args:
-        matrix: Rotation matrices as np.ndarray of shape (..., 3, 3).
-
-    Returns:
-        quaternions with real part first, as np.ndarray of shape (..., 4).
-    """
-    if matrix.shape[1:3] != (3, 3):
-        raise ValueError(f'Invalid rotation matrix  shape f{matrix.shape}.')
-    batch_dim = matrix.shape[:-2]
-    m00, m01, m02, m10, m11, m12, m20, m21, m22 = matrix.reshape(
-        *batch_dim, 9).T
-    m = np.stack(
-        [
-            1.0 + m00 + m11 + m22,
-            1.0 + m00 - m11 - m22,
-            1.0 - m00 + m11 - m22,
-            1.0 - m00 - m11 + m22,
-        ],
-        axis=-1,
-    )
-    positive_mask = m > 0
-    q_abs = np.zeros_like(m)
-    q_abs[positive_mask] = np.sqrt(m[positive_mask])
-
-    quat_by_rijk = np.stack(
-        [
-            np.stack([q_abs[..., 0]**2, m21 - m12, m02 - m20, m10 - m01],
-                     axis=-1),
-            np.stack([m21 - m12, q_abs[..., 1]**2, m10 + m01, m02 + m20],
-                     axis=-1),
-            np.stack([m02 - m20, m10 + m01, q_abs[..., 2]**2, m12 + m21],
-                     axis=-1),
-            np.stack([m10 - m01, m20 + m02, m21 + m12, q_abs[..., 3]**2],
-                     axis=-1),
-        ],
-        axis=-2,
-    )
-
-    quat_candidates = quat_by_rijk / (2.0 * np.maximum(q_abs[..., None], 0.1))
-    return quat_candidates[np.eye(4)[q_abs.argmax(axis=-1)] > 0.5, ]
 
 
 def flip_thetas(thetas, theta_pairs):
@@ -614,11 +555,6 @@ class HybrIKAffine:
 
     def __init__(self, img_res):
         self.image_size = np.array([img_res, img_res])
-
-    def affine_transform(self, pt, t):
-        new_pt = np.array([pt[0], pt[1], 1.]).T
-        new_pt = np.dot(t, new_pt)
-        return new_pt[:2]
 
     def __call__(self, results):
 

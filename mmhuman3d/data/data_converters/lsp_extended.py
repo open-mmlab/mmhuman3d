@@ -76,7 +76,7 @@ class LspExtendedConverter(BaseConverter):
                 continue
 
             # store data
-            image_path_.append(image_path)
+            image_path_.append(imgname)
             bbox_xywh_.append(bbox_xywh)
             keypoints2d_.append(keypoints2d14)
 

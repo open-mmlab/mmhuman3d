@@ -88,7 +88,7 @@ class LspConverter(BaseModeConverter):
                 continue
 
             # store data
-            image_path_.append(image_path)
+            image_path_.append(os.path.join('images', imgname))
             bbox_xywh_.append(bbox_xywh)
             keypoints2d_.append(keypoints2d14)
 
