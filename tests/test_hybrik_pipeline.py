@@ -3,6 +3,7 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
@@ -23,11 +24,14 @@ from mmhuman3d.data.datasets.pipelines import (
     RandomOcclusion,
     ToTensor,
 )
-from mmhuman3d.data.datasets.pipelines.hybrik_transforms import box2cs
+from mmhuman3d.data.datasets.pipelines.hybrik_transforms import (
+    bbox_clip_xyxy,
+    bbox_xywh_to_xyxy,
+    box2cs,
+)
 
 
 def get_3d_keypoints_vis(keypoints):
-
     keypoints, keypoints_vis = keypoints[:, :, :-1], keypoints[:, :, -1]
     num_datapoints, num_keypoints, dim = keypoints.shape
     joint_img = np.zeros((num_datapoints, num_keypoints, 3), dtype=np.float32)
@@ -36,6 +40,51 @@ def get_3d_keypoints_vis(keypoints):
     joint_vis[:, :, :dim] = np.tile(
         np.expand_dims(keypoints_vis, axis=2), (1, dim))
     return joint_img, joint_vis
+
+
+def test_bbox():
+
+    xywh = [521.16, 187.1, 28.59, 85.78]
+    xywhc = [521.16, 187.1, 28.59, 85.78, 1.0]
+
+    with pytest.raises(IndexError):
+        _ = bbox_xywh_to_xyxy(xywhc)
+
+    with pytest.raises(IndexError):
+        _ = bbox_xywh_to_xyxy(np.array([xywhc] * 2))
+
+    with pytest.raises(TypeError):
+        _ = bbox_xywh_to_xyxy(torch.tensor(xywh))
+
+    xyxy = bbox_xywh_to_xyxy(xywh)
+    assert isinstance(xyxy, tuple)
+    assert len(xyxy) == 4
+
+    xyxy = bbox_xywh_to_xyxy(np.array([xywh] * 2))
+    assert isinstance(xyxy, np.ndarray)
+    assert len(xyxy) == 2
+    assert len(xyxy[0]) == 4
+
+    xyxy = [521.16, 187.1, 548.75, 271.88]
+    xyxyc = [521.16, 187.1, 548.75, 271.88, 1.0]
+    width, height = 640, 427
+
+    with pytest.raises(IndexError):
+        _ = bbox_clip_xyxy(xyxyc, width, height)
+
+    with pytest.raises(IndexError):
+        _ = bbox_clip_xyxy(np.array([xyxyc]), width, height)
+
+    with pytest.raises(TypeError):
+        _ = bbox_clip_xyxy(torch.tensor(xywh), width, height)
+
+    xyxy = bbox_clip_xyxy(xyxy, width, height)
+    assert isinstance(xyxy, tuple)
+    assert len(xyxy) == 4
+
+    xyxy = bbox_clip_xyxy(np.array([xyxy]), width, height)
+    assert isinstance(xyxy, np.ndarray)
+    assert len(xyxy) == 4
 
 
 def _load_test_data():
@@ -159,8 +208,6 @@ def test_hybrik_pipeline():
 
     # test random flip
     humandata_flip_pairs = get_flip_pairs('human_data')
-    transform = HybrIKRandomFlip(
-        flip_prob=1.0, flip_pairs=humandata_flip_pairs)
     original_img = results['img']
     original_twist = results['target_twist']
     original_keypoints3d17_relative = results['keypoints3d17_relative']
@@ -169,9 +216,18 @@ def test_hybrik_pipeline():
     original_pose = results['pose']
     original_keypoints3d = results['keypoints3d']
 
+    # test no flip
+    transform = HybrIKRandomFlip(flip_prob=0., flip_pairs=humandata_flip_pairs)
+    results_no_flip = transform(copy.deepcopy(results))
+    assert np.equal(results_no_flip['img'], original_img).all()
+    assert np.equal(results_no_flip['keypoints3d'], original_keypoints3d).all()
+
+    # test flip
+    transform = HybrIKRandomFlip(
+        flip_prob=1.0, flip_pairs=humandata_flip_pairs)
+
     # test flip for data without smpl
     results['has_smpl'] = 0
-
     results_flip = transform(copy.deepcopy(results))
     assert not np.equal(results_flip['img'], original_img).all()
     assert np.equal(results_flip['target_twist'], original_twist).all()
@@ -268,11 +324,28 @@ def test_hybrik_pipeline():
     for k in new_keys:
         assert k not in results
 
+    # test generate hybrik target
     transform = GenerateHybrIKTarget(img_res=256, test_mode=False)
+
+    # mock coco
+    results_coco = copy.deepcopy(results)
+    results_coco['has_smpl'] = 0
+    results_coco['ann_info']['dataset_name'] = 'coco'
+    results_coco = transform(copy.deepcopy(results_coco))
+
+    # mock mpi_inf_3dhp
+    results_hp3d = copy.deepcopy(results)
+    results_hp3d['has_smpl'] = 0
+    results_hp3d['ann_info']['dataset_name'] = 'mpi_inf_3dhp'
+    results_hp3d = transform(copy.deepcopy(results_hp3d))
+
+    # moch h36m
     results = transform(copy.deepcopy(results))
 
     for k in new_keys:
         assert k in results
+        assert k in results_coco
+        assert k in results_hp3d
 
     # test channel noise
     random_noise = RandomChannelNoise(noise_factor=0.2)

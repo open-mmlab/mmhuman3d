@@ -1,5 +1,6 @@
 import glob
 import os
+import pickle
 import xml.etree.ElementTree as ET
 from typing import List
 
@@ -83,17 +84,17 @@ class H36mCamera():
                              c: List[float],
                              inv: bool = False) -> np.ndarray:
         """Get intrisic matrix (or its inverse) given f and c."""
-        intrinsic_metrix = np.zeros((3, 3)).astype(np.float32)
-        intrinsic_metrix[0, 0] = f[0]
-        intrinsic_metrix[0, 2] = c[0]
-        intrinsic_metrix[1, 1] = f[1]
-        intrinsic_metrix[1, 2] = c[1]
-        intrinsic_metrix[2, 2] = 1
+        intrinsic_matrix = np.zeros((3, 3)).astype(np.float32)
+        intrinsic_matrix[0, 0] = f[0]
+        intrinsic_matrix[0, 2] = c[0]
+        intrinsic_matrix[1, 1] = f[1]
+        intrinsic_matrix[1, 2] = c[1]
+        intrinsic_matrix[2, 2] = 1
 
         if inv:
-            intrinsic_metrix = np.linalg.inv(intrinsic_metrix).astype(
+            intrinsic_matrix = np.linalg.inv(intrinsic_matrix).astype(
                 np.float32)
-        return intrinsic_metrix
+        return intrinsic_matrix
 
     def _get_camera_params(self, camera: int, subject: str) -> dict:
         """Get camera parameters given camera id and subject id."""
@@ -165,13 +166,15 @@ class H36mConverter(BaseModeConverter):
         protocol (int): 1 or 2 for available protocols
         extract_img (bool): Store True to extract images into a separate
         folder. Default: False.
+        mosh_dir (str, optional): Path to directory containing mosh files.
     """
     ACCEPTED_MODES = ['valid', 'train']
 
     def __init__(self,
                  modes: List = [],
                  protocol: int = 1,
-                 extract_img: bool = False) -> None:
+                 extract_img: bool = False,
+                 mosh_dir=None) -> None:
         super(H36mConverter, self).__init__(modes)
         accepted_protocol = [1, 2]
         if protocol not in accepted_protocol:
@@ -179,6 +182,10 @@ class H36mConverter(BaseModeConverter):
                 Use either 1 or 2')
         self.protocol = protocol
         self.extract_img = extract_img
+        self.get_mosh = False
+        if mosh_dir is not None and os.path.exists(mosh_dir):
+            self.get_mosh = True
+            self.mosh_dir = mosh_dir
         self.camera_name_to_idx = {
             '54138969': 0,
             '55011271': 1,
@@ -242,11 +249,16 @@ class H36mConverter(BaseModeConverter):
             seq_list = glob.glob(os.path.join(pose_path, '*.cdf'))
             seq_list.sort()
 
+            # mosh path
+            if self.get_mosh:
+                mosh_path = os.path.join(self.mosh_dir, user_name)
+
             for seq_i in tqdm(seq_list, desc='sequence id'):
 
                 # sequence info
                 seq_name = seq_i.split('/')[-1]
                 action, camera, _ = seq_name.split('.')
+                action_raw = action
                 action = action.replace(' ', '_')
                 # irrelevant sequences
                 if action == '_ALL':
@@ -258,6 +270,20 @@ class H36mConverter(BaseModeConverter):
 
                 # 3D pose file
                 poses_3d = cdflib.CDF(seq_i)['Pose'][0]
+
+                # 3D mosh file
+                if self.get_mosh:
+                    mosh_name = '%s_cam%s_aligned.pkl' % (
+                        action_raw, self.camera_name_to_idx[camera])
+                    mosh_file = os.path.join(mosh_path, mosh_name)
+                    if os.path.exists(mosh_file):
+                        with open(mosh_file, 'rb') as file:
+                            mosh_data = pickle.load(file, encoding='latin1')
+                    else:
+                        print(f'mosh file {mosh_name} is missing')
+                        continue
+                    thetas = mosh_data['new_poses']
+                    betas = mosh_data['betas']
 
                 # bbox file
                 bbox_file = os.path.join(bbox_path,
@@ -285,15 +311,14 @@ class H36mConverter(BaseModeConverter):
                         seq_id = f'{user_name}_{action}'
                         image_name = f'{seq_id}.{camera}_{frame_i + 1:06d}.jpg'
                         img_folder_name = f'{user_name}_{action}.{camera}'
-                        image_path = os.path.join(dataset_path, user_name,
-                                                  'images', img_folder_name,
-                                                  image_name)
-
+                        image_path = os.path.join(user_name, 'images',
+                                                  img_folder_name, image_name)
+                        image_abs_path = os.path.join(dataset_path, image_path)
                         # save image
                         if self.extract_img:
-                            cv2.imwrite(image_path)
+                            cv2.imwrite(image_abs_path)
 
-                        # read GT bounding box
+                        # get bbox from mask
                         mask = bbox_h5py[bbox_h5py['Masks'][frame_i, 0]][:].T
                         ys, xs = np.where(mask == 1)
                         bbox_xyxy = np.array([
@@ -325,6 +350,25 @@ class H36mConverter(BaseModeConverter):
                         bbox_xywh_.append(bbox_xywh)
                         keypoints2d_.append(keypoints2d17)
                         keypoints3d_.append(keypoints3d17)
+
+                        # get mosh data
+                        if self.get_mosh:
+                            pose = thetas[frame_i // 5, :]
+                            R_mod = cv2.Rodrigues(np.array([np.pi, 0, 0]))[0]
+                            R_root = cv2.Rodrigues(pose[:3])[0]
+                            new_root = R_root.dot(R_mod)
+                            pose[:3] = cv2.Rodrigues(new_root)[0].reshape(3)
+                            smpl['body_pose'].append(pose[3:].reshape((23, 3)))
+                            smpl['global_orient'].append(pose[:3])
+                            smpl['betas'].append(betas)
+
+        if self.get_mosh:
+            smpl['body_pose'] = np.array(smpl['body_pose']).reshape(
+                (-1, 23, 3))
+            smpl['global_orient'] = np.array(smpl['global_orient']).reshape(
+                (-1, 3))
+            smpl['betas'] = np.array(smpl['betas']).reshape((-1, 10))
+            human_data['smpl'] = smpl
 
         metadata_path = os.path.join(dataset_path, 'metadata.xml')
         if isinstance(metadata_path, str):

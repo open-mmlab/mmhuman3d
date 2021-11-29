@@ -19,6 +19,7 @@ DATASET_CONFIGS = dict(
         type='H36mConverter',
         modes=['train', 'valid'],
         protocol=1,
+        mosh_dir='data/datasets/h36m_mosh',
         prefix='h36m'),
     h36m_p2=dict(
         type='H36mConverter', modes=['valid'], protocol=2, prefix='h36m'),
@@ -51,7 +52,16 @@ DATASET_CONFIGS = dict(
         type='SurrealConverter',
         models=['train', 'val', 'test'],
         run=0,
-        prefix='SURREAL/cmu'))
+        prefix='SURREAL/cmu'),
+    spin=dict(
+        type='SpinConverter',
+        modes=['coco', 'lsp', 'mpii', 'mpi_inf_3dhp', 'hr-lspet'],
+        prefix='spin_data'),
+    h36m_spin=dict(
+        type='H36mSpinConverter',
+        modes=['train'],
+        mosh_dir='data/datasets/h36m_extras/mosh_data',
+        prefix='h36m'))
 
 
 def parse_args():

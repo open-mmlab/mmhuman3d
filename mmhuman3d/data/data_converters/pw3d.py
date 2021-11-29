@@ -132,12 +132,11 @@ class Pw3dConverter(BaseModeConverter):
                         camera.set_K_R_T(K, R, T)
                         parameter_dict = camera.to_dict()
 
-                        extrinsics = valid_global_poses[valid_i][:3, :3]
                         pose[:3] = cv2.Rodrigues(
-                            np.dot(extrinsics,
+                            np.dot(R,
                                    cv2.Rodrigues(pose[:3])[0]))[0].T[0]
 
-                        image_path_.append(valid_img_names[valid_i])
+                        image_path_.append(image_path)
                         bbox_xywh_.append(bbox_xywh)
                         smpl['body_pose'].append(pose[3:].reshape((23, 3)))
                         smpl['global_orient'].append(pose[:3])

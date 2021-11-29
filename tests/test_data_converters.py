@@ -19,7 +19,11 @@ def test_preprocess():
     assert osp.exists(osp.join(output_path, '3dpw_train.npz'))
 
     H36M_ROOT = osp.join(root_path, 'h36m')
-    cfg = dict(type='H36mConverter', modes=['train', 'valid'], protocol=1)
+    cfg = dict(
+        type='H36mConverter',
+        modes=['train', 'valid'],
+        protocol=1,
+        mosh_dir='tests/data/dataset_sample/h36m_mosh')
     data_converter = build_data_converter(cfg)
     data_converter.convert(H36M_ROOT, output_path)
     cfg = dict(type='H36mConverter', modes=['valid'], protocol=2)
@@ -170,6 +174,22 @@ def test_preprocess():
     data_converter.convert(INSTA_VIBE_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'insta_variety.npz')
 
+    SPIN_ROOT = os.path.join(root_path, 'spin_data')
+    cfg = dict(
+        type='SpinConverter',
+        modes=['coco', 'lsp', 'mpii', 'mpi_inf_3dhp', 'hr-lspet'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(SPIN_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'spin_coco_2014_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'spin_lsp_dataset_original_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'spin_mpi_inf_3dhp_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_mpii_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'spin_hr-lspet_train.npz')
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'
@@ -183,7 +203,7 @@ def test_preprocessed_npz():
         'keypoints3d17_relative_mask', 'keypoints3d_relative',
         'keypoints3d17_cam', 'keypoints3d17', 'keypoints3d17_relative',
         'keypoints3d_cam', 'keypoints3d_relative_mask', 'phi', 'phi_weight',
-        'features'
+        'features', 'has_smpl'
     ]
 
     for npf in os.listdir(npz_folder):
