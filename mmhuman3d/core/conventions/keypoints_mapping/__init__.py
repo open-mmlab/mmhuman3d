@@ -194,26 +194,23 @@ def get_mapping(src: str,
                 intersection.append(dst_name)
             # approximate mapping
             if approximate and not matched:
-                approximate_matched = False
-                for part_list in human_data.APPROXIMATE_MAPPING_LIST:
-                    if dst_name in part_list:
-                        for approximate_name in part_list:
-                            if approximate_name != dst_name:
-                                try:
-                                    src_idx = src_names.index(approximate_name)
-                                except ValueError:
-                                    src_idx = -1
-                                if src_idx >= 0:
-                                    dst_idxs.append(dst_idx)
-                                    src_idxs.append(src_idx)
-                                    intersection.append(dst_name)
-                                    unmapped_names.append(src_names[src_idx])
-                                    approximate_names.append(dst_name)
-                                    approximate_matched = True
-                                    break
-
-                    if approximate_matched:
+                try:
+                    part_list = human_data.APPROXIMATE_MAP[dst_name]
+                except KeyError:
+                    continue
+                for approximate_name in part_list:
+                    try:
+                        src_idx = src_names.index(approximate_name)
+                    except ValueError:
+                        src_idx = -1
+                    if src_idx >= 0:
+                        dst_idxs.append(dst_idx)
+                        src_idxs.append(src_idx)
+                        intersection.append(dst_name)
+                        unmapped_names.append(src_names[src_idx])
+                        approximate_names.append(dst_name)
                         break
+
         if unmapped_names:
             warn_message = \
                 f'Approximate mapping {unmapped_names}' +\
@@ -292,22 +289,17 @@ def get_keypoint_idx(name: str,
     except ValueError:
         idx = -1  # not matched
     if approximate and idx == -1:
-        approximate_matched = False
-        for part_list in human_data.APPROXIMATE_MAPPING_LIST:
-            if name in part_list:
-                for approximate_name in part_list:
-                    if approximate_name != name:
-                        try:
-                            idx = keypoints.index(approximate_name)
-                        except ValueError:
-                            idx = -1  # still not matched
-                        if idx >= 0:
-                            approximate_matched = True
-                            break
-
-            if approximate_matched:
-                break
-
+        try:
+            part_list = human_data.APPROXIMATE_MAP[name]
+        except KeyError:
+            return idx
+        for approximate_name in part_list:
+            try:
+                idx = keypoints.index(approximate_name)
+            except ValueError:
+                idx = -1
+            if idx >= 0:
+                return idx
     return idx
 
 

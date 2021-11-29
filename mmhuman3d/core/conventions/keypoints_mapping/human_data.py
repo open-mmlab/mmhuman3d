@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 HUMAN_DATA = [
     'pelvis',
     'left_hip',
@@ -229,6 +231,14 @@ APPROXIMATE_MAPPING_LIST = [
     ['right_smalltoe', 'right_smalltoe_openpose'],
     ['right_heel', 'right_heel_openpose'],
 ]
+
+APPROXIMATE_MAP = defaultdict(list)
+for group in APPROXIMATE_MAPPING_LIST:
+    for member in group:
+        for other_member in group:
+            if member == other_member:
+                continue
+            APPROXIMATE_MAP[member].append(other_member)
 
 HUMAN_DATA_HEAD = [
     'head', 'jaw', 'left_eyeball', 'right_eyeball', 'nose', 'right_eye',
