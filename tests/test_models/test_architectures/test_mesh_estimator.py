@@ -1,9 +1,11 @@
 import torch
 
+from mmhuman3d.core.parametric_model.smplify import perspective_projection
 from mmhuman3d.models.architectures.mesh_estimator import (
     ImageBodyModelEstimator,
     VideoBodyModelEstimator,
 )
+from mmhuman3d.models.builder import build_body_model
 
 
 def test_image_body_mesh_estimator():
@@ -301,3 +303,81 @@ def test_compute_losses():
     assert 'smpl_pose_loss' in loss
     assert 'smpl_betas_loss' in loss
     assert 'camera_loss' in loss
+
+
+def test_run_registration():
+    batch_size = 2
+    body_model = dict(
+        type='SMPL',
+        keypoint_src='smpl_54',
+        keypoint_dst='smpl_49',
+        keypoint_approximate=True,
+        model_path='data/body_models/smpl',
+        extra_joints_regressor='data/body_models/J_regressor_extra.npy',
+        batch_size=batch_size)
+
+    registrant = dict(
+        type='SMPLify',
+        body_model=body_model,
+        num_epochs=1,
+        stages=[
+            dict(
+                num_iter=1,
+                fit_global_orient=True,
+                fit_transl=True,
+                fit_body_pose=False,
+                fit_betas=False)
+        ],
+        optimizer=dict(type='Adam', lr=1e-2, betas=(0.9, 0.999)),
+        keypoints2d_loss=dict(
+            type='KeypointMSELoss',
+            loss_weight=1.0,
+            reduction='sum',
+            sigma=100),
+        device=torch.device('cpu'))
+
+    model = ImageBodyModelEstimator(
+        body_model_train=body_model, registrant=registrant)
+    assert model.registrant is not None
+    assert model.fits_dict is not None
+
+    transl = torch.Tensor([0, 0, 1]).view(1, 3).expand(batch_size, -1)
+
+    predictions = dict(
+        pred_pose=torch.zeros((batch_size, 24, 3, 3)),
+        pred_shape=torch.zeros((batch_size, 10)),
+        pred_cam=transl,
+    )
+
+    # generate 2D keypoints
+    smpl = build_body_model(body_model)
+    keypoints3d = smpl()['joints'].detach()
+    keypoints2d = perspective_projection(
+        keypoints3d,
+        torch.eye(3).view(1, 3, 3).expand(batch_size, -1, -1),
+        translation=transl,
+        focal_length=5000,
+        camera_center=torch.Tensor([112, 112]).view(1,
+                                                    2).expand(batch_size, -1))
+    keypoints2d_conf = torch.ones(*keypoints2d.shape[:2], 1)
+    keypoints2d = torch.cat([keypoints2d, keypoints2d_conf], dim=-1)
+
+    targets = dict(
+        img_metas=[dict(dataset_name='coco'),
+                   dict(dataset_name='h36m')],
+        sample_idx=torch.zeros((batch_size, 1), dtype=torch.int),
+        is_flipped=torch.tensor([0, 1], dtype=torch.int),
+        rotation=torch.tensor([0.0, 0.1]),
+        smpl_betas=torch.zeros((batch_size, 10)),
+        smpl_global_orient=torch.zeros((batch_size, 3)),
+        smpl_body_pose=torch.zeros((batch_size, 69)),
+        keypoints2d=keypoints2d,
+        has_smpl=torch.tensor([0, 1], dtype=torch.int))
+
+    model.run_registration(predictions=predictions, targets=targets)
+    assert 'valid_fit' in targets
+    assert 'opt_vertices' in targets
+    assert 'opt_cam_t' in targets
+    assert 'opt_joints' in targets
+    assert 'opt_pose' in targets
+    assert 'opt_betas' in targets

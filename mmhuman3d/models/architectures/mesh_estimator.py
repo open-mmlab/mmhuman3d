@@ -235,8 +235,8 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         #         [keypoints2d, keypoints2d_mask.reshape(-1, 24, 1)], dim=-1)
         num_keypoints = gt_keypoints_2d.shape[1]
 
-        has_smpl = targets['has_smpl'].squeeze().bool(
-        )  # flag that indicates whether SMPL parameters are valid
+        has_smpl = targets['has_smpl'].view(
+            -1).bool()  # flag that indicates whether SMPL parameters are valid
         batch_size = has_smpl.shape[0]
         device = has_smpl.device
 
