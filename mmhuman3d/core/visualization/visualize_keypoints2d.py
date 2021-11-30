@@ -347,7 +347,7 @@ class _CavasProducer:
         return canvas, kp2d_frame
 
 
-def update_frame_list(frame_list, origin_frames, start, end):
+def update_frame_list(frame_list, origin_frames, img_format, start, end):
     """Update frame list if have origin_frames."""
     input_temp_folder = None
     # choose in frame_list or origin_frames
@@ -369,10 +369,18 @@ def update_frame_list(frame_list, origin_frames, start, end):
             frame_list = glob.glob(osp.join(input_temp_folder, '*.png'))
             frame_list.sort()
         else:
-            frame_list = []
-            for im_name in os.listdir(origin_frames):
-                if Path(im_name).suffix.lower() in ['.png', '.jpg', 'jpeg']:
-                    frame_list.append(osp.join(origin_frames, im_name))
+            if img_format is None:
+                frame_list = []
+                for im_name in os.listdir(origin_frames):
+                    if Path(im_name).suffix.lower() in [
+                            '.png', '.jpg', '.jpeg'
+                    ]:
+                        frame_list.append(osp.join(origin_frames, im_name))
+            else:
+                frame_list = [
+                    osp.join(origin_frames, img_format % index)
+                    for index in range(end - start + 1)
+                ]
             frame_list.sort()
     return frame_list, input_temp_folder
 
@@ -387,6 +395,7 @@ def visualize_kp2d(
         palette: Optional[Iterable[int]] = None,
         data_source: str = 'coco',
         mask: Optional[Union[list, np.ndarray]] = None,
+        img_format: str = '%06d.png',
         start: int = 0,
         end: int = -1,
         overwrite: bool = False,
@@ -398,7 +407,7 @@ def visualize_kp2d(
         pop_parts: Iterable[str] = None,
         disable_tqdm: bool = False,
         disable_limbs: bool = False,
-        return_array: Optional[bool] = None,
+        return_array: Optional[bool] = False,
         keypoints_factory: dict = KEYPOINTS_FACTORY
 ) -> Union[None, np.ndarray]:
     """Visualize 2d keypoints to a video or into a folder of frames.
@@ -429,6 +438,7 @@ def visualize_kp2d(
                 mask to mask out the incorrect point.
                 Pass a `np.ndarray` of shape (J,) or `list` of length J.
                 Defaults to None.
+        img_format (str, optional): input image format. Default to '%06d.png',
         start (int, optional): start frame index. Defaults to 0.
         end (int, optional): end frame index. Defaults to -1.
         overwrite (bool, optional): whether replace the origin frames.
@@ -453,9 +463,8 @@ def visualize_kp2d(
             Defaults to False.
         disable_limbs (bool, optional): whether need to disable drawing limbs.
             Defaults to False.
-        return_array (bool, optional): Whether to return images as opencv array
-            .If None, an array will be returned when frame number is below 100.
-            Defaults to None.
+        return_array (bool, optional): Whether to return images as a opencv
+            array. Defaults to None.
         keypoints_factory (dict, optional): Dict of all the conventions.
             Defaults to KEYPOINTS_FACTORY.
 
@@ -466,21 +475,6 @@ def visualize_kp2d(
     Returns:
         Union[None, np.ndarray].
     """
-    if image_array is not None:
-        origin_frames = None
-        frame_list = None
-        return_array = True
-        input_temp_folder = None
-    else:
-        frame_list, input_temp_folder = update_frame_list(
-            frame_list, origin_frames, start, end)
-    # check output path
-    if output_path is not None:
-        output_temp_folder = _prepare_output_path(output_path, overwrite)
-        # check whether temp_folder will overwrite frame_list by accident
-        _check_temp_path(output_temp_folder, frame_list, overwrite)
-    else:
-        output_temp_folder = None
 
     # check the input array shape, reshape to (num_frame, num_person, J, 2)
     kp2d = kp2d[..., :2].copy()
@@ -488,12 +482,30 @@ def visualize_kp2d(
         kp2d = kp2d[:, np.newaxis]
     assert kp2d.ndim == 4
     num_frame, num_person = kp2d.shape[0], kp2d.shape[1]
+    # slice the input array temporally
+    end = (min(num_frame - 1, end) + num_frame) % num_frame
+    kp2d = kp2d[start:end + 1]
 
-    if return_array is None:
-        if num_frame > 100:
-            return_array = False
-        else:
-            return_array = True
+    if image_array is not None:
+        origin_frames = None
+        frame_list = None
+        return_array = True
+        input_temp_folder = None
+    else:
+        frame_list, input_temp_folder = update_frame_list(
+            frame_list, origin_frames, img_format, start, end)
+
+    if frame_list is not None:
+        num_frame = min(len(frame_list), num_frame)
+    kp2d = kp2d[:num_frame]
+
+    # check output path
+    if output_path is not None:
+        output_temp_folder = _prepare_output_path(output_path, overwrite)
+        # check whether temp_folder will overwrite frame_list by accident
+        _check_temp_path(output_temp_folder, frame_list, overwrite)
+    else:
+        output_temp_folder = None
 
     # check data_source & mask
     if data_source not in keypoints_factory:
@@ -518,12 +530,6 @@ def visualize_kp2d(
         limbs_target, limbs_palette = _prepare_limb_palette(
             limbs, palette, pop_parts, data_source, mask)
 
-    # slice the input array temporally
-    num_frame = min(len(frame_list),
-                    num_frame) if frame_list is not None else num_frame
-    end = (min(num_frame - 1, end) + num_frame) % num_frame
-    kp2d = kp2d[start:end + 1]
-
     canvas_producer = _CavasProducer(frame_list, resolution, kp2d, image_array)
 
     out_image_array = []
@@ -546,10 +552,11 @@ def visualize_kp2d(
                 disable_limbs=disable_limbs)
         if with_file_name and frame_list is not None:
             h, w, _ = canvas.shape
-            cv2.putText(canvas, str(Path(frame_list[frame_index]).name),
-                        (w // 2, h // 10), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5 * h / 500,
-                        np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
+            if frame_index <= len(frame_list) - 1:
+                cv2.putText(
+                    canvas, str(Path(frame_list[frame_index]).name),
+                    (w // 2, h // 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5 * h / 500,
+                    np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
         if output_path is not None:
             # write the frame with opencv
             if frame_list is not None and check_path_suffix(output_path, ['']):

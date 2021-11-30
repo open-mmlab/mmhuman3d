@@ -277,11 +277,11 @@ def convert_cameras(
     # in ndc or in screen
     if in_ndc_dst is False and in_ndc_src is True:
         assert resolution_dst is not None, \
-            'dst in screen, should specific resolution_dst.'
+            'dst in screen, should specify resolution_dst.'
 
     if in_ndc_src is False and in_ndc_dst is True:
         assert resolution_src is not None, \
-            'src in screen, should specific resolution_dst.'
+            'src in screen, should specify resolution_dst.'
     if resolution_dst is None:
         resolution_dst = 2.0
     if resolution_src is None:

@@ -10,6 +10,7 @@ from pytorch3d.io import save_obj
 from pytorch3d.renderer import TexturesVertex
 from pytorch3d.renderer.lighting import DirectionalLights, PointLights
 from pytorch3d.structures import Meshes
+from torch.nn.functional import interpolate
 
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
@@ -54,6 +55,7 @@ class SMPLRenderer(MeshBaseRenderer):
                  plot_kps: bool = False,
                  vis_kp_index: bool = False,
                  in_ndc: bool = True,
+                 final_resolution: Tuple[int, int] = None,
                  **kwargs) -> None:
         if plot_kps:
             self.alpha = max(min(0.8, alpha), 0.1)
@@ -69,6 +71,7 @@ class SMPLRenderer(MeshBaseRenderer):
         self.plot_kps = plot_kps
         self.vis_kp_index = vis_kp_index
         self.out_img_format = out_img_format
+        self.final_resolution = final_resolution
         super().__init__(
             resolution,
             device=device,
@@ -405,16 +408,27 @@ class SMPLRenderer(MeshBaseRenderer):
                         y = point_xy[j_idx, 1]
                         cv2.putText(im, str(j_idx), (int(x), int(y)),
                                     cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.25 * self.resolution[1] / 500, [0, 0, 0],
-                                    int(1 * self.resolution[1] / 1000))
+                                    0.25 * self.final_resolution[1] / 500,
+                                    [0, 0, 0],
+                                    int(1 * self.final_resolution[1] / 1000))
+                if self.final_resolution != self.resolution:
+                    im = cv2.resize(im, self.final_resolution, cv2.INTER_CUBIC)
                 cv2.imwrite(
                     osp.join(folder, self.out_img_format % real_idx), im)
 
         # return
         if self.return_tensor:
             if 'silhouette' in self.render_choice:
+                if self.final_resolution != self.resolution:
+                    alphas = interpolate(
+                        alphas, size=self.final_resolution, mode='bilinear')
                 return alphas
             else:
+                if self.final_resolution != self.resolution:
+                    rendered_images = interpolate(
+                        rendered_images,
+                        size=self.final_resolution,
+                        mode='bilinear')
                 return rendered_images
         else:
             return None

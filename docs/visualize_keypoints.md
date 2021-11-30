@@ -1,25 +1,34 @@
-## Visualize Keypoints (version 0.2.0)
+## Visualize Keypoints
 
 ### Visualize 2d keypoints  
 - **simple example for visualize 2d keypoints:**
 
-    You have 2d mmpose keypoints of shape(10, 133, 2).
+    You have 2d coco_wholebody keypoints of shape(10, 133, 2).
     ```python
     from mmhuman3d.core.visualization.visualize_keypoints2d import visualize_kp2d
-    visualize_kp2d(kp2d_mmpose, data_source='mmpose', output_path='some_video.mp4', resolution=(1024, 1024))
+
+    visualize_kp2d(
+        kp2d_coco_wholebody,
+        data_source='coco_wholebody',
+        output_path='some_video.mp4',
+        resolution=(1024, 1024))
     ```
     Then a 1024x1024 sized video with 10 frames would be save as 'some_video.mp4'
 
 - **data_source and mask:**
 
     If your keypoints have some nonsense points, you should provide the mask. `data_source` is mainly used to search the limb connections and palettes. You should specify the data_source if you dataset is in [convention](mmhuman3d/core/conventions/keypoints_mapping/).
-    E.g., convert mmpose keypoints to the convention of smpl and visualize it:
+    E.g., convert coco_wholebody keypoints to the convention of smpl and visualize it:
     ```python
     from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
     from mmhuman3d.core.visualization.visualize_keypoints2d import visualize_kp2d
 
-    kp2d_smpl, mask = convert_kps(kp2d_mmpose, src='mmpose', dst='smpl')
-    visualize_kp2d(kp2d_smpl, mask=mask, output_path='some_video.mp4', resolution=(1024, 1024))
+    kp2d_smpl, mask = convert_kps(kp2d_coco_wholebody, src='coco_wholebody', dst='smpl')
+    visualize_kp2d(
+        kp2d_smpl,
+        mask=mask,
+        output_path='some_video.mp4',
+        resolution=(1024, 1024))
     ```
     mask is `None` by default. This is the same as all ones mask, then no keypoints will be excluded. Ignore it when you are sure that all the keypoints are valid.
 
@@ -28,31 +37,47 @@
 
     Maybe you want to use numpy input backgrounds.
 
-    E.g., you want to visualize you mmpose kp2d as smpl convention. You have 2d mmpose keypoints of shape(10, 133, 2).
+    E.g., you want to visualize you coco_wholebody kp2d as smpl convention. You have 2d coco_wholebody keypoints of shape(10, 133, 2).
     ```python
     from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
     from mmhuman3d.core.visualization.visualize_keypoints2d import visualize_kp2d
 
     background = np.random.randint(low=0, high=255, shape=(10, 1024, 1024, 4))
     # multi_person, shape is (num_person, num_joints, 2)
-    out_image = visualize_kp2d(kp2d=kp2d, image_array=background, data_source='mmpose', return_array=True)
+    out_image = visualize_kp2d(
+        kp2d=kp2d, image_array=background, data_source='coco_wholebody', return_array=True)
+
     ```
     This is just an example, you can use this function flexibly.
 
-    If want to plot keypoints on frame files, you could provide `frame_list`(list of image path). **Be ware that the order of the frame will be sorted by name.
+    If want to plot keypoints on frame files, you could provide `frame_list`(list of image path). **Be aware that the order of the frame will be sorted by name.**
     or `origin_frames`(mp4 path or image folder path), **Be aware that you should provide the correct `img_format` for `ffmpeg` to read the images.**.
     ```python
     frame_list = ['im1.png', 'im2.png', ...]
-    visualize_kp2d(kp2d_mmpose, data_source='mmpose', output_path='some_video.mp4', resolution=(1024, 1024),
-    frame_list=frame_list)
+    visualize_kp2d(
+        kp2d_coco_wholebody,
+        data_source='coco_wholebody',
+        output_path='some_video.mp4',
+        resolution=(1024, 1024),
+        frame_list=frame_list)
 
     origin_frames = 'some_folder'
-    visualize_kp2d(kp2d_mmpose, data_source='mmpose', output_path='some_video.mp4', resolution=(1024, 1024),
-    origin_frames=origin_frames)
+    visualize_kp2d(
+        kp2d_coco_wholebody,
+        data_source='coco_wholebody',
+        output_path='some_video.mp4',
+        resolution=(1024, 1024),
+        origin_frames=origin_frames)
 
     origin_frames = 'some.mp4'
-    array = visualize_kp2d(kp2d_mmpose, data_source='mmpose', output_path='some_video.mp4', resolution=(1024, 1024), return_array=True,
-    origin_frames=origin_frames)
+    array = visualize_kp2d(
+        kp2d_coco_wholebody,
+        data_source='coco_wholebody',
+        output_path='some_video.mp4',
+        resolution=(1024, 1024),
+        return_array=True,
+        origin_frames=origin_frames)
+
     ```
     The superiorty of background images: `frame_list`
 

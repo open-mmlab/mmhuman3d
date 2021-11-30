@@ -100,7 +100,8 @@ def array_to_video(
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of the output video.
             Defaults to None.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check output path.
         TypeError: check input array.
@@ -184,6 +185,8 @@ def array_to_images(
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): resolution(height, width) of output.
             Defaults to None.
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
 
     Raises:
         FileNotFoundError: check output folder.
@@ -270,6 +273,8 @@ def video_to_array(
         end (int, optional): end frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to -1.
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
 
     Raises:
         FileNotFoundError: check the input path.
@@ -390,7 +395,10 @@ def images_to_array(
         end (int, optional): end frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to -1.
-
+        remove_raw_files (bool, optional): whether remove raw images.
+            Defaults to False.
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
 
@@ -543,6 +551,8 @@ def video_to_gif(
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of the output video.
             Defaults to None.
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
 
     Raises:
         FileNotFoundError: check the input path.
@@ -602,7 +612,8 @@ def video_to_images(input_path: str,
         end (int, optional): end frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to -1.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path
         FileNotFoundError: check the output path
@@ -670,7 +681,8 @@ def images_to_video(input_folder: str,
         end (int, optional): end frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to -1.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
@@ -774,7 +786,8 @@ def images_to_gif(
         end (int, optional): end frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to -1.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
@@ -871,7 +884,8 @@ def gif_to_video(input_path: str,
             Defaults to 1.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output. Defaults to None.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
@@ -920,7 +934,8 @@ def gif_to_images(input_path: str,
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output.
             Defaults to None.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
@@ -967,7 +982,8 @@ def crop_video(
             corner and width and height]. Defaults to [0, 0, 100, 100].
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output. Defaults to None.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
@@ -1028,7 +1044,8 @@ def slice_video(input_path: str,
         end (int, optional): end frame index. Defaults to -1.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output. Defaults to None.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
@@ -1083,7 +1100,8 @@ def spatial_concat_video(input_path_list: List[str],
             Defaults to False.
         padding (int, optional): width of pixels between videos.
             Defaults to 0.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
@@ -1166,7 +1184,8 @@ def temporal_concat_video(input_path_list: List[str],
             Defaults to (512,512).
         remove_raw_files (bool, optional): whether remove the input videos.
             Defaults to False.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
@@ -1231,7 +1250,8 @@ def compress_video(input_path: str,
         down_sample_scale (Union[float, int], optional): spatial down sample
             scale. Defaults to 1.
         fps (int, optional): [description]. Defaults to 30.
-
+        disable_log (bool, optional): whether close the ffmepg command info.
+            Defaults to False.
     Raises:
         FileNotFoundError: check the input path.
         FileNotFoundError: check the output path.
