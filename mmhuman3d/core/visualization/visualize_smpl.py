@@ -391,7 +391,7 @@ def render_smpl(
     end: int = -1,
     alpha: float = 1.0,
     no_grad: bool = False,
-    batch_size: int = 20,
+    batch_size: int = 10,
     device: Union[torch.device, str] = 'cuda',
     # file io parameters
     return_tensor: bool = False,
@@ -749,8 +749,12 @@ def render_smpl(
         R = torch.Tensor(R).view(-1, 3, 3)
     elif isinstance(R, torch.Tensor):
         R = R.view(-1, 3, 3)
+    elif isinstance(R, list):
+        R = torch.Tensor(R).view(-1, 3, 3)
+    elif R is None:
+        pass
     else:
-        R = None
+        raise ValueError(f'Wrong type of R: {type(R)}!')
 
     if R is not None:
         if len(R) > num_frame:
@@ -760,8 +764,12 @@ def render_smpl(
         T = torch.Tensor(T).view(-1, 3)
     elif isinstance(T, torch.Tensor):
         T = T.view(-1, 3)
+    elif isinstance(T, list):
+        T = torch.Tensor(T).view(-1, 3)
+    elif T is None:
+        pass
     else:
-        T = None
+        raise ValueError(f'Wrong type of T: {type(T)}!')
 
     if T is not None:
         if len(T) > num_frame:
@@ -771,8 +779,11 @@ def render_smpl(
         K = torch.Tensor(K).view(-1, K.shape[-2], K.shape[-1])
     elif isinstance(K, torch.Tensor):
         K = K.view(-1, K.shape[-2], K.shape[-1])
+    elif isinstance(K, list):
+        K = torch.Tensor(K)
+        K = K.view(-1, K.shape[-2], K.shape[-1])
     else:
-        K = None
+        raise ValueError(f'Wrong type of K: {type(K)}!')
 
     if K is not None:
         if len(K) > num_frame:
