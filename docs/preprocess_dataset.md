@@ -350,7 +350,7 @@ mmhuman3d
 
 </details>
 
-For [HybrIK](https://github.com/Jeff-sjtu/HybrIK), please download the parsed [json annotation files] (https://github.com/Jeff-sjtu/HybrIK#fetch-data) and place them in the folder structure below:
+For [HybrIK](https://github.com/Jeff-sjtu/HybrIK), please download the parsed [json annotation files](https://github.com/Jeff-sjtu/HybrIK#fetch-data) and place them in the folder structure below:
 
 ```text
 mmhuman3d
@@ -371,10 +371,10 @@ mmhuman3d
 
 To convert the preprocessed json files into npz files used for our pipeline,
 run the following preprocessing scripts:
-  - [Human3.6M] (mmhuman3d/data/data_converters/h36m_hybrik.py)
-  - [PW3D] (mmhuman3d/data/data_converters/pw3d_hybrik.py)
-  - [Mpi-Inf-3dhp] (mmhuman3d/data/data_converters/mpi_inf_3dhp_hybrik.py)
-  - [COCO] (mmhuman3d/data/data_converters/coco_hybrik.py)
+  - [Human3.6M](mmhuman3d/data/data_converters/h36m_hybrik.py)
+  - [PW3D](mmhuman3d/data/data_converters/pw3d_hybrik.py)
+  - [Mpi-Inf-3dhp](mmhuman3d/data/data_converters/mpi_inf_3dhp_hybrik.py)
+  - [COCO](mmhuman3d/data/data_converters/coco_hybrik.py)
 
 
 ## LSP
@@ -703,7 +703,7 @@ mmhuman3d
 
 </details>
 
-For [SPIN](https://github.com/nkolot/SPIN), please download the [preprocessed npz files] (https://github.com/nkolot/SPIN/blob/master/fetch_data.sh) and place them in the folder structure below:
+For [SPIN](https://github.com/nkolot/SPIN), please download the [preprocessed npz files](https://github.com/nkolot/SPIN/blob/master/fetch_data.sh) and place them in the folder structure below:
 
 ```text
 mmhuman3d

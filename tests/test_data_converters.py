@@ -189,6 +189,13 @@ def test_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_mpii_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' +
                           'spin_hr-lspet_train.npz')
+    cfg = dict(
+        type='H36mSpinConverter',
+        modes=['train'],
+        mosh_dir='tests/data/dataset_sample/h36m_mosh')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(H36M_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'spin_h36m_train.npz'))
 
 
 def test_preprocessed_npz():
