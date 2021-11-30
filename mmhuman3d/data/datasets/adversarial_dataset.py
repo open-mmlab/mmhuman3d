@@ -12,32 +12,30 @@ class AdversarialDataset(Dataset):
     The dataset combines data from two datasets and
     return a dict containing data from two datasets.
     Args:
-        train_dataset (Dataset): Dataset for 3D human mesh estimation.
-        adversarial_dataset (Dataset): Dataset for adversarial learning,
-            provides real SMPL parameters.
+        train_dataset (:obj:`Dataset`): Dataset for 3D human mesh estimation.
+        adv_dataset (:obj:`Dataset`): Dataset for adversarial learning.
     """
 
-    def __init__(self, train_dataset, adv_dataset):
+    def __init__(self, train_dataset: Dataset, adv_dataset: Dataset):
         super().__init__()
         self.train_dataset = build_dataset(train_dataset)
         self.adv_dataset = build_dataset(adv_dataset)
-        self.length = len(self.train_dataset)
+        self.num_train_data = len(self.train_dataset)
+        self.num_adv_data = len(self.adv_dataset)
 
     def __len__(self):
         """Get the size of the dataset."""
-        return self.length
+        return self.num_train_data
 
-    def __getitem__(self, i):
+    def __getitem__(self, idx: int):
         """Given index, get the data from train dataset and randomly sample an
         item from adversarial dataset.
 
         Return a dict containing data from train and adversarial dataset.
         """
-        data = self.train_dataset[i]
-        ind_adv = np.random.randint(
-            low=0, high=len(self.adv_dataset), dtype=int)
-        num_adv_data = len(self.adv_dataset)
-        adv_data = self.adv_dataset[ind_adv % num_adv_data]
+        data = self.train_dataset[idx]
+        adv_idx = np.random.randint(low=0, high=self.num_adv_data, dtype=int)
+        adv_data = self.adv_dataset[adv_idx]
         for k, v in adv_data.items():
             data['adv_' + k] = v
         return data

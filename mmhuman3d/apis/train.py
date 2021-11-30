@@ -45,6 +45,7 @@ def train_model(model,
                 timestamp=None,
                 device='cuda',
                 meta=None):
+    """Main api for training model."""
     logger = get_root_logger(cfg.log_level)
 
     # prepare data loaders

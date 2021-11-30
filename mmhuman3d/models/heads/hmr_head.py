@@ -16,8 +16,9 @@ class HMRHead(BaseModule):
                  npose=144,
                  nbeta=10,
                  ncam=3,
-                 hdim=1024):
-        super(HMRHead, self).__init__()
+                 hdim=1024,
+                 init_cfg=None):
+        super(HMRHead, self).__init__(init_cfg=init_cfg)
         self.fc1 = nn.Linear(feat_dim + npose + nbeta + ncam, hdim)
         self.drop1 = nn.Dropout()
         self.fc2 = nn.Linear(hdim, hdim)

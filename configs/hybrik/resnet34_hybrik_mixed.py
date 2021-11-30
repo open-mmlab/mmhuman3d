@@ -55,7 +55,7 @@ data_keys = [
     'target_uvd_29', 'target_xyz_24', 'target_weight_24', 'target_weight_29',
     'target_xyz_17', 'target_weight_17', 'target_theta', 'target_beta',
     'target_smpl_weight', 'target_theta_weight', 'target_twist',
-    'target_twist_weight', 'bbox'
+    'target_twist_weight', 'bbox', 'sample_idx'
 ]
 
 h36m_idxs = [
@@ -172,7 +172,7 @@ data = dict(
         partition=[0.4, 0.1, 0.5]),
     test=dict(
         type=dataset_type,
-        dataset_name='3dpw',
+        dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
         ann_file='3dpw_hybrik_test.npz'),

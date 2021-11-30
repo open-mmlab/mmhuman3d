@@ -21,7 +21,6 @@ from .transforms import (
     CenterCrop,
     ColorJitter,
     GetRandomScaleRotation,
-    KeypointsSelection,
     Lighting,
     MeshAffine,
     Normalize,
@@ -33,7 +32,7 @@ __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToPIL', 'ToNumpy',
     'Transpose', 'Collect', 'LoadImageFromFile', 'CenterCrop',
     'RandomHorizontalFlip', 'ColorJitter', 'Lighting', 'RandomChannelNoise',
-    'GetRandomScaleRotation', 'KeypointsSelection', 'MeshAffine',
-    'HybrIKRandomFlip', 'HybrIKAffine', 'GenerateHybrIKTarget', 'RandomDPG',
-    'RandomOcclusion', 'NewKeypointsSelection', 'Normalize'
+    'GetRandomScaleRotation', 'MeshAffine', 'HybrIKRandomFlip', 'HybrIKAffine',
+    'GenerateHybrIKTarget', 'RandomDPG', 'RandomOcclusion',
+    'NewKeypointsSelection', 'Normalize'
 ]

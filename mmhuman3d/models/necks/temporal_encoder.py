@@ -1,57 +1,50 @@
+from typing import Optional, Union
+
+import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from mmcv.runner.base_module import BaseModule
 
 from ..builder import NECKS
 
 
 @NECKS.register_module()
-class TemporalGRUEncoder(nn.Module):
-    """TemporalEncoder used for VIBE.
+class TemporalGRUEncoder(BaseModule):
+    """TemporalEncoder used for VIBE. Adapted from
+    https://github.com/mkocabas/VIBE.
 
     Args:
-        input_size (int, optional): Dimension of input feature. Default: 2048.
-        num_layer (int, optional): Number of layers for GRU. Default: 1.
-        hidden_size (int, optional): Hidden size for GRU. Default: 2048.
-        bidirectional (bool, optional): Whether use bidirectional GRU or not.
-            Default: False.
-        add_linear (bool, optional): Whether use extra linear layer on the
-            output of GRU module or not. Default: False.
-        use_residual (bool, optional): Whether use residual connection in this
-            module. Default: True.
+        input_size (int, optional): dimension of input feature. Default: 2048.
+        num_layer (int, optional): number of layers for GRU. Default: 1.
+        gru_scale (float, optional): the intial ratio of gru branch
+        hidden_size (int, optional): hidden size for GRU. Default: 2048.
+        init_cfg (dict or list[dict], optional): Initialization config dict.
+            Default: None.
     """
 
     def __init__(self,
-                 input_size=2048,
-                 num_layers=1,
-                 hidden_size=2048,
-                 bidirectional=False,
-                 add_linear=False,
-                 use_residual=True):
-        super(TemporalGRUEncoder, self).__init__()
+                 input_size: Optional[int] = 2048,
+                 num_layers: Optional[int] = 1,
+                 gru_scale: Optional[float] = 1.0,
+                 hidden_size: Optional[int] = 2048,
+                 init_cfg: Optional[Union[list, dict, None]] = None):
+        super(TemporalGRUEncoder, self).__init__(init_cfg)
 
         self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.gru_scale = nn.Parameter(torch.Tensor([gru_scale]))
         self.gru = nn.GRU(
             input_size=input_size,
             hidden_size=hidden_size,
-            bidirectional=bidirectional,
+            bidirectional=False,
             num_layers=num_layers)
-
-        self.linear = None
-        if bidirectional:
-            self.linear = nn.Linear(hidden_size * 2, 2048)
-        elif add_linear:
-            self.linear = nn.Linear(hidden_size, 2048)
-        self.use_residual = use_residual
+        self.relu = nn.ReLU()
+        self.linear = self.linear = nn.Linear(hidden_size, input_size)
 
     def forward(self, x):
-        N, T, L = x.shape
-        x = x.permute(1, 0, 2)  # NTL -> TNL
+        N, T = x.shape[:2]
+        x = x.permute(1, 0, 2)
         y, _ = self.gru(x)
-        if self.linear:
-            y = F.relu(y)
-            y = self.linear(y.view(-1, y.size(-1)))
-            y = y.view(T, N, L)
-        if self.use_residual and y.shape[-1] == 2048:
-            y = y + x
-        y = y.permute(1, 0, 2).contiguous()  # TNL -> NTL
+        y = self.linear(self.relu(y).view(-1, self.hidden_size))
+        y = y.view(T, N, self.input_size) * self.gru_scale + x
+        y = y.permute(1, 0, 2).contiguous()
         return y

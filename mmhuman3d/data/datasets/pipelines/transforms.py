@@ -5,6 +5,7 @@ import cv2
 import mmcv
 import numpy as np
 
+from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
 from ..builder import PIPELINES
 from .compose import Compose
 
@@ -15,7 +16,7 @@ def get_affine_transform(center,
                          output_size,
                          shift=(0., 0.),
                          inv=False,
-                         pixel_std=200.0):
+                         pixel_std=1.0):
     """Get the affine transform matrix, given the center/scale/rot/output_size.
 
     Args:
@@ -37,7 +38,6 @@ def get_affine_transform(center,
     assert len(output_size) == 2
     assert len(shift) == 2
 
-    # pixel_std is 200.
     scale_tmp = scale * pixel_std
 
     shift = np.array(shift)
@@ -210,7 +210,7 @@ def _flip_smpl_pose(pose):
     return pose_flipped
 
 
-def _flip_keypoints(keypoints, keypoints_mask, flip_pairs, img_width=None):
+def _flip_keypoints(keypoints, flip_pairs, img_width=None):
     """Flip human joints horizontally.
 
     Note:
@@ -218,35 +218,29 @@ def _flip_keypoints(keypoints, keypoints_mask, flip_pairs, img_width=None):
         num_dimension: D
     Args:
         keypoints (np.ndarray([K, D])): Coordinates of keypoints.
-        keypoints_mask (np.ndarray([K])): Visibility of keypoints.
         flip_pairs (list[tuple()]): Pairs of keypoints which are mirrored
             (for example, left ear -- right ear).
+        img_width (int | None, optional): The width of the original image.
+            To flip 2D keypoints, image width is needed. To flip 3D keypoints,
+            we simply negate the value of x-axis. Default: None.
     Returns:
-        keypoints_flipped, keypoints_mask_flipped
+        keypoints_flipped
     """
 
-    assert len(keypoints) == len(keypoints_mask)
-
     keypoints_flipped = keypoints.copy()
-    keypoints_mask_flipped = keypoints_mask.copy()
 
     # Swap left-right parts
     for left, right in flip_pairs:
         keypoints_flipped[left, :] = keypoints[right, :]
         keypoints_flipped[right, :] = keypoints[left, :]
 
-        keypoints_mask_flipped[left] = keypoints_mask[right]
-        keypoints_mask_flipped[right] = keypoints_mask[left]
-
     # Flip horizontally
     if img_width is None:
         keypoints_flipped[:, 0] = -keypoints_flipped[:, 0]
     else:
         keypoints_flipped[:, 0] = img_width - 1 - keypoints_flipped[:, 0]
-    keypoints_flipped = \
-        keypoints_flipped * keypoints_mask_flipped.reshape((-1, 1))
 
-    return keypoints_flipped, keypoints_mask_flipped
+    return keypoints_flipped
 
 
 def _rotate_joints_3d(joints_3d, rot):
@@ -304,10 +298,10 @@ class RandomHorizontalFlip(object):
         flip_prob (float): probability of the image being flipped. Default: 0.5
     """
 
-    def __init__(self, flip_prob=0.5, flip_pairs=None):
+    def __init__(self, flip_prob=0.5, convention=None):
         assert 0 <= flip_prob <= 1
         self.flip_prob = flip_prob
-        self.flip_pairs = flip_pairs
+        self.flip_pairs = get_flip_pairs(convention)
 
     def __call__(self, results):
         """Call function to flip image and annotations.
@@ -334,11 +328,8 @@ class RandomHorizontalFlip(object):
             assert self.flip_pairs is not None
             width = results['img'][:, ::-1, :].shape[1]
             keypoints2d = results['keypoints2d']
-            keypoints2d_mask = results['keypoints2d_mask']
-            keypoints2d, keypoints2d_mask = _flip_keypoints(
-                keypoints2d, keypoints2d_mask, self.flip_pairs, width)
+            keypoints2d = _flip_keypoints(keypoints2d, self.flip_pairs, width)
             results['keypoints2d'] = keypoints2d
-            results['keypoints2d_mask'] = keypoints2d_mask
 
         # flip bbox center
         center = results['center']
@@ -349,11 +340,8 @@ class RandomHorizontalFlip(object):
         if 'keypoints3d' in results:
             assert self.flip_pairs is not None
             keypoints3d = results['keypoints3d']
-            keypoints3d_mask = results['keypoints3d_mask']
-            keypoints3d, keypoints3d_mask = _flip_keypoints(
-                keypoints3d, keypoints3d_mask, self.flip_pairs)
+            keypoints3d = _flip_keypoints(keypoints3d, self.flip_pairs)
             results['keypoints3d'] = keypoints3d
-            results['keypoints3d_mask'] = keypoints3d_mask
 
         # flip smpl
         if 'smpl_body_pose' in results:
@@ -672,41 +660,12 @@ class GetRandomScaleRotation:
 
 
 @PIPELINES.register_module()
-class KeypointsSelection:
-    """Select keypoints.
-
-    Modifies key: 'keypoints2d', 'keypoints2d_mask',
-         'keypoints3d' and 'keypoints3d_mask'.
-    Args:
-        keypoints_index (list[int]): indexes of keypoints.
-    """
-
-    def __init__(self, keypoints_index):
-        self.keypoints_index = keypoints_index
-
-    def __call__(self, results):
-        """Perform keypoints selection."""
-        if 'keypoints2d' in results:
-            results['keypoints2d'] = \
-                results['keypoints2d'][..., self.keypoints_index, :]
-            results['keypoints2d_mask'] = \
-                results['keypoints2d_mask'][..., self.keypoints_index]
-        if 'keypoints3d' in results:
-            results['keypoints3d'] = \
-                results['keypoints3d'][..., self.keypoints_index, :]
-            results['keypoints3d_mask'] = \
-                results['keypoints3d_mask'][..., self.keypoints_index]
-        return results
-
-
-@PIPELINES.register_module()
 class MeshAffine:
     """Affine transform the image to get input image.
 
     Affine transform the 2D keypoints, 3D kepoints. Required keys: 'img',
     'pose', 'img_shape', 'rotation' and 'center'. Modifies key: 'img',
-    ''keypoints2d','keypoints2d_mask', 'keypoints3d', 'keypoints3d_mask',
-    'pose',.
+    ''keypoints2d', 'keypoints3d', 'pose'.
     """
 
     def __init__(self, img_res):
@@ -714,25 +673,24 @@ class MeshAffine:
         self.image_size = np.array([img_res, img_res])
 
     def __call__(self, results):
-        img = results['img']
         c = results['center']
         s = results['scale']
         r = results['rotation']
-
         trans = get_affine_transform(c, s, r, self.image_size)
 
-        img = cv2.warpAffine(
-            img,
-            trans, (int(self.image_size[0]), int(self.image_size[1])),
-            flags=cv2.INTER_LINEAR)
-        results['img'] = img
+        if 'img' in results:
+            img = results['img']
+            img = cv2.warpAffine(
+                img,
+                trans, (int(self.image_size[0]), int(self.image_size[1])),
+                flags=cv2.INTER_LINEAR)
+            results['img'] = img
 
         if 'keypoints2d' in results:
             keypoints2d = results['keypoints2d']
-            keypoints2d_mask = results['keypoints2d_mask']
             num_keypoints = len(keypoints2d)
             for i in range(num_keypoints):
-                if keypoints2d_mask[i] > 0.0:
+                if keypoints2d[i][2] > 0.0:
                     keypoints2d[i][:2] = \
                         affine_transform(keypoints2d[i][:2], trans)
             results['keypoints2d'] = keypoints2d

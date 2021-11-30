@@ -25,7 +25,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         data_prefix (str): Path to a directory where preprocessed datasets are
          held.
         pipeline (list[dict | callable]): A sequence of data transforms.
-        dataset_name (str): accepted names include 'h36m', '3dpw',
+        dataset_name (str): accepted names include 'h36m', 'pw3d',
          'mpi_inf_3dhp', 'coco'
         ann_file (str): Name of annotation file.
         test_mode (bool): Store True when building test dataset.
@@ -79,7 +79,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         data.load(self.ann_file)
 
         self.image_path = data['image_path']
-        num_data = len(self.image_path)
+        self.num_data = len(self.image_path)
 
         self.bbox_xywh = data['bbox_xywh']
         self.width = data['image_width']
@@ -96,7 +96,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         try:
             self.smpl = data['smpl']
             if 'has_smpl' not in data.keys():
-                self.has_smpl = np.ones((num_data)).astype(np.float32)
+                self.has_smpl = np.ones((self.num_data)).astype(np.float32)
             else:
                 self.has_smpl = data['has_smpl'].astype(np.float32)
             self.thetas = self.smpl['thetas'].astype(np.float32)
@@ -113,7 +113,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 self.keypoints3d_cam, _ = self.get_3d_keypoints_vis(
                     data['keypoints3d_cam'])
         except KeyError:
-            self.has_smpl = np.zeros((num_data)).astype(np.float32)
+            self.has_smpl = np.zeros((self.num_data)).astype(np.float32)
             if self.test_mode:
                 self.keypoints3d, self.keypoints3d_vis = \
                     self.get_3d_keypoints_vis(data['keypoints3d'])
@@ -123,24 +123,24 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         try:
             self.intrinsic = data['cam_param']['intrinsic']
         except KeyError:
-            self.intrinsic = np.zeros((num_data, 3, 3))
+            self.intrinsic = np.zeros((self.num_data, 3, 3))
 
         try:
             self.target_twist = data['phi']
             # self.target_twist_weight = np.ones_like((self.target_twist))
             self.target_twist_weight = data['phi_weight']
         except KeyError:
-            self.target_twist = np.zeros((num_data, 23, 2))
+            self.target_twist = np.zeros((self.num_data, 23, 2))
             self.target_twist_weight = np.zeros_like((self.target_twist))
 
         try:
             self.root_cam = data['root_cam']
         except KeyError:
-            self.root_cam = np.zeros((num_data, 3))
+            self.root_cam = np.zeros((self.num_data, 3))
 
-        data_infos = []
+        self.data_infos = []
 
-        for idx in range(num_data):
+        for idx in range(self.num_data):
             info = {}
             info['ann_info'] = {}
             info['img_prefix'] = None
@@ -193,9 +193,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                     info['joint_relative_17'] = self.keypoints3d_cam[
                         idx].astype(np.float32)
 
-            data_infos.append(info)
-
-        return data_infos
+            self.data_infos.append(info)
 
     def evaluate(self, outputs, res_folder, metric='joint_error', logger=None):
         """Evaluate 3D keypoint results."""
@@ -206,15 +204,13 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 raise KeyError(f'metric {metric} is not supported')
 
         res_file = os.path.join(res_folder, 'result_keypoints.json')
-        kpts = []
-
+        kpts_dict = {}
         for out in outputs:
-            for (keypoints, image_path) in zip(out['xyz_17'],
-                                               out['image_path']):
-                kpts.append({
-                    'keypoints': keypoints.tolist(),
-                    'image': image_path,
-                })
+            for (keypoints, idx) in zip(out['xyz_17'], out['image_idx']):
+                kpts_dict[int(idx)] = keypoints.tolist()
+        kpts = []
+        for i in range(self.num_data):
+            kpts.append(kpts_dict[i])
         self._write_keypoint_results(kpts, res_file)
         info_str = self._report_metric(res_file)
         name_value = OrderedDict(info_str)
@@ -234,10 +230,9 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         """
 
         with open(res_file, 'r') as fin:
-            preds = json.load(fin)
-        assert len(preds) == len(self.data_infos)
+            pred_keypoints3d = json.load(fin)
+        assert len(pred_keypoints3d) == len(self.data_infos)
 
-        pred_keypoints3d = [pred['keypoints'] for pred in preds]
         pred_keypoints3d = np.array(pred_keypoints3d)
         factor, root_idx_17 = 1, 0
         gts = self.data_infos
@@ -258,11 +253,11 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             joint_mapper = [6, 5, 4, 1, 2, 3, 16, 15, 14, 11, 12, 13, 8, 10]
             gt_keypoints3d_mask = np.ones(
                 (len(gt_keypoints3d), len(joint_mapper)))
-            if self.dataset_name == '3dpw':
+            if self.dataset_name == 'pw3d':
                 factor = 1000
 
         print('Evaluation start...')
-        assert len(gts) == len(preds), (len(gts), len(preds))
+        assert len(gts) == len(pred_keypoints3d)
 
         pred_keypoints3d = pred_keypoints3d * (2000 / factor)
         if self.dataset_name == 'mpi_inf_3dhp':
@@ -272,7 +267,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                                                                root_idx_17]
         gt_keypoints3d = gt_keypoints3d - gt_keypoints3d[:, None, root_idx_17]
 
-        if self.dataset_name == '3dpw' or self.dataset_name == 'h36m':
+        if self.dataset_name == 'pw3d' or self.dataset_name == 'h36m':
             # select eval 14 joints
             pred_keypoints3d = pred_keypoints3d[:, joint_mapper, :]
             gt_keypoints3d = gt_keypoints3d[:, joint_mapper, :]

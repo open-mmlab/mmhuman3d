@@ -81,7 +81,7 @@ class SmoothL1Loss(nn.Module):
         assert reduction_override in (None, 'none', 'mean', 'sum')
         reduction = (
             reduction_override if reduction_override else self.reduction)
-        loss_bbox = self.loss_weight * smooth_l1_loss(
+        loss = self.loss_weight * smooth_l1_loss(
             pred,
             target,
             weight,
@@ -89,7 +89,7 @@ class SmoothL1Loss(nn.Module):
             reduction=reduction,
             avg_factor=avg_factor,
             **kwargs)
-        return loss_bbox
+        return loss
 
 
 @LOSSES.register_module()
@@ -129,6 +129,6 @@ class L1Loss(nn.Module):
         assert reduction_override in (None, 'none', 'mean', 'sum')
         reduction = (
             reduction_override if reduction_override else self.reduction)
-        loss_bbox = self.loss_weight * l1_loss(
+        loss = self.loss_weight * l1_loss(
             pred, target, weight, reduction=reduction, avg_factor=avg_factor)
-        return loss_bbox
+        return loss

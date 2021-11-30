@@ -257,6 +257,7 @@ def _demo_mm_inputs(input_shape=(1, 3, 256, 256)):
         'target_twist_weight': torch.FloatTensor(target_twist_weight),
         'bbox': torch.FloatTensor(bbox),
         'img_metas': img_metas,
+        'sample_idx': np.arange(N)
     }
 
     return mm_inputs

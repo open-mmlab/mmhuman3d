@@ -1,3 +1,5 @@
+from typing import Optional, Union
+
 import numpy as np
 from torch.utils.data import ConcatDataset, Dataset, WeightedRandomSampler
 
@@ -6,8 +8,21 @@ from .builder import DATASETS, build_dataset
 
 @DATASETS.register_module()
 class MixedDataset(Dataset):
+    """Mixed Dataset.
 
-    def __init__(self, configs, partition, num_data=None):
+    Args:
+        config (list): the list of different datasets.
+        partition (list): the ratio of datasets in each batch.
+        num_data (int | None, optional): if num_data is not None, the number
+            of iterations is set to this fixed value. Otherwise, the number of
+            iterations is set to the maximum size of each single dataset.
+            Default: None.
+    """
+
+    def __init__(self,
+                 configs: list,
+                 partition: list,
+                 num_data: Optional[Union[int, None]] = None):
         """Load data from multiple datasets."""
         assert min(partition) >= 0
         datasets = [build_dataset(cfg) for cfg in configs]

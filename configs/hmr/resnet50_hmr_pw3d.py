@@ -27,22 +27,32 @@ model = dict(
         type='ResNet',
         depth=50,
         out_indices=[3],
+        norm_eval=False,
+        norm_cfg=dict(type='SyncBN', requires_grad=True),
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     head=dict(
         type='HMRHead',
         feat_dim=2048,
         smpl_mean_params='data/body_models/smpl_mean_params.npz'),
-    body_model=dict(
+    body_model_train=dict(
         type='SMPL',
         keypoint_src='smpl_54',
-        keypoint_dst='smpl_49',
+        keypoint_dst='smpl_45',
         model_path='data/body_models/smpl',
-        extra_joints_regressor='data/J_regressor_extra.npy'),
-    loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=1000),
-    loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=100),
-    loss_vertex=dict(type='L1Loss', loss_weight=20),
-    loss_smpl_pose=dict(type='MSELoss', loss_weight=30),
-    loss_smpl_betas=dict(type='MSELoss', loss_weight=0.2),
+        keypoint_approximate=True,
+        extra_joints_regressor='data/body_models/J_regressor_extra.npy'),
+    body_model_test=dict(
+        type='SMPL',
+        keypoint_src='h36m',
+        keypoint_dst='h36m',
+        model_path='data/body_models/smpl',
+        joints_regressor='data/body_models/J_regressor_h36m.npy'),
+    convention='smpl_45',
+    loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=100),
+    loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=10),
+    loss_vertex=dict(type='L1Loss', loss_weight=2),
+    loss_smpl_pose=dict(type='MSELoss', loss_weight=3),
+    loss_smpl_betas=dict(type='MSELoss', loss_weight=0.02),
     loss_adv=dict(
         type='GANLoss',
         gan_type='lsgan',
@@ -56,17 +66,12 @@ img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data_keys = [
     'has_smpl', 'smpl_body_pose', 'smpl_global_orient', 'smpl_betas',
-    'smpl_transl', 'keypoints2d', 'keypoints2d_mask', 'keypoints3d',
-    'keypoints3d_mask'
+    'smpl_transl', 'keypoints2d', 'keypoints3d', 'sample_idx'
 ]
-keypoints_index = [_ for _ in range(24)]
-flip_pairs = [[0, 5], [1, 4], [2, 3], [6, 11], [7, 10], [8, 9], [20, 21],
-              [22, 23]]
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='RandomChannelNoise', noise_factor=0.4),
-    dict(type='KeypointsSelection', keypoints_index=keypoints_index),
-    dict(type='RandomHorizontalFlip', flip_prob=0.5, flip_pairs=flip_pairs),
+    dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_45'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='MeshAffine', img_res=224),
     dict(type='Normalize', **img_norm_cfg),
@@ -83,7 +88,6 @@ adv_data_keys = [
 train_adv_pipeline = [dict(type='Collect', keys=adv_data_keys, meta_keys=[])]
 test_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='KeypointsSelection', keypoints_index=keypoints_index),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
     dict(type='MeshAffine', img_res=224),
     dict(type='Normalize', **img_norm_cfg),
@@ -107,36 +111,42 @@ data = dict(
                     dataset_name='h36m',
                     data_prefix='data',
                     pipeline=train_pipeline,
-                    ann_file='h36m_train.npz'),
+                    convention='smpl_45',
+                    ann_file='h36m_mosh_train.npz'),
                 dict(
                     type=dataset_type,
                     dataset_name='mpi_inf_3dhp',
                     data_prefix='data',
                     pipeline=train_pipeline,
+                    convention='smpl_45',
                     ann_file='mpi_inf_3dhp_train.npz'),
                 dict(
                     type=dataset_type,
-                    dataset_name='lsp_original',
+                    dataset_name='lsp',
                     data_prefix='data',
                     pipeline=train_pipeline,
-                    ann_file='lsp_dataset_original_train.npz'),
+                    convention='smpl_45',
+                    ann_file='lsp_train.npz'),
                 dict(
                     type=dataset_type,
                     dataset_name='lspet',
                     data_prefix='data',
                     pipeline=train_pipeline,
+                    convention='smpl_45',
                     ann_file='hr-lspet_train.npz'),
                 dict(
                     type=dataset_type,
                     dataset_name='mpii',
                     data_prefix='data',
                     pipeline=train_pipeline,
+                    convention='smpl_45',
                     ann_file='mpii_train.npz'),
                 dict(
                     type=dataset_type,
                     dataset_name='coco',
                     data_prefix='data',
                     pipeline=train_pipeline,
+                    convention='smpl_45',
                     ann_file='coco_2014_train.npz'),
             ],
             partition=[0.35, 0.15, 0.1, 0.10, 0.10, 0.2],
@@ -151,10 +161,10 @@ data = dict(
         type=dataset_type,
         body_model=dict(
             type='GenderedSMPL',
-            keypoint_src='smpl_54',
-            keypoint_dst='smpl_49',
+            keypoint_src='h36m',
+            keypoint_dst='h36m',
             model_path='data/body_models/smpl',
-            extra_joints_regressor='data/J_regressor_extra.npy'),
+            joints_regressor='data/body_models/J_regressor_h36m.npy'),
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,

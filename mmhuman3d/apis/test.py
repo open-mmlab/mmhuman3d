@@ -17,6 +17,7 @@ def single_gpu_test(model,
                     show=False,
                     out_dir=None,
                     **show_kwargs):
+    """Test with single gpu."""
     model.eval()
     results = []
     dataset = data_loader.dataset
@@ -65,7 +66,10 @@ def single_gpu_test(model,
                     out_file=out_file,
                     **show_kwargs)
 
-        batch_size = data['img'].size(0)
+        if 'img' in data.keys():
+            batch_size = data['img'].size(0)
+        else:
+            batch_size = data['features'].size(0)
         for _ in range(batch_size):
             prog_bar.update()
     return results
@@ -127,6 +131,7 @@ def multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False):
 
 
 def collect_results_cpu(result_part, size, tmpdir=None):
+    """Collect results in cpu."""
     rank, world_size = get_dist_info()
     # create a tmp dir if it is not specified
     if tmpdir is None:
@@ -171,6 +176,7 @@ def collect_results_cpu(result_part, size, tmpdir=None):
 
 
 def collect_results_gpu(result_part, size):
+    """Collect results in gpu."""
     rank, world_size = get_dist_info()
     # dump result part to tensor with pickle
     part_tensor = torch.tensor(
