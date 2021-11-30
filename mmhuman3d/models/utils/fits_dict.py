@@ -4,15 +4,22 @@ import cv2
 import numpy as np
 import torch
 
-from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
 from mmhuman3d.utils.transforms import aa_to_rotmat
 
-train_datasets = [
-    'h36m', 'mpi_inf_3dhp', 'lsp_original', 'lspet', 'mpii', 'coco'
-]
-
+train_datasets = ['h36m', 'mpi_inf_3dhp', 'lsp', 'lspet', 'mpii', 'coco']
 static_fits_load_dir = 'data/static_fits'
 save_dir = 'data/spin_fits'
+
+# Permutation of SMPL pose parameters when flipping the shape
+SMPL_JOINTS_FLIP_PERM = [
+    0, 2, 1, 3, 5, 4, 6, 8, 7, 9, 11, 10, 12, 14, 13, 15, 17, 16, 19, 18, 21,
+    20, 23, 22
+]
+SMPL_POSE_FLIP_PERM = []
+for i in SMPL_JOINTS_FLIP_PERM:
+    SMPL_POSE_FLIP_PERM.append(3 * i)
+    SMPL_POSE_FLIP_PERM.append(3 * i + 1)
+    SMPL_POSE_FLIP_PERM.append(3 * i + 2)
 
 
 class FitsDict():
@@ -28,8 +35,7 @@ class FitsDict():
 
         # array used to flip SMPL pose parameters
         self.flipped_parts = torch.tensor(
-            get_flip_pairs(convention='smpl_49'), dtype=torch.int64)
-
+            SMPL_POSE_FLIP_PERM, dtype=torch.int64)
         # Load dictionary state
         # for ds_name, ds in train_dataset.dataset_dict.items():
         for ds_name in train_datasets:

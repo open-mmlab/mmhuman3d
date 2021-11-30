@@ -1,4 +1,5 @@
 from torch.utils.data.dataset import ConcatDataset as _ConcatDataset
+from torch.utils.data.dataset import Dataset
 
 from .builder import DATASETS
 
@@ -14,7 +15,7 @@ class ConcatDataset(_ConcatDataset):
         datasets (list[:obj:`Dataset`]): A list of datasets.
     """
 
-    def __init__(self, datasets):
+    def __init__(self, datasets: list):
         super(ConcatDataset, self).__init__(datasets)
 
 
@@ -32,18 +33,15 @@ class RepeatDataset(object):
         times (int): Repeat times.
     """
 
-    def __init__(self, dataset, times):
+    def __init__(self, dataset: Dataset, times: int):
         self.dataset = dataset
         self.times = times
         self.CLASSES = dataset.CLASSES
 
         self._ori_len = len(self.dataset)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         return self.dataset[idx % self._ori_len]
-
-    def get_cat_ids(self, idx):
-        return self.dataset.get_cat_ids(idx % self._ori_len)
 
     def __len__(self):
         return self.times * self._ori_len

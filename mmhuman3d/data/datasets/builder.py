@@ -1,12 +1,14 @@
 import platform
 import random
 from functools import partial
+from typing import Optional, Union
 
 import numpy as np
 from mmcv.parallel import collate
 from mmcv.runner import get_dist_info
 from mmcv.utils import Registry, build_from_cfg
 from torch.utils.data import DataLoader
+from torch.utils.data.dataset import Dataset
 
 from .samplers import DistributedSampler
 
@@ -23,7 +25,9 @@ DATASETS = Registry('dataset')
 PIPELINES = Registry('pipeline')
 
 
-def build_dataset(cfg, default_args=None):
+def build_dataset(cfg: Union[dict, list, tuple],
+                  default_args: Optional[Union[dict, None]] = None):
+    """"Build dataset by the given config."""
     from .dataset_wrappers import (
         ConcatDataset,
         RepeatDataset,
@@ -39,14 +43,14 @@ def build_dataset(cfg, default_args=None):
     return dataset
 
 
-def build_dataloader(dataset,
-                     samples_per_gpu,
-                     workers_per_gpu,
-                     num_gpus=1,
-                     dist=True,
-                     shuffle=True,
-                     round_up=True,
-                     seed=None,
+def build_dataloader(dataset: Dataset,
+                     samples_per_gpu: int,
+                     workers_per_gpu: int,
+                     num_gpus: Optional[int] = 1,
+                     dist: Optional[bool] = True,
+                     shuffle: Optional[bool] = True,
+                     round_up: Optional[bool] = True,
+                     seed: Optional[Union[int, None]] = None,
                      **kwargs):
     """Build PyTorch DataLoader.
 
@@ -54,17 +58,18 @@ def build_dataloader(dataset,
     In non-distributed training, there is only one dataloader for all GPUs.
 
     Args:
-        dataset (Dataset): A PyTorch dataset.
+        dataset (:obj:`Dataset`): A PyTorch dataset.
         samples_per_gpu (int): Number of training samples on each GPU, i.e.,
             batch size of each GPU.
         workers_per_gpu (int): How many subprocesses to use for data loading
             for each GPU.
-        num_gpus (int): Number of GPUs. Only used in non-distributed training.
-        dist (bool): Distributed training/test or not. Default: True.
-        shuffle (bool): Whether to shuffle the data at every epoch.
+        num_gpus (int, optional): Number of GPUs. Only used in non-distributed
+            training.
+        dist (bool, optional): Distributed training/test or not. Default: True.
+        shuffle (bool, optional): Whether to shuffle the data at every epoch.
             Default: True.
-        round_up (bool): Whether to round up the length of dataset by adding
-            extra samples to make it evenly divisible. Default: True.
+        round_up (bool, optional): Whether to round up the length of dataset by
+            adding extra samples to make it evenly divisible. Default: True.
         kwargs: any keyword argument to be used to initialize DataLoader
 
     Returns:
@@ -100,7 +105,8 @@ def build_dataloader(dataset,
     return data_loader
 
 
-def worker_init_fn(worker_id, num_workers, rank, seed):
+def worker_init_fn(worker_id: int, num_workers: int, rank: int, seed: int):
+    """Init random seed for each worker."""
     # The seed of each worker equals to
     # num_worker * rank + worker_id + user_seed
     worker_seed = num_workers * rank + worker_id + seed

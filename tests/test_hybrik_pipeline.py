@@ -172,6 +172,7 @@ def _load_test_data():
         info['target_twist'] = np.zeros((23, 2))
         info['target_twist_weight'] = np.zeros_like((info['target_twist']))
 
+    info['sample_idx'] = 0
     return copy.deepcopy(info)
 
 
@@ -375,7 +376,8 @@ def test_hybrik_pipeline():
         'target_uvd_29', 'target_xyz_24', 'target_weight_24',
         'target_weight_29', 'target_xyz_17', 'target_weight_17',
         'target_theta', 'target_beta', 'target_smpl_weight',
-        'target_theta_weight', 'target_twist', 'target_twist_weight', 'bbox'
+        'target_theta_weight', 'target_twist', 'target_twist_weight', 'bbox',
+        'sample_idx'
     ]
     for k in data_keys:
         assert not isinstance(results[k], torch.Tensor)
@@ -414,9 +416,8 @@ def test_human_hybrik_dataset():
         'target_twist', 'target_twist_weight', 'keypoints3d',
         'keypoints3d_vis', 'pose', 'beta', 'keypoints3d_relative',
         'keypoints3d17', 'keypoints3d17_vis', 'keypoints3d17_relative',
-        'dataset_name'
+        'dataset_name', 'sample_idx'
     ]
-
     sample_item = custom_dataset[0]
     for k in keys:
         assert k in sample_item
@@ -434,7 +435,7 @@ def test_human_hybrik_dataset():
     for item in custom_dataset:
         pred = dict(
             xyz_17=item['joint_relative_17'][None, ...],
-            image_path=item['image_path'])
+            image_idx=[item['sample_idx']])
         outputs.append(pred)
     with tempfile.TemporaryDirectory() as tmpdir:
         eval_result = custom_dataset.evaluate(outputs, tmpdir)

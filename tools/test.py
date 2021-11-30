@@ -104,7 +104,7 @@ def main():
         workers_per_gpu=cfg.data.workers_per_gpu,
         dist=distributed,
         shuffle=False,
-        round_up=True)
+        round_up=False)
 
     # build the model and load checkpoint
     model = build_architecture(cfg.model)
