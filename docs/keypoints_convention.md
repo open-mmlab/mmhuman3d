@@ -133,14 +133,14 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 ## CrowdPose
 
 <details>
-<summary align="right"><a href="https://arxiv.org/pdf/1812.00324.pdf">CrowdPose (arKiv'2018)</a></summary>
+<summary align="right"><a href="https://arxiv.org/pdf/1812.00324.pdf">CrowdPose (CVPR'2019)</a></summary>
 
 ```bibtex
 @article{li2018crowdpose,
   title={CrowdPose: Efficient Crowded Scenes Pose Estimation and A New Benchmark},
   author={Li, Jiefeng and Wang, Can and Zhu, Hao and Mao, Yihuan and Fang, Hao-Shu and Lu, Cewu},
-  journal={arXiv preprint arXiv:1812.00324},
-  year={2018}
+  journal={Proceedings IEEE/CVF Conf.~on Computer Vision and Pattern Recognition ({CVPR})},
+  year={2019}
 }
 ```
 
