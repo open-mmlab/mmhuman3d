@@ -1,4 +1,5 @@
 import copy
+import glob
 import os
 import os.path as osp
 import shutil
@@ -29,6 +30,7 @@ from mmhuman3d.utils.demo_utils import (
 )
 from mmhuman3d.utils.ffmpeg_utils import (
     images_to_array,
+    vid_info_reader,
     video_to_array,
     video_to_images,
 )
@@ -50,19 +52,26 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
                         read_frames_batch):
     """Compare among `image_array`, `frame_list` and `origin_frames` and decide
     whether to save the temp background images."""
-    if num_frame > 500:
+    if num_frame > 300:
         read_frames_batch = True
 
     frames_folder = None
     remove_folder = False
 
     if isinstance(image_array, np.ndarray):
+
         image_array = torch.Tensor(image_array)
 
     if image_array is not None:
+        if image_array.ndim == 3:
+            image_array = image_array[None]
+        if image_array.shape[0] == 1:
+            image_array = image_array.repeat(end - start, 1, 1, 1)
+        image_array
         frame_list = None
         origin_frames = None
         image_array = image_array[start:end + 1]
+
     # check the output path and get the image_array
     if output_path is not None:
         prepare_output_path(
@@ -73,6 +82,7 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
             overwrite=overwrite)
         if image_array is None:
             # choose in frame_list or origin_frames
+            # if all None, will use pure white background
             if frame_list is None and origin_frames is None:
                 print(
                     'No background provided, will use pure white background.')
@@ -81,12 +91,14 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
                 origin_frames = None
 
             # read the origin frames as array if any.
-            if origin_frames is not None and frame_list is None:
+            if frame_list is None and origin_frames is not None:
                 check_input_path(
                     input_path=origin_frames,
                     allowed_suffix=['.mp4', '.gif', ''],
                     tag='origin frames',
                     path_type='auto')
+                # if origin_frames is a video, write it as a folder of images
+                # if read_frames_batch is True, else read directly as an array.
                 if Path(origin_frames).is_file():
                     if read_frames_batch:
                         frames_folder = osp.join(
@@ -101,6 +113,9 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
                         frames_folder = None
                         image_array = video_to_array(
                             origin_frames, start=start, end=end)
+                # if origin_frames is a folder, write it as a folder of images
+                # read the folder as an array if read_frames_batch is True
+                # else return frames_folder for reading during rendering.
                 else:
                     if read_frames_batch:
                         frames_folder = origin_frames
@@ -114,6 +129,9 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
                             end=end)
                         remove_folder = False
                         frames_folder = origin_frames
+            # if frame_list is not None, move the images into a folder
+            # read the folder as an array if read_frames_batch is True
+            # else return frames_folder for reading during rendering.
             elif frame_list is not None and origin_frames is None:
                 frames_folder = osp.join(
                     Path(output_path).parent,
@@ -138,7 +156,7 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
                 else:
                     image_array = None
                     remove_folder = True
-    return remove_folder, frames_folder
+    return image_array, remove_folder, frames_folder
 
 
 def _prepare_body_model(model_type, body_model, model_path, gender, use_pca):
@@ -368,7 +386,7 @@ def render_smpl(
     render_choice: Literal['lq', 'mq', 'hq', 'silhouette', 'depth', 'normal',
                            'pointcloud', 'part_silhouette'] = 'hq',
     palette: Union[List[str], str, np.ndarray] = 'white',
-    resolution: Union[List[int], Tuple[int, int]] = (1024, 1024),
+    resolution: Optional[Union[List[int], Tuple[int, int]]] = None,
     start: int = 0,
     end: int = -1,
     alpha: float = 1.0,
@@ -517,6 +535,9 @@ def render_smpl(
             1). If iterable, should be (height, width) of output images.
             2). If int, would be taken as (resolution, resolution).
             Defaults to (1024, 1024).
+            This will influence the overlay results when render with
+            backgrounds. The output video will be rendered following the
+            size of background images and finally resized to resolution.
         start (int, optional): start frame index. Defaults to 0.
         end (int, optional): end frame index. Defaults to -1.
         alpha (float, optional): Transparency of the mesh.
@@ -602,10 +623,35 @@ def render_smpl(
             warnings.warn('`plot_kps` is False, `kp3d` will be set as None.')
             kp3d = None
 
-    remove_folder, frames_folder = _prepare_background(
+    image_array, remove_folder, frames_folder = _prepare_background(
         image_array, frame_list, origin_frames, output_path, start, end,
         img_format, overwrite, num_frame, read_frames_batch)
 
+    render_resolution = None
+    if image_array is not None:
+        render_resolution = (image_array.shape[1], image_array.shape[2])
+    elif frames_folder is not None:
+        frame_path_list = glob.glob(osp.join(
+            frames_folder, '*.jpg')) + glob.glob(
+                osp.join(frames_folder, '*.png')) + glob.glob(
+                    osp.join(frames_folder, '*.jpeg'))
+        vid_info = vid_info_reader(frame_path_list[0])
+        render_resolution = (int(vid_info['height']), int(vid_info['width']))
+    if resolution is not None:
+        if render_resolution is not None:
+            if render_resolution != resolution:
+                warnings.warn(
+                    f'Size of background: {render_resolution} !='
+                    f' resolution: {resolution}, the output video will be '
+                    f'resized as {resolution}')
+            final_resolution = resolution
+        elif render_resolution is None:
+            render_resolution = final_resolution = resolution
+    elif resolution is None:
+        if render_resolution is None:
+            render_resolution = final_resolution = (1024, 1024)
+        elif render_resolution is not None:
+            final_resolution = render_resolution
     if isinstance(kp3d, np.ndarray):
         kp3d = torch.Tensor(kp3d)
 
@@ -672,7 +718,7 @@ def render_smpl(
 
     if orig_cam is not None:
         projection = 'weakperspective'
-        r = resolution[1] / resolution[0]
+        r = render_resolution[1] / render_resolution[0]
         orig_cam = orig_cam[start:end + 1]
         orig_cam = orig_cam.view(num_frame, num_person, 4)
         # if num_person > 1:
@@ -752,13 +798,13 @@ def render_smpl(
         T=T,
         is_perspective=is_perspective,
         convention_src=convention,
-        resolution_src=resolution,
+        resolution_src=render_resolution,
         in_ndc_src=in_ndc,
         in_ndc_dst=in_ndc)
 
     # initialize the renderer.
     renderer = SMPLRenderer(
-        resolution=resolution,
+        resolution=render_resolution,
         faces=faces,
         device=device,
         obj_path=obj_path,
@@ -774,6 +820,7 @@ def render_smpl(
         plot_kps=plot_kps,
         vis_kp_index=vis_kp_index,
         in_ndc=in_ndc,
+        final_resolution=final_resolution,
         **render_param_dict)
 
     renderer = renderer.to(device)
