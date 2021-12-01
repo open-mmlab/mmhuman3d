@@ -30,19 +30,6 @@ class Pw3dConverter(BaseModeConverter):
     def __init__(self, modes: List = []) -> None:
         super(Pw3dConverter, self).__init__(modes)
 
-    def bbox_expand(self,
-                    bbox_xywh: List[float],
-                    scale_factor: float = 1.2) -> List[float]:
-        """Obtain bbox in xywh format."""
-        center = [
-            bbox_xywh[0] + bbox_xywh[2] / 2, bbox_xywh[1] + bbox_xywh[3] / 2
-        ]
-        x = scale_factor * (bbox_xywh[0] - center[0]) + center[0]
-        y = scale_factor * (bbox_xywh[1] - center[1]) + center[1]
-        w = bbox_xywh[2] * scale_factor * scale_factor
-        h = bbox_xywh[3] * scale_factor * scale_factor
-        return [x, y, w, h]
-
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:
         """
@@ -113,10 +100,12 @@ class Pw3dConverter(BaseModeConverter):
                         bbox_xywh = [
                             min(keypoints2d[:, 0]),
                             min(keypoints2d[:, 1]),
-                            max(keypoints2d[:, 0]) - min(keypoints2d[:, 0]),
-                            max(keypoints2d[:, 1]) - min(keypoints2d[:, 0])
+                            max(keypoints2d[:, 0]),
+                            max(keypoints2d[:, 1])
                         ]
-                        bbox_xywh = self.bbox_expand(bbox_xywh)
+
+                        bbox_xywh = self._bbox_expand(
+                            bbox_xywh, scale_factor=1.2)
 
                         image_path = valid_img_names[valid_i]
                         image_abs_path = os.path.join(root_path, image_path)
@@ -158,12 +147,12 @@ class Pw3dConverter(BaseModeConverter):
         human_data['smpl'] = smpl
         human_data['meta'] = meta
         human_data['cam_param'] = cam_param_
-        human_data['config'] = '3dpw'
+        human_data['config'] = 'pw3d'
 
         # store data
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
-        file_name = '3dpw_{}.npz'.format(mode)
+        file_name = 'pw3d_{}.npz'.format(mode)
         out_file = os.path.join(out_path, file_name)
         human_data.dump(out_file)
