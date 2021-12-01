@@ -126,7 +126,7 @@ test_pipeline = [
     dict(type='Collect', keys=['img', *data_keys], meta_keys=meta_data_keys)
 ]
 data = dict(
-    samples_per_gpu=8,
+    samples_per_gpu=32,
     workers_per_gpu=1,
     train=dict(
         type='MixedDataset',
@@ -158,7 +158,7 @@ data = dict(
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_49',
-                ann_file='spin_hr-lspet_train.npz'),
+                ann_file='spin_lspet_train.npz'),
             dict(
                 type=dataset_type,
                 dataset_name='mpii',
@@ -188,5 +188,5 @@ data = dict(
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='pw3d_test.npz'),
+        ann_file='spin_pw3d_test.npz'),
 )
