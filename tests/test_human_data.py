@@ -241,6 +241,13 @@ def test_load():
     human_data.load(human_data_load_path)
     assert human_data['keypoints2d'].shape[2] == 3
     assert isinstance(human_data['misc'], dict)
+    human_data['image_path'] = ['1.jpg', '2.jpg']
+    human_data_with_image_path = \
+        'tests/data/human_data/human_data_img.npz'
+    human_data.dump(human_data_with_image_path)
+    human_data = HumanData.fromfile(human_data_with_image_path)
+    assert isinstance(human_data['image_path'], list)
+    os.remove(human_data_with_image_path)
 
 
 def test_construct_from_dict():

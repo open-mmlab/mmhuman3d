@@ -183,6 +183,7 @@ class HumanData(dict):
             npz_path (str):
                 Path to a dumped npz file.
         """
+        supported_keys = self.__class__.SUPPORTED_KEYS
         with np.load(npz_path, allow_pickle=True) as npz_file:
             tmp_data_dict = dict(npz_file)
             for key, value in list(tmp_data_dict.items()):
@@ -190,6 +191,9 @@ class HumanData(dict):
                         len(value.shape) == 0:
                     # value is not an ndarray before dump
                     value = value.item()
+                elif key in supported_keys and\
+                        type(value) != supported_keys[key]['type']:
+                    value = supported_keys[key]['type'](value)
                 if value is None:
                     tmp_data_dict.pop(key)
                 elif key == '__key_strict__' or \
