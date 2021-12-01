@@ -68,26 +68,27 @@ def test_HybrIK_head():
     depth_factor = mm_inputs.pop('depth_factor')
     intrinsic_param = mm_inputs.pop('intrinsic_param')
 
-    predictions = head(features, trans_inv, intrinsic_param, joint_root,
-                       depth_factor, smpl)
-    pred_keys = [
-        'pred_phi', 'pred_delta_shape', 'pred_shape', 'pred_theta_mats',
-        'pred_uvd_jts', 'pred_xyz_jts_24', 'pred_xyz_jts_24_struct',
-        'pred_xyz_jts_17', 'pred_vertices', 'maxvals'
-    ]
-    for k in pred_keys:
-        assert k in predictions
-        assert predictions[k].shape[0] == batch_size
+    if torch.cuda.is_available():
+        predictions = head(features, trans_inv, intrinsic_param, joint_root,
+                           depth_factor, smpl)
+        pred_keys = [
+            'pred_phi', 'pred_delta_shape', 'pred_shape', 'pred_theta_mats',
+            'pred_uvd_jts', 'pred_xyz_jts_24', 'pred_xyz_jts_24_struct',
+            'pred_xyz_jts_17', 'pred_vertices', 'maxvals'
+        ]
+        for k in pred_keys:
+            assert k in predictions
+            assert predictions[k].shape[0] == batch_size
 
-    with pytest.raises(RuntimeError):
-        joint_root = torch.zeros((6, 3)).cuda()
-        _ = head(features, trans_inv, intrinsic_param, joint_root,
-                 depth_factor, smpl)
+        with pytest.raises(RuntimeError):
+            joint_root = torch.zeros((6, 3)).cuda()
+            _ = head(features, trans_inv, intrinsic_param, joint_root,
+                     depth_factor, smpl)
 
-    with pytest.raises(RuntimeError):
-        joint_root = torch.zeros((batch_size, 3))
-        _ = head(features, trans_inv, intrinsic_param, joint_root,
-                 depth_factor, smpl)
+        with pytest.raises(RuntimeError):
+            joint_root = torch.zeros((batch_size, 3))
+            _ = head(features, trans_inv, intrinsic_param, joint_root,
+                     depth_factor, smpl)
 
     tmpdir.cleanup()
 
@@ -121,21 +122,24 @@ def test_HybrIK_trainer():
         loss_uvd=dict(type='L1Loss', loss_weight=1),
     )
 
-    model = HybrIK_trainer(**model_cfg).cuda()
+    model = HybrIK_trainer(**model_cfg)
+    if torch.cuda.is_available():
+        model = model.cuda()
     input_shape = (4, 3, 256, 256)
     mm_inputs = _demo_mm_inputs(input_shape)
     img = mm_inputs.pop('img')
     img_metas = mm_inputs.pop('img_metas')
-    output = model.forward_train(img, img_metas, **mm_inputs)
-    assert isinstance(output, dict)
-    assert 'loss' in output
-    assert output['loss'].dtype == torch.float32
-
-    with torch.no_grad():
-        output = model.forward_test(img, img_metas, **mm_inputs)
+    if torch.cuda.is_available():
+        output = model.forward_train(img, img_metas, **mm_inputs)
         assert isinstance(output, dict)
-        for k in ['vertices', 'xyz_17', 'uvd_jts', 'xyz_24', 'image_path']:
-            assert k in output
+        assert 'loss' in output
+        assert output['loss'].dtype == torch.float32
+
+        with torch.no_grad():
+            output = model.forward_test(img, img_metas, **mm_inputs)
+            assert isinstance(output, dict)
+            for k in ['vertices', 'xyz_17', 'uvd_jts', 'xyz_24', 'image_path']:
+                assert k in output
 
     tmpdir.cleanup()
 
@@ -289,8 +293,9 @@ def _demo_head_inputs(input_shape=(1, 512, 8, 8)):
         'depth_factor': torch.FloatTensor(depth_factor),
     }
 
-    for k, _ in mm_inputs.items():
-        mm_inputs[k] = mm_inputs[k].cuda()
+    if torch.cuda.is_available():
+        for k, _ in mm_inputs.items():
+            mm_inputs[k] = mm_inputs[k].cuda()
 
     return mm_inputs
 
@@ -329,7 +334,8 @@ def _demo_IK_inputs(batch_size=1):
         'rot_mat_chain_parent': torch.FloatTensor(rot_mat_chain_parent),
     }
 
-    for k, _ in mm_inputs.items():
-        mm_inputs[k] = mm_inputs[k].cuda()
+    if torch.cuda.is_available():
+        for k, _ in mm_inputs.items():
+            mm_inputs[k] = mm_inputs[k].cuda()
 
     return mm_inputs

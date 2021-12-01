@@ -315,8 +315,8 @@ class H36mHybrIKConverter(BaseModeConverter):
             os.makedirs(out_path)
 
         if mode == 'train':
-            out_file = os.path.join(out_path, 'h36m_hybrik_train.npz')
+            out_file = os.path.join(out_path, 'hybrik_h36m_train.npz')
         elif mode == 'test':
             out_file = os.path.join(out_path,
-                                    'h36m_hybrik_valid_protocol2.npz')
+                                    'hybrik_h36m_valid_protocol2.npz')
         human_data.dump(out_file)

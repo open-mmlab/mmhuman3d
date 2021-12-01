@@ -34,7 +34,8 @@ def test_visualize_smpl_pose():
             output_path='/tmp/1.mp4',
             render_choice='hq',
             resolution=(128, 128),
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
     with pytest.raises(ValueError):
         visualize_smpl_pose(
             poses=torch.zeros(2, 164),
@@ -43,7 +44,8 @@ def test_visualize_smpl_pose():
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
     with pytest.raises(RuntimeError):
         pose_dict = {
             'body_pose': torch.zeros(2, 68),
@@ -56,7 +58,8 @@ def test_visualize_smpl_pose():
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
     with pytest.raises(RuntimeError):
         pose_dict = {
             'body_pose': torch.zeros(2, 64),
@@ -74,7 +77,8 @@ def test_visualize_smpl_pose():
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
     # wrong input keys
     with pytest.raises(KeyError):
         pose_dict = {
@@ -88,7 +92,8 @@ def test_visualize_smpl_pose():
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
 
     with pytest.raises(KeyError):
         pose_dict = {
@@ -107,7 +112,8 @@ def test_visualize_smpl_pose():
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
     # wrong output path
     with pytest.raises(FileExistsError):
         v = np.zeros((3, 512, 512, 3))
@@ -119,7 +125,8 @@ def test_visualize_smpl_pose():
             model_path=model_path,
             resolution=(128, 128),
             render_choice='hq',
-            overwrite=False)
+            overwrite=False,
+            device=device_name)
 
     # wrong body model weight path
     with pytest.raises(FileNotFoundError):
@@ -132,7 +139,8 @@ def test_visualize_smpl_pose():
             resolution=(128, 128),
             model_path='/312',
             render_choice='hq',
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
 
     with pytest.raises(AssertionError):
         command = ['touch', '/tmp/1.mp4']
@@ -144,7 +152,8 @@ def test_visualize_smpl_pose():
             resolution=(128, 128),
             model_path='/tmp',
             render_choice='hq',
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
 
     with pytest.raises(FileNotFoundError):
         command = ['touch', '/tmp/1.mp4']
@@ -156,7 +165,8 @@ def test_visualize_smpl_pose():
             resolution=(128, 128),
             model_path='/123',
             render_choice='hq',
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
 
     visualize_smpl_pose(
         poses=torch.zeros(1, 72),
@@ -175,7 +185,8 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         output_path='/tmp/1.mp4',
         resolution=(128, 128),
-        overwrite=True)
+        overwrite=True,
+        device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (1, 128, 128, 3)
 
     visualize_smpl_pose(
@@ -185,7 +196,8 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         output_path='/tmp/1.mp4',
         resolution=(128, 128),
-        overwrite=True)
+        overwrite=True,
+        device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (1, 128, 128, 3)
 
     with pytest.raises(ValueError):
@@ -196,7 +208,8 @@ def test_visualize_smpl_pose():
             model_path=model_path,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
     with pytest.raises(ValueError):
         visualize_smpl_pose(
             poses=torch.zeros(1, 3, 72),
@@ -205,7 +218,8 @@ def test_visualize_smpl_pose():
             model_path=model_path,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
-            overwrite=True)
+            overwrite=True,
+            device=device_name)
 
     visualize_smpl_pose(
         poses=torch.zeros(1, 2, 72),
@@ -215,7 +229,8 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         output_path='/tmp/1.mp4',
         resolution=(128, 128),
-        overwrite=True)
+        overwrite=True,
+        device=device_name)
     visualize_smpl_pose(
         poses=torch.zeros(10, 72),
         betas=torch.zeros(1, 10),
@@ -223,7 +238,8 @@ def test_visualize_smpl_pose():
         model_path=model_path,
         output_path='/tmp/1.mp4',
         resolution=(128, 128),
-        overwrite=True)
+        overwrite=True,
+        device=device_name)
 
     visualize_smpl_pose(
         poses=torch.zeros(1, 165),

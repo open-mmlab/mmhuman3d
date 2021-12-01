@@ -1,3 +1,8 @@
+# ------------------------------------------------------------------------------
+# Adapted from https://github.com/nkolot/SPIN/blob/master/train/fits_dict.py
+# Original licence please see docs/additional_licenses.md
+# ------------------------------------------------------------------------------
+
 import os
 
 import cv2

@@ -195,13 +195,13 @@ class Pw3dHybrIKConverter(BaseConverter):
         human_data['keypoints3d_relative'] = keypoints3d_relative_
         human_data['keypoints3d_cam'] = keypoints3d_cam_
         human_data['keypoints3d'] = keypoints3d_
-        human_data['config'] = '3dpw'
+        human_data['config'] = 'pw3d'
         human_data.compress_keypoints_by_mask()
 
         # store the data struct
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
-        file_name = '3dpw_hybrik_test.npz'
+        file_name = 'hybrik_pw3d_test.npz'
         out_file = os.path.join(out_path, file_name)
         human_data.dump(out_file)

@@ -95,5 +95,5 @@ class CocoHybrIKConverter(BaseConverter):
         # store the data struct
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
-        out_file = os.path.join(out_path, 'coco_2017_hybrik_train.npz')
+        out_file = os.path.join(out_path, 'hybrik_coco_2017_train.npz')
         human_data.dump(out_file)

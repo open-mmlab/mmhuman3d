@@ -7,6 +7,7 @@ from torch.nn.modules.batchnorm import _BatchNorm
 from mmhuman3d.models.backbones import ResNet, ResNetV1d
 from mmhuman3d.models.backbones.resnet import BasicBlock, Bottleneck
 from mmhuman3d.models.utils import ResLayer, SimplifiedBasicBlock
+from mmhuman3d.utils.path_utils import Existence, check_path_existence
 from .utils import check_norm_state, is_block, is_norm
 
 
@@ -392,8 +393,12 @@ def test_resnet_backbone():
     assert check_norm_state(model.modules(), False)
 
     # Test ResNet50 with torchvision pretrained weight
-    model = ResNet(
-        depth=50, norm_eval=True, pretrained='weights/resnet50-0676ba61.pth')
+
+    pretrained_path = 'weights/resnet50-0676ba61.pth'
+    if check_path_existence(pretrained_path) == Existence.FileExist:
+        model = ResNet(depth=50, norm_eval=True, pretrained=pretrained_path)
+    else:
+        model = ResNet(depth=50, norm_eval=True)
     model.init_weights()
     model.train()
     assert check_norm_state(model.modules(), False)

@@ -129,6 +129,9 @@ logs/
 *.jpg
 !demo/resources/*
 
+# Resources as exception
+!resources/*
+
 # Body models
 body_models
 

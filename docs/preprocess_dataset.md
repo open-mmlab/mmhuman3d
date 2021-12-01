@@ -1,11 +1,57 @@
-## Data preparation
+# Data preparation
+
+<!-- - [Data preparation](#data-preparation) -->
+  <!-- * [Overview](#overview)
+  * [Generate dataset files](#generate-dataset-files)
+  * [Obtain preprocessed datasets](#obtain-preprocessed-datasets) -->
+- [Datasets for supported algorithms](#datasets-for-supported-algorithms)
+- [Folder structure](#folder-structure)
+  * [COCO](#coco)
+  * [COCO-WholeBody](#coco-wholebody)
+  * [CrowdPose](#crowdpose)
+  * [Human3.6M](#human36m)
+  * [Human3.6M Mosh](#human36m-mosh)
+  * [HybrIK](#hybrik)
+  * [LSP](#lsp)
+  * [LSPET](#lspet)
+  * [MPI-INF-3DHP](#mpi-inf-3dhp)
+  * [MPII](#mpii)
+  * [PoseTrack18](#posetrack18)
+  * [PW3D](#pw3d)
+  * [SPIN](#spin)
 
 
-### Overview
+## Overview
 
 Our data pipeline use [HumanData](mmhuman3d/docs/human_data.md) structure for
 storing and loading. The proprocessed npz files can be obtained from raw data using our data converters, and the supported configs can be found [here](mmhuman3d/tools/convert_datasets.py).
 
+These are our supported converters and their respective `dataset-name`:
+- AgoraConverter (`agora`)
+- AmassConverter (`amass`)
+- CocoConverter (`coco`)
+- CocoHybrIKConverter (`coco_hybrik`)
+- CocoWholebodyConverter (`coco_wholebody`)
+- CrowdposeConverter (`crowdpose`)
+- EftConverter (`eft`)
+- H36mConverter (`h36m_p1`, `h36m_p2`)
+- H36mHybrIKConverter (`h36m_hybrik`)
+- H36mSpinConverter (`h36m_spin`)
+- InstaVibeConverter (`instavariety_vibe`)
+- LspExtendedConverter (`lsp_extended`)
+- LspConverter (`lsp_original`, `lsp_dataset`)
+- MpiiConverter (`mpii`)
+- MpiInf3dhpConverter (`mpi_inf_3dhp`)
+- MpiInf3dhpHybrIKConverter (`mpi_inf_3dhp_hybrik`)
+- PennActionConverter (`penn_action`)
+- PosetrackConverter (`posetrack`)
+- Pw3dConverter (`pw3d`)
+- Pw3dHybrIKConverter (`pw3d_hybrik`)
+- SurrealConverter (`surreal`)
+- SpinConverter (`spin`)
+- Up3dConverter (`up3d`)
+
+<!--
 
 ### Generate dataset files
 
@@ -27,7 +73,67 @@ python tools/convert_datasets.py \
   --output_path $YOUR_OUTPUT_PATH
 ```
 
-### Datasets for supported algorithms
+### Obtain preprocessed datasets
+
+The available dataset configurations are listed [here](mmhuman3d/tools/convert_datasets.py).
+
+An example is
+```
+DATASET_CONFIGS = dict(
+    ...
+    pw3d=dict(type='Pw3dConverter', modes=['train', 'test'], prefix='pw3d')
+)
+```
+
+where `pw3d` is an example of a `dataset-name`. The available modes are `train` and `test` and the prefix specifies the name of the dataset folder. In this case, `pw3d` is the name
+of the dataset folder containing the raw annotations and images arranged in the following [structure](#pw3d).
+
+Running this command
+
+```bash
+python tools/convert_datasets.py \
+  --datasets pw3d \
+  --root_path data/datasets \
+  --output_path data/preprocessed_datasets
+```
+
+would allow us to obtain the preprocessed npz files under `data/preprocessed_datasets`:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── datasets
+    └── preprocessed_datasets
+        ├── pw3d_train.npz
+        └── pw3d_test.npz
+```
+
+We can also modify the mode in the dataset configuration if we only want to obtain the
+preprocessed npz file in `test` mode. i.e.
+```
+DATASET_CONFIGS = dict(
+    ...
+    pw3d=dict(type='Pw3dConverter', modes=['test'], prefix='pw3d')
+)
+```
+
+-->
+
+## Datasets for supported algorithms
+
+For all algorithms, the root path for our datasets and output path for our preprocessed npz files are stored in `data/datasets` and `data/preprocessed_datasets`. As such, use this command with the listed `dataset-names`:
+
+```bash
+python tools/convert_datasets.py \
+  --datasets <dataset-name> \
+  --root_path data/datasets \
+  --output_path data/preprocessed_datasets
+```
 
 For HMR training and testing, the following datasets are required:
   - [COCO](#coco)
@@ -39,8 +145,40 @@ For HMR training and testing, the following datasets are required:
   - [LSPET](#lspet)
   - [PW3D](#pw3d)
 
+Convert datasets with the following `dataset-names`:
 ```
-dataset-name: coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
+coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
+```
+
+**Alternatively**, you may download the preprocessed files directly:
+- [cmu_mosh.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/cmu_mosh.npz?versionId=CAEQHhiBgMCglbPY6xciIDEyMTFmOGFkNWZjNDQxYjg4YjlhNjNmMjhhMjQzZTk0)
+- [coco_2014_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/coco_2014_train.npz?versionId=CAEQHhiBgICUrvbS6xciIDFmZmFhMDk5OGQ3YzQ5ZDE5NzJkMGQxNzdmMmQzZDdi)
+- [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
+- [lsp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/lsp_train.npz?versionId=CAEQHhiBgICnq_bS6xciIDU4ZTRhMDIwZTBkZjQ1YTliYTY0NGFmMDVmOGVhZjMy)
+- [lspet_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/lspet_train.npz?versionId=CAEQHhiBgICXrPbS6xciIDVkZGNmYWZjODlmMzQ2YjNhMjhlNmJmMzU2MjM4Yzg4)
+- [mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgMD3q_bS6xciIGQwYjc4NTRjYTllMzRkODU5NTNiZDQyOTBlYmRhODg5)
+- [mpii_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/mpii_train.npz?versionId=CAEQHhiBgIDhq_bS6xciIDEwMmE0ZDc0NWI1NjQ2NWZhYTA5ZjEyODBiNWFmODg1)
+- [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
+
+
+The preprocessed datasets should have this structure:
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── datasets
+    └── preprocessed_datasets
+        ├── coco_2014_train.npz
+        ├── h36m_train.npz
+        ├── lspet_train.npz
+        ├── lsp_train.npz
+        ├── mpi_inf_3dhp_train.npz
+        ├── mpii_train.npz
+        └── pw3d_test.npz
 ```
 
 For SPIN training, the following datasets are required:
@@ -54,9 +192,42 @@ For SPIN training, the following datasets are required:
   - [PW3D](#pw3d)
   - [SPIN](#spin)
 
+
+Convert datasets with the following `dataset-names`:
 ```
-dataset-name: spin, h36m_spin
+spin, h36m_spin
 ```
+
+**Alternatively**, you may download the preprocessed files directly:
+- [spin_coco_2014_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_coco_2014_train.npz?versionId=CAEQHhiBgICb6bfT6xciIGM2NmNmZDYyNDMxMDRiNTVhNDk3YzY1N2Y2ODdlMTAy)
+- [spin_h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_h36m_train.npz?versionId=CAEQHhiBgID657fT6xciIDM4ZDc5YjIwZjQwOTQ4ODRhOWZhMWQwZmVhNWZkZTQ3)
+- [spin_lsp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_lsp_train.npz?versionId=CAEQHhiBgIDu57fT6xciIDQ0ODAzNjUyNjJkMzQyNzQ5Y2IzNGNhOTZmZGI2NzBm)
+- [spin_lspet_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_lspet_train.npz?versionId=CAEQHhiBgMCe6LfT6xciIDc3NzZiYzA1ZGJkYzQwNzRhYjg3ZDMwYTdjZDZmNTAw)
+- [spin_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgMCV6LfT6xciIDliYTJhM2FkNDkyYjRiOWFiYTUwOTk0MGRlNThlZWRk)
+- [spin_mpii_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_mpii_train.npz?versionId=CAEQHhiBgMDz57fT6xciIGJjMzAwMDdlYTBmMTQ0MDg4ZGE4YjhiZGNkNWQwZmM1)
+- [spin_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_pw3d_test.npz?versionId=CAEQHhiBgMCL6LfT6xciIGUxNjY3OTBiODU5ZDQxODliYTQ4NzU0OGVjMzJkYmRm)
+
+
+The preprocessed datasets should have this structure:
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── datasets
+    └── preprocessed_datasets
+        ├── spin_coco_2014_train.npz
+        ├── spin_h36m_train.npz
+        ├── spin_lsp_train.npz
+        ├── spin_lspet_train.npz
+        ├── spin_mpi_inf_3dhp_train.npz
+        ├── spin_mpii_train.npz
+        └── spin_pw3d_test.npz
+```
+
 
 For HYBRIK training and testing, the following datasets are required:
   - [HybrIK](#hybrik)
@@ -65,11 +236,38 @@ For HYBRIK training and testing, the following datasets are required:
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [PW3D](#pw3d)
 
+Convert datasets with the following `dataset-names`:
 ```
-dataset-name: h36m_hybrik, pw3d_hybrik, mpi_inf_3dhp_hybrik, coco_hybrik
+h36m_hybrik, pw3d_hybrik, mpi_inf_3dhp_hybrik, coco_hybrik
 ```
 
-## COCO
+**Alternatively**, you may download the preprocessed files directly:
+- [hybriK_coco_2017_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_coco_2017_train.npz?versionId=CAEQHhiBgMDA6rjT6xciIDE3N2FiZDkxYTkyZDRjN2ZiYjc1ODQ2YTc5NjY0ZmFl)
+- [hybrik_h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_h36m_train.npz?versionId=CAEQHhiBgIC_iLjT6xciIGE4NmQ5YzUxMzY0ZjQ0Y2U5MWFkOTkwNmIwMGI4NTNm)
+- [hybrik_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgICogLjT6xciIDQwYzRlYTVlOTE0YTQ4ZDRhYTljOGRkZDc1MDhjNDgy)
+- [hybrik_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_pw3d_test.npz?versionId=CAEQHhiBgMCO8LfT6xciIDhjMDFhOTFmZjY4MDQ4MWI4MzVmODYyYTc1NTYwNjA1)
+
+
+The preprocessed datasets should have this structure:
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── datasets
+    └── preprocessed_datasets
+        ├── hybriK_coco_2017_train.npz
+        ├── hybrik_h36m_train.npz
+        ├── hybrik_mpi_inf_3dhp_train.npz
+        └── hybrik_pw3d_test.npz
+```
+
+## Folder structure
+
+### COCO
 
 <!-- [DATASET] -->
 
@@ -99,35 +297,35 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        │── annotations
-            ├── person_keypoints_train2014.json
-            ├── person_keypoints_val2014.json
-        │── coco
-            │-- train2014
+└── data
+    └── datasets
+        └── coco
+            ├── annotations
+            |   ├── person_keypoints_train2014.json
+            |   ├── person_keypoints_val2014.json
+            ├── train2014
             │   ├── COCO_train2014_000000000009.jpg
             │   ├── COCO_train2014_000000000025.jpg
             │   ├── COCO_train2014_000000000030.jpg
-            |   │-- ...
-            │-- train_2017
+            |   └── ...
+            └── train_2017
                 │── annotations
                 │   ├── person_keypoints_train2017.json
-                │   ├── person_keypoints_val2017.json
+                │   └── person_keypoints_val2017.json
                 │── train2017
                 │   ├── 000000000009.jpg
                 │   ├── 000000000025.jpg
                 │   ├── 000000000030.jpg
-                │   │-- ...
-                │── val2017
+                │   └── ...
+                └── val2017
                     ├── 000000000139.jpg
                     ├── 000000000285.jpg
                     ├── 000000000632.jpg
-                    │-- ...
+                    └── ...
 ```
 
 
-## COCO-WholeBody
+### COCO-WholeBody
 
 <!-- [DATASET] -->
 
@@ -155,13 +353,18 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        │── annotations
-        │   │-- coco_wholebody_train_v1.0.json
-        │   |-- coco_wholebody_val_v1.0.json
-        │── coco
-            │-- train_2017
+└── data
+    └── datasets
+        └── coco
+            ├── annotations
+            |   ├── person_keypoints_train2014.json
+            |   └── person_keypoints_val2014.json
+            ├── train2014
+            │   ├── COCO_train2014_000000000009.jpg
+            │   ├── COCO_train2014_000000000025.jpg
+            │   ├── COCO_train2014_000000000030.jpg
+            |   └── ...
+            └── train_2017
                 │── annotations
                 │   ├── person_keypoints_train2017.json
                 │   ├── person_keypoints_val2017.json
@@ -169,19 +372,19 @@ mmhuman3d
                 │   ├── 000000000009.jpg
                 │   ├── 000000000025.jpg
                 │   ├── 000000000030.jpg
-                │   │-- ...
-                │── val2017
+                │   └── ...
+                └── val2017
                     ├── 000000000139.jpg
                     ├── 000000000285.jpg
                     ├── 000000000632.jpg
-                    │-- ...
+                    └── ...
 
 ```
 
 
 
 
-## CrowdPose
+### CrowdPose
 
 <!-- [DATASET] -->
 
@@ -209,22 +412,22 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        │── Crowdpose
-            │-- crowdpose_train.json
-            │-- crowdpose_val.json
-            │-- crowdpose_trainval.json
-            │-- crowdpose_test.json
-            │-- images
-                │-- 100000.jpg
-                │-- 100001.jpg
-                │-- 100002.jpg
-                │-- ...
+└── data
+    └── datasets
+        └── Crowdpose
+            ├── crowdpose_train.json
+            ├── crowdpose_val.json
+            ├── crowdpose_trainval.json
+            ├── crowdpose_test.json
+            └── images
+                ├── 100000.jpg
+                ├── 100001.jpg
+                ├── 100002.jpg
+                └── ...
 ```
 
 
-## Human3.6M
+### Human3.6M
 
 <!-- [DATASET] -->
 
@@ -256,30 +459,31 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        ├── h36m
+└── data
+    └── datasets
+        └── h36m
             ├── annot
             ├── S1
             |   ├── images
-            |   |    ├── S1_Directions_1.54138969
-            |   |       ├── S1_Directions_1.54138969_00001.jpg
-            |   |       ├── S1_Directions_1.54138969_00002.jpg
-            |   |       ├── ...
+            |   |    |── S1_Directions_1.54138969
+            |   |    |  ├── S1_Directions_1.54138969_00001.jpg
+            |   |    |  ├── S1_Directions_1.54138969_00002.jpg
+            |   |    |  └── ...
+            |   |    └── ...
             |   ├── ...
             |   ├── MyPoseFeatures
             |   ├── MySegmentsMat
-            |   ├── Videos
+            |   └── Videos
             ├── S5
             ├── S6
             ├── S7
             ├── S8
             ├── S9
             ├── S11
-            `── metadata.xml
+            └── metadata.xml
 ```
 
-## Human3.6M Mosh
+### Human3.6M Mosh
 
 <!-- [DATASET] -->
 
@@ -313,24 +517,24 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        ├── h36m_mosh
+└── data
+    └── datasets
+        └── h36m_mosh
             ├── annot
             ├── S1
             |   ├── images
             |   |    ├── Directions 1_cam0_aligned.pkl
             |   |    ├── Directions 1_cam1_aligned.pkl
-            |   |    ├── ...
+            |   |    └── ...
             ├── S5
             ├── S6
             ├── S7
             ├── S8
             ├── S9
-            `── S11
+            └── S11
 ```
 
-## HybrIK
+### HybrIK
 
 <!-- [DATASET] -->
 
@@ -359,14 +563,14 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        ├── hybrik_data
+└── data
+    └── datasets
+        └── hybrik_data
             ├── Sample_5_train_Human36M_smpl_leaf_twist_protocol_2.json
             ├── Sample_20_test_Human36M_smpl_protocol_2.json
             ├── 3DPW_test_new.json
             ├── annotation_mpi_inf_3dhp_train_v2.json
-            `── annotation_mpi_inf_3dhp_test.json
+            └── annotation_mpi_inf_3dhp_test.json
 ```
 
 To convert the preprocessed json files into npz files used for our pipeline,
@@ -377,7 +581,7 @@ run the following preprocessing scripts:
   - [COCO](mmhuman3d/data/data_converters/coco_hybrik.py)
 
 
-## LSP
+### LSP
 
 <!-- [DATASET] -->
 
@@ -409,16 +613,17 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        │── lsp_dataset_original
+└── data
+    └── datasets
+        └── lsp
             ├── images
-               ├── im0001.jpg
-               ├── im0002.jpg
-               └── ...
+            |  ├── im0001.jpg
+            |  ├── im0002.jpg
+            |  └── ...
+            └── joints.mat
 ```
 
-## LSPET
+### LSPET
 
 <!-- [DATASET] -->
 
@@ -449,20 +654,19 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        │── lspet_dataset
-            ├── images
-            │   ├── im00001.jpg
-            │   ├── im00002.jpg
-            │   ├── im00003.jpg
-            │   └── ...
+└── data
+    └── datasets
+        └── lspet
+            ├── im00001.jpg
+            ├── im00002.jpg
+            ├── im00003.jpg
+            ├── ...
             └── joints.mat
 ```
 
 
 
-## MPI-INF-3DHP
+### MPI-INF-3DHP
 
 <details>
 <summary align="right"><a href="https://arxiv.org/pdf/1611.09813.pdf">MPI_INF_3DHP (3DV'2017)</a></summary>
@@ -490,43 +694,44 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        ├── mpi_inf_3dhp_test_set
-        │   ├── TS1
-        │   ├── TS2
-        │   ├── TS3
-        │   ├── TS4
-        │   ├── TS5
-        │   └── TS6
-        ├── S1
-        │   ├── Seq1
-        │   └── Seq2
-        ├── S2
-        │   ├── Seq1
-        │   └── Seq2
-        ├── S3
-        │   ├── Seq1
-        │   └── Seq2
-        ├── S4
-        │   ├── Seq1
-        │   └── Seq2
-        ├── S5
-        │   ├── Seq1
-        │   └── Seq2
-        ├── S6
-        │   ├── Seq1
-        │   └── Seq2
-        ├── S7
-        │   ├── Seq1
-        │   └── Seq2
-        └── S8
-            ├── Seq1
-            └── Seq2
+└── data
+    └── datasets
+        └── mpi_inf_3dhp
+            ├── mpi_inf_3dhp_test_set
+            │   ├── TS1
+            │   ├── TS2
+            │   ├── TS3
+            │   ├── TS4
+            │   ├── TS5
+            │   └── TS6
+            ├── S1
+            │   ├── Seq1
+            │   └── Seq2
+            ├── S2
+            │   ├── Seq1
+            │   └── Seq2
+            ├── S3
+            │   ├── Seq1
+            │   └── Seq2
+            ├── S4
+            │   ├── Seq1
+            │   └── Seq2
+            ├── S5
+            │   ├── Seq1
+            │   └── Seq2
+            ├── S6
+            │   ├── Seq1
+            │   └── Seq2
+            ├── S7
+            │   ├── Seq1
+            │   └── Seq2
+            └── S8
+                ├── Seq1
+                └── Seq2
 ```
 
 
-## MPII
+### MPII
 
 <!-- [DATASET] -->
 
@@ -555,18 +760,18 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        │── mpii
+└── data
+    └── datasets
+        └── mpii
             |── train.h5
-            `── images
+            └── images
                 |── 000001163.jpg
                 |── 000003072.jpg
-
+                └── ...
 ```
 
 
-## PoseTrack18
+### PoseTrack18
 
 <!-- [DATASET] -->
 
@@ -595,45 +800,45 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        │── PoseTrack
-            │-- images
-            │   │-- train
-            │   │   │-- 000001_bonn_train
-            │   │   │   │-- 000000.jpg
-            │   │   │   │-- 000001.jpg
-            │   │   │   │-- ...
-            │   │   │-- ...
-            │   │-- val
-            │   │   │-- 000342_mpii_test
-            │   │   │   │-- 000000.jpg
-            │   │   │   │-- 000001.jpg
-            │   │   │   │-- ...
-            │   │   │-- ...
-            │   `-- test
-            │       │-- 000001_mpiinew_test
-            │       │   │-- 000000.jpg
-            │       │   │-- 000001.jpg
-            │       │   │-- ...
-            │       │-- ...
-            `-- posetrack_data
-                │-- annotations
-                    │-- train
-                    │   │-- 000001_bonn_train.json
-                    │   │-- 000002_bonn_train.json
-                    │   │-- ...
-                    │-- val
-                    │   │-- 000342_mpii_test.json
-                    │   │-- 000522_mpii_test.json
-                    │   │-- ...
-                    `-- test
-                        │-- 000001_mpiinew_test.json
-                        │-- 000002_mpiinew_test.json
-                        │-- ...
+└── data
+    └── datasets
+        └── PoseTrack
+            ├── images
+            │   ├── train
+            │   │   ├── 000001_bonn_train
+            │   │   │   ├── 000000.jpg
+            │   │   │   ├── 000001.jpg
+            │   │   │   └── ...
+            │   │   └── ...
+            │   ├── val
+            │   │   ├── 000342_mpii_test
+            │   │   │   ├── 000000.jpg
+            │   │   │   ├── 000001.jpg
+            │   │   │   └── ...
+            │   │   └── ...
+            │   └── test
+            │       ├── 000001_mpiinew_test
+            │       │   ├── 000000.jpg
+            │       │   ├── 000001.jpg
+            │       │   └── ...
+            │       └── ...
+            └── posetrack_data
+                └── annotations
+                    ├── train
+                    │   ├── 000001_bonn_train.json
+                    │   ├── 000002_bonn_train.json
+                    │   └── ...
+                    ├── val
+                    │   ├── 000342_mpii_test.json
+                    │   ├── 000522_mpii_test.json
+                    │   └── ...
+                    └── test
+                        ├── 000001_mpiinew_test.json
+                        ├── 000002_mpiinew_test.json
+                        └── ...
 ```
 
-## PW3D
+### PW3D
 
 <!-- [DATASET] -->
 
@@ -662,30 +867,30 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        │── 3DPW
+└── data
+    └── datasets
+        └── pw3d
             |── imageFiles
-            |   |    ├── courtyard_arguing_00
+            |   |    └── courtyard_arguing_00
             |   |       ├── image_00000.jpg
             |   |       ├── image_00001.jpg
-            |   |       ├── ...
-            `── sequenceFiles
-                │-- train
-                │   │-- downtown_arguing_00.pkl
-                │   │-- ...
-                │-- val
-                │   │-- courtyard_arguing_00.pkl
-                │   │-- ...
-                `-- test
-                    │-- courtyard_basketball_00.pkl
-                    │-- ...
+            |   |       └── ...
+            └── sequenceFiles
+                ├── train
+                │   ├── downtown_arguing_00.pkl
+                │   └── ...
+                ├── val
+                │   ├── courtyard_arguing_00.pkl
+                │   └── ...
+                └── test
+                    ├── courtyard_basketball_00.pkl
+                    └── ...
 
 ```
 
 
 
-## SPIN
+### SPIN
 
 <!-- [DATASET] -->
 
@@ -712,12 +917,12 @@ mmhuman3d
 ├── tests
 ├── tools
 ├── configs
-`── data
-    │── datasets
-        ├── spin_data
+└── data
+    └── datasets
+        └── spin_data
             ├── coco_2014_train.npz
             ├── hr-lspet_train.npz
             ├── lsp_dataset_original_train.npz
             ├── mpi_inf_3dhp_train.npz
-            `── mpii_train.npz
+            └── mpii_train.npz
 ```

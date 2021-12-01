@@ -96,5 +96,5 @@ class LspExtendedConverter(BaseConverter):
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
-        out_file = os.path.join(out_path, 'hr-lspet_train.npz')
+        out_file = os.path.join(out_path, 'lspet_train.npz')
         human_data.dump(out_file)
