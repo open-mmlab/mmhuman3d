@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="resources/mmhuman3d-logo.png" width="400"/>
+    <img src="resources/mmhuman3d-logo.png" width="600"/>
 </div>
 
 <!-- [![Documentation](https://readthedocs.org/projects/mmhuman3d/badge/?version=latest)](https://mmhuman3d.readthedocs.io/en/latest/?badge=latest)
@@ -16,7 +16,7 @@ MMHuman3D is an open source human pose and shape estimation toolbox based on PyT
 
 The main branch works with **PyTorch 1.7+**.
 
-https://user-images.githubusercontent.com/62529255/144250076-c0c22b2c-4aeb-48e0-a35e-eb52cf4da7ec.mp4
+https://user-images.githubusercontent.com/62529255/144252934-b9d39de0-7701-40dd-a081-52086de51b5b.mp4
 
 ### Major Features
 
