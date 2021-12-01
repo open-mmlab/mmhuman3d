@@ -348,16 +348,10 @@ def test_compress():
         osp.join(root, 'input_video.mp4'),
         output_path=osp.join(root, 'compress_video_output_rate4.mp4'),
         compress_rate=3,
-        down_sample_scale=1,
+        down_sample_scale=2,
         fps=15)
     size4 = os.path.getsize(osp.join(root, 'compress_video_output_rate4.mp4'))
 
-    compress_video(
-        osp.join(root, 'input_video.mp4'),
-        output_path=osp.join(root, 'compress_video_output_rate5.mp4'),
-        compress_rate=3,
-        down_sample_scale=2,
-        fps=15)
-    size5 = os.path.getsize(osp.join(root, 'compress_video_output_rate5.mp4'))
-
-    assert size1 > size2 > size3 > size4 > size5
+    assert size1 > size2
+    assert size2 > size3
+    assert size3 > size4

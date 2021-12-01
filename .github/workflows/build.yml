@@ -1,0 +1,90 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: build
+
+on:
+  push:
+   branches:
+    - master
+
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install pre-commit hook
+        run: |
+          pip install pre-commit
+          pre-commit install
+      - name: Linting
+        run: pre-commit run --all-files
+      - name: Check docstring coverage
+        run: |
+          pip install interrogate
+          interrogate -vinmMI --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" -f 40 mmhuman3d/
+
+  build_cuda101:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        python-version: [3.7]
+        torch: [1.7.0, 1.8.0]
+        include:
+          - torch: 1.7.0
+            torchvision: 0.8.1
+          - torch: 1.8.0
+            torchvision: 0.9.0
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: mmhuman3d_env
+          python-version: 3.7
+          auto-activate-base: false
+      - name: Prepare test data
+        run: |
+          mkdir mmhuman3d_download
+          cd mmhuman3d_download
+          wget -q http://98.126.31.28:8008/mmhuman3d.7z
+          7za x mmhuman3d.7z
+          ls -l
+          cd ..
+          cp -r mmhuman3d_download/mmhuman3d/* ./
+          rm -rf mmhuman3d_download
+      - name: Upgrade pip
+        run: pip install pip --upgrade
+      - name: Install ffmpeg
+        run: |
+          conda install ffmpeg
+          ffmpeg -version
+      - name: Install PyTorch
+        run: |
+          conda install pytorch==${{matrix.torch}} torchvision==${{matrix.torchvision}} cudatoolkit=10.1 -c pytorch
+      - name: Install pytorch3d
+        run: |
+          conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
+          conda install pytorch3d -c pytorch3d
+      - name: Install MMCV
+        run: |
+          pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/torch${{matrix.torch}}/index.html
+          python -c 'import mmcv; print(mmcv.__version__)'
+      - name: Install other dependencies
+        run: pip install -r requirements.txt
+      - name: Build and install
+        run: rm -rf .eggs && pip install -e .
+      - name: Run unittests and generate coverage report
+        run: |
+          coverage run --source mmhuman3d -m pytest tests/
+          coverage xml
+          coverage report -m
