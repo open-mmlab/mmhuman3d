@@ -56,7 +56,7 @@ class OneEuro:
         return x_hat
 
 
-@FILTERS.register_module()
+@FILTERS.register_module(name=['OneEuroFilter', 'oneeuro'])
 class OneEuroFilter:
     """Oneeuro filter, source code: https://github.com/mkocabas/VIBE/blob/c0
     c3f77d587351c806e901221a9dc05d1ffade4b/lib/utils/smooth_pose.py.

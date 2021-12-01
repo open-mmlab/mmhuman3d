@@ -71,6 +71,7 @@ test_pipeline = [
     dict(type='ToTensor', keys=['features', 'sample_idx']),
     dict(type='Collect', keys=['features', 'sample_idx'], meta_keys=[])
 ]
+inference_pipeline = test_pipeline
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=1,

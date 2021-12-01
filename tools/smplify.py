@@ -2,13 +2,12 @@ import argparse
 import pickle
 
 import mmcv
-import smplx
+import numpy as np
 import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.parametric_model import build_registrant
 from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_pose
-from mmhuman3d.utils.misc import torch_to_numpy
 
 
 def parse_args():
@@ -25,15 +24,19 @@ def parse_args():
         default='keypoints3d',
         help='input type')
     parser.add_argument(
+        '--J_regressor',
+        type=str,
+        default=None,
+        help='the path of the J_regressor')
+    parser.add_argument(
         '--keypoint_type',
-        choices=['mmpose', 'coco'],
-        default='mmpose',
+        default='coco_wholebody',
         help='the source type of input keypoints')
     parser.add_argument('--config', help='smplify config file path')
     parser.add_argument('--body_model_dir', help='body models file path')
     parser.add_argument('--batch_size', type=int, default=None)
     parser.add_argument('--num_betas', type=int, default=10)
-    parser.add_argument('--num_epochs', type=int, default=2)
+    parser.add_argument('--num_epochs', type=int, default=20)
     parser.add_argument(
         '--use_one_betas_per_video',
         action='store_true',
@@ -58,18 +61,15 @@ def parse_args():
 
 def main():
     args = parse_args()
+    smplify_config = mmcv.Config.fromfile(args.config)
+    assert smplify_config.body_model.type.lower() in ['smpl', 'smplx']
+    assert smplify_config.type.lower() in ['smplify', 'smplifyx']
 
-    cfg = mmcv.Config.fromfile(args.config)
-    assert cfg.body_model_type in ['smpl', 'smplx']
-    assert cfg.smplify_method in ['smplify', 'smplifyx']
     # set cudnn_benchmark
-    if cfg.get('cudnn_benchmark', False):
+    if smplify_config.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
 
     device = torch.device(args.device)
-
-    # TODO: support keypoints2d
-    assert args.input_type == 'keypoints3d', 'Only support keypoints3d!'
 
     with open(args.input, 'rb') as f:
         keypoints_src = pickle.load(f, encoding='latin1')
@@ -81,8 +81,10 @@ def main():
             raise KeyError('Only support keypoints2d and keypoints3d')
 
     keypoints, mask = convert_kps(
-        keypoints_src, src=args.keypoint_type, dst=cfg.body_model_type)
-    keypoints_conf = mask
+        keypoints_src,
+        src=args.keypoint_type,
+        dst=smplify_config.body_model['keypoint_dst'])
+    keypoints_conf = np.repeat(mask[None], keypoints.shape[0], axis=0)
 
     batch_size = args.batch_size if args.batch_size else keypoints.shape[0]
 
@@ -95,71 +97,45 @@ def main():
             keypoints3d=keypoints, keypoints3d_conf=keypoints_conf)
 
     # create body model
-    cfg_body_model = dict(
-        model_path=args.body_model_dir,
-        model_type=cfg.body_model_type,
+    body_model_config = dict(
+        type=smplify_config.body_model.type,
         gender=args.gender,
         num_betas=args.num_betas,
+        model_path=args.body_model_dir,
         batch_size=batch_size,
     )
-    if cfg.body_model_type == 'smplx':
-        cfg_body_model.update(
+
+    if args.J_regressor is not None:
+        body_model_config.update(dict(joints_regressor=args.J_regressor))
+
+    if smplify_config.body_model.type.lower() == 'smplx':
+        body_model_config.update(
             dict(
                 use_face_contour=True,  # 127 -> 144
                 use_pca=False,  # current vis do not supports use_pca
             ))
-    body_model = smplx.create(**cfg_body_model)
 
-    cfg.update(
+    smplify_config.update(
         dict(
-            type=cfg.smplify_method,
-            body_model=body_model,
+            body_model=body_model_config,
             use_one_betas_per_video=args.use_one_betas_per_video,
             num_epochs=args.num_epochs))
 
+    smplify = build_registrant(dict(smplify_config))
+
     # run SMPLify(X)
-    smplify = build_registrant(dict(cfg))
     smplify_output = smplify(**human_data)
 
-    # TODO: read keypoints3d directly from smplify_output
-    if cfg.body_model_type == 'smpl':
-        body_model_output = body_model(
-            global_orient=smplify_output['global_orient'],
-            transl=smplify_output['transl'],
-            body_pose=smplify_output['body_pose'],
-            betas=smplify_output['betas'])
-    else:
-        body_model_output = body_model(
-            global_orient=smplify_output['global_orient'],
-            transl=smplify_output['transl'],
-            body_pose=smplify_output['body_pose'],
-            betas=smplify_output['betas'],
-            left_hand_pose=smplify_output['left_hand_pose'],
-            right_hand_pose=smplify_output['right_hand_pose'],
-            expression=smplify_output['expression'],
-            jaw_pose=smplify_output['jaw_pose'],
-            leye_pose=smplify_output['leye_pose'],
-            reye_pose=smplify_output['reye_pose'])
+    # get smpl parameters directly from smplify output
+    poses = {k: v.detach().cpu() for k, v in smplify_output.items()}
 
-    body_model_keypoints3d = torch_to_numpy(body_model_output.joints)
-
-    results = {k: torch_to_numpy(v) for k, v in smplify_output.items()}
-    results.update({'keypoints3d': body_model_keypoints3d})
-
-    # save results
-    if args.output:
-        print(f'writing results to {args.output}')
-        mmcv.dump(results, args.output)
-
-    # save rendered results
-    if args.show_path:
-        # TODO: use results directly after !42 is merged
-        poses = {k: v.detach().cpu() for k, v in smplify_output.items()}
+    if args.show_path is not None:
+        # visualize mesh
         visualize_smpl_pose(
             poses=poses,
-            body_model_dir=args.body_model_dir,
+            model_path=args.body_model_dir,
             output_path=args.show_path,
-            model_type=cfg.body_model_type,
+            model_type=smplify_config.body_model.type.lower(),
             overwrite=True)
 
 

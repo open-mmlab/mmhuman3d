@@ -7,7 +7,7 @@ import torch
 from .builder import FILTERS
 
 
-@FILTERS.register_module()
+@FILTERS.register_module(name=['SGFilter', 'savgol'])
 class SGFilter:
     """savgol_filter lib is from:
     https://docs.scipy.org/doc/scipy/reference/generated/

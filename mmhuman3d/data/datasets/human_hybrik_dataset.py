@@ -9,7 +9,7 @@ import numpy as np
 from mmhuman3d.core.conventions.keypoints_mapping import get_mapping
 from mmhuman3d.core.evaluation.mpjpe import keypoint_mpjpe
 from mmhuman3d.data.data_structures.human_data import HumanData
-from mmhuman3d.data.datasets.pipelines.hybrik_transforms import box2cs
+from mmhuman3d.utils.demo_utils import box2cs
 from .base_dataset import BaseDataset
 from .builder import DATASETS
 

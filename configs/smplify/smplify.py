@@ -12,7 +12,7 @@ body_model = dict(
 stages = [
     # stage 1
     dict(
-        num_iter=10,
+        num_iter=20,
         fit_global_orient=True,
         fit_transl=True,
         fit_body_pose=False,
@@ -31,10 +31,11 @@ stages = [
         joint_weights=dict(body_weight=5.0, use_shoulder_hip_only=False))
 ]
 
-optimizer = dict(type='Adam', lr=1e-2, betas=(0.9, 0.999))
+optimizer = dict(
+    type='LBFGS', max_iter=20, lr=1e-2, line_search_fn='strong_wolfe')
 
 keypoints2d_loss = dict(
-    type='KeypointMSELoss', loss_weight=0, reduction='sum', sigma=100)
+    type='KeypointMSELoss', loss_weight=1.0, reduction='sum', sigma=100)
 
 keypoints3d_loss = dict(
     type='KeypointMSELoss', loss_weight=10, reduction='sum', sigma=100)
@@ -50,3 +51,15 @@ joint_prior_loss = dict(
     use_full_body=True)
 
 smooth_loss = dict(type='SmoothJointLoss', loss_weight=0, reduction='sum')
+
+pose_prior_loss = dict(
+    type='MaxMixturePrior',
+    prior_folder='data',
+    num_gaussians=8,
+    loss_weight=4.78**2,
+    reduction='sum')
+
+ignore_keypoints = [
+    'neck_openpose', 'right_hip_openpose', 'left_hip_openpose',
+    'right_hip_extra', 'left_hip_extra'
+]

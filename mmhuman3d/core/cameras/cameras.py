@@ -322,9 +322,11 @@ class WeakPerspectiveCameras(NewAttributeCameras):
     render.
 
     K modified from (VIBE)[https://github.com/mkocabas/VIBE/blob/master/
-    lib/utils/renderer.py] and changed to opencv convention. This intrinsic
-    matrix is orthographics indeed, but could serve as weakperspective for
-    single smpl mesh.
+    lib/utils/renderer.py] and changed to opencv convention.
+    Original license please see docs/additional_license/md.
+
+    This intrinsic matrix is orthographics indeed, but could serve as
+    weakperspective for single smpl mesh.
     """
     is_perspective = False
 
