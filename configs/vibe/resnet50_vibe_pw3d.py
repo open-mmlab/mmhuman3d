@@ -6,8 +6,8 @@ optimizer = dict(
     neck=dict(type='Adam', lr=2.5e-4), head=dict(type='Adam', lr=2.5e-4))
 optimizer_config = dict(grad_clip=None)
 # learning policy
-lr_config = dict(policy='step', gamma=0.2, step=[5, 10, 15])
-runner = dict(type='EpochBasedRunner', max_epochs=20)
+lr_config = dict(policy='step', gamma=0.1, step=[5])
+runner = dict(type='EpochBasedRunner', max_epochs=10)
 
 log_config = dict(
     interval=50,
@@ -73,7 +73,7 @@ test_pipeline = [
 ]
 data = dict(
     samples_per_gpu=32,
-    workers_per_gpu=2,
+    workers_per_gpu=1,
     train=dict(
         type='MixedDataset',
         configs=[
@@ -85,8 +85,16 @@ data = dict(
                 pipeline=train_pipeline,
                 convention='smpl_54',
                 ann_file='vibe_mpi_inf_3dhp_train.npz'),
+            dict(
+                type=dataset_type,
+                dataset_name='insta_variety',
+                data_prefix='data',
+                seq_len=16,
+                pipeline=train_pipeline,
+                convention='smpl_54',
+                ann_file='vibe_insta_variety.npz'),
         ],
-        partition=[1.0],
+        partition=[0.4, 0.6],
         num_data=8000),
     test=dict(
         type=dataset_type,
