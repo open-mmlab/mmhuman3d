@@ -885,8 +885,6 @@ def visualize_smpl_calibration(
     """Visualize a smpl mesh which has opencv calibration matrix defined in
     screen."""
     assert K is not None, '`K` is required.'
-    assert R is not None, '`R` is required.'
-    assert T is not None, '`T` is required.'
     assert resolution is not None, '`resolution`(h, w) is required.'
     func = partial(
         render_smpl,
