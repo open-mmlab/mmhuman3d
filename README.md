@@ -10,6 +10,8 @@
 [![Average time to resolve an issue](https://isitmaintained.com/badge/resolution/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/issues)
 [![Percentage of issues still open](https://isitmaintained.com/badge/open/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/issues) -->
 
+[![LICENSE](https://img.shields.io/github/license/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/blob/master/LICENSE)
+
 ## Introduction
 
 MMHuman3D is an open source human pose and shape estimation toolbox based on PyTorch. It is a part of the [OpenMMLab](https://openmmlab.com/) project.
