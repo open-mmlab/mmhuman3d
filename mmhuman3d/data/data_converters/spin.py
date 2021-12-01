@@ -22,16 +22,16 @@ class SpinConverter(BaseModeConverter):
         for accepted modes
     """
 
-    ACCEPTED_MODES = ['coco', 'lsp', 'mpii', 'mpi_inf_3dhp', 'hr-lspet']
+    ACCEPTED_MODES = ['coco_2014', 'lsp', 'mpii', 'mpi_inf_3dhp', 'lspet']
 
     def __init__(self, modes: List = []) -> None:
         super(SpinConverter, self).__init__(modes)
         self.mapping_dict = {
-            'coco': 'coco_2014_train.npz',
+            'coco_2014': 'coco_2014_train.npz',
             'lsp': 'lsp_dataset_original_train.npz',
             'mpi_inf_3dhp': 'mpi_inf_3dhp_train.npz',
             'mpii': 'mpii_train.npz',
-            'hr-lspet': 'hr-lspet_train.npz'
+            'lspet': 'hr-lspet_train.npz'
         }
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
@@ -111,5 +111,5 @@ class SpinConverter(BaseModeConverter):
         # store the data struct
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
-        out_file = os.path.join(out_path, 'spin_' + seq_file)
+        out_file = os.path.join(out_path, f'spin_{mode}_train.npz')
         human_data.dump(out_file)

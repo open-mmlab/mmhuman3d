@@ -194,6 +194,6 @@ class MpiInf3dhpHybrIKConverter(BaseModeConverter):
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
-        file_name = 'mpi_inf_3dhp_hybrik_{}.npz'.format(mode)
+        file_name = 'hybrik_mpi_inf_3dhp_{}.npz'.format(mode)
         out_file = os.path.join(out_path, file_name)
         human_data.dump(out_file)

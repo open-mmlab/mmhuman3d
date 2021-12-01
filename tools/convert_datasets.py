@@ -13,7 +13,7 @@ DATASET_CONFIGS = dict(
         type='CrowdposeConverter',
         modes=['train', 'val', 'test', 'trainval'],
         prefix='Crowdpose'),
-    pw3d=dict(type='Pw3dConverter', modes=['train', 'test'], prefix='3DPW'),
+    pw3d=dict(type='Pw3dConverter', modes=['train', 'test'], prefix='pw3d'),
     mpii=dict(type='MpiiConverter'),
     h36m_p1=dict(
         type='H36mConverter',
@@ -25,10 +25,9 @@ DATASET_CONFIGS = dict(
         type='H36mConverter', modes=['valid'], protocol=2, prefix='h36m'),
     mpi_inf_3dhp=dict(type='MpiInf3dhpConverter', modes=['train', 'test']),
     penn_action=dict(type='PennActionConverter', prefix='Penn_Action'),
-    lsp_original=dict(
-        type='LspConverter', modes=['train'], prefix='lsp_dataset_original'),
+    lsp_original=dict(type='LspConverter', modes=['train'], prefix='lsp'),
     lsp_dataset=dict(type='LspConverter', modes=['test']),
-    lsp_extended=dict(type='LspExtendedConverter', prefix='hr-lspet'),
+    lsp_extended=dict(type='LspExtendedConverter', prefix='lspet'),
     up3d=dict(
         type='Up3dConverter', modes=['trainval', 'test'], prefix='up-3d'),
     posetrack=dict(
@@ -55,7 +54,7 @@ DATASET_CONFIGS = dict(
         prefix='SURREAL/cmu'),
     spin=dict(
         type='SpinConverter',
-        modes=['coco', 'lsp', 'mpii', 'mpi_inf_3dhp', 'hr-lspet'],
+        modes=['coco_2014', 'lsp', 'mpii', 'mpi_inf_3dhp', 'lspet'],
         prefix='spin_data'),
     h36m_spin=dict(
         type='H36mSpinConverter',

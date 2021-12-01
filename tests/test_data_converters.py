@@ -83,7 +83,7 @@ def test_preprocess():
     cfg = dict(type='LspExtendedConverter')
     data_converter = build_data_converter(cfg)
     data_converter.convert(HR_LSPET_ROOT, output_path)
-    assert osp.exists(osp.join(output_path, 'hr-lspet_train.npz'))
+    assert osp.exists(osp.join(output_path, 'lspet_train.npz'))
 
     UP3D_ROOT = osp.join(root_path, 'up-3d')
     cfg = dict(type='Up3dConverter', modes=['trainval', 'test'])
@@ -144,29 +144,29 @@ def test_preprocess():
     cfg = dict(type='Pw3dHybrIKConverter')
     data_converter = build_data_converter(cfg)
     data_converter.convert(HYBRIK_ROOT, output_path)
-    assert os.path.exists('/tmp/preprocessed_npzs/' + '3dpw_hybrik_test.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'hybrik_pw3d_test.npz')
 
     cfg = dict(type='H36mHybrIKConverter', modes=['train', 'test'])
     data_converter = build_data_converter(cfg)
     data_converter.convert(HYBRIK_ROOT, output_path)
-    assert os.path.exists('/tmp/preprocessed_npzs/' + 'h36m_hybrik_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'hybrik_h36m_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'h36m_hybrik_valid_protocol2.npz')
+                          'hybrik_h36m_valid_protocol2.npz')
 
     cfg = dict(type='MpiInf3dhpHybrIKConverter', modes=['train', 'test'])
     data_converter = build_data_converter(cfg)
     data_converter.convert(HYBRIK_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'mpi_inf_3dhp_hybrik_train.npz')
+                          'hybrik_mpi_inf_3dhp_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'mpi_inf_3dhp_hybrik_test.npz')
+                          'hybrik_mpi_inf_3dhp_test.npz')
 
     COCO_2017_ROOT = os.path.join(root_path, 'coco_2017')
     cfg = dict(type='CocoHybrIKConverter')
     data_converter = build_data_converter(cfg)
     data_converter.convert(COCO_2017_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'coco_2017_hybrik_train.npz')
+                          'hybrik_coco_2017_train.npz')
 
     INSTA_VIBE_ROOT = os.path.join(root_path, 'vibe_data')
     cfg = dict(type='InstaVibeConverter')
@@ -177,18 +177,16 @@ def test_preprocess():
     SPIN_ROOT = os.path.join(root_path, 'spin_data')
     cfg = dict(
         type='SpinConverter',
-        modes=['coco', 'lsp', 'mpii', 'mpi_inf_3dhp', 'hr-lspet'])
+        modes=['coco_2014', 'lsp', 'mpii', 'mpi_inf_3dhp', 'lspet'])
     data_converter = build_data_converter(cfg)
     data_converter.convert(SPIN_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/' +
                           'spin_coco_2014_train.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'spin_lsp_dataset_original_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_lsp_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' +
                           'spin_mpi_inf_3dhp_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_mpii_train.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/' +
-                          'spin_hr-lspet_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_lspet_train.npz')
     cfg = dict(
         type='H36mSpinConverter',
         modes=['train'],

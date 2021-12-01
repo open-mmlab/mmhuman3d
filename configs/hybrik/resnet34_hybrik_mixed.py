@@ -1,8 +1,4 @@
 _base_ = ['../_base_/default_runtime.py']
-# _base_ = [
-#     '../_base_/datasets/mixed_hybrik.py', '../_base_/schedulers/hybrik.py',
-#     '../_base_/default_runtime.py', 'resnet34_hybrik.py'
-# ]
 
 # optimizer
 optimizer = dict(type='Adam', lr=1e-3, weight_decay=0)
@@ -47,8 +43,6 @@ model = dict(
 dataset_type = 'HybrIKHumanImageDataset'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
-# img_norm_cfg = dict(  # to achieve the same values as Hybrik
-#     mean=[103.53, 116.28, 123.675], std=[57.375, 57.12, 58.395], to_rgb=True)
 
 data_keys = [
     'trans_inv', 'intrinsic_param', 'joint_root', 'depth_factor',
@@ -145,7 +139,7 @@ test_hp3d_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=32,  # 32
+    samples_per_gpu=32,
     workers_per_gpu=1,
     train=dict(
         type='MixedDataset',
@@ -155,19 +149,19 @@ data = dict(
                 dataset_name='h36m',
                 data_prefix='data',
                 pipeline=train_pipeline,
-                ann_file='h36m_hybrik_train.npz'),
+                ann_file='hybrik_h36m_train.npz'),
             dict(
                 type=dataset_type,
                 dataset_name='mpi_inf_3dhp',
                 data_prefix='data',
                 pipeline=train_pipeline,
-                ann_file='mpi_inf_3dhp_hybrik_train.npz'),
+                ann_file='hybrik_mpi_inf_3dhp_train.npz'),
             dict(
                 type=dataset_type,
                 dataset_name='coco',
                 data_prefix='data',
                 pipeline=train_pipeline,
-                ann_file='coco_2017_hybrik_train.npz'),
+                ann_file='hybrik_coco_2017_train.npz'),
         ],
         partition=[0.4, 0.1, 0.5]),
     test=dict(
@@ -175,17 +169,4 @@ data = dict(
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='3dpw_hybrik_test.npz'),
-    # test=dict(
-    #     type=dataset_type,
-    #     dataset_name='h36m',
-    #     data_prefix='data',
-    #     pipeline=test_pipeline,
-    #     ann_file='h36m_hybrik_valid_protocol2.npz'),
-    # test=dict(
-    #     type=dataset_type,
-    #     dataset_name='mpi_inf_3dhp',
-    #     data_prefix='data',
-    #     pipeline=test_hp3d_pipeline,
-    #     ann_file='mpi_inf_3dhp_hybrik_test.npz'),
-)
+        ann_file='hybrik_pw3d_test.npz'))
