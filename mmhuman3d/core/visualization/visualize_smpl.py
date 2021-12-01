@@ -353,7 +353,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         num_frame = verts.shape[0]
         vertices = verts.view(num_frame, -1, num_verts, 3)
         num_joints = joints.shape[-2]
-        joints = joints.view(num_frame, num_joints, -1, 3)
+        joints = joints.view(num_frame, -1, num_joints, 3)
         num_person = vertices.shape[1]
     else:
         raise ValueError('Poses and verts are all None.')
@@ -936,8 +936,8 @@ def visualize_smpl_hmr(cam_transl,
     if isinstance(cam_transl, np.ndarray):
         cam_transl = torch.Tensor(cam_transl)
     T = torch.cat([
-        cam_transl[..., 1], cam_transl[..., 2], 2 * focal_length /
-        (det_width * cam_transl[..., 0] + 1e-9)
+        cam_transl[..., [1]], cam_transl[..., [2]], 2 * focal_length /
+        (det_width * cam_transl[..., [0]] + 1e-9)
     ], -1)
     for k in func.keywords.keys():
         if k in kwargs:

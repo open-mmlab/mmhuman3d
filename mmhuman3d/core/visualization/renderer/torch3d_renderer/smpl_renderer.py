@@ -343,10 +343,10 @@ class SMPLRenderer(MeshBaseRenderer):
 
             elif self.render_choice == 'part_silhouette':
                 colors = get_different_colors(alphas.shape[-1])
-                output_images = colors * alphas[
-                    ..., None].detach().cpu().numpy().astype(np.uint8)
-                output_images = np.sum(output_images, -2)
-
+                output_images = torch.tensor(colors).to(
+                    self.device) * alphas[..., None]
+                output_images = torch.sum(
+                    output_images, -2).detach().cpu().numpy().astype(np.uint8)
             else:
                 if images is not None:
                     output_images = rgbs * 255 * valid_masks * self.alpha + \

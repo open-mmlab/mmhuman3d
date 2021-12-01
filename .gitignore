@@ -121,11 +121,13 @@ logs/
 *.pth
 *.pt
 
+
 # Visualization
 *.mp4
 *.png
 *.gif
 *.jpg
+!demo/resources/*
 
 # Body models
 body_models

@@ -27,8 +27,8 @@ from mmhuman3d.data.datasets.pipelines import (
 from mmhuman3d.data.datasets.pipelines.hybrik_transforms import (
     bbox_clip_xyxy,
     bbox_xywh_to_xyxy,
-    box2cs,
 )
+from mmhuman3d.utils.demo_utils import box2cs
 
 
 def get_3d_keypoints_vis(keypoints):

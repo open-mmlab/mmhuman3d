@@ -6,6 +6,7 @@ import mmcv
 import numpy as np
 
 from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
+from mmhuman3d.utils.demo_utils import box2cs
 from ..builder import PIPELINES
 from .transforms import (
     _rotate_smpl_pose,
@@ -162,38 +163,6 @@ def bbox_clip_xyxy(xyxy, width, height):
         raise TypeError(
             'Expect input xywh a list, tuple or numpy.ndarray, given {}'.
             format(type(xyxy)))
-
-
-def box2cs(x, y, w, h, aspect_ratio=1.0, scale_mult=1.25):
-    """Convert box coordinates to center and scale.
-
-    adapted from https://github.com/Microsoft/human-pose-estimation.pytorch
-
-    Args:
-    xyxy (list, tuple or numpy.ndarray): bbox in format (xmin, ymin,
-     xmax, ymax). If numpy.ndarray is provided, we expect multiple bounding
-     boxes with shape `(N, 4)`.
-    width (int or float): Boundary width.
-    height (int or float): Boundary height.
-
-    Returns:
-    xyxy (list, tuple or numpy.ndarray): clipped bbox in format (xmin, ymin,
-     xmax, ymax) and input type
-    """
-    pixel_std = 1
-    center = np.zeros((2), dtype=np.float32)
-    center[0] = x + w * 0.5
-    center[1] = y + h * 0.5
-
-    if w > aspect_ratio * h:
-        h = w / aspect_ratio
-    elif w < aspect_ratio * h:
-        w = h * aspect_ratio
-    scale = np.array([w * 1.0 / pixel_std, h * 1.0 / pixel_std],
-                     dtype=np.float32)
-    if center[0] != -1:
-        scale = scale * scale_mult
-    return center, scale
 
 
 def cam2pixel(cam_coord, f, c):

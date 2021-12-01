@@ -125,6 +125,17 @@ test_pipeline = [
     dict(type='ToTensor', keys=data_keys),
     dict(type='Collect', keys=['img', *data_keys], meta_keys=meta_data_keys)
 ]
+
+inference_pipeline = [
+    dict(type='MeshAffine', img_res=224),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='ImageToTensor', keys=['img']),
+    dict(
+        type='Collect',
+        keys=['img', 'sample_idx'],
+        meta_keys=['image_path', 'center', 'scale', 'rotation'])
+]
+
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=1,
