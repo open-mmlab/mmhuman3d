@@ -3,8 +3,8 @@ from argparse import ArgumentParser
 import mmcv
 import numpy as np
 
+import mmhuman3d.core.visualization.visualize_smpl as visualize_smpl
 from mmhuman3d.apis import inference_model, init_model
-from mmhuman3d.core.visualization.visualize_smpl import render_smpl
 from mmhuman3d.utils.demo_utils import (
     conver_verts_to_cam_coord,
     prepare_frames,
@@ -43,7 +43,7 @@ def single_person_with_mmdet(args, frames_iter):
     person_det_model = init_detector(
         args.det_config, args.det_checkpoint, device=args.device.lower())
 
-    pose_model = init_model(
+    mesh_model = init_model(
         args.mesh_reg_config,
         args.mesh_reg_checkpoint,
         device=args.device.lower())
@@ -63,7 +63,7 @@ def single_person_with_mmdet(args, frames_iter):
 
         # test a single image, with a list of bboxes.
         mesh_results = inference_model(
-            pose_model,
+            mesh_model,
             frame,
             person_det_results,
             bbox_thr=args.bbox_thr,
@@ -198,22 +198,18 @@ def main(args):
             'Only supports single_person_demo or multi_person_demo')
 
     # Visualization
-    render_smpl(
+    visualize_smpl.visualize_smpl_calibration(
         verts=verts,
         model_path=args.body_model_dir,
         model_type='smpl',
-        img_format=None,
-        K=K0,
         output_path=args.output_path,
         render_choice=args.render_choice,
         resolution=frames_iter[0].shape[:2],
         image_array=np.array(frames_iter)[img_index],
+        K=K0,
+        R=None,
+        T=None,
         overwrite=True,
-        in_ndc=False,
-        convention='opencv',
-        projection='perspective',
-        no_grad=True,
-        return_tensor=False,
         palette=args.palette)
 
 
