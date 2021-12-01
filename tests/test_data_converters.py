@@ -15,8 +15,8 @@ def test_preprocess():
     cfg = dict(type='Pw3dConverter', modes=['train', 'test'])
     data_converter = build_data_converter(cfg)
     data_converter.convert(PW3D_ROOT, output_path)
-    assert osp.exists(osp.join(output_path, '3dpw_test.npz'))
-    assert osp.exists(osp.join(output_path, '3dpw_train.npz'))
+    assert osp.exists(osp.join(output_path, 'pw3d_test.npz'))
+    assert osp.exists(osp.join(output_path, 'pw3d_train.npz'))
 
     H36M_ROOT = osp.join(root_path, 'h36m')
     cfg = dict(
