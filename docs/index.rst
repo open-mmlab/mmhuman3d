@@ -32,6 +32,12 @@ Welcome to MMHuman3D's documentation!
    visualize_smpl.md
 
 .. toctree::
+   :maxdepth: 2
+   :caption: License
+
+   additional_licenses.md
+
+.. toctree::
    :maxdepth: 1
    :caption: API Reference
 
