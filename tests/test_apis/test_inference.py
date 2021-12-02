@@ -1,12 +1,17 @@
 import numpy as np
+import torch
 
 from mmhuman3d.apis import inference_model, init_model
 from mmhuman3d.utils.demo_utils import conver_verts_to_cam_coord
 
 
 def test_inference_model():
+    if torch.cuda.is_available():
+        device_name = 'cuda:0'
+    else:
+        device_name = 'cpu'
     mesh_model = init_model(
-        'configs/spin/resnet50_spin_pw3d.py', None, device='cuda:0')
+        'configs/spin/resnet50_spin_pw3d.py', None, device=device_name)
 
     # frames_iter = prepare_frames(
     #     video_path='demo/resources/multi_person_demo.mp4')
