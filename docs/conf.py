@@ -44,14 +44,18 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'recommonmark',
     'sphinx_markdown_tables',
     'sphinx_copybutton',
+    'myst_parser'
 ]
 
 autodoc_mock_imports = [
     'mmhuman3d.version', 'mmcv.ops'
 ]
+
+# Ignore >>> when copying code
+copybutton_prompt_text = r'>>> |\.\.\. '
+copybutton_prompt_is_regexp = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -64,9 +68,6 @@ source_suffix = {
     '.md': 'markdown',
 }
 
-# The master toctree document.
-master_doc = 'index'
-
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
@@ -77,7 +78,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'sphinx_rtd_theme'
 html_theme = 'pytorch_sphinx_theme'
 html_theme_path = [pytorch_sphinx_theme.get_html_theme_path()]
 
@@ -135,6 +135,10 @@ html_theme_options = {
                     'name': 'MMFlow',
                     'url': 'https://github.com/open-mmlab/mmflow',
                 },
+                {
+                    'name': 'MMHuman3D',
+                    'url': 'https://github.com/open-mmlab/mmhuman3d',
+                },
             ]
         },
         {
@@ -168,7 +172,7 @@ html_theme_options = {
 html_static_path = ['_static']
 html_css_files = ['css/readthedocs.css']
 
-# -- Extension configuration -------------------------------------------------
-# Ignore >>> when copying code
-copybutton_prompt_text = r'>>> |\.\.\. '
-copybutton_prompt_is_regexp = True
+# Enable ::: for my_st
+myst_enable_extensions = ['colon_fence']
+
+master_doc = 'index'
