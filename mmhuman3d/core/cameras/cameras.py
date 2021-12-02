@@ -416,21 +416,29 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
             opencv intrinsic matrix: (N, 4, 4)
-            r > 1;
+
+            r > 1::
+
                 K = [[sx*r,   0,    0,   tx*sx*r],
-                     [0,     sy,    0,   ty*sy],
-                     [0,     0,     1,       0],
-                     [0,     0,     0,       1],]
-            or r < 1:
+                     [0,     sy,    0,     ty*sy],
+                     [0,      0,    1,         0],
+                     [0,      0,    0,         1]]
+
+            or r < 1::
+
                 K = [[sx,    0,     0,   tx*sx],
                      [0,   sy/r,    0,  ty*sy/r],
                      [0,     0,     1,      0],
                      [0,     0,     0,      1],]
-            rotation matrix: (N, 3, 3)
+
+            rotation matrix: (N, 3, 3)::
+
                 [[1, 0, 0],
                  [0, 1, 0],
                  [0, 0, 1]]
-            translation matrix: (N, 3)
+
+            translation matrix: (N, 3)::
+
                 [0, 0, -znear]
         """
         znear = kwargs.get('znear', -1.0)
@@ -1108,7 +1116,7 @@ def compute_orbit_cameras(
         elev (float, optional):  This is the angle between the
             vector from the object to the camera, and the horizontal
             plane y = 0 (xz-plane).
-             Defaults to 0.
+            Defaults to 0.
         azim (float, optional): angle in degrees or radians. The vector
             from the object to the camera is projected onto a horizontal
             plane y = 0. azim is the angle between the projected vector and a
