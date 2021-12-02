@@ -68,7 +68,7 @@ These are the supported conventions:
   - [SMPL-X](#smplx)
 
 
-## HUMANDATA
+#### HUMANDATA
 
 The first 144 keypoints in HumanData correspond to that in `SMPL-X`.
 Keypoints with suffix `_extra` refer to those obtained from Jregressor_extra.
@@ -76,7 +76,7 @@ Keypoints with suffix `_openpose` refer to those obtained from `OpenPose` predic
 
 There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` that has the same name but were semantically different from keypoints in `SMPL-X`. As such, we added an extra suffix to differentiate those keypoints i.e. `head_h36m`.
 
-## AGORA
+#### AGORA
 
 <details>
 <summary align="right"><a href="https://arxiv.org/pdf/2104.14643.pdf">AGORA (CVPR'2021)</a></summary>
@@ -94,7 +94,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-## COCO
+#### COCO
 
 <details>
 <summary align="right"><a href="https://link.springer.com/chapter/10.1007/978-3-319-10602-1_48">COCO (ECCV'2014)</a></summary>
@@ -113,7 +113,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-## COCO-WHOLEBODY
+#### COCO-WHOLEBODY
 
 <details>
 <summary align="right"><a href="https://arxiv.org/abs/2007.11858.pdf">COCO-Wholebody (ECCV'2020)</a></summary>
@@ -122,7 +122,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 @inproceedings{jin2020whole,
   title={Whole-Body Human Pose Estimation in the Wild},
   author={Jin, Sheng and Xu, Lumin and Xu, Jin and Wang, Can and Liu, Wentao and Qian, Chen and Ouyang, Wanli and Luo, Ping},
-  booktitle={Proceedings of the European Conference on Computer Vision (ECCV)},  
+  booktitle={Proceedings of the European Conference on Computer Vision (ECCV)},
   year={2020}
 }
 ```
@@ -130,7 +130,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-## CrowdPose
+#### CrowdPose
 
 <details>
 <summary align="right"><a href="https://arxiv.org/pdf/1812.00324.pdf">CrowdPose (CVPR'2019)</a></summary>
@@ -146,7 +146,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-## Human3.6M
+#### Human3.6M
 
 
 <details>
@@ -169,7 +169,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-## HybrIK
+#### HybrIK
 
 
 <details>
@@ -188,7 +188,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-## LSP
+#### LSP
 
 
 <details>
@@ -208,7 +208,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 ```
 </details>
 
-## MPI-INF-3DHP
+#### MPI-INF-3DHP
 
 <details>
 <summary align="right"><a href="https://arxiv.org/pdf/1611.09813.pdf">MPI_INF_3DHP (3DV'2017)</a></summary>
@@ -228,7 +228,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-## MPII
+#### MPII
 
 
 <details>
@@ -246,7 +246,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-## PoseTrack18
+#### PoseTrack18
 
 
 <details>
@@ -264,7 +264,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-## OpenPose
+#### OpenPose
 
 
 <details>
@@ -281,7 +281,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-## PennAction
+#### PennAction
 
 
 <details>
@@ -300,7 +300,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-## SMPL
+#### SMPL
 
 
 <details>
@@ -323,7 +323,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-## SMPL-X
+#### SMPL-X
 
 
 <details>
@@ -345,4 +345,4 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 #### Customizing keypoint convention
 
-Please refer to [customize_keypoints_convention](docs/customize_keypoints_convention.md).
+Please refer to [customize_keypoints_convention](./customize_keypoints_convention.md).

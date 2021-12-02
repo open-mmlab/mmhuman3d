@@ -315,14 +315,14 @@ class NewAttributeCameras(cameras.CamerasBase):
 @CAMERAS.register_module(
     name=('WeakPerspectiveCameras', 'WeakPerspective', 'weakperspective'))
 class WeakPerspectiveCameras(NewAttributeCameras):
-    """Inherited from (pytorch3d cameras)[https://github.com/facebookresearch/
-    pytorch3d/blob/main/pytorch3d/renderer/cameras.py] and mimiced the code
+    """Inherited from [pytorch3d cameras](https://github.com/facebookresearch/
+    pytorch3d/blob/main/pytorch3d/renderer/cameras.py) and mimiced the code
     style. And re-inmplemented functions: compute_projection_matrix,
     get_projection_transform, unproject_points, is_perspective, in_ndc for
     render.
 
-    K modified from (VIBE)[https://github.com/mkocabas/VIBE/blob/master/
-    lib/utils/renderer.py] and changed to opencv convention.
+    K modified from [VIBE](https://github.com/mkocabas/VIBE/blob/master/
+    lib/utils/renderer.py) and changed to opencv convention.
     Original license please see docs/additional_license/md.
 
     This intrinsic matrix is orthographics indeed, but could serve as
@@ -416,27 +416,29 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
             opencv intrinsic matrix: (N, 4, 4)
-            r > 1;
-                K = [
-                        [sx*r,   0,    0,   tx*sx*r],
-                        [0,     sy,    0,   ty*sy],
-                        [0,     0,     1,       0],
-                        [0,     0,     0,       1],
-                ]
-            or r < 1:
-                K = [
-                        [sx,    0,     0,   tx*sx],
-                        [0,   sy/r,    0,  ty*sy/r],
-                        [0,     0,     1,      0],
-                        [0,     0,     0,      1],
-                ]
-            rotation matrix: (N, 3, 3)
-                [
-                    [1, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 1]
-                ]
-            translation matrix: (N, 3)
+
+            r > 1::
+
+                K = [[sx*r,   0,    0,   tx*sx*r],
+                     [0,     sy,    0,     ty*sy],
+                     [0,      0,    1,         0],
+                     [0,      0,    0,         1]]
+
+            or r < 1::
+
+                K = [[sx,    0,     0,   tx*sx],
+                     [0,   sy/r,    0,  ty*sy/r],
+                     [0,     0,     1,      0],
+                     [0,     0,     0,      1],]
+
+            rotation matrix: (N, 3, 3)::
+
+                [[1, 0, 0],
+                 [0, 1, 0],
+                 [0, 0, 1]]
+
+            translation matrix: (N, 3)::
+
                 [0, 0, -znear]
         """
         znear = kwargs.get('znear', -1.0)
@@ -473,12 +475,12 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         Args:
             K (torch.Tensor):
                 opencv orthographics intrinsic matrix: (N, 4, 4)
-                K = [
-                        [sx*r,   0,    0,   tx*sx*r],
-                        [0,     sy,    0,   ty*sy],
-                        [0,     0,     1,       0],
-                        [0,     0,     0,       1],
-                ]
+
+                K = [[sx*r,   0,    0,   tx*sx*r],
+                     [0,     sy,    0,   ty*sy],
+                     [0,     0,     1,       0],
+                     [0,     0,     0,       1],]
+
             aspect_ratio (Union[torch.Tensor, float], optional):
                 aspect ratio of the image pixels. 1.0 indicates square pixels.
                 Defaults to 1.0.
@@ -935,12 +937,10 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
             px = principal_point[:,0]
             py = principal_point[:,1]
 
-            K = [
-                    [fx,   0,    0,  px],
-                    [0,   fy,    0,  py],
-                    [0,    0,    1,   0],
-                    [0,    0,    0,   1],
-            ]
+            K = [[fx,   0,    0,  px],
+                 [0,   fy,    0,  py],
+                 [0,    0,    1,   0],
+                 [0,    0,    0,   1],]
         """
         batch_size = args.get('batch_size', 1)
         device = args.get('device', 'cpu')
@@ -1047,12 +1047,10 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
             mix_y = (max_y + min_y) / (max_y - min_y)
             mid_z = (far + near) / (far - near)
 
-            K = [
-                    [scale_x,        0,         0,  -mid_x],
-                    [0,        scale_y,         0,  -mix_y],
-                    [0,              0,  -scale_z,  -mid_z],
-                    [0,              0,         0,       1],
-            ]
+            K = [[scale_x,        0,         0,  -mid_x],
+                 [0,        scale_y,         0,  -mix_y],
+                 [0,              0,  -scale_z,  -mid_z],
+                 [0,              0,         0,       1],]
         """
         znear = args.get('znear', 1.0)
         zfar = args.get('zfar', 100.0)
@@ -1118,7 +1116,7 @@ def compute_orbit_cameras(
         elev (float, optional):  This is the angle between the
             vector from the object to the camera, and the horizontal
             plane y = 0 (xz-plane).
-             Defaults to 0.
+            Defaults to 0.
         azim (float, optional): angle in degrees or radians. The vector
             from the object to the camera is projected onto a horizontal
             plane y = 0. azim is the angle between the projected vector and a

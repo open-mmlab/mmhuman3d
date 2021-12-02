@@ -23,8 +23,8 @@
 
 ## Overview
 
-Our data pipeline use [HumanData](mmhuman3d/docs/human_data.md) structure for
-storing and loading. The proprocessed npz files can be obtained from raw data using our data converters, and the supported configs can be found [here](mmhuman3d/tools/convert_datasets.py).
+Our data pipeline use [HumanData](./human_data.md) structure for
+storing and loading. The proprocessed npz files can be obtained from raw data using our data converters, and the supported configs can be found [here](https://github.com/open-mmlab/mmhuman3d/tree/main/tools/convert_datasets.py).
 
 These are our supported converters and their respective `dataset-name`:
 - AgoraConverter (`agora`)
@@ -75,7 +75,7 @@ python tools/convert_datasets.py \
 
 ### Obtain preprocessed datasets
 
-The available dataset configurations are listed [here](mmhuman3d/tools/convert_datasets.py).
+The available dataset configurations are listed [here](https://github.com/open-mmlab/mmhuman3d/tree/main/tools/convert_datasets.py).
 
 An example is
 ```
@@ -450,7 +450,7 @@ mmhuman3d
 
 </details>
 
-For [Human3.6M](http://vision.imar.ro/human3.6m/description.php), please download from the official website and run the [preprocessing script](mmhuman3d/data/data_converters/h36m.py), which will extract pose annotations at downsampled framerate (10 FPS). The processed data should have the following structure:
+For [Human3.6M](http://vision.imar.ro/human3.6m/description.php), please download from the official website and run the [preprocessing script](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py), which will extract pose annotations at downsampled framerate (10 FPS). The processed data should have the following structure:
 
 ```text
 mmhuman3d
@@ -487,7 +487,7 @@ mmhuman3d
 
 <!-- [DATASET] -->
 
-For data preparation of [Human3.6M](http://vision.imar.ro/human3.6m/description.php) for HMR and SPIN training, we use the [MoShed](https://mosh.is.tue.mpg.de/) data provided in [HMR](https://github.com/akanazawa/hmr) for training. However, due to license limitations, we are not allowed to redistribute the data. Even if you do not have access to these parameters, you can still generate the preprocessed h36m npz file without mosh parameters using our [converter](mmhuman3d/data/data_converters/keypoints_mapping/h36m.py).
+For data preparation of [Human3.6M](http://vision.imar.ro/human3.6m/description.php) for HMR and SPIN training, we use the [MoShed](https://mosh.is.tue.mpg.de/) data provided in [HMR](https://github.com/akanazawa/hmr) for training. However, due to license limitations, we are not allowed to redistribute the data. Even if you do not have access to these parameters, you can still generate the preprocessed h36m npz file without mosh parameters using our [converter](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py).
 
 Config without mosh:
 ```python
@@ -575,10 +575,10 @@ mmhuman3d
 
 To convert the preprocessed json files into npz files used for our pipeline,
 run the following preprocessing scripts:
-  - [Human3.6M](mmhuman3d/data/data_converters/h36m_hybrik.py)
-  - [PW3D](mmhuman3d/data/data_converters/pw3d_hybrik.py)
-  - [Mpi-Inf-3dhp](mmhuman3d/data/data_converters/mpi_inf_3dhp_hybrik.py)
-  - [COCO](mmhuman3d/data/data_converters/coco_hybrik.py)
+  - [Human3.6M](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m_hybrik.py)
+  - [PW3D](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/pw3d_hybrik.py)
+  - [Mpi-Inf-3dhp](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/mpi_inf_3dhp_hybrik.py)
+  - [COCO](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/coco_hybrik.py)
 
 
 ### LSP

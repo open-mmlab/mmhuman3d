@@ -198,7 +198,7 @@ You can slice the cameras by index.
 
 - **Define your new camera convention:**
 
-    If want to use a new convention, define your convention in [CAMERA_CONVENTION_FACTORY](mmhuman3d/core/conventions/cameras/__init__.py) by the order of right to, up to, and off screen. E.g., the first one is pyrender and its convention should be '+x+y+z'. '+' could be ignored. The second one is opencv and its convention should be '+x-y-z'. The third one is pytorch3d and its convention should be '-xyz'.
+    If want to use a new convention, define your convention in [CAMERA_CONVENTION_FACTORY](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/cameras/__init__.py) by the order of right to, up to, and off screen. E.g., the first one is pyrender and its convention should be '+x+y+z'. '+' could be ignored. The second one is opencv and its convention should be '+x-y-z'. The third one is pytorch3d and its convention should be '-xyz'.
     ```
     opengl(pyrender)       opencv             pytorch3d
         y                   z                     y
@@ -267,14 +267,14 @@ Convert functions are also defined in conventions.cameras.
 
 - **Compute depth of points:**
 
-    You can simply convert points to the view coordinates and get the z value as depth. Example culd be found in [DepthRenderer](mmhuman3d/core/visualization/renderer/torch3d_renderer/depth_renderer.py).
+    You can simply convert points to the view coordinates and get the z value as depth. Example culd be found in [DepthRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/visualization/renderer/torch3d_renderer/depth_renderer.py).
     ```python
     points_depth = cameras.compute_depth_of_points(points)
     ```
 
 - **Compute normal of meshes:**
 
-    Use `pytorch3d` to compute normal of meshes. Example culd be found in [NormalRenderer](mmhuman3d/core/visualization/renderer/torch3d_renderer/normal_renderer.py).
+    Use `pytorch3d` to compute normal of meshes. Example culd be found in [NormalRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/visualization/renderer/torch3d_renderer/normal_renderer.py).
     ```python
     normals = cameras.compute_normal_of_meshes(meshes)
     ```

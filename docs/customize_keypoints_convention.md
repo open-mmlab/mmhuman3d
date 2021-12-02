@@ -26,7 +26,7 @@ These are the conventions that our project currently support:
 **1. Create a new convention**
 
 Please follow
-[`mmhuman3d/core/conventions/keypoints_mapping/human_data.py`](mmhuman3d/core/conventions/keypoints_mapping/human_data.py) to create a file named NEW_CONVENTION.py. In this file,
+[`mmhuman3d/core/conventions/keypoints_mapping/human_data.py`](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/human_data.py) to create a file named NEW_CONVENTION.py. In this file,
 `NEW_KEYPOINTS` is a list containing keypoints naming and order specific to the new convention.
 
 For instance, if we want to create a new convention for AGORA dataset, `agora.py` would contain:
@@ -43,7 +43,7 @@ AGORA_KEYPOINTS = [
 
 In this project, keypoints that share the same naming across datasets should have the exact same semantic definition in the human body. `human_data` convention has already consolidated the different keypoints naming and correspondences across our supported datasets.
 
-For each keypoint in `NEW_KEYPOINTS`, we have to check (1) if the keypoint name exists in [`mmhuman3d/core/conventions/keypoints_mapping/human_data.py`](mmhuman3d/core/conventions/keypoints_mapping/human_data.py) and (2) if the keypoint has a correspondence i.e. maps to the same
+For each keypoint in `NEW_KEYPOINTS`, we have to check (1) if the keypoint name exists in [`mmhuman3d/core/conventions/keypoints_mapping/human_data.py`](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/human_data.py) and (2) if the keypoint has a correspondence i.e. maps to the same
 location as the ones defined in `human_data`.
 
 If both conditions are met, retain the keypoint name in NEW_CONVENTION.py.
@@ -63,7 +63,7 @@ We may expand `human_data` to the new keypoint if necessary. However, this can o
 **4. Initialise the new set of keypoint convention**
 
 Add import for NEW_CONVENTION.py in
-[`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L8-25), and add the identifier to dict [KEYPOINTS_FACTORY](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L27-52).
+[`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L8-25), and add the identifier to dict [KEYPOINTS_FACTORY](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L27-52).
 
 For instance, if our new convention is `agora`:
 ```
@@ -82,7 +82,7 @@ KEYPOINTS_FACTORY = {
 
 **5. Using keypoints convention for keypoints mapping**
 
-To convert keypoints from any existing convention to your newly defined convention (or vice versa), you can use the `convert_kps` function [`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](mmhuman3d/core/conventions/keypoints_mapping/__init__.py), which produce a mask containing 0 or 1 indicating if the corresponding point should be filtered or retained.
+To convert keypoints from any existing convention to your newly defined convention (or vice versa), you can use the `convert_kps` function [`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/__init__.py), which produce a mask containing 0 or 1 indicating if the corresponding point should be filtered or retained.
 
 To convert from coco to new convention:
 ```
