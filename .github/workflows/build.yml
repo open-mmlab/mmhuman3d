@@ -52,7 +52,7 @@ jobs:
         run: |
           mkdir mmhuman3d_download
           cd mmhuman3d_download
-          wget -O mmhuman3d.7z -q http://98.126.31.28:8008/mmhuman3d.7z
+          wget -O mmhuman3d.7z -q ${{secrets.TEST_DATA_FROM_ION}}
           7za x mmhuman3d.7z
           ls -l
           cd ..
