@@ -102,7 +102,7 @@ python demo/estimate_smpl.py \
 
 ## Evaluation
 
-We provide pretrained models in the respective method folders in [config](../configs).
+We provide pretrained models in the respective method folders in [config](https://github.com/open-mmlab/mmhuman3d/tree/main/configs).
 
 ### Evaluate with a single GPU / multiple GPUs
 
@@ -156,7 +156,7 @@ Example: using 8 GPUs to train HMR on a slurm cluster.
 ./tools/slurm_train.sh my_partition my_job configs/hmr/resnet50_hmr_pw3d.py work_dirs/hmr 8 --no-validate
 ```
 
-You can check [slurm_train.sh](../tools/slurm_train.sh) for full arguments and environment variables.
+You can check [slurm_train.sh](https://github.com/open-mmlab/mmhuman3d/tree/main/tools/slurm_train.sh) for full arguments and environment variables.
 
 
 ## More Tutorials

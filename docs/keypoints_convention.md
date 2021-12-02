@@ -345,4 +345,4 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 #### Customizing keypoint convention
 
-Please refer to [customize_keypoints_convention](docs/customize_keypoints_convention.md).
+Please refer to [customize_keypoints_convention](./customize_keypoints_convention.md).
