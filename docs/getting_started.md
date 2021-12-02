@@ -16,11 +16,11 @@
 
 ## Installation
 
-Please refer to [install.md](docs/install.md) for installation.
+Please refer to [install.md](./install.md) for installation.
 
 ## Data Preparation
 
-Please refer to [data_preparation.md](docs/preprocess_dataset.md) for data preparation.
+Please refer to [data_preparation.md](./preprocess_dataset.md) for data preparation.
 
 ## Body Model Preparation
 
@@ -161,9 +161,9 @@ You can check [slurm_train.sh](../tools/slurm_train.sh) for full arguments and e
 
 ## More Tutorials
 
-- [Camera conventions](cameras.md)
-- [Keypoint conventions](keypoints_convention.md)
-- [Custom keypoint conventions](customize_keypoints_convention.md)
-- [HumanData](human_data.md)
-- [Keypoint visualization](visualization.md)
-- [Mesh visualization](render_mesh.md)
+- [Camera conventions](./cameras.md)
+- [Keypoint conventions](./keypoints_convention.md)
+- [Custom keypoint conventions](./customize_keypoints_convention.md)
+- [HumanData](./human_data.md)
+- [Keypoint visualization](./visualize_keypoints.md)
+- [Mesh visualization](./visualize_smpl.md)

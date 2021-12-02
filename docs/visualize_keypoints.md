@@ -1,6 +1,6 @@
 ## Visualize Keypoints
 
-### Visualize 2d keypoints  
+### Visualize 2d keypoints
 - **simple example for visualize 2d keypoints:**
 
     You have 2d coco_wholebody keypoints of shape(10, 133, 2).
@@ -95,7 +95,7 @@
 
     You should provide limbs like
     `limbs=[[0, 1], ..., [10, 11]]`
-    if you dataset is not in [convention](mmhuman3d/core/conventions/keypoints_mapping/).
+    if you dataset is not in [convention](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/).
 
 - **other parameters:**
 

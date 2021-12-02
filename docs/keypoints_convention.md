@@ -122,7 +122,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 @inproceedings{jin2020whole,
   title={Whole-Body Human Pose Estimation in the Wild},
   author={Jin, Sheng and Xu, Lumin and Xu, Jin and Wang, Can and Liu, Wentao and Qian, Chen and Ouyang, Wanli and Luo, Ping},
-  booktitle={Proceedings of the European Conference on Computer Vision (ECCV)},  
+  booktitle={Proceedings of the European Conference on Computer Vision (ECCV)},
   year={2020}
 }
 ```

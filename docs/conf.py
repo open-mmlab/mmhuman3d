@@ -50,7 +50,7 @@ extensions = [
 ]
 
 autodoc_mock_imports = [
-    'matplotlib', 'mmhuman3d.version', 'mmcv.ops'
+    'mmhuman3d.version', 'mmcv.ops'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
