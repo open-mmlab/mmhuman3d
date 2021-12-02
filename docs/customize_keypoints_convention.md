@@ -63,7 +63,7 @@ We may expand `human_data` to the new keypoint if necessary. However, this can o
 **4. Initialise the new set of keypoint convention**
 
 Add import for NEW_CONVENTION.py in
-[`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L8-25), and add the identifier to dict [KEYPOINTS_FACTORY](mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L27-52).
+[`mmhuman3d/core/conventions/keypoints_mapping/__init__.py`](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L8-25), and add the identifier to dict [KEYPOINTS_FACTORY](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/__init__.py#L27-52).
 
 For instance, if our new convention is `agora`:
 ```
