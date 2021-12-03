@@ -14,7 +14,9 @@
 
 ## Introduction
 
-MMHuman3D is an open source human pose and shape estimation toolbox based on PyTorch. It is a part of the [OpenMMLab](https://openmmlab.com/) project.
+English | [简体中文](README_CN.md)
+
+MMHuman3D is an open source PyTorch-based codebase for the use of 3D human parametric models in computer vision and computer graphics. It is a part of the [OpenMMLab](https://openmmlab.com/) project.
 
 The main branch works with **PyTorch 1.7+**.
 
@@ -128,4 +130,4 @@ We wish that the toolbox and benchmark could serve the growing research communit
 - [MMGeneration](https://github.com/open-mmlab/mmgeneration): OpenMMLab next-generation toolbox for generative models.
 - [MMFlow](https://github.com/open-mmlab/mmflow): OpenMMLab optical flow toolbox and benchmark.
 - [MMFewShot](https://github.com/open-mmlab/mmfewshot): OpenMMLab FewShot Learning Toolbox and Benchmark.
-- [MMHuman3D](https://github.com/open-mmlab/mmhuman3d): OpenMMLab Human Pose and Shape Estimation Toolbox and Benchmark.
+- [MMHuman3D](https://github.com/open-mmlab/mmhuman3d): OpenMMLab 3D Human Parametric Model Toolbox and Benchmark.
