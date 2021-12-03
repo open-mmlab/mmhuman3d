@@ -139,7 +139,7 @@ MMHuman3D是一款由不同学校和公司共同贡献的开源项目。我们�
 <img src="docs_zh-CN/imgs/wechat_assistant_qrcode.jpg" height="200" /> 
 </div>
 
-扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，加入 MMHuman3D 团队的官方交流 QQ 群
+扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，加入 MMHuman3D 团队的[官方交流 QQ 群](https://jq.qq.com/?_wv=1027&k=EKJmcIiO)
 
 <div align="center">
 <img src="docs_zh-CN/imgs/zhihu_qrcode.jpg" height="400" />  <img src="docs_zh-CN/imgs/mmhuman3d_qq_qrcode.jpg" height="400" />
