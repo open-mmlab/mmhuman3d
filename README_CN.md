@@ -136,7 +136,7 @@ MMHuman3D是一款由不同学校和公司共同贡献的开源项目。我们�
 扫描下方的二维码联系管理员来加入我们的微信社区
 
 <div align="center">
-<img src="docs_zh-CN/imgs/wechat_assistant_qrcode.jpg" height="200" /> 
+<img src="docs_zh-CN/imgs/wechat_assistant_qrcode.jpg" height="200" />
 </div>
 
 扫描下方的二维码可关注 OpenMMLab 团队的 [知乎官方账号](https://www.zhihu.com/people/openmmlab)，加入 MMHuman3D 团队的[官方交流 QQ 群](https://jq.qq.com/?_wv=1027&k=EKJmcIiO)
