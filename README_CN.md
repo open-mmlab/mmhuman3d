@@ -16,7 +16,7 @@
 
 [English](README.md) | 简体中文
 
-MMHuman3D 是一款基于 PyTorch 的人体参数化模型的开源工具箱，是[OpenMMLab](https://openmmlab.com/)项目的成员之一。
+MMHuman3D 是一款基于 PyTorch 的人体参数化模型的开源工具箱，是 [OpenMMLab](https://openmmlab.com/) 项目的成员之一。
 
 主分支代码目前支持 **PyTorch 1.7** 以上的版本。
 
