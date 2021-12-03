@@ -154,6 +154,7 @@ def test_cache():
     coco_wb_keypoints2d = np.ones((1, 133, 3))
     coco_wb_mask = np.ones((133, ))
     start_time = time.time()
+    # establish mapping cache at the first time
     for dst_key in KEYPOINTS_FACTORY:
         convert_kps(
             keypoints=coco_wb_keypoints2d,
@@ -162,6 +163,7 @@ def test_cache():
             dst=dst_key)
     without_cache_time = time.time() - start_time
     start_time = time.time()
+    # re-use cached mapping to convert faster
     for dst_key in KEYPOINTS_FACTORY:
         convert_kps(
             keypoints=coco_wb_keypoints2d,
