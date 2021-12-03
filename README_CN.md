@@ -30,7 +30,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 - **通过一个统一的数据规范 HumanData 支持多种数据集**
 
-  通过一个规范工具箱的帮助，我们将所有的支持的数据集都对齐到一个统一的数据格式 *HumanData* . 我们同时也提供预处理完成的数据文件。
+  通过一个规范工具箱，我们将所有的支持的数据集都对齐到统一的数据格式 *HumanData* . 我们同时也提供预处理完成的数据文件。
 
 - **多功能可视化工具箱**
 
@@ -86,7 +86,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 ## 快速入门
 
-请参考[快速入门](docs/getting_started.md)文档学习 MMDetection 的基本使用。
+请参考[快速入门](docs/getting_started.md)文档学习 MMHuman3D 的基本使用。
 
 ## 许可
 
