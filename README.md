@@ -97,7 +97,7 @@ If you find this project useful in your research, please consider cite:
 
 ```bibtex
 @misc{mmhuman3d,
-    title={OpenMMLab Human Pose and Shape Estimation Toolbox and Benchmark},
+    title={OpenMMLab 3D Human Parametric Model Toolbox and Benchmark},
     author={MMHuman3D Contributors},
     howpublished = {\url{https://github.com/open-mmlab/mmhuman3d}},
     year={2021}
