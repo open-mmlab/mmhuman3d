@@ -81,7 +81,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 我们将跟进学界的最新进展，并支持更多算法和框架。
 
-如果您对MMHuman3D有任何功能需求，请随时在 [愿望清单](https://github.com/open-mmlab/mmpose/issues/2) 中留言。
+如果您对MMHuman3D有任何功能需求，请随时在[愿望清单](https://github.com/open-mmlab/mmhuman3d/issues/3)中留言。
 
 
 ## 快速入门
