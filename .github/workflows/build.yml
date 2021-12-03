@@ -57,7 +57,7 @@ jobs:
         run: |
           mkdir mmhuman3d_download
           cd mmhuman3d_download
-          wget -O mmhuman3d.7z -q ${{secrets.TEST_DATA_FROM_ALI}}
+          wget -O mmhuman3d.7z -q https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/mmhuman3d.7z
           7za x mmhuman3d.7z
           ls -l
           cd ..
