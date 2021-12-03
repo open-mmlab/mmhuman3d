@@ -8,16 +8,16 @@ MPI-INF-3DHP.
 
 ### HMR
 
-Please refer to [HMR](../configs/hmr/README.md) for details.
+Please refer to [HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/) for details.
 
 ### SPIN
 
-Please refer to [SPIN](../configs/spin/README.md) for details.
+Please refer to [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/) for details.
 
 ### VIBE
 
-Please refer to [VIBE](../configs/vibe/README.md) for details.
+Please refer to [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/) for details.
 
 ### HybrIK
 
-Please refer to [HybrIK](../configs/hybrik/README.md) for details.
+Please refer to [HybrIK](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hybrik/) for details.

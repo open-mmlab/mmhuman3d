@@ -16,11 +16,11 @@
 
 ## Installation
 
-Please refer to [install.md](docs/install.md) for installation.
+Please refer to [install.md](./install.md) for installation.
 
 ## Data Preparation
 
-Please refer to [data_preparation.md](docs/preprocess_dataset.md) for data preparation.
+Please refer to [data_preparation.md](./preprocess_dataset.md) for data preparation.
 
 ## Body Model Preparation
 
@@ -102,7 +102,7 @@ python demo/estimate_smpl.py \
 
 ## Evaluation
 
-We provide pretrained models in the respective method folders in [config](../configs).
+We provide pretrained models in the respective method folders in [config](https://github.com/open-mmlab/mmhuman3d/tree/main/configs).
 
 ### Evaluate with a single GPU / multiple GPUs
 
@@ -156,14 +156,14 @@ Example: using 8 GPUs to train HMR on a slurm cluster.
 ./tools/slurm_train.sh my_partition my_job configs/hmr/resnet50_hmr_pw3d.py work_dirs/hmr 8 --no-validate
 ```
 
-You can check [slurm_train.sh](../tools/slurm_train.sh) for full arguments and environment variables.
+You can check [slurm_train.sh](https://github.com/open-mmlab/mmhuman3d/tree/main/tools/slurm_train.sh) for full arguments and environment variables.
 
 
 ## More Tutorials
 
-- [Camera conventions](cameras.md)
-- [Keypoint conventions](keypoints_convention.md)
-- [Custom keypoint conventions](customize_keypoints_convention.md)
-- [HumanData](human_data.md)
-- [Keypoint visualization](visualization.md)
-- [Mesh visualization](render_mesh.md)
+- [Camera conventions](./cameras.md)
+- [Keypoint conventions](./keypoints_convention.md)
+- [Custom keypoint conventions](./customize_keypoints_convention.md)
+- [HumanData](./human_data.md)
+- [Keypoint visualization](./visualize_keypoints.md)
+- [Mesh visualization](./visualize_smpl.md)

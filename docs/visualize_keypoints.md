@@ -1,6 +1,6 @@
 ## Visualize Keypoints
 
-### Visualize 2d keypoints  
+### Visualize 2d keypoints
 - **simple example for visualize 2d keypoints:**
 
     You have 2d coco_wholebody keypoints of shape(10, 133, 2).
@@ -17,7 +17,7 @@
 
 - **data_source and mask:**
 
-    If your keypoints have some nonsense points, you should provide the mask. `data_source` is mainly used to search the limb connections and palettes. You should specify the data_source if you dataset is in [convention](mmhuman3d/core/conventions/keypoints_mapping/).
+    If your keypoints have some nonsense points, you should provide the mask. `data_source` is mainly used to search the limb connections and palettes. You should specify the data_source if you dataset is in [convention](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/).
     E.g., convert coco_wholebody keypoints to the convention of smpl and visualize it:
     ```python
     from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
@@ -95,7 +95,7 @@
 
     You should provide limbs like
     `limbs=[[0, 1], ..., [10, 11]]`
-    if you dataset is not in [convention](mmhuman3d/core/conventions/keypoints_mapping/).
+    if you dataset is not in [convention](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/keypoints_mapping/).
 
 - **other parameters:**
 
@@ -140,7 +140,7 @@
 
 
 ### About ffmpeg_utils
-- In [ffmpeg_utils](mmhuman3d/utils/ffmpeg_utils.py) , each function has abundant doc strings, and the semantically defined function names could be easily understood.
+- In [ffmpeg_utils](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/utils/ffmpeg_utils.py) , each function has abundant doc strings, and the semantically defined function names could be easily understood.
 
 - **read files:**
 
