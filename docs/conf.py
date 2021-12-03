@@ -11,7 +11,6 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import subprocess
 import sys
 
 import pytorch_sphinx_theme
@@ -41,17 +40,11 @@ release = get_version()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
-    'sphinx_markdown_tables',
-    'sphinx_copybutton',
-    'myst_parser'
+    'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.viewcode',
+    'sphinx_markdown_tables', 'sphinx_copybutton', 'myst_parser'
 ]
 
-autodoc_mock_imports = [
-    'mmhuman3d.version', 'mmcv.ops'
-]
+autodoc_mock_imports = ['mmhuman3d.version', 'mmcv.ops']
 
 # Ignore >>> when copying code
 copybutton_prompt_text = r'>>> |\.\.\. '
