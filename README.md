@@ -81,7 +81,7 @@ Supported datasets:
 
 We will keep up with the latest progress of the community, and support more popular methods and frameworks.
 
-If you have any feature requests, please feel free to leave an issue.
+If you have any feature requests, please feel free to leave an comment in the [wishlist](https://github.com/open-mmlab/mmhuman3d/issues/3).
 
 ## Get Started
 
