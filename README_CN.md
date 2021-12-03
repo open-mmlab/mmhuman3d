@@ -94,7 +94,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 ## 引用
 
-如果您觉得 MMPose 对您的研究有所帮助，请考虑引用它：
+如果您觉得 MMHuman3D 对您的研究有所帮助，请考虑引用它：
 
 ```bibtex
 @misc{mmhuman3d,
@@ -107,7 +107,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 ## 参与贡献
 
-我们非常欢迎用户对于 MMPose 做出的任何贡献，可以参考 [CONTRIBUTION.md](.github/CONTRIBUTING.md) 文件了解更多细节。
+我们非常欢迎用户对于 MMHuman3D 做出的任何贡献，可以参考 [CONTRIBUTION.md](.github/CONTRIBUTING.md) 文件了解更多细节。
 
 ## 致谢
 
