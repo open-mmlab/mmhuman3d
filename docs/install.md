@@ -18,7 +18,7 @@
 - CUDA 9.2+
 - GCC 5+
 - PyTorch3D 0.4+
-- [MMCV](https://github.com/open-mmlab/mmcv) (Please install mmcv-full>=1.3.13, <1.4.0 for GPU)
+- [MMCV](https://github.com/open-mmlab/mmcv) (Please install mmcv-full>=1.3.13, <=1.5.0 for GPU)
 
 Optional:
 - [MMPOSE](https://github.com/open-mmlab/mmpose) (Only for demo.)
