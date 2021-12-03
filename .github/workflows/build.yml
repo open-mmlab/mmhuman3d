@@ -6,9 +6,10 @@ name: build
 on:
   push:
    branches:
-    - master
+    - main
 
   pull_request:
+
 
 jobs:
   lint:
@@ -50,13 +51,13 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: mmhuman3d_env
-          python-version: 3.7
+          python-version: ${{matrix.python-version}}
           auto-activate-base: false
       - name: Prepare test data
         run: |
           mkdir mmhuman3d_download
           cd mmhuman3d_download
-          wget -q http://98.126.31.28:8008/mmhuman3d.7z
+          wget -O mmhuman3d.7z -q ${{secrets.TEST_DATA_FROM_ALI}}
           7za x mmhuman3d.7z
           ls -l
           cd ..
