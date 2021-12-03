@@ -29,7 +29,7 @@ jobs:
       - name: Check docstring coverage
         run: |
           pip install interrogate
-          interrogate -vinmMI --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" -f 40 mmhuman3d/
+          interrogate -vinmMI --ignore-init-method --ignore-module --ignore-nested-functions --ignore-regex "__repr__" -f 80 mmhuman3d/
 
   build_cuda101:
     runs-on: ubuntu-18.04
@@ -57,7 +57,7 @@ jobs:
         run: |
           mkdir mmhuman3d_download
           cd mmhuman3d_download
-          wget -O mmhuman3d.7z -q ${{secrets.TEST_DATA_FROM_ALI}}
+          wget -O mmhuman3d.7z -q https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/mmhuman3d.7z
           7za x mmhuman3d.7z
           ls -l
           cd ..
