@@ -89,3 +89,11 @@ jobs:
           coverage run --source mmhuman3d -m pytest tests/
           coverage xml
           coverage report -m
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          env_vars: OS,PYTHON
+          name: codecov-umbrella
+          fail_ci_if_error: false
