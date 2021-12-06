@@ -46,7 +46,7 @@ def visualize_kp3d(
     data_source: str = 'coco',
     mask: Optional[Union[list, tuple, np.ndarray]] = None,
     start: int = 0,
-    end: int = -1,
+    end: Optional[int] = None,
     resolution: Union[list, Tuple[int, int]] = (1024, 1024),
     fps: Union[float, int] = 30,
     frame_names: Optional[Union[List[str], str]] = None,
@@ -78,7 +78,7 @@ def visualize_kp3d(
         mask (Optional[Union[list, tuple, np.ndarray]], optional):
             mask to mask out the incorrect points. Defaults to None.
         start (int, optional): start frame index. Defaults to 0.
-        end (int, optional): end frame index. Defaults to -1.
+        end (int, optional): end frame index. Defaults to None.
         resolution (Union[list, Tuple[int, int]], optional):
             (width, height) of the output video
             will be the same size as the original images if not specified.
@@ -158,8 +158,9 @@ def visualize_kp3d(
             allowed_suffix=['.mp4', '.gif', ''])
 
     # slice the frames
-    end = (min(end, num_frames - 1) + num_frames) % num_frames
-    kp3d = kp3d[start:end + 1]
+    end = (min(end, num_frames - 1) +
+           num_frames) % num_frames + 1 if end is not None else num_frames
+    kp3d = kp3d[start:end]
     # norm the coordinates
     if value_range is not None:
         # norm pose location to value_range (70% value range)
