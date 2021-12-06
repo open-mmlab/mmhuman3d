@@ -48,11 +48,11 @@ except ImportError:
 
 
 def _prepare_background(image_array, frame_list, origin_frames, output_path,
-                        start, end, img_format, overwrite, num_frame,
+                        start, end, img_format, overwrite, num_frames,
                         read_frames_batch):
     """Compare among `image_array`, `frame_list` and `origin_frames` and decide
     whether to save the temp background images."""
-    if num_frame > 300:
+    if num_frames > 300:
         read_frames_batch = True
 
     frames_folder = None
@@ -66,7 +66,7 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
         if image_array.ndim == 3:
             image_array = image_array[None]
         if image_array.shape[0] == 1:
-            image_array = image_array.repeat(num_frame, 1, 1, 1)
+            image_array = image_array.repeat(num_frames, 1, 1, 1)
         image_array
         frame_list = None
         origin_frames = None
@@ -202,31 +202,31 @@ def _prepare_input_data(verts, poses, betas, transl):
 
     if isinstance(verts, np.ndarray):
         verts = torch.Tensor(verts)
-        num_frame = verts.shape[0]
+        num_frames = verts.shape[0]
     elif isinstance(verts, torch.Tensor):
-        num_frame = verts.shape[0]
+        num_frames = verts.shape[0]
 
     if isinstance(poses, np.ndarray):
         poses = torch.Tensor(poses)
-        num_frame = poses.shape[0]
+        num_frames = poses.shape[0]
     elif isinstance(poses, torch.Tensor):
-        num_frame = poses.shape[0]
+        num_frames = poses.shape[0]
     elif isinstance(poses, dict):
         for k, v in poses.items():
             if isinstance(v, np.ndarray):
                 poses[k] = torch.tensor(v)
-        num_frame = poses['body_pose'].shape[0]
+        num_frames = poses['body_pose'].shape[0]
 
     if isinstance(betas, np.ndarray):
         betas = torch.Tensor(betas)
 
     if betas is not None:
-        if betas.shape[0] != num_frame:
-            times = num_frame // betas.shape[0]
+        if betas.shape[0] != num_frames:
+            times = num_frames // betas.shape[0]
             if betas.ndim == 2:
-                betas = betas.repeat(times, 1)[:num_frame]
+                betas = betas.repeat(times, 1)[:num_frames]
             elif betas.ndim == 3:
-                betas = betas.repeat(times, 1, 1)[:num_frame]
+                betas = betas.repeat(times, 1, 1)[:num_frames]
             print(f'betas will be repeated by dim 0 for {times} times.')
     if isinstance(transl, np.ndarray):
         transl = torch.Tensor(transl)
@@ -247,12 +247,12 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
                 raise KeyError(
                     f'{str(poses.keys())}, Please make sure that your '
                     f'input dict has all of {", ".join(body_pose_keys)}')
-            num_frame = poses['body_pose'].shape[0]
+            num_frames = poses['body_pose'].shape[0]
             _, num_person, _ = poses['body_pose'].view(
-                num_frame, -1, NUM_BODY_JOINTS * 3).shape
+                num_frames, -1, NUM_BODY_JOINTS * 3).shape
 
             full_pose = body_model.dict2tensor(poses)
-            start = (min(start, num_frame - 1) + num_frame) % num_frame
+            start = (min(start, num_frames - 1) + num_frames) % num_frames
             full_pose = full_pose[start:end]
 
         elif isinstance(poses, torch.Tensor):
@@ -261,8 +261,8 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
                     f'Please make sure your poses is {NUM_DIM} dims in'
                     f'the last axis. Your input shape: {poses.shape}')
             poses = poses.view(poses.shape[0], -1, (NUM_JOINTS + 1) * 3)
-            num_frame, num_person, _ = poses.shape
-            start = (min(start, num_frame - 1) + num_frame) % num_frame
+            num_frames, num_person, _ = poses.shape
+            start = (min(start, num_frames - 1) + num_frames) % num_frames
             full_pose = poses[start:end]
         else:
             raise ValueError('Wrong pose type, should be `dict` or `tensor`.')
@@ -270,7 +270,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         # multi person check
         if num_person > 1:
             if betas is not None:
-                betas = betas.view(num_frame, -1, 10)
+                betas = betas.view(num_frames, -1, 10)
 
                 if betas.shape[1] == 1:
                     betas = betas.repeat(1, num_person, 1)
@@ -319,8 +319,8 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         pose_dict = body_model.tensor2dict(
             full_pose=full_pose, betas=betas, transl=transl)
 
-        # get new num_frame
-        num_frame = full_pose.shape[0]
+        # get new num_frames
+        num_frames = full_pose.shape[0]
 
         model_output = body_model(**pose_dict)
         vertices = model_output['vertices']
@@ -344,17 +344,17 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         num_verts = body_model.NUM_VERTS
         assert verts.shape[-2] == num_verts, 'Wrong input verts shape.'
         faces = body_model.faces_tensor
-        num_frame = verts.shape[0]
-        start = (min(start, num_frame - 1) + num_frame) % num_frame
+        num_frames = verts.shape[0]
+        start = (min(start, num_frames - 1) + num_frames) % num_frames
         verts = verts[start:end]
-        num_frame = verts.shape[0]
-        vertices = verts.view(num_frame, -1, num_verts, 3)
+        num_frames = verts.shape[0]
+        vertices = verts.view(num_frames, -1, num_verts, 3)
         num_joints = joints.shape[-2]
-        joints = joints.view(num_frame, -1, num_joints, 3)
+        joints = joints.view(num_frames, -1, num_joints, 3)
         num_person = vertices.shape[1]
     else:
         raise ValueError('Poses and verts are all None.')
-    return vertices, faces, joints, num_frame, num_person
+    return vertices, faces, joints, num_frames, num_person
 
 
 def render_smpl(
@@ -498,7 +498,7 @@ def render_smpl(
             Defaults to None.
         orig_cam (Optional[Union[torch.Tensor, np.ndarray]], optional):
             shape should be (frame, 4) or (frame, num_person, 4). If f equals
-            1, will be repeated to num_frame. num_person should be 1 if single
+            1, will be repeated to num_frames. num_person should be 1 if single
             person. Usually for HMR, VIBE predicted cameras.
             Higher priority than `K` & `R` & `T`.
 
@@ -669,9 +669,11 @@ def render_smpl(
                                                       transl)
     body_model = _prepare_body_model(model_type, body_model, model_path,
                                      gender, use_pca)
-    vertices, faces, joints, num_frame, num_person = _prepare_mesh(
+    vertices, faces, joints, num_frames, num_person = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
-    vertices = vertices.view(num_frame, num_person, -1, 3)
+    end = (min(end, num_frames - 1) +
+           num_frames) % num_frames + 1 if end is not None else num_frames
+    vertices = vertices.view(num_frames, num_person, -1, 3)
 
     if render_choice == 'pointcloud':
         plot_kps = True
@@ -686,7 +688,7 @@ def render_smpl(
 
     image_array, remove_folder, frames_folder = _prepare_background(
         image_array, frame_list, origin_frames, output_path, start, end,
-        img_format, overwrite, num_frame, read_frames_batch)
+        img_format, overwrite, num_frames, read_frames_batch)
 
     render_resolution = None
     if image_array is not None:
@@ -721,7 +723,7 @@ def render_smpl(
             map_index = np.where(np.array(mask) != 0)[0]
             kp3d = kp3d[map_index.tolist()]
         kp3d = kp3d[start:end]
-        kp3d = kp3d.view(num_frame, -1, 3)
+        kp3d = kp3d.view(num_frames, -1, 3)
 
     # prepare render_param_dict
     if render_choice not in [
@@ -761,36 +763,36 @@ def render_smpl(
         Ks = Ks.view(-1, num_person, 3, 3)
         Ks = Ks[start:end]
         Ks = Ks.view(-1, 3, 3)
-        K = K.repeat(num_frame * num_person, 1, 1)
+        K = K.repeat(num_frames * num_person, 1, 1)
 
         Ks = K.inverse() @ Ks @ K
-        vertices = vertices.view(num_frame * num_person, -1, 3)
+        vertices = vertices.view(num_frames * num_person, -1, 3)
         if T is None:
-            T = torch.zeros(num_frame, num_person, 1, 3)
+            T = torch.zeros(num_frames, num_person, 1, 3)
         elif isinstance(T, np.ndarray):
             T = torch.Tensor(T)
         T = T[start:end]
-        T = T.view(num_frame * num_person, 1, 3)
+        T = T.view(num_frames * num_person, 1, 3)
         vertices = torch.einsum('blc,bvc->bvl', Ks, vertices + T)
 
         R = None
         T = None
-        vertices = vertices.view(num_frame, num_person, -1, 3)
+        vertices = vertices.view(num_frames, num_person, -1, 3)
 
     if orig_cam is not None:
         projection = 'weakperspective'
         r = render_resolution[1] / render_resolution[0]
         orig_cam = orig_cam[start:end]
-        orig_cam = orig_cam.view(num_frame, num_person, 4)
+        orig_cam = orig_cam.view(num_frames, num_person, 4)
         # if num_person > 1:
         sx, sy, tx, ty = torch.unbind(orig_cam, -1)
 
-        vertices[..., 0] += tx.view(num_frame, num_person, 1)
-        vertices[..., 1] += ty.view(num_frame, num_person, 1)
-        vertices[..., 0] *= sx.view(num_frame, num_person, 1)
-        vertices[..., 1] *= sy.view(num_frame, num_person, 1)
+        vertices[..., 0] += tx.view(num_frames, num_person, 1)
+        vertices[..., 1] += ty.view(num_frames, num_person, 1)
+        vertices[..., 0] *= sx.view(num_frames, num_person, 1)
+        vertices[..., 1] *= sy.view(num_frames, num_person, 1)
         orig_cam = torch.tensor([1.0, 1.0, 0.0,
-                                 0.0]).view(1, 4).repeat(num_frame, 1)
+                                 0.0]).view(1, 4).repeat(num_frames, 1)
         K, R, T = WeakPerspectiveCameras.convert_orig_cam_to_matrix(
             orig_cam=orig_cam,
             znear=torch.min(vertices[..., 2] - 1),
@@ -802,7 +804,7 @@ def render_smpl(
         K, R, T = compute_orbit_cameras(
             at=(torch.mean(vertices.view(-1, 3), 0)),
             orbit_speed=orbit_speed,
-            batch_size=num_frame,
+            batch_size=num_frames,
             convention=convention)
         convention = 'pytorch3d'
 
@@ -818,7 +820,7 @@ def render_smpl(
         raise ValueError(f'Wrong type of R: {type(R)}!')
 
     if R is not None:
-        if len(R) > num_frame:
+        if len(R) > num_frames:
             R = R[start:end]
 
     if isinstance(T, np.ndarray):
@@ -833,7 +835,7 @@ def render_smpl(
         raise ValueError(f'Wrong type of T: {type(T)}!')
 
     if T is not None:
-        if len(T) > num_frame:
+        if len(T) > num_frames:
             T = T[start:end]
 
     if isinstance(K, np.ndarray):
@@ -847,7 +849,7 @@ def render_smpl(
         raise ValueError(f'Wrong type of K: {type(K)}!')
 
     if K is not None:
-        if len(K) > num_frame:
+        if len(K) > num_frames:
             K = K[start:end]
 
     assert projection in [
