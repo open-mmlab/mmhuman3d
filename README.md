@@ -12,7 +12,9 @@
 
 ## Introduction
 
-MMHuman3D is an open source human pose and shape estimation toolbox based on PyTorch. It is a part of the [OpenMMLab](https://openmmlab.com/) project.
+English | [简体中文](README_CN.md)
+
+MMHuman3D is an open source PyTorch-based codebase for the use of 3D human parametric models in computer vision and computer graphics. It is a part of the [OpenMMLab](https://openmmlab.com/) project.
 
 The main branch works with **PyTorch 1.7+**.
 
@@ -41,12 +43,12 @@ Supported methods:
 <details open>
 <summary>(click to collapse)</summary>
 
-- [x] SMPLify (ECCV'2016)
-- [x] SMPLify-X (CVPR'2019)
-- [x] HMR (CVPR'2018)
-- [x] SPIN (ICCV'2019)
-- [x] VIBE (CVPR'2020)
-- [x] HybrIK (CVPR'2021)
+- [x] [SMPLify](https://smplify.is.tue.mpg.de/) (ECCV'2016)
+- [x] [SMPLify-X](https://smpl-x.is.tue.mpg.de/) (CVPR'2019)
+- [x] [HMR](https://akanazawa.github.io/hmr/) (CVPR'2018)
+- [x] [SPIN](https://www.seas.upenn.edu/~nkolot/projects/spin/) (ICCV'2019)
+- [x] [VIBE](https://github.com/mkocabas/VIBE) (CVPR'2020)
+- [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
 
 </details>
 
@@ -55,29 +57,29 @@ Supported datasets:
 <details open>
 <summary>(click to collapse)</summary>
 
-- [x] 3DPW (ECCV'2018)
-- [x] AGORA (CVPR'2021)
-- [x] AMASS (ICCV'2019)
-- [x] COCO (ECCV'2014)
-- [x] COCO-WholeBody (ECCV'2020)
-- [x] CrowdPose (CVPR'2019)
-- [x] EFT (3DV'2021)
-- [x] Human3.6M (TPAMI'2014)
-- [x] InstaVariety (CVPR'2019)
-- [x] LSP (BMVC'2010)
-- [x] LSP-Extended (CVPR'2011)
-- [x] MPI-INF-3DHP (3DC'2017)
-- [x] MPII (CVPR'2014)
-- [x] Penn Action (ICCV'2012)
-- [x] PoseTrack18 (CVPR'2018)
-- [x] SURREAL (CVPR'2017)
-- [x] UP3D (CVPR'2017)
+- [x] [3DPW](https://virtualhumans.mpi-inf.mpg.de/3DPW/) (ECCV'2018)
+- [x] [AGORA](https://agora.is.tue.mpg.de/) (CVPR'2021)
+- [x] [AMASS](https://amass.is.tue.mpg.de/) (ICCV'2019)
+- [x] [COCO](https://cocodataset.org/#home) (ECCV'2014)
+- [x] [COCO-WholeBody](https://github.com/jin-s13/COCO-WholeBody) (ECCV'2020)
+- [x] [CrowdPose](https://github.com/Jeff-sjtu/CrowdPose) (CVPR'2019)
+- [x] [EFT](https://github.com/facebookresearch/eft) (3DV'2021)
+- [x] [Human3.6M](http://vision.imar.ro/human3.6m/description.php) (TPAMI'2014)
+- [x] [InstaVariety](https://github.com/akanazawa/human_dynamics/blob/master/doc/insta_variety.md) (CVPR'2019)
+- [x] [LSP](https://sam.johnson.io/research/lsp.html) (BMVC'2010)
+- [x] [LSP-Extended](https://sam.johnson.io/research/lspet.html) (CVPR'2011)
+- [x] [MPI-INF-3DHP](http://gvv.mpi-inf.mpg.de/3dhp-dataset/) (3DC'2017)
+- [x] [MPII](http://human-pose.mpi-inf.mpg.de/) (CVPR'2014)
+- [x] [Penn Action](http://dreamdragon.github.io/PennAction/) (ICCV'2012)
+- [x] [PoseTrack18](https://posetrack.net/users/download.php) (CVPR'2018)
+- [x] [SURREAL](https://www.di.ens.fr/willow/research/surreal/data/) (CVPR'2017)
+- [x] [UP3D](https://files.is.tuebingen.mpg.de/classner/up/) (CVPR'2017)
 
 </details>
 
 We will keep up with the latest progress of the community, and support more popular methods and frameworks.
 
-If you have any feature requests, please feel free to leave an issue.
+If you have any feature requests, please feel free to leave a comment in the [wishlist](https://github.com/open-mmlab/mmhuman3d/issues/3).
 
 ## Get Started
 
@@ -93,7 +95,7 @@ If you find this project useful in your research, please consider cite:
 
 ```bibtex
 @misc{mmhuman3d,
-    title={OpenMMLab Human Pose and Shape Estimation Toolbox and Benchmark},
+    title={OpenMMLab 3D Human Parametric Model Toolbox and Benchmark},
     author={MMHuman3D Contributors},
     howpublished = {\url{https://github.com/open-mmlab/mmhuman3d}},
     year={2021}
@@ -126,4 +128,4 @@ We wish that the toolbox and benchmark could serve the growing research communit
 - [MMGeneration](https://github.com/open-mmlab/mmgeneration): OpenMMLab next-generation toolbox for generative models.
 - [MMFlow](https://github.com/open-mmlab/mmflow): OpenMMLab optical flow toolbox and benchmark.
 - [MMFewShot](https://github.com/open-mmlab/mmfewshot): OpenMMLab FewShot Learning Toolbox and Benchmark.
-- [MMHuman3D](https://github.com/open-mmlab/mmhuman3d): OpenMMLab Human Pose and Shape Estimation Toolbox and Benchmark.
+- [MMHuman3D](https://github.com/open-mmlab/mmhuman3d): OpenMMLab 3D Human Parametric Model Toolbox and Benchmark.
