@@ -66,11 +66,11 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
         if image_array.ndim == 3:
             image_array = image_array[None]
         if image_array.shape[0] == 1:
-            image_array = image_array.repeat(end - start + 1, 1, 1, 1)
+            image_array = image_array.repeat(num_frame, 1, 1, 1)
         image_array
         frame_list = None
         origin_frames = None
-        image_array = image_array[start:end + 1]
+        image_array = image_array[start:end]
 
     # check the output path and get the image_array
     if output_path is not None:
@@ -253,8 +253,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
 
             full_pose = body_model.dict2tensor(poses)
             start = (min(start, num_frame - 1) + num_frame) % num_frame
-            end = (min(end, num_frame - 1) + num_frame) % num_frame
-            full_pose = full_pose[start:end + 1]
+            full_pose = full_pose[start:end]
 
         elif isinstance(poses, torch.Tensor):
             if poses.shape[-1] != NUM_DIM:
@@ -264,8 +263,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
             poses = poses.view(poses.shape[0], -1, (NUM_JOINTS + 1) * 3)
             num_frame, num_person, _ = poses.shape
             start = (min(start, num_frame - 1) + num_frame) % num_frame
-            end = (min(end, num_frame - 1) + num_frame) % num_frame
-            full_pose = poses[start:end + 1]
+            full_pose = poses[start:end]
         else:
             raise ValueError('Wrong pose type, should be `dict` or `tensor`.')
 
@@ -316,8 +314,8 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
                               'default translation.')
 
         # slice the input poses, betas, and transl.
-        betas = betas[start:end + 1] if betas is not None else None
-        transl = transl[start:end + 1] if transl is not None else None
+        betas = betas[start:end] if betas is not None else None
+        transl = transl[start:end] if transl is not None else None
         pose_dict = body_model.tensor2dict(
             full_pose=full_pose, betas=betas, transl=transl)
 
@@ -348,8 +346,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         faces = body_model.faces_tensor
         num_frame = verts.shape[0]
         start = (min(start, num_frame - 1) + num_frame) % num_frame
-        end = (min(end, num_frame - 1) + num_frame) % num_frame
-        verts = verts[start:end + 1]
+        verts = verts[start:end]
         num_frame = verts.shape[0]
         vertices = verts.view(num_frame, -1, num_verts, 3)
         num_joints = joints.shape[-2]
@@ -357,7 +354,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         num_person = vertices.shape[1]
     else:
         raise ValueError('Poses and verts are all None.')
-    return vertices, faces, joints, num_frame, num_person, start, end
+    return vertices, faces, joints, num_frame, num_person
 
 
 def render_smpl(
@@ -388,7 +385,7 @@ def render_smpl(
     palette: Union[List[str], str, np.ndarray] = 'white',
     resolution: Optional[Union[List[int], Tuple[int, int]]] = None,
     start: int = 0,
-    end: int = -1,
+    end: Optional[int] = None,
     alpha: float = 1.0,
     no_grad: bool = False,
     batch_size: int = 10,
@@ -580,8 +577,11 @@ def render_smpl(
             size of background images and finally resized to resolution.
         start (int, optional): start frame index. Defaults to 0.
 
-        end (int, optional): end frame index. Defaults to -1.
+        end (int, optional): end slice index. Excluded.
+            Could be positive int or negative int or None.
+            None represents include till final frame.
 
+            Defaults to None.
         alpha (float, optional): Transparency of the mesh.
             Range in [0.0, 1.0]
 
@@ -593,13 +593,7 @@ def render_smpl(
         batch_size (int, optional):  Batch size for render.
             Related to your gpu memory.
 
-            Defaults to 20.
-
-        # TODO
-        DDP (bool, optional): whether use distributeddataparallel.
-
-            Defaults to False.
-
+            Defaults to 10.
         # file io parameters:
 
         return_tensor (bool, optional): Whether return the result tensors.
@@ -633,12 +627,13 @@ def render_smpl(
             files.
 
             Defaults to None.
-        read_frames_batch (bool, optional): [description].
+        read_frames_batch (bool, optional): Whether read frames by batch.
+            Set it as True if your video is large in size.
 
             Defaults to False.
 
         # visualize keypoints
-        plot_kps (bool, optional): [description].
+        plot_kps (bool, optional): whether plot keypoints on the output video.
 
             Defaults to False.
         kp3d (Optional[Union[np.ndarray, torch.Tensor]], optional):
@@ -650,7 +645,10 @@ def render_smpl(
             Mask of keypoints existence.
 
             Defaults to None.
+        vis_kp_index (bool, optional):
+            Whether plot keypoint index number on human mesh.
 
+            Defaults to False.
     Returns:
         Union[None, torch.Tensor]: return the rendered image tensors or None.
     """
@@ -671,7 +669,7 @@ def render_smpl(
                                                       transl)
     body_model = _prepare_body_model(model_type, body_model, model_path,
                                      gender, use_pca)
-    vertices, faces, joints, num_frame, num_person, start, end = _prepare_mesh(
+    vertices, faces, joints, num_frame, num_person = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
     vertices = vertices.view(num_frame, num_person, -1, 3)
 
@@ -722,7 +720,7 @@ def render_smpl(
         if mask is not None:
             map_index = np.where(np.array(mask) != 0)[0]
             kp3d = kp3d[map_index.tolist()]
-        kp3d = kp3d[start:end + 1]
+        kp3d = kp3d[start:end]
         kp3d = kp3d.view(num_frame, -1, 3)
 
     # prepare render_param_dict
@@ -761,7 +759,7 @@ def render_smpl(
         if isinstance(Ks, np.ndarray):
             Ks = torch.Tensor(Ks)
         Ks = Ks.view(-1, num_person, 3, 3)
-        Ks = Ks[start:end + 1]
+        Ks = Ks[start:end]
         Ks = Ks.view(-1, 3, 3)
         K = K.repeat(num_frame * num_person, 1, 1)
 
@@ -771,7 +769,7 @@ def render_smpl(
             T = torch.zeros(num_frame, num_person, 1, 3)
         elif isinstance(T, np.ndarray):
             T = torch.Tensor(T)
-        T = T[start:end + 1]
+        T = T[start:end]
         T = T.view(num_frame * num_person, 1, 3)
         vertices = torch.einsum('blc,bvc->bvl', Ks, vertices + T)
 
@@ -782,7 +780,7 @@ def render_smpl(
     if orig_cam is not None:
         projection = 'weakperspective'
         r = render_resolution[1] / render_resolution[0]
-        orig_cam = orig_cam[start:end + 1]
+        orig_cam = orig_cam[start:end]
         orig_cam = orig_cam.view(num_frame, num_person, 4)
         # if num_person > 1:
         sx, sy, tx, ty = torch.unbind(orig_cam, -1)
@@ -821,7 +819,7 @@ def render_smpl(
 
     if R is not None:
         if len(R) > num_frame:
-            R = R[start:end + 1]
+            R = R[start:end]
 
     if isinstance(T, np.ndarray):
         T = torch.Tensor(T).view(-1, 3)
@@ -836,7 +834,7 @@ def render_smpl(
 
     if T is not None:
         if len(T) > num_frame:
-            T = T[start:end + 1]
+            T = T[start:end]
 
     if isinstance(K, np.ndarray):
         K = torch.Tensor(K).view(-1, K.shape[-2], K.shape[-1])
@@ -850,7 +848,7 @@ def render_smpl(
 
     if K is not None:
         if len(K) > num_frame:
-            K = K[start:end + 1]
+            K = K[start:end]
 
     assert projection in [
         'perspective', 'weakperspective', 'orthographics', 'fovorthographics',

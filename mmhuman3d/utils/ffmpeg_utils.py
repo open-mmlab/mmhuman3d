@@ -256,7 +256,7 @@ def video_to_array(
     input_path: str,
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
     start: int = 0,
-    end: int = -1,
+    end: Optional[int] = None,
     disable_log: bool = False,
 ) -> np.ndarray:
     """
@@ -270,9 +270,9 @@ def video_to_array(
         start (int, optional): start frame index. Included.
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Included.
+        end (int, optional): end frame index. Excluded.
             If < 0, will be converted to frame_index range in [0, frame_num].
-            Defaults to -1.
+            Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
 
@@ -295,13 +295,14 @@ def video_to_array(
         width, height = int(info['width']), int(info['height'])
     num_frames = int(info['nb_frames'])
     start = (min(start, num_frames - 1) + num_frames) % num_frames
-    end = (min(end, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) +
+           num_frames) % num_frames + 1 if end is not None else num_frames
     command = [
         'ffmpeg',
         '-i',
         input_path,
         '-filter_complex',
-        f'[0]trim=start_frame={start}:end_frame={end+1}[v0]',
+        f'[0]trim=start_frame={start}:end_frame={end}[v0]',
         '-map',
         '[v0]',
         '-pix_fmt',
@@ -376,7 +377,7 @@ def images_to_array(
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
     img_format: str = '%06d.png',
     start: int = 0,
-    end: int = -1,
+    end: Optional[int] = None,
     remove_raw_files: bool = False,
     disable_log: bool = False,
 ) -> np.ndarray:
@@ -392,9 +393,9 @@ def images_to_array(
         start (int, optional): start frame index. Included.
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Included.
+        end (int, optional): end frame index. Excluded.
             If < 0, will be converted to frame_index range in [0, frame_num].
-            Defaults to -1.
+            Defaults to None.
         remove_raw_files (bool, optional): whether remove raw images.
             Defaults to False.
         disable_log (bool, optional): whether close the ffmepg command info.
@@ -430,7 +431,8 @@ def images_to_array(
 
     num_frames = len(os.listdir(input_folder))
     start = (min(start, num_frames - 1) + num_frames) % num_frames
-    end = (min(end, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) +
+           num_frames) % num_frames + 1 if end is not None else num_frames
     command = [
         'ffmpeg',
         '-y',
@@ -441,7 +443,7 @@ def images_to_array(
         '-i',
         f'{input_folder}/{img_format}',
         '-frames:v',
-        f'{end - start + 1}',
+        f'{end - start}',
         '-f',
         'rawvideo',
         '-pix_fmt',
@@ -595,7 +597,7 @@ def video_to_images(input_path: str,
                                                Tuple[float, float]]] = None,
                     img_format: str = '%06d.png',
                     start: int = 0,
-                    end: int = -1,
+                    end: Optional[int] = None,
                     disable_log: bool = False) -> None:
     """Convert a video to a folder of images.
 
@@ -609,9 +611,10 @@ def video_to_images(input_path: str,
         start (int, optional): start frame index. Included.
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Included.
+        end (int, optional): end frame index. Excluded.
             If < 0, will be converted to frame_index range in [0, frame_num].
-            Defaults to -1.
+            None represents all.
+            Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
     Raises:
@@ -635,11 +638,12 @@ def video_to_images(input_path: str,
     info = vid_info_reader(input_path)
     num_frames = int(info['nb_frames'])
     start = (min(start, num_frames - 1) + num_frames) % num_frames
-    end = (min(end, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) +
+           num_frames) % num_frames + 1 if end is not None else num_frames
 
     command = [
         'ffmpeg', '-i', input_path, '-filter_complex',
-        f'[0]trim=start_frame={start}:end_frame={end+1}[v0]', '-map', '[v0]',
+        f'[0]trim=start_frame={start}:end_frame={end}[v0]', '-map', '[v0]',
         '-f', 'image2', '-v', 'error', '-start_number', '0', '-threads', '1',
         f'{output_folder}/{img_format}'
     ]
@@ -660,7 +664,7 @@ def images_to_video(input_folder: str,
                     resolution: Optional[Union[Tuple[int, int],
                                                Tuple[float, float]]] = None,
                     start: int = 0,
-                    end: int = -1,
+                    end: Optional[int] = None,
                     disable_log: bool = False) -> None:
     """Convert a folder of images to a video.
 
@@ -680,7 +684,7 @@ def images_to_video(input_folder: str,
             Defaults to 0.
         end (int, optional): end frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
-            Defaults to -1.
+            Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
     Raises:
@@ -704,7 +708,8 @@ def images_to_video(input_folder: str,
     input_folderinfo = Path(input_folder)
     num_frames = len(os.listdir(input_folder))
     start = (min(start, num_frames - 1) + num_frames) % num_frames
-    end = (min(end, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) +
+           num_frames) % num_frames + 1 if end is not None else num_frames
     temp_input_folder = None
     if img_format is None:
         temp_input_folder = os.path.join(input_folderinfo.parent,
@@ -721,7 +726,7 @@ def images_to_video(input_folder: str,
         '-i',
         f'{input_folder}/{img_format}',
         '-frames:v',
-        f'{end - start + 1}',
+        f'{end - start}',
         '-profile:v',
         'baseline',
         '-level',
@@ -764,7 +769,7 @@ def images_to_gif(
     fps: int = 15,
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
     start: int = 0,
-    end: int = -1,
+    end: Optional[int] = None,
     disable_log: bool = False,
 ) -> None:
     """Convert series of images to a video, similar to images_to_video, but
@@ -809,7 +814,8 @@ def images_to_gif(
         overwrite=True)
     num_frames = len(os.listdir(input_folder))
     start = (min(start, num_frames - 1) + num_frames) % num_frames
-    end = (min(end, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) +
+           num_frames) % num_frames + 1 if end is not None else num_frames
     temp_input_folder = None
     if img_format is None:
         file_list = []
@@ -843,7 +849,7 @@ def images_to_gif(
         '-i',
         f'{input_folder}/{img_format}',
         '-frames:v',
-        f'{end - start + 1}',
+        f'{end - start}',
         '-r',
         f'{fps}',
         '-loglevel',
@@ -1031,7 +1037,7 @@ def crop_video(
 def slice_video(input_path: str,
                 output_path: str,
                 start: int = 0,
-                end: int = -1,
+                end: Optional[int] = None,
                 resolution: Optional[Union[Tuple[int, int],
                                            Tuple[float, float]]] = None,
                 disable_log: bool = False) -> None:
@@ -1041,7 +1047,8 @@ def slice_video(input_path: str,
         input_path (str): input video or gif file path.
         output_path (str): output video of gif file path.
         start (int, optional): start frame index. Defaults to 0.
-        end (int, optional): end frame index. Defaults to -1.
+        end (int, optional): end frame index. Excluded.
+            Defaults to None.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output. Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
@@ -1056,10 +1063,11 @@ def slice_video(input_path: str,
     info = vid_info_reader(input_path)
     num_frames = int(info['nb_frames'])
     start = (min(start, num_frames - 1) + num_frames) % num_frames
-    end = (min(end, num_frames - 1) + num_frames) % num_frames
+    end = (min(end, num_frames - 1) +
+           num_frames) % num_frames + 1 if end is not None else num_frames
     command = [
         'ffmpeg', '-y', '-i', input_path, '-filter_complex',
-        f'[0]trim=start_frame={start}:end_frame={end+1}[v0]', '-map', '[v0]',
+        f'[0]trim=start_frame={start}:end_frame={end}[v0]', '-map', '[v0]',
         '-loglevel', 'error', '-vcodec', 'libx264', output_path
     ]
     if resolution:
@@ -1249,7 +1257,7 @@ def compress_video(input_path: str,
             Defaults to 1.
         down_sample_scale (Union[float, int], optional): spatial down sample
             scale. Defaults to 1.
-        fps (int, optional): [description]. Defaults to 30.
+        fps (int, optional): FPS. Defaults to 30.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
     Raises:
