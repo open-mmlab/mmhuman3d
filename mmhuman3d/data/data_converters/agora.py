@@ -41,10 +41,6 @@ class AgoraConverter(BaseModeConverter):
             raise ValueError('Input resolution not in accepted resolution. \
                 Use either 1280x720 or 3840x2160')
         self.res = res
-        if fit == 'smplx':
-            self.num_keypoints = 127
-        else:
-            self.num_keypoints = 45
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:
@@ -70,26 +66,28 @@ class AgoraConverter(BaseModeConverter):
         # get a list of .pkl files in the directory
         img_path = os.path.join(dataset_path, 'images', mode)
 
+        bodymodel = {}
+        bodymodel['body_pose'] = []
+        bodymodel['global_orient'] = []
+        bodymodel['betas'] = []
+        bodymodel['transl'] = []
+
         if self.fit == 'smplx':
             annot_path = os.path.join(dataset_path, 'camera_dataframe')
-            smplx = {}
-            smplx['body_pose'] = []
-            smplx['global_orient'] = []
-            smplx['betas'] = []
-            smplx['transl'] = []
-            smplx['left_hand_pose'] = []
-            smplx['right_hand_pose'] = []
-            smplx['expression'] = []
-            smplx['leye_pose'] = []
-            smplx['reye_pose'] = []
-            smplx['jaw_pose'] = []
+            bodymodel['left_hand_pose'] = []
+            bodymodel['right_hand_pose'] = []
+            bodymodel['expression'] = []
+            bodymodel['leye_pose'] = []
+            bodymodel['reye_pose'] = []
+            bodymodel['jaw_pose'] = []
+            num_keypoints = 127
+            keypoints_convention = 'agora'
+            num_body_pose = 21
         else:
             annot_path = os.path.join(dataset_path, 'camera_dataframe_smpl')
-            smpl = {}
-            smpl['body_pose'] = []
-            smpl['global_orient'] = []
-            smpl['betas'] = []
-            smpl['transl'] = []
+            num_keypoints = 45
+            keypoints_convention = 'smpl_45'
+            num_body_pose = 23
 
         meta = {}
         meta['gender'] = []
@@ -126,57 +124,46 @@ class AgoraConverter(BaseModeConverter):
                         keypoints2d *= (720 / 2160)
                     keypoints3d = df.iloc[idx]['gt_joints_3d'][pidx]
 
+                    gt_bodymodel_path = os.path.join(
+                        dataset_path,
+                        df.iloc[idx][f'gt_path_{self.fit}'][pidx])
+                    gt_bodymodel_path = gt_bodymodel_path.replace(
+                        '.obj', '.pkl')
+                    ann = pickle.load(open(gt_bodymodel_path, 'rb'))
+
                     if self.fit == 'smplx':
                         # obtain smplx data
-                        gt_smplx_path = os.path.join(
-                            dataset_path, df.iloc[idx]['gt_path_smplx'][pidx])
-                        gt_smplx_path = gt_smplx_path.replace('.obj', '.pkl')
-                        gt_smplx = pickle.load(open(gt_smplx_path, 'rb'))
-
-                        smplx['body_pose'].append(
-                            gt_smplx['body_pose'].reshape((21, 3)))
-                        smplx['global_orient'].append(
-                            gt_smplx['global_orient'].reshape((3)))
-                        smplx['betas'].append(
-                            gt_smplx['betas'].reshape(-1)[:10])
-                        smplx['transl'].append(gt_smplx['transl'].reshape((3)))
-                        smplx['left_hand_pose'].append(
-                            gt_smplx['left_hand_pose'].reshape((15, 3)))
-                        smplx['right_hand_pose'].append(
-                            gt_smplx['right_hand_pose'].reshape((15, 3)))
-                        smplx['jaw_pose'].append(gt_smplx['jaw_pose'].reshape(
-                            (3)))
-                        smplx['leye_pose'].append(
-                            gt_smplx['leye_pose'].reshape((3)))
-                        smplx['reye_pose'].append(
-                            gt_smplx['reye_pose'].reshape((3)))
-                        smplx['expression'].append(
-                            gt_smplx['expression'].reshape((10)))
+                        bodymodel['body_pose'].append(ann['body_pose'])
+                        bodymodel['global_orient'].append(ann['global_orient'])
+                        bodymodel['betas'].append(
+                            ann['betas'].reshape(-1)[:10])
+                        bodymodel['transl'].append(ann['transl'])
+                        bodymodel['left_hand_pose'].append(
+                            ann['left_hand_pose'])
+                        bodymodel['right_hand_pose'].append(
+                            ann['right_hand_pose'])
+                        bodymodel['jaw_pose'].append(ann['jaw_pose'])
+                        bodymodel['leye_pose'].append(ann['leye_pose'])
+                        bodymodel['reye_pose'].append(ann['reye_pose'])
+                        bodymodel['expression'].append(ann['expression'])
 
                     else:
                         # obtain smpl data
-                        gt_smpl_path = os.path.join(
-                            dataset_path, df.iloc[idx]['gt_path_smpl'][pidx])
-                        gt_smpl_path = gt_smpl_path.replace('.obj', '.pkl')
-                        gt_smpl = pickle.load(open(gt_smpl_path, 'rb'))
-
-                        smpl['body_pose'].append(gt_smpl['body_pose'].cpu(
-                        ).detach().numpy().reshape((23, 3)))
-                        smpl['global_orient'].append(gt_smpl['root_pose'].cpu(
-                        ).detach().numpy().reshape((3)))
-                        smpl['betas'].append(
-                            gt_smpl['betas'].cpu().detach().numpy().reshape(
+                        bodymodel['body_pose'].append(
+                            ann['body_pose'].cpu().detach().numpy())
+                        bodymodel['global_orient'].append(
+                            ann['root_pose'].cpu().detach().numpy())
+                        bodymodel['betas'].append(
+                            ann['betas'].cpu().detach().numpy().reshape(
                                 -1)[:10])
-                        smpl['transl'].append(gt_smpl['translation'].cpu().
-                                              detach().numpy().reshape((3)))
+                        bodymodel['transl'].append(
+                            ann['translation'].cpu().detach().numpy())
 
                     # add confidence column
                     keypoints2d = np.hstack(
-                        [keypoints2d,
-                         np.ones((self.num_keypoints, 1))])
+                        [keypoints2d, np.ones((num_keypoints, 1))])
                     keypoints3d = np.hstack(
-                        [keypoints3d,
-                         np.ones((self.num_keypoints, 1))])
+                        [keypoints3d, np.ones((num_keypoints, 1))])
 
                     bbox_xyxy = [
                         min(keypoints2d[:, 0]),
@@ -199,28 +186,25 @@ class AgoraConverter(BaseModeConverter):
 
         # change list to np array
         if self.fit == 'smplx':
-            smplx['body_pose'] = np.array(smplx['body_pose']).reshape(
-                (-1, 21, 3))
-            smplx['global_orient'] = np.array(smplx['global_orient']).reshape(
+            bodymodel['left_hand_pose'] = np.array(
+                bodymodel['left_hand_pose']).reshape((-1, 15, 3))
+            bodymodel['right_hand_pose'] = np.array(
+                bodymodel['right_hand_pose']).reshape((-1, 15, 3))
+            bodymodel['expression'] = np.array(
+                bodymodel['expression']).reshape((-1, 10))
+            bodymodel['leye_pose'] = np.array(bodymodel['leye_pose']).reshape(
                 (-1, 3))
-            smplx['betas'] = np.array(smplx['betas']).reshape((-1, 10))
-            smplx['transl'] = np.array(smplx['transl']).reshape((-1, 3))
-            smplx['left_hand_pose'] = np.array(
-                smplx['left_hand_pose']).reshape((-1, 15, 3))
-            smplx['right_hand_pose'] = np.array(
-                smplx['right_hand_pose']).reshape((-1, 15, 3))
-            smplx['expression'] = np.array(smplx['expression']).reshape(
-                (-1, 10))
-            smplx['leye_pose'] = np.array(smplx['leye_pose']).reshape((-1, 3))
-            smplx['reye_pose'] = np.array(smplx['reye_pose']).reshape((-1, 3))
-            smplx['jaw_pose'] = np.array(smplx['jaw_pose']).reshape((-1, 3))
-        else:
-            smpl['body_pose'] = np.array(smpl['body_pose']).reshape(
-                (-1, 23, 3))
-            smpl['global_orient'] = np.array(smpl['global_orient']).reshape(
+            bodymodel['reye_pose'] = np.array(bodymodel['reye_pose']).reshape(
                 (-1, 3))
-            smpl['betas'] = np.array(smpl['betas']).reshape((-1, 10))
-            smpl['transl'] = np.array(smpl['transl']).reshape((-1, 3))
+            bodymodel['jaw_pose'] = np.array(bodymodel['jaw_pose']).reshape(
+                (-1, 3))
+
+        bodymodel['body_pose'] = np.array(bodymodel['body_pose']).reshape(
+            (-1, num_body_pose, 3))
+        bodymodel['global_orient'] = np.array(
+            bodymodel['global_orient']).reshape((-1, 3))
+        bodymodel['betas'] = np.array(bodymodel['betas']).reshape((-1, 10))
+        bodymodel['transl'] = np.array(bodymodel['transl']).reshape((-1, 3))
 
         meta['gender'] = np.array(meta['gender'])
         meta['age'] = np.array(meta['age'])
@@ -232,23 +216,12 @@ class AgoraConverter(BaseModeConverter):
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
 
         # change list to np array
-        if self.fit == 'smplx':
-            keypoints2d_ = np.array(keypoints2d_).reshape(
-                (-1, self.num_keypoints, 3))
-            keypoints2d_, mask = convert_kps(keypoints2d_, 'agora',
-                                             'human_data')
-            keypoints3d_ = np.array(keypoints3d_).reshape(
-                (-1, self.num_keypoints, 4))
-            keypoints3d_, _ = convert_kps(keypoints3d_, 'agora', 'human_data')
-        else:
-            keypoints2d_ = np.array(keypoints2d_).reshape(
-                (-1, self.num_keypoints, 3))
-            keypoints2d_, mask = convert_kps(keypoints2d_, 'smpl_45',
-                                             'human_data')
-            keypoints3d_ = np.array(keypoints3d_).reshape(
-                (-1, self.num_keypoints, 4))
-            keypoints3d_, _ = convert_kps(keypoints3d_, 'smpl_45',
-                                          'human_data')
+        keypoints2d_ = np.array(keypoints2d_).reshape((-1, num_keypoints, 3))
+        keypoints2d_, mask = convert_kps(keypoints2d_, keypoints_convention,
+                                         'human_data')
+        keypoints3d_ = np.array(keypoints3d_).reshape((-1, num_keypoints, 4))
+        keypoints3d_, _ = convert_kps(keypoints3d_, keypoints_convention,
+                                      'human_data')
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
@@ -259,9 +232,9 @@ class AgoraConverter(BaseModeConverter):
         human_data['meta'] = meta
         human_data['config'] = 'agora'
         if self.fit == 'smplx':
-            human_data['smplx'] = smplx
+            human_data['smplx'] = bodymodel
         else:
-            human_data['smpl'] = smpl
+            human_data['smpl'] = bodymodel
         human_data.compress_keypoints_by_mask()
 
         # store data
