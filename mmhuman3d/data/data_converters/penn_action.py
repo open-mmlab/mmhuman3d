@@ -77,7 +77,7 @@ class PennActionConverter(BaseConverter):
                 ]
                 bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
 
-                image_path_.append(img_path)
+                image_path_.append(img_path.replace(dataset_path + '/', ''))
                 bbox_xywh_.append(bbox_xywh)
                 keypoints2d_.append(kp)
 

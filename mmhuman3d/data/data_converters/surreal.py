@@ -136,12 +136,12 @@ class SurrealConverter(BaseModeConverter):
         meta = {}
         meta['gender'] = []
 
-        dataset_path = os.path.join(dataset_path,
-                                    '{}/run{}'.format(mode, self.run))
+        data_path = os.path.join(dataset_path,
+                                 '{}/run{}'.format(mode, self.run))
 
         # go through all the .pkl files
-        for seq_name in tqdm(os.listdir(dataset_path)):
-            seq_path = os.path.join(dataset_path, seq_name)
+        for seq_name in tqdm(os.listdir(data_path)):
+            seq_path = os.path.join(data_path, seq_name)
             if not os.path.isdir(seq_path):
                 continue
             seq_files = [
@@ -166,6 +166,7 @@ class SurrealConverter(BaseModeConverter):
 
                 # image folder
                 img_dir = os.path.join(seq_path, 'images_' + str(ann_id))
+                rel_img_dir = img_dir.replace(dataset_path + '/', '')
 
                 # extract frames from video file
                 if self.extract_img:
@@ -206,7 +207,8 @@ class SurrealConverter(BaseModeConverter):
                     # add confidence column
                     keypoints2d = np.hstack([keypoints2d, np.ones((24, 1))])
                     keypoints3d = np.hstack([keypoints3d, np.ones([24, 1])])
-                    image_path = os.path.join(img_dir, 'frame_%06d.jpg' % idx)
+                    image_path = os.path.join(rel_img_dir,
+                                              'frame_%06d.jpg' % idx)
 
                     # store the data
                     image_path_.append(image_path)

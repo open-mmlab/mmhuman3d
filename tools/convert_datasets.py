@@ -8,11 +8,12 @@ DATASET_CONFIGS = dict(
         type='AgoraConverter', modes=['train', 'validation'], fit='smplx'),
     amass=dict(type='AmassConverter', prefix='AMASS_file'),
     coco=dict(type='CocoConverter'),
-    coco_wholebody=dict(type='CocoWholebodyConverter', modes=['train', 'val']),
+    coco_wholebody=dict(
+        type='CocoWholebodyConverter', modes=['train', 'val'], prefix='coco'),
     crowdpose=dict(
         type='CrowdposeConverter',
         modes=['train', 'val', 'test', 'trainval'],
-        prefix='Crowdpose'),
+        prefix='crowdpose'),
     pw3d=dict(type='Pw3dConverter', modes=['train', 'test'], prefix='pw3d'),
     mpii=dict(type='MpiiConverter'),
     h36m_p1=dict(
@@ -24,19 +25,19 @@ DATASET_CONFIGS = dict(
     h36m_p2=dict(
         type='H36mConverter', modes=['valid'], protocol=2, prefix='h36m'),
     mpi_inf_3dhp=dict(type='MpiInf3dhpConverter', modes=['train', 'test']),
-    penn_action=dict(type='PennActionConverter', prefix='Penn_Action'),
+    penn_action=dict(type='PennActionConverter', prefix='penn_action'),
     lsp_original=dict(type='LspConverter', modes=['train'], prefix='lsp'),
     lsp_dataset=dict(type='LspConverter', modes=['test']),
     lsp_extended=dict(type='LspExtendedConverter', prefix='lspet'),
     up3d=dict(
         type='Up3dConverter', modes=['trainval', 'test'], prefix='up-3d'),
     posetrack=dict(
-        type='PosetrackConverter',
-        modes=['train', 'val'],
-        prefix='PoseTrack/data'),
+        type='PosetrackConverter', modes=['train', 'val'], prefix='posetrack'),
     instavariety_vibe=dict(type='InstaVibeConverter', prefix='vibe_data'),
     eft=dict(
-        type='EftConverter', modes=['coco_all', 'coco_part', 'mpii', 'lspet']),
+        type='EftConverter',
+        modes=['coco_all', 'coco_part', 'mpii', 'lspet'],
+        prefix='eft'),
     coco_hybrik=dict(type='CocoHybrIKConverter', prefix='coco/train_2017'),
     pw3d_hybrik=dict(type='Pw3dHybrIKConverter', prefix='hybrik_data'),
     h36m_hybrik=dict(
@@ -49,9 +50,9 @@ DATASET_CONFIGS = dict(
         prefix='hybrik_data'),
     surreal=dict(
         type='SurrealConverter',
-        models=['train', 'val', 'test'],
+        modes=['train', 'val', 'test'],
         run=0,
-        prefix='SURREAL/cmu'),
+        prefix='surreal'),
     spin=dict(
         type='SpinConverter',
         modes=['coco_2014', 'lsp', 'mpii', 'mpi_inf_3dhp', 'lspet'],
