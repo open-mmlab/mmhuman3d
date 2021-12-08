@@ -299,6 +299,14 @@ mmhuman3d
 └── data
    └── datasets
        └── agora
+           ├── camera_dataframe # smplx annotations
+           │   ├── train_0_withjv.pkl
+           │   ├── validation_0_withjv.pkl
+           │   └── ...
+           ├── camera_dataframe_smpl # smpl annotations
+           │   ├── train_0_withjv.pkl
+           │   ├── validation_0_withjv.pkl
+           │   └── ...
            ├── images
            │   ├── train
            │   │   ├── ag_trainset_3dpeople_bfh_archviz_5_10_cam00_00000_1280x720.png
@@ -306,20 +314,12 @@ mmhuman3d
            │   │   └── ...
            │   ├── validation
            │   └── test
-           ├── SMPL
-           │   ├── train_0_withjv.pkl
-           │   ├── validation_0_withjv.pkl
-           │   └── ...
            ├── smpl_gt
            │   ├── trainset_3dpeople_adults_bfh
            │   │   ├── 10004_w_Amaya_0_0.mtl
            │   │   ├── 10004_w_Amaya_0_0.obj
            │   │   ├── 10004_w_Amaya_0_0.pkl
            │   │   └── ...
-           │   └── ...
-           ├── SMPLX
-           │   ├── train_0_withjv.pkl
-           │   ├── validation_0_withjv.pkl
            │   └── ...
            └── smplx_gt
                    ├── 10004_w_Amaya_0_0.obj
@@ -417,17 +417,9 @@ mmhuman3d
     └── datasets
         └── coco
             ├── annotations
-            |   ├── person_keypoints_train2014.json
-            |   └── person_keypoints_val2014.json
-            ├── train2014
-            │   ├── COCO_train2014_000000000009.jpg
-            │   ├── COCO_train2014_000000000025.jpg
-            │   ├── COCO_train2014_000000000030.jpg
-            |   └── ...
+            |   ├── coco_wholebody_train_v1.0.json
+            |   └── coco_wholebody_val_v1.0.json
             └── train_2017
-                │── annotations
-                │   ├── person_keypoints_train2017.json
-                │   ├── person_keypoints_val2017.json
                 │── train2017
                 │   ├── 000000000009.jpg
                 │   ├── 000000000025.jpg
