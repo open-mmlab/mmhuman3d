@@ -25,11 +25,8 @@ class AgoraConverter(BaseModeConverter):
     """
     ACCEPTED_MODES = ['validation', 'train']
 
-    def __init__(
-        self,
-        modes: List = [],
-        fit: str = 'smpl',
-        res: Tuple[int, int] = (1280, 720)) -> None:
+    def __init__(self, modes: List = [], fit: str = 'smpl',
+                 res: Tuple[int, int] = (1280, 720)) -> None:  # yapf: disable
         super(AgoraConverter, self).__init__(modes)
         accepted_fits = ['smpl', 'smplx']
         if fit not in accepted_fits:
