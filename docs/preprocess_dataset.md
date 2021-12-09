@@ -237,9 +237,9 @@ For VIBE training and testing, the following datasets are required:
 The data converters are currently not available.
 
 **Alternatively**, you may download the preprocessed files directly:
-- [vibe_insta_variety.npz]
-- [vibe_mpi_inf_3dhp_train.npz]
-- [vibe_pw3d_test.npz]
+- [vibe_insta_variety.npz](https://pjlab-my.sharepoint.cn/:u:/g/personal/openmmlab_pjlab_org_cn/EYnlkp-69NBNlXDH-5ELZikBXDbSg8SZHqmdSX_3hK4EYg?e=QUl5nI)
+- [vibe_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/vibe_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgICTnq3U6xciIGUwMTc5YWQ2MjNhZDQ3NGE5MmYxOWJhMGQxMTcwNTll)
+- [vibe_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/vibe_pw3d_test.npz?versionId=CAEQHhiBgMD5na3U6xciIGQ4MmU0MjczYTYzODQ1NDQ5M2JiNzY1N2E5MTNlOWY5)
 
 
 The preprocessed datasets should have this structure:
