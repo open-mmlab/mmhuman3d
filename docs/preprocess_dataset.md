@@ -229,6 +229,35 @@ mmhuman3d
 ```
 
 
+For VIBE training and testing, the following datasets are required:
+  - [MPI-INF-3DHP](#mpi-inf-3dhp)
+  - [PW3D](#pw3d)
+
+
+The data converters are currently not available.
+
+**Alternatively**, you may download the preprocessed files directly:
+- [vibe_insta_variety.npz]
+- [vibe_mpi_inf_3dhp_train.npz]
+- [vibe_pw3d_test.npz]
+
+
+The preprocessed datasets should have this structure:
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── datasets
+    └── preprocessed_datasets
+        ├── vibe_insta_variety.npz
+        ├── vibe_mpi_inf_3dhp_train.npz
+        └── vibe_pw3d_test.npz
+```
+
 For HYBRIK training and testing, the following datasets are required:
   - [HybrIK](#hybrik)
   - [COCO](#coco)
