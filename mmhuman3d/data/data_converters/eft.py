@@ -15,7 +15,7 @@ from .builder import DATA_CONVERTERS
 @DATA_CONVERTERS.register_module()
 class EftConverter(BaseModeConverter):
     """Eft dataset `Exemplar Fine-Tuning for 3D Human Pose Fitting Towards In-
-    the-Wild 3D Human Pose Estimation' 3DV'2020 More details can be found in
+    the-Wild 3D Human Pose Estimation' 3DV'2021 More details can be found in
     the `paper.
 
     <https://arxiv.org/pdf/2004.03686.pdf>`__ .
