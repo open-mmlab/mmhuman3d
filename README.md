@@ -1,6 +1,12 @@
+<br/>
+
 <div align="center">
     <img src="resources/mmhuman3d-logo.png" width="600"/>
 </div>
+
+<br/>
+
+<div align="center">
 
 [![Documentation](https://readthedocs.org/projects/mmhuman3d/badge/?version=latest)](https://mmhuman3d.readthedocs.io/en/latest/?badge=latest)
 [![actions](https://github.com/open-mmlab/mmhuman3d/workflows/build/badge.svg)](https://github.com/open-mmlab/mmhuman3d/actions)
@@ -9,6 +15,7 @@
 [![LICENSE](https://img.shields.io/github/license/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/blob/main/LICENSE)
 [![Percentage of issues still open](https://isitmaintained.com/badge/open/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/issues)
 
+</div>
 
 ## Introduction
 
@@ -37,6 +44,16 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 ## Benchmark and Model Zoo
 
 More details can be found in [model_zoo.md](docs/model_zoo.md).
+
+Supported body models:
+
+<details open>
+<summary>(click to collapse)</summary>
+
+- [x] [SMPL](https://smpl.is.tue.mpg.de/) (SIGGRAPH Asia'2015)
+- [x] [SMPL-X](https://smpl-x.is.tue.mpg.de/) (CVPR'2019)
+
+</details>
 
 Supported methods:
 
