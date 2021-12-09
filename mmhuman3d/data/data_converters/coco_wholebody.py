@@ -49,7 +49,7 @@ class CocoWholebodyConverter(BaseModeConverter):
 
         json_path = os.path.join(dataset_path, 'annotations',
                                  'coco_wholebody_{}_v1.0.json'.format(mode))
-        img_dir = os.path.join(dataset_path, '{}2017'.format(mode))
+        img_dir = os.path.join('train_2017', '{}2017'.format(mode))
 
         json_data = json.load(open(json_path, 'r'))
 

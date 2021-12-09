@@ -267,6 +267,66 @@ mmhuman3d
 
 ## Folder structure
 
+### AGORA
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/2104.14643.pdf">AGORA (CVPR'2021)</a></summary>
+
+```bibtex
+@inproceedings{Patel:CVPR:2021,
+ title = {{AGORA}: Avatars in Geography Optimized for Regression Analysis},
+ author = {Patel, Priyanka and Huang, Chun-Hao P. and Tesch, Joachim and Hoffmann, David T. and Tripathi, Shashank and Black, Michael J.},
+ booktitle = {Proceedings IEEE/CVF Conf.~on Computer Vision and Pattern Recognition ({CVPR})},
+ month = jun,
+ year = {2021},
+ month_numeric = {6}
+}
+```
+
+</details>
+
+For [AGORA](https://agora.is.tue.mpg.de/index.html), please download the [dataset](https://agora.is.tue.mpg.de/download.php) and place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+   └── datasets
+       └── agora
+           ├── camera_dataframe # smplx annotations
+           │   ├── train_0_withjv.pkl
+           │   ├── validation_0_withjv.pkl
+           │   └── ...
+           ├── camera_dataframe_smpl # smpl annotations
+           │   ├── train_0_withjv.pkl
+           │   ├── validation_0_withjv.pkl
+           │   └── ...
+           ├── images
+           │   ├── train
+           │   │   ├── ag_trainset_3dpeople_bfh_archviz_5_10_cam00_00000_1280x720.png
+           │   │   ├── ag_trainset_3dpeople_bfh_archviz_5_10_cam00_00001_1280x720.png
+           │   │   └── ...
+           │   ├── validation
+           │   └── test
+           ├── smpl_gt
+           │   ├── trainset_3dpeople_adults_bfh
+           │   │   ├── 10004_w_Amaya_0_0.mtl
+           │   │   ├── 10004_w_Amaya_0_0.obj
+           │   │   ├── 10004_w_Amaya_0_0.pkl
+           │   │   └── ...
+           │   └── ...
+           └── smplx_gt
+                   ├── 10004_w_Amaya_0_0.obj
+                   ├── 10004_w_Amaya_0_0.pkl
+                   └── ...
+```
+
 ### COCO
 
 <!-- [DATASET] -->
@@ -357,17 +417,9 @@ mmhuman3d
     └── datasets
         └── coco
             ├── annotations
-            |   ├── person_keypoints_train2014.json
-            |   └── person_keypoints_val2014.json
-            ├── train2014
-            │   ├── COCO_train2014_000000000009.jpg
-            │   ├── COCO_train2014_000000000025.jpg
-            │   ├── COCO_train2014_000000000030.jpg
-            |   └── ...
+            |   ├── coco_wholebody_train_v1.0.json
+            |   └── coco_wholebody_val_v1.0.json
             └── train_2017
-                │── annotations
-                │   ├── person_keypoints_train2017.json
-                │   ├── person_keypoints_val2017.json
                 │── train2017
                 │   ├── 000000000009.jpg
                 │   ├── 000000000025.jpg
@@ -414,7 +466,7 @@ mmhuman3d
 ├── configs
 └── data
     └── datasets
-        └── Crowdpose
+        └── crowdpose
             ├── crowdpose_train.json
             ├── crowdpose_val.json
             ├── crowdpose_trainval.json
@@ -426,6 +478,45 @@ mmhuman3d
                 └── ...
 ```
 
+### EFT
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/2004.03686.pdf">EFT (3DV'2021)</a></summary>
+
+```bibtex
+@inproceedings{joo2020eft,
+ title={Exemplar Fine-Tuning for 3D Human Pose Fitting Towards In-the-Wild 3D Human Pose Estimation},
+ author={Joo, Hanbyul and Neverova, Natalia and Vedaldi, Andrea},
+ booktitle={3DV},
+ year={2020}
+}
+```
+
+</details>
+
+For [EFT](https://github.com/facebookresearch/eft) data, please download from [EFT](https://github.com/facebookresearch/eft).
+Download and extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+   └── datasets
+       └── eft
+           ├── coco_2014_train_fit
+           |   ├── COCO2014-All-ver01.json
+           |   └── COCO2014-Part-ver01.json
+           |── LSPet_fit
+           |   └── LSPet_ver01.json
+           └── MPII_fit
+               └── MPII_ver01.json
+```
 
 ### Human3.6M
 
@@ -470,10 +561,15 @@ mmhuman3d
             |   |    |  ├── S1_Directions_1.54138969_00002.jpg
             |   |    |  └── ...
             |   |    └── ...
-            |   ├── ...
             |   ├── MyPoseFeatures
+            |   |    |── D2Positions
+            |   |    └── D3_Positions_Mono
             |   ├── MySegmentsMat
+            |   |    └── ground_truth_bs
             |   └── Videos
+            |        |── Directions 1.54138969.mp4
+            |        |── Directions 1.55011271.mp4
+            |        └── ...
             ├── S5
             ├── S6
             ├── S7
@@ -483,11 +579,24 @@ mmhuman3d
             └── metadata.xml
 ```
 
+To extract images from [Human3.6M](http://vision.imar.ro/human3.6m/description.php) original videos, modify the `h36m_p1` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
+
+```python
+h36m_p1=dict(
+    type='H36mConverter',
+    modes=['train', 'valid'],
+    protocol=1,
+    extract_img=True, # set to true to extract images from raw videos
+    prefix='h36m'),
+```
+
 ### Human3.6M Mosh
 
 <!-- [DATASET] -->
 
 For data preparation of [Human3.6M](http://vision.imar.ro/human3.6m/description.php) for HMR and SPIN training, we use the [MoShed](https://mosh.is.tue.mpg.de/) data provided in [HMR](https://github.com/akanazawa/hmr) for training. However, due to license limitations, we are not allowed to redistribute the data. Even if you do not have access to these parameters, you can still generate the preprocessed h36m npz file without mosh parameters using our [converter](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py).
+
+To do so, modify the `h36m_p1` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
 
 Config without mosh:
 ```python
@@ -802,7 +911,7 @@ mmhuman3d
 ├── configs
 └── data
     └── datasets
-        └── PoseTrack
+        └── posetrack
             ├── images
             │   ├── train
             │   │   ├── 000001_bonn_train
@@ -836,6 +945,49 @@ mmhuman3d
                         ├── 000001_mpiinew_test.json
                         ├── 000002_mpiinew_test.json
                         └── ...
+```
+
+### Penn Action
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://openaccess.thecvf.com/content_iccv_2013/papers/Zhang_From_Actemes_to_2013_ICCV_paper.pdf">Penn Action (ICCV'2013)</a></summary>
+
+```bibtex
+@inproceedings{zhang2013pennaction,
+ title={From Actemes to Action: A Strongly-supervised Representation for Detailed Action Understanding},
+ author={Zhang, Weiyu and Zhu, Menglong and Derpanis, Konstantinos},
+ booktitle={ICCV},
+ year={2013}
+}
+```
+
+</details>
+
+For [Penn Action](http://dreamdragon.github.io/PennAction/) data, please download from [Penn Action](https://upenn.box.com/PennAction).
+Extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+   └── datasets
+       └── penn_action
+           ├── frames
+           │   ├── 0001
+           │   │   ├── 000001.jpg
+           │   │   ├── 000002.jpg
+           │   │   └── ...
+           │   └── ...
+           └── labels
+               ├── 0001.mat
+               ├── 0002.mat
+               └── ...
 ```
 
 ### PW3D
@@ -925,4 +1077,57 @@ mmhuman3d
             ├── lsp_dataset_original_train.npz
             ├── mpi_inf_3dhp_train.npz
             └── mpii_train.npz
+```
+
+
+
+### SURREAL
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1701.01370.pdf">SURREAL (CVPR'2017)</a></summary>
+
+```bibtex
+@inproceedings{varol17_surreal,
+ title     = {Learning from Synthetic Humans},
+ author    = {Varol, G{\"u}l and Romero, Javier and Martin, Xavier and Mahmood, Naureen and Black, Michael J. and Laptev, Ivan and Schmid, Cordelia},
+ booktitle = {CVPR},
+ year      = {2017}
+}
+```
+
+</details>
+
+For [SURREAL](https://www.di.ens.fr/willow/research/surreal/), please download the [dataset] (https://www.di.ens.fr/willow/research/surreal/data/) and place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+   └── datasets
+       └── surreal
+          ├── train
+          │   ├── run0
+          |   |    ├── 03_01
+          |   |    │   ├── 03_01_c0001_depth.mat
+          |   |    │   ├── 03_01_c0001_info.mat
+          |   |    │   ├── 03_01_c0001_segm.mat
+          |   |    │   ├── 03_01_c0001.mp4
+          |   |    │   └── ...
+          |   |    └── ...
+          │   ├── run1
+          │   └── run2
+          ├── val
+          │   ├── run0
+          │   ├── run1
+          │   └── run2
+          └── test
+              ├── run0
+              ├── run1
+              └── run2
 ```

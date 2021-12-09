@@ -180,7 +180,7 @@ class H36mSpinConverter(BaseModeConverter):
 
                         # save image
                         if self.extract_img:
-                            cv2.imwrite(image_abs_path)
+                            cv2.imwrite(image_abs_path, image)
 
                         # read GT bounding box
                         mask = bbox_h5py[bbox_h5py['Masks'][frame_i, 0]][:].T
