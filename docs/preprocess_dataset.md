@@ -151,7 +151,7 @@ coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
 ```
 
 **Alternatively**, you may download the preprocessed files directly:
-- [cmu_mosh.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/cmu_mosh.npz?versionId=CAEQHhiBgMCglbPY6xciIDEyMTFmOGFkNWZjNDQxYjg4YjlhNjNmMjhhMjQzZTk0)
+- [cmu_mosh.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/cmu_mosh.npz?versionId=CAEQHhiBgIDoof_37BciIDU0OGU0MGNhMjAxMjRiZWI5YzdkMWEzMzc3YzBiZDM2)
 - [coco_2014_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/coco_2014_train.npz?versionId=CAEQHhiBgICUrvbS6xciIDFmZmFhMDk5OGQ3YzQ5ZDE5NzJkMGQxNzdmMmQzZDdi)
 - [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
 - [lsp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/lsp_train.npz?versionId=CAEQHhiBgICnq_bS6xciIDU4ZTRhMDIwZTBkZjQ1YTliYTY0NGFmMDVmOGVhZjMy)
