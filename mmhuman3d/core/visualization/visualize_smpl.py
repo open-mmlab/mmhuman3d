@@ -818,9 +818,11 @@ def render_smpl(
                 f'{mesh_file_path}/frame{frame_idx}_person{person_idx}.ply'
                 for person_idx in range(num_person)
             ]
-            save_meshes_as_plys(vertices[frame_idx],
-                                faces[None].repeat(num_person, 1,
-                                                   1), colors, ply_paths)
+            save_meshes_as_plys(
+                verts=vertices[frame_idx],
+                faces=faces[None].repeat(num_person, 1, 1),
+                verts_rgb=colors,
+                paths=ply_paths)
 
     if Ks is not None:
         projection = 'perspective'
@@ -1022,8 +1024,7 @@ def visualize_smpl_calibration(
         orig_cam=None,
         in_ndc=False,
         return_tensor=False,
-        no_grad=True,
-        mesh_file_path=None)
+        no_grad=True)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
@@ -1057,7 +1058,6 @@ def visualize_smpl_hmr(cam_transl,
         R=None,
         return_tensor=False,
         no_grad=True,
-        mesh_file_path=None,
         orig_cam=None,
     )
     if isinstance(cam_transl, np.ndarray):
@@ -1128,7 +1128,6 @@ def visualize_T_pose(num_frames,
         T=None,
         return_tensor=False,
         no_grad=True,
-        mesh_file_path=None,
         origin_frames=None,
         gender='neutral')
     for k in func.keywords.keys():
@@ -1155,7 +1154,6 @@ def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
         in_ndc=True,
         return_tensor=False,
         no_grad=True,
-        mesh_file_path=None,
         origin_frames=None,
         frame_list=None,
         image_array=None)
