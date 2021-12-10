@@ -399,8 +399,9 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
                         color_person[:, index] = torch.FloatTensor(
                             color_part[part_idx]) / 255
                 elif palette[person_idx] in Color.color_names:
-                    color_person = torch.FloatTensor(Color(palette).rgb).view(
-                        1, 1, 3).repeat(1, num_verts, 1)
+                    color_person = torch.FloatTensor(
+                        Color(palette[person_idx]).rgb).view(1, 1, 3).repeat(
+                            1, num_verts, 1)
                 else:
                     raise ValueError('Wrong palette. Use numpy or str')
                 colors.append(color_person)
@@ -633,8 +634,8 @@ def render_smpl(
         start (int, optional): start frame index. Defaults to 0.
 
         end (int, optional): end frame index. Exclusive.
-            Could be positive int or negative int or None.
-            None represents include all the frames.
+                Could be positive int or negative int or None.
+                None represents include all the frames.
 
             Defaults to None.
         alpha (float, optional): Transparency of the mesh.
