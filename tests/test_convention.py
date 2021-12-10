@@ -160,7 +160,8 @@ def test_cache():
             keypoints=coco_wb_keypoints2d,
             mask=coco_wb_mask,
             src='coco_wholebody',
-            dst=dst_key)
+            dst=dst_key,
+            read_cache=False)
     without_cache_time = time.time() - start_time
     start_time = time.time()
     # re-use cached mapping to convert faster
