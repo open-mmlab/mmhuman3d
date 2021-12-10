@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
   - name: "MMHuman3D Contributors"
-title: "MMHuman3D: OpenMMLab Human Pose and Shape Estimation Toolbox and Benchmark"
+title: "MMHuman3D: OpenMMLab 3D Human Parametric Model Toolbox and Benchmark"
 date-released: 2021-12-01
 url: "https://github.com/open-mmlab/mmhuman3d"
 license: Apache-2.0
