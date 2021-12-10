@@ -43,7 +43,7 @@ class video_writer:
             '-pix_fmt',
             'bgr24',
             '-s',
-            f'{width}x{height}',
+            f'{int(width)}x{int(height)}',
             '-r',
             f'{fps}',  # frames per second
             '-loglevel',
@@ -54,6 +54,8 @@ class video_writer:
             '-',  # The input comes from a pipe
             '-vcodec',
             'libx264',
+            '-r',
+            f'{fps}',  # frames per second
             '-an',  # Tells FFMPEG not to expect any audio
             output_path,
         ]
@@ -132,11 +134,11 @@ def array_to_video(
         '-f',
         'rawvideo',
         '-s',
-        '%dx%d' % (width, height),  # size of one frame
+        f'{int(width)}x{int(height)}',  # size of one frame
         '-pix_fmt',
         'bgr24',
         '-r',
-        str(fps),  # frames per second
+        f'{fps}',  # frames per second
         '-loglevel',
         'error',
         '-threads',
@@ -216,7 +218,7 @@ def array_to_images(
         '-f',
         'rawvideo',
         '-s',
-        '%dx%d' % (width, height),  # size of one frame
+        f'{int(width)}x{int(height)}',  # size of one frame
         '-pix_fmt',
         'bgr24',  # bgr24 for matching OpenCV
         '-loglevel',
@@ -296,7 +298,7 @@ def video_to_array(
     num_frames = int(info['nb_frames'])
     start = (min(start, num_frames - 1) + num_frames) % num_frames
     end = (min(end, num_frames - 1) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+           num_frames) % num_frames if end is not None else num_frames
     command = [
         'ffmpeg',
         '-i',
@@ -308,7 +310,7 @@ def video_to_array(
         '-pix_fmt',
         'bgr24',  # bgr24 for matching OpenCV
         '-s',
-        '%dx%d' % (int(width), int(height)),
+        f'{int(width)}x{int(height)}',
         '-f',
         'image2pipe',
         '-vcodec',
@@ -432,7 +434,7 @@ def images_to_array(
     num_frames = len(os.listdir(input_folder))
     start = (min(start, num_frames - 1) + num_frames) % num_frames
     end = (min(end, num_frames - 1) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+           num_frames) % num_frames if end is not None else num_frames
     command = [
         'ffmpeg',
         '-y',
@@ -449,7 +451,7 @@ def images_to_array(
         '-pix_fmt',
         'bgr24',  # bgr24 for matching OpenCV
         '-s',
-        '%dx%d' % (int(width), int(height)),
+        f'{int(width)}x{int(height)}',
         '-loglevel',
         'error',
         '-'
@@ -543,6 +545,7 @@ def video_to_gif(
     input_path: str,
     output_path: str,
     resolution: Optional[Union[Tuple[int, int], Tuple[float, float]]] = None,
+    fps: Union[float, int] = 15,
     disable_log: bool = False,
 ) -> None:
     """Convert a video to a gif file.
@@ -553,6 +556,7 @@ def video_to_gif(
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of the output video.
             Defaults to None.
+        fps (Union[float, int], optional): frames per second. Defaults to 15.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
 
@@ -576,15 +580,17 @@ def video_to_gif(
         overwrite=True)
 
     info = vid_info_reader(input_path)
+    duration = info['duration']
     if resolution:
         height, width = resolution
     else:
         width, height = int(info['width']), int(info['height'])
 
     command = [
-        'ffmpeg', '-i', input_path, '-r', '15', '-s',
-        '%dx%d' % (width, height), '-loglevel', 'error', '-threads', '4', '-y',
-        output_path
+        'ffmpeg', '-r',
+        str(info['r_frame_rate']), '-i', input_path, '-r', f'{fps}', '-s',
+        f'{width}x{height}', '-loglevel', 'error', '-t', f'{duration}',
+        '-threads', '4', '-y', output_path
     ]
     if not disable_log:
         print(f'Running \"{" ".join(command)}\"')
@@ -639,7 +645,7 @@ def video_to_images(input_path: str,
     num_frames = int(info['nb_frames'])
     start = (min(start, num_frames - 1) + num_frames) % num_frames
     end = (min(end, num_frames - 1) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+           num_frames) % num_frames if end is not None else num_frames
 
     command = [
         'ffmpeg', '-i', input_path, '-filter_complex',
@@ -682,7 +688,7 @@ def images_to_video(input_folder: str,
         start (int, optional): start frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Included.
+        end (int, optional): end frame index. Excluded.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
@@ -709,7 +715,7 @@ def images_to_video(input_folder: str,
     num_frames = len(os.listdir(input_folder))
     start = (min(start, num_frames - 1) + num_frames) % num_frames
     end = (min(end, num_frames - 1) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+           num_frames) % num_frames if end is not None else num_frames
     temp_input_folder = None
     if img_format is None:
         temp_input_folder = os.path.join(input_folderinfo.parent,
@@ -722,17 +728,18 @@ def images_to_video(input_folder: str,
         '-threads',
         '4',
         '-start_number',
-        str(start),
+        f'{start}',
+        '-r',
+        f'{fps}',
         '-i',
-        f'{input_folder}/{img_format}',
+        f'{input_folder}/{img_format}'
+        if temp_input_folder is None else f'{temp_input_folder}/{img_format}',
         '-frames:v',
         f'{end - start}',
         '-profile:v',
         'baseline',
         '-level',
         '3.0',
-        '-r',
-        f'{fps}',
         '-c:v',
         'libx264',
         '-pix_fmt',
@@ -788,7 +795,7 @@ def images_to_gif(
         start (int, optional): start frame index. Included.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Included.
+        end (int, optional): end frame index. Excluded.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to -1.
         disable_log (bool, optional): whether close the ffmepg command info.
@@ -815,7 +822,7 @@ def images_to_gif(
     num_frames = len(os.listdir(input_folder))
     start = (min(start, num_frames - 1) + num_frames) % num_frames
     end = (min(end, num_frames - 1) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+           num_frames) % num_frames if end is not None else num_frames
     temp_input_folder = None
     if img_format is None:
         file_list = []
@@ -846,12 +853,12 @@ def images_to_gif(
         '4',
         '-start_number',
         f'{start}',
+        '-r',
+        f'{fps}',
         '-i',
         f'{input_folder}/{img_format}',
         '-frames:v',
         f'{end - start}',
-        '-r',
-        f'{fps}',
         '-loglevel',
         'error',
         '-v',
@@ -958,9 +965,8 @@ def gif_to_images(input_path: str,
         path_type='dir',
         overwrite=True)
     command = [
-        'ffmpeg', '-i', input_path, '-r',
-        str(fps), '-loglevel', 'error', '-f', 'image2', '-v', 'error',
-        '-threads', '4', '-y', '-start_number', '0',
+        'ffmpeg', '-r', f'{fps}', '-i', input_path, '-loglevel', 'error', '-f',
+        'image2', '-v', 'error', '-threads', '4', '-y', '-start_number', '0',
         f'{output_folder}/{img_format}'
     ]
     if resolution:
@@ -1064,7 +1070,7 @@ def slice_video(input_path: str,
     num_frames = int(info['nb_frames'])
     start = (min(start, num_frames - 1) + num_frames) % num_frames
     end = (min(end, num_frames - 1) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+           num_frames) % num_frames if end is not None else num_frames
     command = [
         'ffmpeg', '-y', '-i', input_path, '-filter_complex',
         f'[0]trim=start_frame={start}:end_frame={end}[v0]', '-map', '[v0]',
@@ -1298,10 +1304,10 @@ def compress_video(input_path: str,
     new_height = int(height / down_sample_scale)
     new_height += new_height % 2
     command = [
-        'ffmpeg', '-y', '-i', input_path, '-loglevel', 'error', '-b:v',
-        str(bit_rate / (compress_rate * down_sample_scale)), '-r',
-        str(float(fps)), '-t',
-        str(duration), '-s',
+        'ffmpeg', '-y', '-r',
+        str(info['r_frame_rate']), '-i', input_path, '-loglevel', 'error',
+        '-b:v', f'{bit_rate / (compress_rate * down_sample_scale)}', '-r',
+        f'{fps}', '-t', f'{duration}', '-s',
         '%dx%d' % (new_width, new_height), temp_outpath
     ]
     if not disable_log:
