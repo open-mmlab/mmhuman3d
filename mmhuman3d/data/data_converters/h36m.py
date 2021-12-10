@@ -316,7 +316,7 @@ class H36mConverter(BaseModeConverter):
                         image_abs_path = os.path.join(dataset_path, image_path)
                         # save image
                         if self.extract_img:
-                            cv2.imwrite(image_abs_path)
+                            cv2.imwrite(image_abs_path, image)
 
                         # get bbox from mask
                         mask = bbox_h5py[bbox_h5py['Masks'][frame_i, 0]][:].T

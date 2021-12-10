@@ -64,8 +64,8 @@ def test_preprocess():
         type='AgoraConverter', modes=['train', 'validation'], fit='smplx')
     data_converter = build_data_converter(cfg)
     data_converter.convert(AGORA_ROOT, output_path)
-    assert osp.exists(osp.join(output_path, 'agora_train.npz'))
-    assert osp.exists(osp.join(output_path, 'agora_validation.npz'))
+    assert osp.exists(osp.join(output_path, 'agora_train_smplx.npz'))
+    assert osp.exists(osp.join(output_path, 'agora_validation_smplx.npz'))
 
     LSP_ORIGINAL_ROOT = osp.join(root_path, 'lsp_dataset_original')
     cfg = dict(type='LspConverter', modes=['train'])

@@ -18,7 +18,7 @@
 - CUDA 9.2+
 - GCC 5+
 - PyTorch3D 0.4+
-- [MMCV](https://github.com/open-mmlab/mmcv) (Please install mmcv-full>=1.3.13, <1.4.0 for GPU)
+- [MMCV](https://github.com/open-mmlab/mmcv) (Please install mmcv-full>=1.3.13, <=1.5.0 for GPU)
 
 Optional:
 - [MMPOSE](https://github.com/open-mmlab/mmpose) (Only for demo.)
@@ -127,7 +127,7 @@ pip install mmdet
 
 Optionally, you can also build MMDetection from source in case you want to modify the code:
 ```shell
-git clone git@github.com:open-mmlab/mmdetection.git
+git clone https://github.com/open-mmlab/mmdetection.git
 cd mmdetection
 pip install -r requirements/build.txt
 pip install -v -e .
@@ -141,7 +141,7 @@ pip install mmpose
 Optionally, you can also build MMPose from source in case you want to modify the code:
 
 ```shell
-git clone git@github.com:open-mmlab/mmpose.git
+git clone https://github.com/open-mmlab/mmpose.git
 cd mmpose
 pip install -r requirements.txt
 pip install -v -e .
@@ -164,7 +164,7 @@ pip install -v -e .  # or "python setup.py develop"
 b. Clone the mmhuman3d repository.
 
 ```shell
-git clone git@github.com:open-mmlab/mmhuman3d.git
+git clone https://github.com/open-mmlab/mmhuman3d.git
 cd mmhuman3d
 ```
 
@@ -206,7 +206,7 @@ pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
 
 # install mmhuman3d
 
-git clone git@github.com:open-mmlab/mmhuman3d.git
+git clone https://github.com/open-mmlab/mmhuman3d.git
 cd mmhuman3d
 pip install -v -e .
 ```

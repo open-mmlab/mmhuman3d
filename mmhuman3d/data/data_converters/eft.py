@@ -29,10 +29,12 @@ class EftConverter(BaseModeConverter):
     def __init__(self, modes: List = []) -> None:
         super(EftConverter, self).__init__(modes)
         self.json_mapping_dict = {
-            'coco_all': 'coco_2014_train_fit/COCO2014-All-ver01.json',
-            'coco_part': 'coco_2014_train_fit/COCO2014-Part-ver01.json',
-            'lspet': 'LSPet_fit/LSPet_ver01.json',
-            'mpii': 'MPII_fit/MPII_ver01.json'
+            'coco_all':
+            ['coco_2014_train_fit/COCO2014-All-ver01.json', 'train2014/'],
+            'coco_part':
+            ['coco_2014_train_fit/COCO2014-Part-ver01.json', 'train2014/'],
+            'lspet': ['LSPet_fit/LSPet_ver01.json', ''],
+            'mpii': ['MPII_fit/MPII_ver01.json', 'images/']
         }
 
     @staticmethod
@@ -66,7 +68,8 @@ class EftConverter(BaseModeConverter):
 
         if mode in self.json_mapping_dict.keys():
             annot_file = os.path.join(dataset_path,
-                                      self.json_mapping_dict[mode])
+                                      self.json_mapping_dict[mode][0])
+            image_prefix = self.json_mapping_dict[mode][1]
         else:
             raise ValueError('provided dataset is not in eft fittings')
 
@@ -94,7 +97,7 @@ class EftConverter(BaseModeConverter):
             smpl['betas'].append(beta)
 
             # store data
-            image_path_.append(image_name)
+            image_path_.append(image_prefix + image_name)
             bbox_xywh_.append(bbox_xywh)
             keypoints2d_.append(gt_keypoint_2d)
 

@@ -76,8 +76,8 @@ class PennActionConverter(BaseConverter):
                     max(kp[:, 1])
                 ]
                 bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
-
-                image_path_.append(img_path)
+                # store relative instead of absolute image path
+                image_path_.append(img_path.replace(dataset_path + '/', ''))
                 bbox_xywh_.append(bbox_xywh)
                 keypoints2d_.append(kp)
 
