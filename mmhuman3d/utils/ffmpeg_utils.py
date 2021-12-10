@@ -269,10 +269,10 @@ def video_to_array(
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): resolution(height, width) of output.
             Defaults to None.
-        start (int, optional): start frame index. Included.
+        start (int, optional): start frame index. Inclusive.
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Excluded.
+        end (int, optional): end frame index. Exclusive.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
@@ -392,10 +392,10 @@ def images_to_array(
             resolution(height, width) of output. Defaults to None.
         img_format (str, optional): format of images to be read.
             Defaults to '%06d.png'.
-        start (int, optional): start frame index. Included.
+        start (int, optional): start frame index. Inclusive.
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Excluded.
+        end (int, optional): end frame index. Exclusive.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to None.
         remove_raw_files (bool, optional): whether remove raw images.
@@ -614,10 +614,10 @@ def video_to_images(input_path: str,
             (height, width) of output. defaults to None.
         img_format (str, optional): format of images to be read.
             Defaults to '%06d.png'.
-        start (int, optional): start frame index. Included.
+        start (int, optional): start frame index. Inclusive.
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Excluded.
+        end (int, optional): end frame index. Exclusive.
             If < 0, will be converted to frame_index range in [0, frame_num].
             None represents all.
             Defaults to None.
@@ -685,10 +685,10 @@ def images_to_video(input_folder: str,
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output.
             defaults to None.
-        start (int, optional): start frame index. Included.
+        start (int, optional): start frame index. Inclusive.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Excluded.
+        end (int, optional): end frame index. Exclusive.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
@@ -792,10 +792,10 @@ def images_to_gif(
         fps (int, optional): output video fps. Defaults to 15.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output. Defaults to None.
-        start (int, optional): start frame index. Included.
+        start (int, optional): start frame index. Inclusive.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
-        end (int, optional): end frame index. Excluded.
+        end (int, optional): end frame index. Exclusive.
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to -1.
         disable_log (bool, optional): whether close the ffmepg command info.

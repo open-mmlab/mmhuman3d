@@ -78,7 +78,10 @@ def visualize_kp3d(
         mask (Optional[Union[list, tuple, np.ndarray]], optional):
             mask to mask out the incorrect points. Defaults to None.
         start (int, optional): start frame index. Defaults to 0.
-        end (int, optional): end frame index. Defaults to None.
+        end (int, optional): end frame index.
+            Could be positive int or negative int or None.
+            None represents include all the frames.
+            Defaults to None.
         resolution (Union[list, Tuple[int, int]], optional):
             (width, height) of the output video
             will be the same size as the original images if not specified.

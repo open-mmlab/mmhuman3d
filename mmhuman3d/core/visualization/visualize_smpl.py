@@ -632,9 +632,9 @@ def render_smpl(
             size of background images and finally resized to resolution.
         start (int, optional): start frame index. Defaults to 0.
 
-        end (int, optional): end slice index. Excluded.
+        end (int, optional): end frame index. Exclusive.
             Could be positive int or negative int or None.
-            None represents include till final frame.
+            None represents include all the frames.
 
             Defaults to None.
         alpha (float, optional): Transparency of the mesh.

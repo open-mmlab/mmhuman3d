@@ -89,7 +89,7 @@ def save_meshes_as_plys(meshes: Meshes = None,
                         verts: torch.Tensor = None,
                         faces: torch.Tensor = None,
                         verts_rgb: torch.Tensor = None,
-                        paths: List(str) = []):
+                        paths: List[str] = []):
     if meshes is None:
         meshes = Meshes(
             verts=verts,
