@@ -12,6 +12,7 @@ import mmcv
 import numpy as np
 import torch
 import torch.nn as nn
+from colormap import Color
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -21,6 +22,7 @@ from mmhuman3d.core.cameras import (
     compute_orbit_cameras,
 )
 from mmhuman3d.core.conventions.cameras import convert_cameras
+from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.models.builder import build_body_model
 from mmhuman3d.utils.demo_utils import (
     convert_bbox_to_intrinsic,
@@ -34,6 +36,8 @@ from mmhuman3d.utils.ffmpeg_utils import (
     video_to_array,
     video_to_images,
 )
+from mmhuman3d.utils.keypoint_utils import get_different_colors
+from mmhuman3d.utils.mesh_utils import save_meshes_as_plys
 from mmhuman3d.utils.path_utils import (
     check_input_path,
     check_path_suffix,
@@ -159,7 +163,7 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
     return image_array, remove_folder, frames_folder
 
 
-def _prepare_body_model(model_type, body_model, model_path, gender, use_pca):
+def _prepare_body_model(model_type, body_model, model_path, gender):
     """Prepare `body_model` from `model_path` or existing `body_model`."""
     if model_type not in ['smpl', 'smplx']:
         raise ValueError(
@@ -176,10 +180,9 @@ def _prepare_body_model(model_type, body_model, model_path, gender, use_pca):
                     type=model_type,
                     model_path=model_path,
                     gender=gender,
-                    use_pca=use_pca,
+                    use_pca=False,
                     use_face_contour=True,
-                    num_betas=10,
-                    num_pca_comps=6))
+                    num_betas=10))
         else:
             raise ValueError('Please input body_model or model_path.')
     else:
@@ -357,6 +360,59 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
     return vertices, faces, joints, num_frames, num_person
 
 
+def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
+
+    if not len(palette) == num_person:
+        raise ValueError('Please give the right number of palette.')
+    body_seg = body_segmentation(model_type)
+
+    if render_choice == 'silhouette':
+        colors = torch.ones(num_person, num_verts, 3)
+    elif render_choice == 'part_silhouette':
+        colors = torch.zeros(num_person, num_verts, 3)
+        for i, k in enumerate(body_seg.keys()):
+            colors[:, body_seg[k]] = 0.01 * (i + 1)
+    else:
+        if isinstance(palette, torch.Tensor):
+            colors = palette.view(num_person,
+                                  3).unsqueeze(1).repeat(1, num_verts, 1)
+
+        elif isinstance(palette, list):
+            colors = []
+            for person_idx in range(num_person):
+
+                if palette[person_idx] == 'random':
+                    color_person = get_different_colors(num_person)[person_idx]
+                    color_person = torch.FloatTensor(color_person) / 255.0
+                    color_person = torch.clip(
+                        color_person * 1.5, min=0.6, max=1)
+                    color_person = color_person.view(1, 1, 3).repeat(
+                        1, num_verts, 1)
+                elif palette[person_idx] == 'segmentation':
+                    verts_labels = torch.zeros(num_verts)
+                    color_person = torch.ones(1, num_verts, 3)
+                    color_part = get_different_colors(
+                        len(list(body_seg.keys())))
+                    for part_idx, k in enumerate(body_seg.keys()):
+                        index = body_seg[k]
+                        verts_labels[index] = part_idx
+                        color_person[:, index] = torch.FloatTensor(
+                            color_part[part_idx]) / 255
+                elif palette[person_idx] in Color.color_names:
+                    color_person = torch.FloatTensor(Color(palette).rgb).view(
+                        1, 1, 3).repeat(1, num_verts, 1)
+                else:
+                    raise ValueError('Wrong palette. Use numpy or str')
+                colors.append(color_person)
+            colors = torch.cat(colors, 0)
+            assert colors.shape == (num_person, num_verts, 3)
+            # the color passed to renderer will be (num_person, num_verts, 3)
+        else:
+            raise ValueError(
+                'Palette should be tensor, array or list of strs.')
+    return colors
+
+
 def render_smpl(
     # smpl parameters
     poses: Optional[Union[torch.Tensor, np.ndarray, dict]] = None,
@@ -367,7 +423,6 @@ def render_smpl(
     gender: Literal['male', 'female', 'neutral'] = 'neutral',
     model_path: Optional[str] = None,
     body_model: Optional[nn.Module] = None,
-    use_pca: bool = False,
     # camera paramters
     R: Optional[Union[torch.Tensor, np.ndarray]] = None,
     T: Optional[Union[torch.Tensor, np.ndarray]] = None,
@@ -398,7 +453,7 @@ def render_smpl(
     image_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
     img_format: str = 'frame_%06d.jpg',
     overwrite: bool = False,
-    obj_path: Optional[str] = None,
+    mesh_file_path: Optional[str] = None,
     read_frames_batch: bool = False,
     # visualize keypoints
     plot_kps: bool = False,
@@ -623,8 +678,8 @@ def render_smpl(
         overwrite (bool, optional): whether overwriting the existing files.
 
             Defaults to False.
-        obj_path (bool, optional): the directory path to store the `.obj`
-            files.
+        mesh_file_path (bool, optional): the directory path to store the `.obj`
+            or '.ply' files. Will be named like 'frame_idx_person_idx.obj'.
 
             Defaults to None.
         read_frames_batch (bool, optional): Whether read frames by batch.
@@ -668,12 +723,13 @@ def render_smpl(
     verts, poses, betas, transl = _prepare_input_data(verts, poses, betas,
                                                       transl)
     body_model = _prepare_body_model(model_type, body_model, model_path,
-                                     gender, use_pca)
+                                     gender)
     vertices, faces, joints, num_frames, num_person = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
     end = (min(end, num_frames - 1) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+           num_frames) % num_frames if end is not None else num_frames
     vertices = vertices.view(num_frames, num_person, -1, 3)
+    num_verts = vertices.shape[-2]
 
     if render_choice == 'pointcloud':
         plot_kps = True
@@ -734,7 +790,7 @@ def render_smpl(
 
     render_param_dict = copy.deepcopy(RENDER_CONFIGS[render_choice.lower()])
 
-    # body part colorful visualization should use flat shader to be shaper.
+    # body part colorful visualization should use flat shader to be sharper.
     if isinstance(palette, str):
         if (palette == 'segmentation') and ('silhouette'
                                             not in render_choice.lower()):
@@ -751,9 +807,19 @@ def render_smpl(
                 print(f'Same color for all the {num_person} people')
             else:
                 print('Repeat palette for multi-person.')
+    colors = _prepare_colors(palette, render_choice, num_person, num_verts,
+                             model_type)
 
-    if not len(palette) == num_person:
-        raise ValueError('Please give the right number of palette.')
+    # write .ply files
+    if mesh_file_path is not None:
+        for frame_idx in range(num_frames):
+            ply_paths = [
+                f'{mesh_file_path}/frame{frame_idx}_person{person_idx}.ply'
+                for person_idx in range(num_person)
+            ]
+            save_meshes_as_plys(vertices[frame_idx],
+                                faces[None].repeat(num_person, 1,
+                                                   1), colors, ply_paths)
 
     if Ks is not None:
         projection = 'perspective'
@@ -881,9 +947,8 @@ def render_smpl(
         resolution=render_resolution,
         faces=faces,
         device=device,
-        obj_path=obj_path,
         output_path=output_path,
-        palette=palette,
+        colors=colors,
         return_tensor=return_tensor,
         alpha=alpha,
         model_type=model_type,
@@ -957,7 +1022,7 @@ def visualize_smpl_calibration(
         in_ndc=False,
         return_tensor=False,
         no_grad=True,
-        obj_path=None)
+        mesh_file_path=None)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
@@ -991,7 +1056,7 @@ def visualize_smpl_hmr(cam_transl,
         R=None,
         return_tensor=False,
         no_grad=True,
-        obj_path=None,
+        mesh_file_path=None,
         orig_cam=None,
     )
     if isinstance(cam_transl, np.ndarray):
@@ -1062,7 +1127,7 @@ def visualize_T_pose(num_frames,
         T=None,
         return_tensor=False,
         no_grad=True,
-        obj_path=None,
+        mesh_file_path=None,
         origin_frames=None,
         gender='neutral')
     for k in func.keywords.keys():
@@ -1071,12 +1136,14 @@ def visualize_T_pose(num_frames,
     func(poses=poses, model_type=model_type, orbit_speed=orbit_speed, **kwargs)
 
 
-def visualize_smpl_pose(poses, **kwargs) -> None:
+def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
     """Simpliest way to visualize a sequence of smpl pose.
 
     Cameras will focus on the center of smpl mesh. `orbit speed` is recomended.
     """
-
+    assert (poses
+            is not None) or (verts
+                             is not None), 'Pass either `poses` or `verts`.'
     func = partial(
         render_smpl,
         convention='opencv',
@@ -1087,7 +1154,7 @@ def visualize_smpl_pose(poses, **kwargs) -> None:
         in_ndc=True,
         return_tensor=False,
         no_grad=True,
-        obj_path=None,
+        mesh_file_path=None,
         origin_frames=None,
         frame_list=None,
         image_array=None)

@@ -1,6 +1,7 @@
 from typing import List
 
 import torch
+from pytorch3d.io import IO
 from pytorch3d.renderer import TexturesVertex
 from pytorch3d.structures import (
     Meshes,
@@ -82,3 +83,20 @@ def mesh_to_pointcloud_vc(
         verts_rgba = None
     pointclouds = Pointclouds(points=vertices, features=verts_rgba)
     return pointclouds
+
+
+def save_meshes_as_plys(meshes: Meshes = None,
+                        verts: torch.Tensor = None,
+                        faces: torch.Tensor = None,
+                        verts_rgb: torch.Tensor = None,
+                        paths: List(str) = []):
+    if meshes is None:
+        meshes = Meshes(
+            verts=verts,
+            faces=faces,
+            textures=TexturesVertex(verts_features=verts_rgb))
+    writer = IO()
+    for idx in range(len(meshes)):
+        assert paths[idx].endswith('.ply'), 'Please save as .ply files.'
+        writer.save_mesh(
+            meshes[idx], paths[idx], colors_as_uint8=True, binary=False)
