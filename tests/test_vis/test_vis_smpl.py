@@ -520,7 +520,7 @@ def test_visualize_smpl_pose():
         device=device_name)
 
     image_array = np.random.randint(
-        low=0, high=255, size=(1, 128, 128, 3), dtype=np.uint8)
+        low=0, high=255, size=(3, 128, 128, 3), dtype=np.uint8)
     array_to_images(image_array, '/tmp/temp_images', img_format='%06d.png')
 
     bbox = np.zeros((3, 1, 4))
