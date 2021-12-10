@@ -955,3 +955,43 @@ mmhuman3d
             ├── mpi_inf_3dhp_train.npz
             └── mpii_train.npz
 ```
+
+
+### VIBE
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1912.05656.pdf">VIBE (CVPR'2020)</a></summary>
+
+```BibTeX
+@inproceedings{VIBE,
+  author    = {Muhammed Kocabas and
+               Nikos Athanasiou and
+               Michael J. Black},
+  title     = {{VIBE}: Video Inference for Human Body Pose and Shape Estimation},
+  booktitle = {CVPR},
+  year      = {2020}
+}
+```
+
+</details>
+
+For [SPIN](https://github.com/nkolot/SPIN), please download the [preprocessed mpi_inf_3dhp and pw3d npz files](https://github.com/nkolot/SPIN/blob/master/fetch_data.sh) and place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    └── datasets
+        └── vibe_data
+            ├── spin_
+            ├── hr-lspet_train.npz
+            ├── lsp_dataset_original_train.npz
+            ├── mpi_inf_3dhp_train.npz
+            └── mpii_train.npz
+```
