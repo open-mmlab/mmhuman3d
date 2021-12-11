@@ -799,9 +799,8 @@ def render_smpl(
                                             not in render_choice.lower()):
             render_param_dict['shader']['shader_type'] = 'flat'
         palette = [palette] * num_person
-    else:
-        if isinstance(palette, np.ndarray):
-            palette = torch.Tensor(palette)
+    elif isinstance(palette, np.ndarray):
+        palette = torch.Tensor(palette)
         palette = palette.view(-1, 3)
         if palette.shape[0] != num_person:
             _times = num_person // palette.shape[0]
@@ -810,6 +809,9 @@ def render_smpl(
                 print(f'Same color for all the {num_person} people')
             else:
                 print('Repeat palette for multi-person.')
+    else:
+        raise ValueError('Wrong input palette type. '
+                         'Palette should be tensor, array or list of strs')
     colors = _prepare_colors(palette, render_choice, num_person, num_verts,
                              model_type)
 

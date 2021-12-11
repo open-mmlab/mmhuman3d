@@ -18,7 +18,7 @@ def test_save_meshes():
         save_meshes_as_plys()
 
     # File suffix wrong
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         save_meshes_as_plys(Torus, paths=['1.obj'])
 
     save_meshes_as_plys(Torus, paths=['1.ply'])
