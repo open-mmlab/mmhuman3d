@@ -269,6 +269,7 @@ def _check_frame_path(frame_list):
 
 
 def _check_temp_path(temp_folder, frame_list, overwrite):
+    """Check temp frame folder path."""
     if not overwrite and frame_list is not None and len(frame_list) > 0:
         if Path(temp_folder).absolute() == \
                 Path(frame_list[0]).parent.absolute():
@@ -285,6 +286,7 @@ class _CavasProducer:
                  kp2d,
                  image_array=None,
                  default_scale=1.5):
+        """Initialize a canvas writer."""
         # check the origin background frames
         if frame_list is not None:
             _check_frame_path(frame_list)
@@ -313,6 +315,7 @@ class _CavasProducer:
             self.len = self.image_array.shape[0]
 
     def get_data(self, frame_index):
+        """Get frame data from frame_list of image_array."""
         # frame file exists, resolution not set
         if frame_index < self.len and self.resolution is None:
             if self.image_array is not None:

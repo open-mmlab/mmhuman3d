@@ -1,3 +1,4 @@
+import warnings
 from typing import List
 
 import torch
@@ -89,12 +90,34 @@ def save_meshes_as_plys(meshes: Meshes = None,
                         verts: torch.Tensor = None,
                         faces: torch.Tensor = None,
                         verts_rgb: torch.Tensor = None,
-                        paths: List[str] = []):
+                        paths: List[str] = []) -> None:
+    """Save meshes as .ply files. Mainly for vertex color meshes.
+
+    Args:
+        meshes (Meshes, optional): higher priority than
+            (verts & faces & verts_rgb). Defaults to None.
+        verts (torch.Tensor, optional): lower priority than meshes.
+            Defaults to None.
+        faces (torch.Tensor, optional): lower priority than meshes.
+            Defaults to None.
+        verts_rgb (torch.Tensor, optional): lower priority than meshes.
+            Defaults to None.
+        paths (List[str], optional): Output .ply file list.
+            Defaults to [].
+    """
     if meshes is None:
+        assert verts is not None and faces is not None, 'Not mesh input.'
         meshes = Meshes(
             verts=verts,
             faces=faces,
             textures=TexturesVertex(verts_features=verts_rgb))
+    else:
+        if verts is not None or faces is not None or verts_rgb is not None:
+            warnings.warn('Redundant input, will use meshes only.')
+        elif (verts is None or faces is None):
+            raise ValueError('No mesh information input.')
+
+    assert len(paths) >= len(meshes)
     writer = IO()
     for idx in range(len(meshes)):
         assert paths[idx].endswith('.ply'), 'Please save as .ply files.'
