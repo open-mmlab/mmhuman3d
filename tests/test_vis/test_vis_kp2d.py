@@ -233,10 +233,7 @@ def test_vis_kp2d():
     visualize_kp2d(
         kp2d,
         output_path=output_folder,
-        frame_list=[
-            'tests/data/test_vis_kp2d/%06d.png' % 0,
-            'tests/data/test_vis_kp2d/%06d.png' % 1
-        ],
+        origin_frames='tests/data/test_vis_kp2d/',
         img_format='%06d.png',
         overwrite=True,
     )

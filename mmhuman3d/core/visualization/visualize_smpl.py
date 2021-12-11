@@ -403,7 +403,8 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
                         Color(palette[person_idx]).rgb).view(1, 1, 3).repeat(
                             1, num_verts, 1)
                 else:
-                    raise ValueError('Wrong palette. Use numpy or str')
+                    raise ValueError('Wrong palette string. '
+                                     'Please choose in the pre-defined range.')
                 colors.append(color_person)
             colors = torch.cat(colors, 0)
             assert colors.shape == (num_person, num_verts, 3)

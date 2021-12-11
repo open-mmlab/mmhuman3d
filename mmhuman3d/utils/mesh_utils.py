@@ -114,10 +114,8 @@ def save_meshes_as_plys(meshes: Meshes = None,
     else:
         if verts is not None or faces is not None or verts_rgb is not None:
             warnings.warn('Redundant input, will use meshes only.')
-        elif (verts is None or faces is None):
-            raise ValueError('No mesh information input.')
 
-    assert len(paths) >= len(meshes)
+    assert len(paths) >= len(meshes), 'Not enough output paths.'
     writer = IO()
     for idx in range(len(meshes)):
         assert paths[idx].endswith('.ply'), 'Please save as .ply files.'
