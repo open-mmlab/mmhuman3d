@@ -579,3 +579,18 @@ def test_visualize_smpl_pose():
         overwrite=True,
         palette=np.ones((1, 3)),
         device=device_name)
+
+    visualize_smpl_hmr(
+        poses=torch.zeros(3, 3, 165),
+        model_type='smplx',
+        model_path=model_path,
+        bbox=np.zeros((3, 3, 4)),
+        cam_transl=torch.zeros(3, 3, 3),
+        output_path='/tmp/1.mp4',
+        origin_frames='/tmp/temp_images',
+        img_format='%06d.png',
+        resolution=(128, 128),
+        overwrite=True,
+        mesh_file_path='/tmp',
+        palette=np.ones((1, 3)),
+        device=device_name)

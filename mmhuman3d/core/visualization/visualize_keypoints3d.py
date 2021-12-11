@@ -19,7 +19,7 @@ def _norm_pose(pose_numpy: np.ndarray, min_value: Union[float, int],
     axis_num = 3
     axis_stat = np.zeros(shape=[axis_num, 4])
     for axis_index in range(axis_num):
-        axis_data = pose_np_normed[..., axis_index]
+        axis_data = pose_np_normed[..., mask, axis_index]
         axis_min = np.min(axis_data)
         axis_max = np.max(axis_data)
         axis_mid = (axis_min + axis_max) / 2.0

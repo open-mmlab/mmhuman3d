@@ -192,7 +192,7 @@ def _prepare_body_model(model_type, body_model, model_path, gender):
     return body_model
 
 
-def _prepare_input_data(verts, poses, betas, transl):
+def _prepare_input_pose(verts, poses, betas, transl):
     """Prepare input pose data as tensor and ensure correct temporal slice."""
     if verts is None and poses is None:
         raise ValueError('Please input valid poses or verts.')
@@ -679,8 +679,8 @@ def render_smpl(
         overwrite (bool, optional): whether overwriting the existing files.
 
             Defaults to False.
-        mesh_file_path (bool, optional): the directory path to store the `.obj`
-            or '.ply' files. Will be named like 'frame_idx_person_idx.obj'.
+        mesh_file_path (bool, optional): the directory path to store the `.ply`
+            or '.ply' files. Will be named like 'frame_idx_person_idx.ply'.
 
             Defaults to None.
         read_frames_batch (bool, optional): Whether read frames by batch.
@@ -708,7 +708,7 @@ def render_smpl(
     Returns:
         Union[None, torch.Tensor]: return the rendered image tensors or None.
     """
-    # initialize the gpu device
+    # initialize the device
     device = torch.device(device) if isinstance(device, str) else device
 
     RENDER_CONFIGS = mmcv.Config.fromfile(
@@ -721,7 +721,7 @@ def render_smpl(
     elif isinstance(resolution, list):
         resolution = tuple(resolution)
 
-    verts, poses, betas, transl = _prepare_input_data(verts, poses, betas,
+    verts, poses, betas, transl = _prepare_input_pose(verts, poses, betas,
                                                       transl)
     body_model = _prepare_body_model(model_type, body_model, model_path,
                                      gender)
@@ -772,6 +772,7 @@ def render_smpl(
             render_resolution = final_resolution = (1024, 1024)
         elif render_resolution is not None:
             final_resolution = render_resolution
+
     if isinstance(kp3d, np.ndarray):
         kp3d = torch.Tensor(kp3d)
 
@@ -813,6 +814,7 @@ def render_smpl(
 
     # write .ply files
     if mesh_file_path is not None:
+        mmcv.mkdir_or_exist(mesh_file_path)
         for frame_idx in range(num_frames):
             ply_paths = [
                 f'{mesh_file_path}/frame{frame_idx}_person{person_idx}.ply'
@@ -824,6 +826,7 @@ def render_smpl(
                 verts_rgb=colors,
                 paths=ply_paths)
 
+    # prepare camera matrixs
     if Ks is not None:
         projection = 'perspective'
         orig_cam = None
@@ -924,7 +927,7 @@ def render_smpl(
     assert projection in [
         'perspective', 'weakperspective', 'orthographics', 'fovorthographics',
         'fovperspective'
-    ], f'Wrong projection: {projection}'
+    ], f'Wrong camera projection: {projection}'
     if projection in ['fovperspective', 'perspective']:
         is_perspective = True
     elif projection in [

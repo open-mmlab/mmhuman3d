@@ -1,11 +1,9 @@
 import os.path as osp
-from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 import torch
-from pytorch3d.io import save_obj
 from pytorch3d.renderer import TexturesVertex
 from pytorch3d.renderer.lighting import DirectionalLights, PointLights
 from pytorch3d.structures import Meshes
@@ -37,7 +35,6 @@ class SMPLRenderer(MeshBaseRenderer):
                  resolution: Tuple[int, int],
                  faces: Union[np.ndarray, torch.LongTensor],
                  device: Union[torch.device, str] = 'cpu',
-                 obj_path: Optional[str] = None,
                  output_path: Optional[str] = None,
                  colors: Optional[Union[List[str], np.ndarray,
                                         torch.Tensor]] = None,
@@ -74,7 +71,6 @@ class SMPLRenderer(MeshBaseRenderer):
         super().__init__(
             resolution,
             device=device,
-            obj_path=obj_path,
             output_path=output_path,
             return_tensor=return_tensor,
             alpha=alpha,
@@ -125,9 +121,6 @@ class SMPLRenderer(MeshBaseRenderer):
                 be rendered.
             device (torch.device, optional): cuda or cpu device.
                 Defaults to torch.device('cpu').
-            obj_path (Optional[str], optional): output .obj file directory.
-                if None, would export no obj files.
-                Defaults to None.
             output_path (Optional[str], optional): render output path.
                 could be .mp4 or .gif or a folder.
                 Else: 1). If `render_choice` in ['lq', 'mq', 'hq'], the output
@@ -217,7 +210,7 @@ class SMPLRenderer(MeshBaseRenderer):
                 ). `n_class` is the number of part segments defined by smpl of
                 smplx.
         """
-        num_frames, num_person, num_verts, _ = vertices.shape
+        num_frames, num_person, _, _ = vertices.shape
         faces = self.raw_faces[None].repeat(num_frames, 1, 1)
         if self.frames_folder is not None and images is None:
             images = images_to_array(
@@ -289,16 +282,6 @@ class SMPLRenderer(MeshBaseRenderer):
             alphas = part_silhouettes[..., 0].permute(1, 2, 3, 0)
         else:
             alphas = rendered_images[..., 3] / (rendered_images[..., 3] + 1e-9)
-
-        # save .obj files
-        if self.obj_path and (self.render_choice != 'part_silhouette'):
-            for idx, real_idx in enumerate(indexs):
-                save_obj(
-                    osp.join(
-                        self.obj_path,
-                        Path(self.out_img_format % real_idx).stem + '.obj'),
-                    meshes.verts_padded()[idx],
-                    meshes.faces_padded()[idx])
 
         # write temp images for the output video
         if self.output_path is not None:
