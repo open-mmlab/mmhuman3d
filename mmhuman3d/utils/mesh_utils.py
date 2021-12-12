@@ -118,6 +118,8 @@ def save_meshes_as_plys(meshes: Meshes = None,
 
     assert len(paths) >= len(meshes), 'Not enough output paths.'
     writer = IO()
+    if not isinstance(paths, list):
+        paths = [paths]
     for idx in range(len(meshes)):
         assert paths[idx].endswith('.ply'), 'Please save as .ply files.'
         writer.save_mesh(
