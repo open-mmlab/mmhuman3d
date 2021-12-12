@@ -23,7 +23,7 @@ def test_save_meshes():
 
     save_meshes_as_plys(Torus, paths=['1.ply'])
     save_meshes_as_plys(
-        verts=Torus.verts_padded(), faces=Torus.faces_packed(), paths='1.ply')
+        verts=Torus.verts_padded(), faces=Torus.faces_padded(), paths='1.ply')
     save_meshes_as_plys(
         Torus,
         verts=Torus.verts_padded(),
