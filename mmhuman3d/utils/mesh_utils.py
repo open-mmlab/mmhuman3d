@@ -110,7 +110,8 @@ def save_meshes_as_plys(meshes: Meshes = None,
         meshes = Meshes(
             verts=verts,
             faces=faces,
-            textures=TexturesVertex(verts_features=verts_rgb))
+            textures=TexturesVertex(
+                verts_features=verts_rgb) if verts_rgb is not None else None)
     else:
         if verts is not None or faces is not None or verts_rgb is not None:
             warnings.warn('Redundant input, will use meshes only.')
