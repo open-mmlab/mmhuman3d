@@ -1053,7 +1053,7 @@ def slice_video(input_path: str,
         input_path (str): input video or gif file path.
         output_path (str): output video of gif file path.
         start (int, optional): start frame index. Defaults to 0.
-        end (int, optional): end frame index. Excluded.
+        end (int, optional): end frame index. Exclusive.
             Defaults to None.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output. Defaults to None.
