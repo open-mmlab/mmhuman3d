@@ -445,9 +445,8 @@ def visualize_kp2d(
         img_format (str, optional): input image format. Default to '%06d.png',
         start (int, optional): start frame index. Defaults to 0.
         end (int, optional): end frame index. Exclusive.
-            Could be positive int or negative int or None.
-            None represents include all the frames.
-            Defaults to None.
+                Could be positive int or negative int or None.
+                None represents include all the frames.
         overwrite (bool, optional): whether replace the origin frames.
                 Defaults to False.
         with_file_name (bool, optional): whether write origin frame name on

@@ -273,7 +273,8 @@ def video_to_array(
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
         end (int, optional): end frame index. Exclusive.
-            If < 0, will be converted to frame_index range in [0, frame_num].
+            Could be positive int or negative int or None.
+            None represents include all the frames.
             Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
@@ -396,7 +397,8 @@ def images_to_array(
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
         end (int, optional): end frame index. Exclusive.
-            If < 0, will be converted to frame_index range in [0, frame_num].
+            Could be positive int or negative int or None.
+            None represents include all the frames.
             Defaults to None.
         remove_raw_files (bool, optional): whether remove raw images.
             Defaults to False.
@@ -618,8 +620,8 @@ def video_to_images(input_path: str,
              If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
         end (int, optional): end frame index. Exclusive.
-            If < 0, will be converted to frame_index range in [0, frame_num].
-            None represents all.
+            Could be positive int or negative int or None.
+            None represents include all the frames.
             Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
@@ -689,7 +691,8 @@ def images_to_video(input_folder: str,
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
         end (int, optional): end frame index. Exclusive.
-            If < 0, will be converted to frame_index range in [0, frame_num].
+            Could be positive int or negative int or None.
+            None represents include all the frames.
             Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
@@ -796,8 +799,9 @@ def images_to_gif(
             If < 0, will be converted to frame_index range in [0, frame_num].
             Defaults to 0.
         end (int, optional): end frame index. Exclusive.
-            If < 0, will be converted to frame_index range in [0, frame_num].
-            Defaults to -1.
+            Could be positive int or negative int or None.
+            None represents include all the frames.
+            Defaults to None.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
     Raises:
@@ -1054,6 +1058,8 @@ def slice_video(input_path: str,
         output_path (str): output video of gif file path.
         start (int, optional): start frame index. Defaults to 0.
         end (int, optional): end frame index. Exclusive.
+            Could be positive int or negative int or None.
+            None represents include all the frames.
             Defaults to None.
         resolution (Optional[Union[Tuple[int, int], Tuple[float, float]]],
             optional): (height, width) of output. Defaults to None.
