@@ -23,6 +23,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     pw3d,
     smpl,
     smplx,
+    gta,
 )
 
 KEYPOINTS_FACTORY = {
@@ -51,6 +52,7 @@ KEYPOINTS_FACTORY = {
     'openpose_135': openpose.OPENPOSE_135_KEYPOINTS,
     'hybrik_29': hybrik.HYBRIK_29_KEYPOINTS,
     'hybrik_hp3d': mpi_inf_3dhp.HYBRIK_MPI_INF_3DHP_KEYPOINTS,
+    'gta': gta.GTA_KEYPOINTS
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)

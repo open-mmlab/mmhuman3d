@@ -53,7 +53,12 @@ DATASET_CONFIGS = dict(
         type='H36mSpinConverter',
         modes=['train'],
         mosh_dir='data/datasets/h36m_extras/mosh_data',
-        prefix='h36m'))
+        prefix='h36m'),
+    gta_human=dict(
+        type='GTAHumanConverter',
+        prefix='gta_human'
+    )
+)
 
 
 def parse_args():
