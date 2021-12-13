@@ -74,8 +74,6 @@ class GTAHumanConverter(BaseConverter):
             extra_joints_regressor='data/body_models/J_regressor_extra.npy')
     ).to(device)
 
-
-
     def convert(self, dataset_path: str, out_path: str) -> dict:
         """
         Args:
@@ -104,8 +102,8 @@ class GTAHumanConverter(BaseConverter):
         keypoints_2d_list = []
         keypoints_3d_list = []
 
-        anno_paths = sorted(glob.glob(
-            os.path.join(dataset_path, 'annotations', '*.pkl')))
+        anno_paths = sorted(
+            glob.glob(os.path.join(dataset_path, 'annotations', '*.pkl')))
 
         for anno_path in tqdm(anno_paths):
 
