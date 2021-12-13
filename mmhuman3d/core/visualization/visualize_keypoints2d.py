@@ -491,7 +491,7 @@ def visualize_kp2d(
     num_frames, num_person = kp2d.shape[0], kp2d.shape[1]
     # slice the input array temporally
     end = (min(num_frames - 1, end) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+           num_frames) % num_frames if end is not None else num_frames
     kp2d = kp2d[start:end]
 
     if image_array is not None:

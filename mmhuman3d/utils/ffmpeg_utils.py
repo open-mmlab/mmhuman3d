@@ -1263,7 +1263,7 @@ def compress_video(input_path: str,
             Defaults to 1.
         down_sample_scale (Union[float, int], optional): spatial down sample
             scale. Defaults to 1.
-        fps (int, optional): FPS. Defaults to 30.
+        fps (int, optional): Frames per second. Defaults to 30.
         disable_log (bool, optional): whether close the ffmepg command info.
             Defaults to False.
     Raises:

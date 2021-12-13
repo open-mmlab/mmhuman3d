@@ -161,8 +161,7 @@ def visualize_kp3d(
             allowed_suffix=['.mp4', '.gif', ''])
 
     # slice the frames
-    end = (min(end, num_frames - 1) +
-           num_frames) % num_frames + 1 if end is not None else num_frames
+    end = num_frames if end is None else end
     kp3d = kp3d[start:end]
     # norm the coordinates
     if value_range is not None:
