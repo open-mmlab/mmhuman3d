@@ -10,6 +10,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     coco,
     coco_wholebody,
     crowdpose,
+    gta,
     h36m,
     human_data,
     hybrik,
@@ -23,7 +24,6 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     pw3d,
     smpl,
     smplx,
-    gta,
 )
 
 KEYPOINTS_FACTORY = {
