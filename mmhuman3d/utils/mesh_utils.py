@@ -1,6 +1,8 @@
+import warnings
 from typing import List
 
 import torch
+from pytorch3d.io import IO
 from pytorch3d.renderer import TexturesVertex
 from pytorch3d.structures import (
     Meshes,
@@ -82,3 +84,43 @@ def mesh_to_pointcloud_vc(
         verts_rgba = None
     pointclouds = Pointclouds(points=vertices, features=verts_rgba)
     return pointclouds
+
+
+def save_meshes_as_plys(meshes: Meshes = None,
+                        verts: torch.Tensor = None,
+                        faces: torch.Tensor = None,
+                        verts_rgb: torch.Tensor = None,
+                        paths: List[str] = []) -> None:
+    """Save meshes as .ply files. Mainly for vertex color meshes.
+
+    Args:
+        meshes (Meshes, optional): higher priority than
+            (verts & faces & verts_rgb). Defaults to None.
+        verts (torch.Tensor, optional): lower priority than meshes.
+            Defaults to None.
+        faces (torch.Tensor, optional): lower priority than meshes.
+            Defaults to None.
+        verts_rgb (torch.Tensor, optional): lower priority than meshes.
+            Defaults to None.
+        paths (List[str], optional): Output .ply file list.
+            Defaults to [].
+    """
+    if meshes is None:
+        assert verts is not None and faces is not None, 'Not mesh input.'
+        meshes = Meshes(
+            verts=verts,
+            faces=faces,
+            textures=TexturesVertex(
+                verts_features=verts_rgb) if verts_rgb is not None else None)
+    else:
+        if verts is not None or faces is not None or verts_rgb is not None:
+            warnings.warn('Redundant input, will use meshes only.')
+
+    assert len(paths) >= len(meshes), 'Not enough output paths.'
+    writer = IO()
+    if not isinstance(paths, list):
+        paths = [paths]
+    for idx in range(len(meshes)):
+        assert paths[idx].endswith('.ply'), 'Please save as .ply files.'
+        writer.save_mesh(
+            meshes[idx], paths[idx], colors_as_uint8=True, binary=False)
