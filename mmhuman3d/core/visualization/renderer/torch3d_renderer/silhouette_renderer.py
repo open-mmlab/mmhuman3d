@@ -4,6 +4,7 @@ import torch
 from pytorch3d.structures import Meshes
 
 from .base_renderer import MeshBaseRenderer
+from .builder import RENDERER
 
 try:
     from typing import Literal
@@ -11,6 +12,8 @@ except ImportError:
     from typing_extensions import Literal
 
 
+@RENDERER.register_module(
+    name=['silhouette', 'Silhouette', 'SilhouetteRenderer'])
 class SilhouetteRenderer(MeshBaseRenderer):
     """Silhouette renderer."""
 
@@ -20,7 +23,7 @@ class SilhouetteRenderer(MeshBaseRenderer):
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         return_tensor: bool = True,
-        img_format: str = '%06d.png',
+        out_img_format: str = '%06d.png',
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
@@ -41,9 +44,14 @@ class SilhouetteRenderer(MeshBaseRenderer):
             return_tensor (bool, optional):
                 Boolean of whether return the rendered tensor.
                 Defaults to False.
+            out_img_format (str, optional): The image format string for
+                saving the images.
+                Defaults to '%06d.png'.
             projection (str, optional):
                 Projection type of camera.
                 Defaults to 'weakperspetive'.
+            in_ndc (bool, optional): Whether defined in NDC.
+                Defaults to True.
 
         Returns:
             None
@@ -54,7 +62,7 @@ class SilhouetteRenderer(MeshBaseRenderer):
             output_path=output_path,
             obj_path=None,
             return_tensor=return_tensor,
-            img_format=img_format,
+            out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)

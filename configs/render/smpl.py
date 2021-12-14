@@ -146,6 +146,21 @@ RENDER_CONFIGS = {
         },
         'blend': white_blend_params,
     },
+    'opticalflow': {
+        'light': base_directional_light,
+        'material': base_material,
+        'raster': {
+            'resolution': [512, 512],
+            'blur_radius': 0.0,
+            'faces_per_pixel': 1,
+            'cull_to_frustum': False,
+            'cull_backfaces': False,
+        },
+        'shader': {
+            'shader_type': 'nolight',
+        },
+        'blend': white_blend_params,
+    },
     'pointcloud': {
         'light': base_directional_light,
         'material': base_material,
