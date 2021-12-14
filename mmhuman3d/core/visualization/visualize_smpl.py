@@ -255,7 +255,6 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
                 num_frames, -1, NUM_BODY_JOINTS * 3).shape
 
             full_pose = body_model.dict2tensor(poses)
-            start = (min(start, num_frames - 1) + num_frames) % num_frames
             full_pose = full_pose[start:end]
 
         elif isinstance(poses, torch.Tensor):
@@ -265,7 +264,6 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
                     f'the last axis. Your input shape: {poses.shape}')
             poses = poses.view(poses.shape[0], -1, (NUM_JOINTS + 1) * 3)
             num_frames, num_person, _ = poses.shape
-            start = (min(start, num_frames - 1) + num_frames) % num_frames
             full_pose = poses[start:end]
         else:
             raise ValueError('Wrong pose type, should be `dict` or `tensor`.')
@@ -348,7 +346,6 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         assert verts.shape[-2] == num_verts, 'Wrong input verts shape.'
         faces = body_model.faces_tensor
         num_frames = verts.shape[0]
-        start = (min(start, num_frames - 1) + num_frames) % num_frames
         verts = verts[start:end]
         num_frames = verts.shape[0]
         vertices = verts.view(num_frames, -1, num_verts, 3)
@@ -361,17 +358,21 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
 
 
 def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
+    """Prepare the `color` as a tensor of shape (num_person, num_verts, 3)
+    according to `palette`.
 
+    This is to make the identity in video clear.
+    """
     if not len(palette) == num_person:
         raise ValueError('Please give the right number of palette.')
-    body_seg = body_segmentation(model_type)
+    body_segger = body_segmentation(model_type)
 
     if render_choice == 'silhouette':
         colors = torch.ones(num_person, num_verts, 3)
     elif render_choice == 'part_silhouette':
         colors = torch.zeros(num_person, num_verts, 3)
-        for i, k in enumerate(body_seg.keys()):
-            colors[:, body_seg[k]] = 0.01 * (i + 1)
+        for i, k in enumerate(body_segger.keys()):
+            colors[:, body_segger[k]] = 0.01 * (i + 1)
     else:
         if isinstance(palette, torch.Tensor):
             colors = palette.view(num_person,
@@ -392,9 +393,9 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
                     verts_labels = torch.zeros(num_verts)
                     color_person = torch.ones(1, num_verts, 3)
                     color_part = get_different_colors(
-                        len(list(body_seg.keys())))
-                    for part_idx, k in enumerate(body_seg.keys()):
-                        index = body_seg[k]
+                        len(list(body_segger.keys())))
+                    for part_idx, k in enumerate(body_segger.keys()):
+                        index = body_segger[k]
                         verts_labels[index] = part_idx
                         color_person[:, index] = torch.FloatTensor(
                             color_part[part_idx]) / 255
@@ -728,8 +729,7 @@ def render_smpl(
                                      gender)
     vertices, faces, joints, num_frames, num_person = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
-    end = (min(end, num_frames - 1) +
-           num_frames) % num_frames if end is not None else num_frames
+    end = num_frames if end is None else end
     vertices = vertices.view(num_frames, num_person, -1, 3)
     num_verts = vertices.shape[-2]
 
