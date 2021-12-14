@@ -443,9 +443,11 @@ class SMPLify(object):
             return_full_pose=return_full_pose)
 
         model_joints = body_model_output['joints']
+        model_joint_mask = body_model_output['joint_mask']
 
         loss_dict = self._compute_loss(
             model_joints,
+            model_joint_mask,
             keypoints2d=keypoints2d,
             keypoints2d_conf=keypoints2d_conf,
             keypoints2d_weight=keypoints2d_weight,
@@ -473,6 +475,7 @@ class SMPLify(object):
 
     def _compute_loss(self,
                       model_joints: torch.Tensor,
+                      model_joint_conf: torch.Tensor,
                       keypoints2d: torch.Tensor = None,
                       keypoints2d_conf: torch.Tensor = None,
                       keypoints2d_weight: float = None,
@@ -491,10 +494,14 @@ class SMPLify(object):
 
         Notes:
             B: batch size
+            K: number of keypoints
             D: shape dimension
 
         Args:
-            model_joints: 3D joints regressed from body model
+            model_joints: 3D joints regressed from body model of shape (B, K)
+            model_joint_conf: 3D joint confidence of shape (B, K). It is
+                normally all 1, except for zero-pads due to convert_kps in
+                the SMPL wrapper.
             keypoints2d: 2D keypoints of shape (B, K, 2)
             keypoints2d_conf: 2D keypoint confidence of shape (B, K)
             keypoints2d_weight: weight of 2D keypoint loss
@@ -536,6 +543,7 @@ class SMPLify(object):
 
             keypoint2d_loss = self.keypoints2d_mse_loss(
                 pred=projected_joints,
+                pred_conf=model_joint_conf,
                 target=keypoints2d,
                 target_conf=keypoints2d_conf,
                 keypoint_weight=weight,
@@ -547,6 +555,7 @@ class SMPLify(object):
         if keypoints3d is not None:
             keypoints3d_loss = self.keypoints3d_mse_loss(
                 pred=model_joints,
+                pred_conf=model_joint_conf,
                 target=keypoints3d,
                 target_conf=keypoints3d_conf,
                 keypoint_weight=weight,
@@ -1038,9 +1047,11 @@ class SMPLifyX(SMPLify):
             return_full_pose=return_full_pose)
 
         model_joints = body_model_output['joints']
+        model_joint_mask = body_model_output['joint_mask']
 
         loss_dict = self._compute_loss(
             model_joints,
+            model_joint_mask,
             keypoints2d=keypoints2d,
             keypoints2d_conf=keypoints2d_conf,
             keypoints2d_weight=keypoints2d_weight,
