@@ -282,7 +282,7 @@ class SMPLRenderer(MeshBaseRenderer):
         cameras = self.init_cameras(K, R, T)
         if isinstance(self.lights, DirectionalLights):
             lights = self.lights.clone()
-            lights.direction = cameras.get_camera_plane_normals()
+            lights.direction = -1 * cameras.get_camera_plane_normals()
         elif isinstance(self.lights, PointLights):
             lights = self.lights.clone()
             lights.location = cameras.get_camera_plane_normals(
