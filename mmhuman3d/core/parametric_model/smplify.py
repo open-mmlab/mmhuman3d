@@ -85,10 +85,10 @@ class OptimizableParameters():
 
 @REGISTRANTS.register_module()
 class SMPLify(object):
-    """
-    Re-implementation of SMPLify with extended features.
-        - video input
-        - 3D keypoints
+    """Re-implementation of SMPLify with extended features.
+
+    - video input
+    - 3D keypoints
     """
 
     def __init__(
@@ -222,16 +222,19 @@ class SMPLify(object):
 
         global_orient = self._match_init_batch_size(
             init_global_orient, self.body_model.global_orient, batch_size)
-        transl = self._match_init_batch_size(
-            init_transl, self.body_model.transl, batch_size)
-        body_pose = self._match_init_batch_size(
-            init_body_pose, self.body_model.body_pose, batch_size)
+        transl = self._match_init_batch_size(init_transl,
+                                             self.body_model.transl,
+                                             batch_size)
+        body_pose = self._match_init_batch_size(init_body_pose,
+                                                self.body_model.body_pose,
+                                                batch_size)
         if init_betas is None and self.use_one_betas_per_video:
             betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
                 self.device)
         else:
-            betas = self._match_init_batch_size(
-                init_betas, self.body_model.betas, batch_size)
+            betas = self._match_init_batch_size(init_betas,
+                                                self.body_model.betas,
+                                                batch_size)
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
@@ -619,12 +622,10 @@ class SMPLify(object):
 
         return losses
 
-    def _match_init_batch_size(
-            self,
-            init_param: torch.Tensor,
-            init_param_body_model: torch.Tensor,
-            batch_size : int) -> torch.Tensor:
-        """ A helper function to ensure body model parameters have the same
+    def _match_init_batch_size(self, init_param: torch.Tensor,
+                               init_param_body_model: torch.Tensor,
+                               batch_size: int) -> torch.Tensor:
+        """A helper function to ensure body model parameters have the same
         batch size as the input keypoints.
 
         Args:
@@ -656,7 +657,6 @@ class SMPLify(object):
         assert param.shape[1:] == init_param_body_model.shape[1:]
 
         return param
-
 
     def _set_keypoint_idxs(self) -> None:
         """Set keypoint indices to 1) body parts to be assigned different
@@ -750,10 +750,10 @@ class SMPLify(object):
 
 @REGISTRANTS.register_module()
 class SMPLifyX(SMPLify):
-    """
-    Re-implementation of SMPLify-X with extended features.
-        - video input
-        - 3D keypoints
+    """Re-implementation of SMPLify-X with extended features.
+
+    - video input
+    - 3D keypoints
     """
 
     def __call__(self,
@@ -819,28 +819,35 @@ class SMPLifyX(SMPLify):
 
         global_orient = self._match_init_batch_size(
             init_global_orient, self.body_model.global_orient, batch_size)
-        transl = self._match_init_batch_size(
-            init_transl, self.body_model.transl, batch_size)
-        body_pose = self._match_init_batch_size(
-            init_body_pose, self.body_model.body_pose, batch_size)
+        transl = self._match_init_batch_size(init_transl,
+                                             self.body_model.transl,
+                                             batch_size)
+        body_pose = self._match_init_batch_size(init_body_pose,
+                                                self.body_model.body_pose,
+                                                batch_size)
         left_hand_pose = self._match_init_batch_size(
             init_left_hand_pose, self.body_model.left_hand_pose, batch_size)
         right_hand_pose = self._match_init_batch_size(
             init_right_hand_pose, self.body_model.right_hand_pose, batch_size)
-        expression = self._match_init_batch_size(
-            init_expression, self.body_model.expression, batch_size)
-        jaw_pose = self._match_init_batch_size(
-            init_jaw_pose, self.body_model.jaw_pose, batch_size)
-        leye_pose = self._match_init_batch_size(
-            init_leye_pose, self.body_model.leye_pose, batch_size)
-        reye_pose = self._match_init_batch_size(
-            init_reye_pose, self.body_model.reye_pose, batch_size)
+        expression = self._match_init_batch_size(init_expression,
+                                                 self.body_model.expression,
+                                                 batch_size)
+        jaw_pose = self._match_init_batch_size(init_jaw_pose,
+                                               self.body_model.jaw_pose,
+                                               batch_size)
+        leye_pose = self._match_init_batch_size(init_leye_pose,
+                                                self.body_model.leye_pose,
+                                                batch_size)
+        reye_pose = self._match_init_batch_size(init_reye_pose,
+                                                self.body_model.reye_pose,
+                                                batch_size)
         if init_betas is None and self.use_one_betas_per_video:
             betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
                 self.device)
         else:
-            betas = self._match_init_batch_size(
-                init_betas, self.body_model.betas, batch_size)
+            betas = self._match_init_batch_size(init_betas,
+                                                self.body_model.betas,
+                                                batch_size)
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
