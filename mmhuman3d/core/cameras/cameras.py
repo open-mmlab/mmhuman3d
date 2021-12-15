@@ -136,7 +136,7 @@ class NewAttributeCameras(cameras.CamerasBase):
         return world_to_view_points[..., 2:3]
 
     def compute_normal_of_meshes(self, meshes: Meshes) -> torch.Tensor:
-        """Compute depth of points to the camera plane.
+        """Compute normal of meshes in the camera view.
 
         Args:
             points ([torch.Tensor]): shape should be (batch_size, 3).
