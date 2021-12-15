@@ -195,6 +195,12 @@ def test_preprocess():
     data_converter.convert(H36M_ROOT, output_path)
     assert osp.exists(osp.join(output_path, 'spin_h36m_train.npz'))
 
+    GTA_HUMAN_ROOT = os.path.join(root_path, 'gta_human_data')
+    cfg = dict(type='GTAHumanConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(GTA_HUMAN_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/gta_human.npz')
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'
