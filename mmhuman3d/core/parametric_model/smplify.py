@@ -12,47 +12,6 @@ from mmhuman3d.core.cameras import build_cameras
 from .builder import REGISTRANTS
 
 
-# def perspective_projection(points: torch.Tensor, rotation: torch.Tensor,
-#                            translation: torch.Tensor,
-#                            focal_length: Union[torch.Tensor, float],
-#                            camera_center: Union[torch.Tensor]):
-#     """Computes the perspective projection of a set of points.
-#
-#     Notes:
-#         B: batch size
-#         K: number of keypoints
-#         D: shape dimension
-#
-#     Args:
-#         points: 3D points of shape (B, K, 3)
-#         rotation: Camera rotation of shape (B, 3, 3)
-#         translation: Camera translation of shape (B, 3)
-#         focal_length: Focal length of shape (B,) or scalar
-#         camera_center: Camera center of shape (B, 2)
-#
-#     Returns:
-#         None
-#     """
-#     batch_size = points.shape[0]
-#     K = torch.zeros([batch_size, 3, 3], device=points.device)
-#     K[:, 0, 0] = focal_length
-#     K[:, 1, 1] = focal_length
-#     K[:, 2, 2] = 1.
-#     K[:, :-1, -1] = camera_center
-#
-#     # Transform points
-#     points = torch.einsum('bij,bkj->bki', rotation, points)
-#     points = points + translation.unsqueeze(1)
-#
-#     # Apply perspective distortion
-#     projected_points = points / points[:, :, -1].unsqueeze(-1)
-#
-#     # Apply camera intrinsics
-#     projected_points = torch.einsum('bij,bkj->bki', K, projected_points)
-#
-#     return projected_points[:, :, :-1]
-
-
 class OptimizableParameters():
     """Collects parameters for optimization."""
 

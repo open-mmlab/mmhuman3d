@@ -132,7 +132,3 @@ def test_smplifyx():
         if isinstance(v, torch.Tensor):
             assert not np.any(np.isnan(
                 v.detach().cpu().numpy())), f'{k} fails.'
-
-if __name__ == '__main__':
-    test_smplify()
-    test_smplifyx()
