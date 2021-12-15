@@ -353,8 +353,3 @@ def test_preprocessed_npz():
 
             elif k == 'features':
                 assert npfile[k].shape == (N, 2048)
-
-
-if __name__ == '__main__':
-    test_preprocess()
-    test_preprocessed_npz()
