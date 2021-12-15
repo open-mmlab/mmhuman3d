@@ -85,11 +85,15 @@ class OptimizableParameters():
 
 @REGISTRANTS.register_module()
 class SMPLify(object):
-    """Re-implementation of SMPLify with extended features."""
+    """
+    Re-implementation of SMPLify with extended features.
+        - video input
+        - 3D keypoints
+    """
 
     def __init__(
         self,
-        body_model: dict,
+        body_model: Union[dict, torch.nn.Module],
         num_epochs: int = 20,
         camera: object = None,
         img_res: Union[Tuple[int], int] = 224,
@@ -108,9 +112,9 @@ class SMPLify(object):
     ) -> None:
         """
         Args:
-            body_model: config of body model. Note that the correct batch_size
-                should be included in the config if no initial parameters to
-                provide when calling SMPLify.
+            body_model: config or an object of body model.
+                Note that the correct batch_size should be included in the
+                config if no initial parameters to provide when calling SMPLify.
             num_epochs: number of epochs of registration
             camera: config of camera
             img_res: image resolution. If tuple, values are (width, height)
@@ -158,7 +162,13 @@ class SMPLify(object):
             self.pose_prior_loss = self.pose_prior_loss.to(self.device)
 
         # initialize body model
-        self.body_model = build_body_model(body_model).to(self.device)
+        if isinstance(body_model, dict):
+            self.body_model = build_body_model(body_model).to(self.device)
+        elif isinstance(body_model, torch.nn.Module):
+            self.body_model = body_model.to(self.device)
+        else:
+            raise TypeError(f'body_model should be either dict or '
+                            f'torch.nn.Module, but got {type(body_model)}')
 
         self.ignore_keypoints = ignore_keypoints
         self.verbose = verbose
@@ -705,7 +715,11 @@ class SMPLify(object):
 
 @REGISTRANTS.register_module()
 class SMPLifyX(SMPLify):
-    """Re-implementation of SMPLify-X with extended features."""
+    """
+    Re-implementation of SMPLify-X with extended features.
+        - video input
+        - 3D keypoints
+    """
 
     def __call__(self,
                  keypoints2d: torch.Tensor = None,
