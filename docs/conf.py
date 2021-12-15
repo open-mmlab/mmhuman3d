@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'MMHuman3D'
-copyright = '2018-2021, OpenMMLab'
+copyright = '2021, OpenMMLab'
 author = 'MMHuman3D Authors'
 version_file = '../mmhuman3d/version.py'
 
@@ -78,7 +78,7 @@ html_theme_options = {
     'menu': [
         {
             'name': 'GitHub',
-            'url': 'https://github.com/open-mmlab/mmdetection'
+            'url': 'https://github.com/open-mmlab/mmhuman3d'
         },
         {
             'name':
