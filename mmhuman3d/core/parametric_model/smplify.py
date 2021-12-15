@@ -113,8 +113,6 @@ class SMPLify(object):
         """
         Args:
             body_model: config or an object of body model.
-                Note that the correct batch_size should be included in the
-                config if no initial parameters to provide when calling SMPLify.
             num_epochs: number of epochs of registration
             camera: config of camera
             img_res: image resolution. If tuple, values are (width, height)
@@ -219,23 +217,21 @@ class SMPLify(object):
             'Neither of 2D nor 3D keypoints are provided.'
         assert not (keypoints2d is not None and keypoints3d is not None), \
             'Do not provide both 2D and 3D keypoints.'
+        batch_size = keypoints2d.shape[0] if keypoints2d is not None \
+            else keypoints3d.shape[0]
 
-        global_orient = init_global_orient.detach().clone() \
-            if init_global_orient is not None \
-            else self.body_model.global_orient.detach().clone()
-        transl = init_transl.detach().clone() \
-            if init_transl is not None \
-            else self.body_model.transl.detach().clone()
-        body_pose = init_body_pose.detach().clone() \
-            if init_body_pose is not None \
-            else self.body_model.body_pose.detach().clone()
-        if init_betas is not None:
-            betas = init_betas.detach().clone()
-        elif self.use_one_betas_per_video:
+        global_orient = self._match_init_batch_size(
+            init_global_orient, self.body_model.global_orient, batch_size)
+        transl = self._match_init_batch_size(
+            init_transl, self.body_model.transl, batch_size)
+        body_pose = self._match_init_batch_size(
+            init_body_pose, self.body_model.body_pose, batch_size)
+        if init_betas is None and self.use_one_betas_per_video:
             betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
                 self.device)
         else:
-            betas = self.body_model.betas.detach().clone()
+            betas = self._match_init_batch_size(
+                init_betas, self.body_model.betas, batch_size)
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
@@ -623,6 +619,45 @@ class SMPLify(object):
 
         return losses
 
+    def _match_init_batch_size(
+            self,
+            init_param: torch.Tensor,
+            init_param_body_model: torch.Tensor,
+            batch_size : int) -> torch.Tensor:
+        """ A helper function to ensure body model parameters have the same
+        batch size as the input keypoints.
+
+        Args:
+            init_param: input initial body model parameters, may be None
+            init_param_body_model: initial body model parameters from the
+                body model
+            batch_size: batch size of keypoints
+
+        Returns:
+            param: body model parameters with batch size aligned
+        """
+
+        # param takes init values
+        param = init_param.detach().clone() \
+            if init_param is not None \
+            else init_param_body_model.detach().clone()
+
+        # expand batch dimension to match batch size
+        param_batch_size = param.shape[0]
+        if param_batch_size != batch_size and param_batch_size == 1:
+            param = param.expand(batch_size, *param.shape[1:])
+        else:
+            raise ValueError(
+                'Init param does not match the batch size of keypoints, '
+                'and is not 1.')
+
+        # shape check
+        assert param.shape[0] == batch_size
+        assert param.shape[1:] == init_param_body_model.shape[1:]
+
+        return param
+
+
     def _set_keypoint_idxs(self) -> None:
         """Set keypoint indices to 1) body parts to be assigned different
         weights 2) be ignored for keypoint loss computation.
@@ -779,40 +814,33 @@ class SMPLifyX(SMPLify):
             'Neither of 2D nor 3D keypoints are provided.'
         assert not (keypoints2d is not None and keypoints3d is not None), \
             'Do not provide both 2D and 3D keypoints.'
+        batch_size = keypoints2d.shape[0] if keypoints2d is not None \
+            else keypoints3d.shape[0]
 
-        global_orient = init_global_orient if init_global_orient is not None \
-            else self.body_model.global_orient
-        transl = init_transl if init_transl is not None \
-            else self.body_model.transl
-        body_pose = init_body_pose if init_body_pose is not None \
-            else self.body_model.body_pose
-
-        left_hand_pose = init_left_hand_pose \
-            if init_left_hand_pose is not None \
-            else self.body_model.left_hand_pose
-        right_hand_pose = init_right_hand_pose \
-            if init_right_hand_pose is not None \
-            else self.body_model.right_hand_pose
-        expression = init_expression \
-            if init_expression is not None \
-            else self.body_model.expression
-        jaw_pose = init_jaw_pose \
-            if init_jaw_pose is not None \
-            else self.body_model.jaw_pose
-        leye_pose = init_leye_pose \
-            if init_leye_pose is not None \
-            else self.body_model.leye_pose
-        reye_pose = init_reye_pose \
-            if init_reye_pose is not None \
-            else self.body_model.reye_pose
-
-        if init_betas is not None:
-            betas = init_betas
-        elif self.use_one_betas_per_video:
+        global_orient = self._match_init_batch_size(
+            init_global_orient, self.body_model.global_orient, batch_size)
+        transl = self._match_init_batch_size(
+            init_transl, self.body_model.transl, batch_size)
+        body_pose = self._match_init_batch_size(
+            init_body_pose, self.body_model.body_pose, batch_size)
+        left_hand_pose = self._match_init_batch_size(
+            init_left_hand_pose, self.body_model.left_hand_pose, batch_size)
+        right_hand_pose = self._match_init_batch_size(
+            init_right_hand_pose, self.body_model.right_hand_pose, batch_size)
+        expression = self._match_init_batch_size(
+            init_expression, self.body_model.expression, batch_size)
+        jaw_pose = self._match_init_batch_size(
+            init_jaw_pose, self.body_model.jaw_pose, batch_size)
+        leye_pose = self._match_init_batch_size(
+            init_leye_pose, self.body_model.leye_pose, batch_size)
+        reye_pose = self._match_init_batch_size(
+            init_reye_pose, self.body_model.reye_pose, batch_size)
+        if init_betas is None and self.use_one_betas_per_video:
             betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
                 self.device)
         else:
-            betas = self.body_model.betas
+            betas = self._match_init_batch_size(
+                init_betas, self.body_model.betas, batch_size)
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
