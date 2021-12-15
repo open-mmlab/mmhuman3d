@@ -8,48 +8,49 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idxs_by_part,
 )
 from mmhuman3d.models.builder import build_body_model, build_loss
+from mmhuman3d.core.cameras import build_cameras
 from .builder import REGISTRANTS
 
 
-def perspective_projection(points: torch.Tensor, rotation: torch.Tensor,
-                           translation: torch.Tensor,
-                           focal_length: Union[torch.Tensor, float],
-                           camera_center: Union[torch.Tensor]):
-    """Computes the perspective projection of a set of points.
-
-    Notes:
-        B: batch size
-        K: number of keypoints
-        D: shape dimension
-
-    Args:
-        points: 3D points of shape (B, K, 3)
-        rotation: Camera rotation of shape (B, 3, 3)
-        translation: Camera translation of shape (B, 3)
-        focal_length: Focal length of shape (B,) or scalar
-        camera_center: Camera center of shape (B, 2)
-
-    Returns:
-        None
-    """
-    batch_size = points.shape[0]
-    K = torch.zeros([batch_size, 3, 3], device=points.device)
-    K[:, 0, 0] = focal_length
-    K[:, 1, 1] = focal_length
-    K[:, 2, 2] = 1.
-    K[:, :-1, -1] = camera_center
-
-    # Transform points
-    points = torch.einsum('bij,bkj->bki', rotation, points)
-    points = points + translation.unsqueeze(1)
-
-    # Apply perspective distortion
-    projected_points = points / points[:, :, -1].unsqueeze(-1)
-
-    # Apply camera intrinsics
-    projected_points = torch.einsum('bij,bkj->bki', K, projected_points)
-
-    return projected_points[:, :, :-1]
+# def perspective_projection(points: torch.Tensor, rotation: torch.Tensor,
+#                            translation: torch.Tensor,
+#                            focal_length: Union[torch.Tensor, float],
+#                            camera_center: Union[torch.Tensor]):
+#     """Computes the perspective projection of a set of points.
+#
+#     Notes:
+#         B: batch size
+#         K: number of keypoints
+#         D: shape dimension
+#
+#     Args:
+#         points: 3D points of shape (B, K, 3)
+#         rotation: Camera rotation of shape (B, 3, 3)
+#         translation: Camera translation of shape (B, 3)
+#         focal_length: Focal length of shape (B,) or scalar
+#         camera_center: Camera center of shape (B, 2)
+#
+#     Returns:
+#         None
+#     """
+#     batch_size = points.shape[0]
+#     K = torch.zeros([batch_size, 3, 3], device=points.device)
+#     K[:, 0, 0] = focal_length
+#     K[:, 1, 1] = focal_length
+#     K[:, 2, 2] = 1.
+#     K[:, :-1, -1] = camera_center
+#
+#     # Transform points
+#     points = torch.einsum('bij,bkj->bki', rotation, points)
+#     points = points + translation.unsqueeze(1)
+#
+#     # Apply perspective distortion
+#     projected_points = points / points[:, :, -1].unsqueeze(-1)
+#
+#     # Apply camera intrinsics
+#     projected_points = torch.einsum('bij,bkj->bki', K, projected_points)
+#
+#     return projected_points[:, :, :-1]
 
 
 class OptimizableParameters():
@@ -95,7 +96,7 @@ class SMPLify(object):
         self,
         body_model: Union[dict, torch.nn.Module],
         num_epochs: int = 20,
-        camera: object = None,
+        camera: Union[dict, torch.nn.Module] = None,
         img_res: Union[Tuple[int], int] = 224,
         stages: dict = None,
         optimizer: dict = None,
@@ -114,7 +115,7 @@ class SMPLify(object):
         Args:
             body_model: config or an object of body model.
             num_epochs: number of epochs of registration
-            camera: config of camera
+            camera: config or an object of camera
             img_res: image resolution. If tuple, values are (width, height)
             stages: config of registration stages
             optimizer: config of optimizer
@@ -168,6 +169,16 @@ class SMPLify(object):
             raise TypeError(f'body_model should be either dict or '
                             f'torch.nn.Module, but got {type(body_model)}')
 
+        # initialize camera
+        if camera is not None:
+            if isinstance(camera, dict):
+                self.camera = build_cameras(camera).to(self.device)
+            elif isinstance(camera, torch.nn.Module):
+                self.camera = camera.to(device)
+            else:
+                raise TypeError(f'camera should be either dict or '
+                                f'torch.nn.Module, but got {type(camera)}')
+
         self.ignore_keypoints = ignore_keypoints
         self.verbose = verbose
 
@@ -212,7 +223,6 @@ class SMPLify(object):
             ret: a dictionary that includes body model parameters,
                 and optional attributes such as vertices and joints
         """
-
         assert keypoints2d is not None or keypoints3d is not None, \
             'Neither of 2D nor 3D keypoints are provided.'
         assert not (keypoints2d is not None and keypoints3d is not None), \
@@ -535,16 +545,15 @@ class SMPLify(object):
 
         # 2D keypoint loss
         if keypoints2d is not None:
-            # TODO: temp!
-            # projected_joints = \
-            # self.camera.transform_points(model_joints)[:, :, :2]
-            bs = model_joints.shape[0]
-            projected_joints = perspective_projection(
-                model_joints,
-                torch.eye(3).expand((bs, 3, 3)).to(model_joints.device),
-                torch.zeros((bs, 3)).to(model_joints.device), 5000.0,
-                torch.Tensor([self.img_res / 2,
-                              self.img_res / 2]).to(model_joints.device))
+            # bs = model_joints.shape[0]
+            # projected_joints = perspective_projection(
+            #     model_joints,
+            #     torch.eye(3).expand((bs, 3, 3)).to(model_joints.device),
+            #     torch.zeros((bs, 3)).to(model_joints.device), 5000.0,
+            #     torch.Tensor([self.img_res / 2,
+            #                   self.img_res / 2]).to(model_joints.device))
+            projected_joints_xyd = self.camera.transform_points_screen(model_joints)
+            projected_joints = projected_joints_xyd[..., :2]
 
             # normalize keypoints to [-1,1]
             projected_joints = 2 * projected_joints / (self.img_res - 1) - 1

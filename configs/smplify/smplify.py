@@ -63,3 +63,10 @@ ignore_keypoints = [
     'neck_openpose', 'right_hip_openpose', 'left_hip_openpose',
     'right_hip_extra', 'left_hip_extra'
 ]
+
+camera = dict(
+    type='PerspectiveCameras',
+    focal_length=5000,
+    image_size=(224, 224),
+    principal_point=(112, 112)
+)
