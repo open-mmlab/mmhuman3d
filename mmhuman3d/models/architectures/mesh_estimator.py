@@ -747,3 +747,8 @@ class VideoBodyModelEstimator(BodyModelEstimator):
         all_preds['image_idx'] = \
             kwargs['sample_idx'].detach().cpu().numpy().reshape((-1))
         return all_preds
+
+
+# from pytorch3d.io import save_obj
+# import numpy as np
+# save_obj('data/5.obj',pred_vertices[120],torch.tensor(self.body_model_test.faces.astype(np.float)))

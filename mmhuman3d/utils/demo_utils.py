@@ -1,5 +1,6 @@
 import os
 import warnings
+from copy import deepcopy
 from pathlib import Path
 
 import mmcv
@@ -26,8 +27,8 @@ def xyxy2xywh(bbox_xyxy):
           shaped (n, 4) or (n, 5). (left, top, width, height, [score])
     """
     bbox_xywh = bbox_xyxy.copy()
-    bbox_xywh[..., 2] = bbox_xywh[..., 2] - bbox_xywh[..., 0] + 1
-    bbox_xywh[..., 3] = bbox_xywh[..., 3] - bbox_xywh[..., 1] + 1
+    bbox_xywh[..., 2] = bbox_xywh[..., 2] - bbox_xywh[..., 0]
+    bbox_xywh[..., 3] = bbox_xywh[..., 3] - bbox_xywh[..., 1]
 
     return bbox_xywh
 
@@ -48,6 +49,26 @@ def xywh2xyxy(bbox_xywh):
     bbox_xyxy[..., 3] = bbox_xyxy[..., 3] + bbox_xyxy[..., 1] - 1
 
     return bbox_xyxy
+
+
+def xywh2xyhh(bbox_xywh):
+    # w >h
+
+    bbox_xyhh = deepcopy(bbox_xywh)
+    mask = (bbox_xywh[..., [2]] > bbox_xywh[..., [3]])
+
+    bbox_xyhh[mask,
+              1] = bbox_xyhh[mask,
+                             1] - (bbox_xyhh[mask, 2] - bbox_xyhh[mask, 3]) / 2
+    bbox_xyhh[mask, 3] = bbox_xyhh[mask, 2]
+
+    mask = ~mask
+    bbox_xyhh[mask,
+              0] = bbox_xyhh[mask,
+                             0] - (bbox_xyhh[mask, 3] - bbox_xyhh[mask, 2]) / 2
+    bbox_xyhh[mask, 2] = bbox_xyhh[mask, 3]
+
+    return bbox_xyhh
 
 
 def box2cs(x, y, w, h, aspect_ratio=1.0, scale_mult=1.25):
@@ -82,8 +103,57 @@ def box2cs(x, y, w, h, aspect_ratio=1.0, scale_mult=1.25):
     return center, scale
 
 
-def convert_crop_cam_to_orig_img(cam: np.ndarray, bbox: np.ndarray,
-                                 img_width: int, img_height: int):
+def box2cs_batch(x, y, w, h, aspect_ratio=1.0, scale_mult=1.25):
+    """[summary]
+
+    Returns:
+        [type]: [description]
+    """
+    pixel_std = 1
+    center = np.stack([x + w * 0.5, y + h * 0.5], -1)
+
+    mask = w > aspect_ratio * h
+    h[mask] = w[mask] / aspect_ratio
+
+    mask = ~mask
+    w[mask] = h[mask] * aspect_ratio
+
+    mask = center[..., 0] != -1
+    scale = np.stack([w * 1.0 / pixel_std, h * 1.0 / pixel_std], -1)
+    scale[mask] = scale[mask] * scale_mult
+
+    return center, scale
+
+
+def xywh2cs(bbox_xywh, aspect_ratio=1, scale_mult=1.25):
+    """Convert bbox_xywh coordinates to center and scale.
+
+    Args:
+        bbox_xywh (numpy.ndarry): Bounding boxes, shaped (n, 4) or
+            (n, 5). (left, top, width, height, [score])
+        aspect_ratio (int, optional): Defaults to 1.
+        scale_mult (float, optional): Defaults to 1.1.
+
+    Returns:
+        numpy.ndarray: Bounding boxes, shaped (n, 4) or
+            (n, 5). (center_x, center_y, scale_x, scale_y, [score])
+    """
+    bbox_xywh = bbox_xywh[..., :4].copy()
+    x, y, w, h = [x.squeeze() for x in np.split(bbox_xywh, 4, -1)]
+    center, scale = box2cs_batch(
+        x, y, w, h, aspect_ratio=aspect_ratio, scale_mult=scale_mult)
+    bbox_cs = np.concatenate([center, scale], axis=-1)
+    return bbox_cs
+
+
+def convert_crop_cam_to_orig_img(cam: np.ndarray,
+                                 bbox: np.ndarray,
+                                 img_width: int,
+                                 img_height: int,
+                                 aspect_ratio: float = 1.0,
+                                 scale_mult: float = 1.25,
+                                 bbox_format: Literal['xyxy', 'xywh',
+                                                      'cs'] = 'xyxy'):
     """This function is modified from [VIBE](https://github.com/
     mkocabas/VIBE/blob/master/lib/utils/demo_utils.py#L242-L259). Original
     license please see docs/additional_licenses.md.
@@ -91,20 +161,35 @@ def convert_crop_cam_to_orig_img(cam: np.ndarray, bbox: np.ndarray,
     Args:
         cam (np.ndarray): cam (ndarray, shape=(frame, 3)):
         weak perspective camera in cropped img coordinates
-        bbox (np.ndarray): bbox coordinates (c_x, c_y, h)
+        bbox (np.ndarray): bbox coordinates
         img_width (int): original image width
         img_height (int): original image height
+        aspect_ratio (float, optional):  Defaults to 1.0.
+        scale_mult (float, optional):  Defaults to 1.25.
+        bbox_format (Literal[, optional): Defaults to 'xyxy'.
 
     Returns:
         orig_cam: shape = (frame, 4)
     """
-    cx, cy, h = bbox[..., 0], bbox[..., 1], bbox[..., 2]
+    bbox = bbox.copy()
+    if bbox_format == 'xyxy':
+        bbox_xywh = xyxy2xywh(bbox)
+        bbox_cs = xywh2cs(bbox_xywh, aspect_ratio, scale_mult)
+    elif bbox_format == 'xywh':
+        bbox_cs = xywh2cs(bbox, aspect_ratio, scale_mult)
+    elif bbox_format == 'cs':
+        bbox_cs = bbox
+    else:
+        raise ValueError('Only supports the format of `xyxy`, `cs` and `xywh`')
+
+    cx, cy, h = bbox_cs[..., 0], bbox_cs[..., 1], bbox_cs[..., 2] + 1e-6
     hw, hh = img_width / 2., img_height / 2.
     sx = cam[..., 0] * (1. / (img_width / h))
     sy = cam[..., 0] * (1. / (img_height / h))
-    tx = ((cx - hw) / hw / sx) + cam[..., 1]
-    ty = ((cy - hh) / hh / sy) + cam[..., 2]
-    orig_cam = np.stack([sx, sy, tx, ty]).T
+    tx = ((cx - hw) / hw / (sx + 1e-6)) + cam[..., 1]
+    ty = ((cy - hh) / hh / (sy + 1e-6)) + cam[..., 2]
+
+    orig_cam = np.stack([sx, sy, tx, ty], axis=-1)
     return orig_cam
 
 
@@ -275,7 +360,7 @@ def smooth_process(x, smooth_type='savgol'):
     return x
 
 
-def process_mmtracking_results(mmtracking_results):
+def process_mmtracking_results(mmtracking_results, max_track_id):
     """Process mmtracking results.
 
     Args:
@@ -295,10 +380,13 @@ def process_mmtracking_results(mmtracking_results):
     for track in tracking_results:
         person = {}
         person['track_id'] = int(track[0])
+        if max_track_id < int(track[0]):
+            max_track_id = int(track[0])
         person['bbox'] = track[1:]
         person_results.append(person)
     person_results = sorted(person_results, key=lambda x: x.get('track_id', 0))
-    return person_results
+    instance_num = len(tracking_results)
+    return person_results, max_track_id, instance_num
 
 
 def process_mmdet_results(mmdet_results, cat_id=1):
@@ -372,6 +460,51 @@ def prepare_frames(image_path=None, video_path=None):
     else:
         raise ValueError('No image path or video path provided.')
 
-    frames_iter = img_list if image_path is not None else video
+    frames_iter = img_list if image_path is not None else list(video)
 
     return frames_iter
+
+
+def extract_pose_sequence(pose_results, frame_idx, causal, seq_len, step=1):
+    """Extract the target frame from 2D pose results, and pad the sequence to a
+    fixed length.
+
+    Args:
+        pose_results (List[List[Dict]]): Multi-frame pose detection results
+            stored in a nested list. Each element of the outer list is the
+            pose detection results of a single frame, and each element of the
+            inner list is the pose information of one person, which contains:
+                keypoints (ndarray[K, 2 or 3]): x, y, [score]
+                track_id (int): unique id of each person, required when
+                    ``with_track_id==True```
+                bbox ((4, ) or (5, )): left, right, top, bottom, [score]
+        frame_idx (int): The index of the frame in the original video.
+        causal (bool): If True, the target frame is the last frame in
+            a sequence. Otherwise, the target frame is in the middle of a
+            sequence.
+        seq_len (int): The number of frames in the input sequence.
+        step (int): Step size to extract frames from the video.
+
+    Returns:
+        List[List[Dict]]: Multi-frame pose detection results stored in a
+            nested list with a length of seq_len.
+        int: The target frame index in the padded sequence.
+    """
+
+    if causal:
+        frames_left = 0
+        frames_right = seq_len - 1
+    else:
+        frames_left = (seq_len - 1) // 2
+        frames_right = frames_left
+    num_frames = len(pose_results)
+
+    # get the padded sequence
+    pad_left = max(0, frames_left - frame_idx // step)
+    pad_right = max(0, frames_right - (num_frames - 1 - frame_idx) // step)
+    start = max(frame_idx % step, frame_idx - frames_left * step)
+    end = min(num_frames - (num_frames - 1 - frame_idx) % step,
+              frame_idx + frames_right * step + 1)
+    pose_results_seq = [pose_results[0]] * pad_left + \
+        pose_results[start:end:step] + [pose_results[-1]] * pad_right
+    return pose_results_seq

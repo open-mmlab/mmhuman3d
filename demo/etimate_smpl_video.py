@@ -3,10 +3,14 @@ from argparse import ArgumentParser
 import mmcv
 import numpy as np
 
-from mmhuman3d.apis import inference_image_based_model, init_model
-from mmhuman3d.core.visualization import visualize_smpl_calibration
+from mmhuman3d.apis import (
+    feature_extract,
+    inference_video_based_model,
+    init_model,
+)
+from mmhuman3d.core.visualization import visualize_smpl_vibe
 from mmhuman3d.utils.demo_utils import (
-    conver_verts_to_cam_coord,
+    extract_pose_sequence,
     prepare_frames,
     process_mmdet_results,
     process_mmtracking_results,
@@ -43,14 +47,16 @@ def single_person_with_mmdet(args, frames_iter):
     person_det_model = init_detector(
         args.det_config, args.det_checkpoint, device=args.device.lower())
 
-    mesh_model = init_model(
+    mesh_model, extrator = init_model(
         args.mesh_reg_config,
         args.mesh_reg_checkpoint,
         device=args.device.lower())
 
     # Used to save the img index
     img_index = []
+    person_results_list = []
     pred_cams, verts, bboxes_xy = [], [], []
+
     for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
         # test a single image, the resulting box is (x1, y1, x2, y2)
         mmdet_results = inference_detector(person_det_model, frame)
@@ -61,37 +67,52 @@ def single_person_with_mmdet(args, frames_iter):
                 mmdet_results,
                 args.det_cat_id)
 
-        # test a single image, with a list of bboxes.
-        mesh_results = inference_image_based_model(
-            mesh_model,
-            frame,
-            person_det_results,
-            bbox_thr=args.bbox_thr,
-            format='xyxy')
+        # extract features from the input video or image sequences
+        if mesh_model.cfg.model.type == 'VideoBodyModelEstimator' \
+                and extrator is not None:
+            person_results = feature_extract(
+                extrator,
+                frame,
+                person_det_results,
+                args.bbox_thr,
+                format='xyxy')
 
         # drop the frame with no detected results
-        if mesh_results == []:
+        if person_results == []:
             continue
 
+        # vis bboxes
+        if args.draw_bbox:
+            bboxes = [res['bbox'] for res in person_results]
+            bboxes = np.vstack(bboxes)
+            mmcv.imshow_bboxes(
+                frame, bboxes, top_k=-1, thickness=2, show=False)
+
+        person_results_list.append(person_results)
         img_index.append(i)
 
+    for i, person_results in enumerate(
+            mmcv.track_iter_progress(person_results_list)):
+        mesh_results_seq = extract_pose_sequence(
+            person_results_list, frame_idx=i, causal=True, seq_len=16, step=1)
+
+        mesh_results = inference_video_based_model(
+            mesh_model, det_results=mesh_results_seq, with_track_id=False)
+        # only single person
+        det_result = person_results[0]
         pred_cams.append(mesh_results[0]['camera'])
         verts.append(mesh_results[0]['vertices'])
-        bboxes_xy.append(mesh_results[0]['bbox'])
+        bboxes_xy.append(det_result['bbox'])
 
     pred_cams = np.array(pred_cams)
     verts = np.array(verts)
     bboxes_xy = np.array(bboxes_xy)
 
-    # convert vertices from world to camera
-    verts, K0 = conver_verts_to_cam_coord(
-        verts, pred_cams, bboxes_xy, focal_length=args.focal_length)
-
     # smooth
     if args.smooth_type is not None:
         verts = smooth_process(verts, smooth_type=args.smooth_type)
 
-    return verts, K0, img_index
+    return verts, pred_cams, bboxes_xy, img_index
 
 
 def multi_person_with_mmtracking(args, frames_iter):
@@ -108,36 +129,40 @@ def multi_person_with_mmtracking(args, frames_iter):
     tracking_model = init_tracking_model(
         args.tracking_config, None, device=args.device.lower())
 
-    mesh_model, _ = init_model(
-        args.mesh_reg_config,
-        args.mesh_reg_checkpoint,
-        device=args.device.lower())
+    mesh_model, extrator = \
+        init_model(args.mesh_reg_config, args.mesh_reg_checkpoint,
+                   device=args.device.lower())
 
-    mesh_results_list = []
+    # The total number of people detected in a video or image sequence
+    max_track_id = 0
+    # Maximum number of people appearing in the same frame
+    max_instance = 0
+    # Used to save inference results
+    # mesh_results_list = []
+    person_results_list = []
     # Used to save the value of the total number of frames
     frame_num = 0
     # Used to save the img index
     img_index = []
-    max_instance = 0
-    max_track_id = 0
-    for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
 
+    # First stage: person tracking
+    for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
+        if i > 200:
+            break
         mmtracking_results = inference_mot(tracking_model, frame, frame_id=i)
 
         # keep the person class bounding boxes.
         person_results, max_track_id, instance_num = \
             process_mmtracking_results(mmtracking_results, max_track_id)
 
-        # test a single image, with a list of bboxes.
-        mesh_results = inference_image_based_model(
-            mesh_model,
-            frame,
-            person_results,
-            bbox_thr=args.bbox_thr,
-            format='xyxy')
+        # extract features from the input video or image sequences
+        if mesh_model.cfg.model.type == 'VideoBodyModelEstimator' \
+                and extrator is not None:
+            person_results = feature_extract(
+                extrator, frame, person_results, args.bbox_thr, format='xyxy')
 
         # drop the frame with no detected results
-        if mesh_results == []:
+        if person_results == []:
             continue
 
         # update max_instance
@@ -154,29 +179,33 @@ def multi_person_with_mmtracking(args, frames_iter):
             labels = np.array(labels)
             mmcv.imshow_det_bboxes(frame, bboxes, labels, show=False)
 
-        mesh_results_list.append(mesh_results)
+        person_results_list.append(person_results)
         img_index.append(i)
         frame_num += 1
 
     verts = np.zeros([frame_num, max_track_id + 1, 6890, 3])
     pred_cams = np.zeros([frame_num, max_track_id + 1, 3])
     bboxes_xy = np.zeros([frame_num, max_track_id + 1, 5])
-
     track_ids_lists = []
-    for i, mesh_results in enumerate(
-            mmcv.track_iter_progress(mesh_results_list)):
+    # second stage
+    for i, person_results in enumerate(
+            mmcv.track_iter_progress(person_results_list)):
+        mesh_results_seq = extract_pose_sequence(
+            person_results_list, frame_idx=i, causal=True, seq_len=16, step=1)
+
+        mesh_results = inference_video_based_model(
+            mesh_model, det_results=mesh_results_seq, with_track_id=True)
+
         track_ids = []
-        for mesh_result in mesh_results:
-            instance_id = mesh_result['track_id']
+        for idx, mesh_result in enumerate(mesh_results):
+            det_result = person_results[idx]
+            instance_id = det_result['track_id']
+            bboxes_xy[i, instance_id] = det_result['bbox']
             pred_cams[i, instance_id] = mesh_result['camera']
             verts[i, instance_id] = mesh_result['vertices']
-            bboxes_xy[i, instance_id] = mesh_result['bbox']
             track_ids.append(instance_id)
 
         track_ids_lists.append(track_ids)
-
-    verts, K0 = conver_verts_to_cam_coord(
-        verts, pred_cams, bboxes_xy, focal_length=args.focal_length)
 
     # smooth
     if args.smooth_type is not None:
@@ -184,12 +213,18 @@ def multi_person_with_mmtracking(args, frames_iter):
 
     # To compress vertices array
     V = np.zeros([frame_num, max_instance, 6890, 3])
-    for i, track_ids_list in enumerate(
-            mmcv.track_iter_progress(track_ids_lists)):
+    C = np.zeros([frame_num, max_instance, 3])
+    B = np.zeros([frame_num, max_instance, 5])
+    for i, track_ids_list in enumerate(track_ids_lists):
         instance_num = len(track_ids_list)
         V[i, :instance_num] = verts[i, track_ids_list]
+        C[i, :instance_num] = pred_cams[i, track_ids_list]
+        B[i, :instance_num] = bboxes_xy[i, track_ids_list]
+    assert len(img_index) > 0
+    # Visualization
+    np.savez('data/vibe_results', verts=V, pred_cam=C, bbox=B)
 
-    return V, K0, img_index
+    return V, C, B, img_index
 
 
 def main(args):
@@ -198,25 +233,23 @@ def main(args):
     frames_iter = prepare_frames(args.image_path, args.video_path)
 
     if args.single_person_demo:
-        verts, K0, img_index = single_person_with_mmdet(args, frames_iter)
+        V, C, B, img_index = single_person_with_mmdet(args, frames_iter)
     elif args.multi_person_demo:
-        verts, K0, img_index = multi_person_with_mmtracking(args, frames_iter)
+        V, C, B, img_index = multi_person_with_mmtracking(args, frames_iter)
     else:
         raise ValueError(
             'Only supports single_person_demo or multi_person_demo')
 
-    # Visualization
-    visualize_smpl_calibration(
-        verts=verts,
+    visualize_smpl_vibe(
+        verts=V,
+        pred_cam=C,
+        bbox=B,
         model_path=args.body_model_dir,
         model_type='smpl',
         output_path=args.output_path,
         render_choice=args.render_choice,
         resolution=frames_iter[0].shape[:2],
         image_array=np.array(frames_iter)[img_index],
-        K=K0,
-        R=None,
-        T=None,
         overwrite=True,
         palette=args.palette)
 
@@ -302,10 +335,5 @@ if __name__ == '__main__':
     if args.multi_person_demo:
         assert has_mmtrack, 'Please install mmtrack to run the demo.'
         assert args.tracking_config is not None
-    from line_profiler import LineProfiler
-    lp = LineProfiler()
-    lp_wrapper = lp(main)
-    lp.add_function(visualize_smpl_calibration)
-    lp_wrapper(args)
-    lp.print_stats()
-    # main(args)
+
+    main(args)

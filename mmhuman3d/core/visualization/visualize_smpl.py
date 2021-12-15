@@ -780,6 +780,8 @@ def render_smpl(
         vertices = vertices.view(num_frame, num_person, -1, 3)
 
     if orig_cam is not None:
+        if isinstance(orig_cam, np.ndarray):
+            orig_cam = torch.Tensor(orig_cam)
         projection = 'weakperspective'
         r = render_resolution[1] / render_resolution[0]
         orig_cam = orig_cam[start:end + 1]
@@ -947,6 +949,7 @@ def visualize_smpl_calibration(
 ) -> None:
     """Visualize a smpl mesh which has opencv calibration matrix defined in
     screen."""
+    print('-----------------------------------')
     assert K is not None, '`K` is required.'
     assert resolution is not None, '`resolution`(h, w) is required.'
     func = partial(
@@ -1011,6 +1014,9 @@ def visualize_smpl_vibe(orig_cam=None,
                         bbox=None,
                         output_path='sample.mp4',
                         resolution=None,
+                        aspect_ratio=1.0,
+                        scale_mult=1.0,
+                        bbox_format='xyxy',
                         **kwargs) -> None:
     """Simpliest way to visualize pred smpl with orign frames and predicted
     cameras."""
@@ -1018,7 +1024,8 @@ def visualize_smpl_vibe(orig_cam=None,
     if pred_cam is not None and bbox is not None:
         orig_cam = torch.Tensor(
             convert_crop_cam_to_orig_img(pred_cam, bbox, resolution[1],
-                                         resolution[0]))
+                                         resolution[0], aspect_ratio,
+                                         scale_mult, bbox_format))
     assert orig_cam is not None, '`orig_cam` is required.'
 
     func = partial(
