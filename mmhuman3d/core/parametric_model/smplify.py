@@ -655,7 +655,7 @@ class SMPLify(object):
         # expand batch dimension to match batch size
         param_batch_size = param.shape[0]
         if param_batch_size != batch_size and param_batch_size == 1:
-            param = param.expand(batch_size, *param.shape[1:])
+            param = param.repeat(batch_size, *[1]*(param.ndim - 1))
         else:
             raise ValueError(
                 'Init param does not match the batch size of keypoints, '
@@ -663,7 +663,8 @@ class SMPLify(object):
 
         # shape check
         assert param.shape[0] == batch_size
-        assert param.shape[1:] == init_param_body_model.shape[1:]
+        assert param.shape[1:] == init_param_body_model.shape[1:], \
+            f'Shape mismatch: {param.shape} vs {init_param_body_model.shape}'
 
         return param
 
