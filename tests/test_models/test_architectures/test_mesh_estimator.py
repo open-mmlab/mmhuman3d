@@ -1,6 +1,6 @@
 import torch
 
-from mmhuman3d.core.parametric_model.smplify import perspective_projection
+from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.models.architectures.mesh_estimator import (
     ImageBodyModelEstimator,
     VideoBodyModelEstimator,
@@ -336,6 +336,15 @@ def test_run_registration():
             sigma=100),
         device=torch.device('cpu'))
 
+    camera = build_cameras(dict(
+        type='PerspectiveCameras',
+        convention='opencv',
+        in_ndc=False,
+        focal_length=5000,
+        image_size=(224, 224),
+        principal_point=(112, 112))
+    )
+
     model = ImageBodyModelEstimator(
         body_model_train=body_model, registrant=registrant)
     assert model.registrant is not None
@@ -351,14 +360,9 @@ def test_run_registration():
 
     # generate 2D keypoints
     smpl = build_body_model(body_model)
-    keypoints3d = smpl()['joints'].detach()
-    keypoints2d = perspective_projection(
-        keypoints3d,
-        torch.eye(3).view(1, 3, 3).expand(batch_size, -1, -1),
-        translation=transl,
-        focal_length=5000,
-        camera_center=torch.Tensor([112, 112]).view(1,
-                                                    2).expand(batch_size, -1))
+    keypoints3d = smpl(transl=transl)['joints'].detach()
+    keypoints2d_xyd = camera.transform_points_screen(keypoints3d)
+    keypoints2d = keypoints2d_xyd[..., :2]
     keypoints2d_conf = torch.ones(*keypoints2d.shape[:2], 1)
     keypoints2d = torch.cat([keypoints2d, keypoints2d_conf], dim=-1)
 
