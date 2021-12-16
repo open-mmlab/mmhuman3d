@@ -193,7 +193,8 @@ def test_perspective_projection():
 
     camera = build_cameras(dict(
         type='PerspectiveCameras',
-        # in_ndc=False,
+        convention='opencv',
+        in_ndc=False,
         focal_length=focal_length,
         image_size=image_size,
         principal_point=principal_point
@@ -213,9 +214,4 @@ def test_perspective_projection():
         camera_center=torch.Tensor((112, 112))
     )
 
-    import pdb; pdb.set_trace()
     assert torch.allclose(projected_keypoints, projected_keypoints_alt)
-
-
-if __name__ == '__main__':
-    test_perspective_projection()

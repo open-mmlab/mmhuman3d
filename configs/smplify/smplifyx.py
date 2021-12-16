@@ -90,6 +90,8 @@ smooth_loss = dict(type='SmoothJointLoss', loss_weight=0, reduction='sum')
 
 camera = dict(
     type='PerspectiveCameras',
+    convention='opencv',
+    in_ndc=False,
     focal_length=5000,
     image_size=(224, 224),
     principal_point=(112, 112)
