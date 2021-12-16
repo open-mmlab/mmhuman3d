@@ -37,7 +37,7 @@ def xywh2xyxy(bbox_xywh):
 
     Args:
         bbox_xywh (np.ndarray): Bounding boxes (with scores), shaped
-        (frame, 4) or (n, 5). (left, top, width, height, [score])
+        (n, 4) or (n, 5). (left, top, width, height, [score])
 
     Returns:
         np.ndarray: Bounding boxes (with scores),
