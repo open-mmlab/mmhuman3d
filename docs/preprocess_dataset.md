@@ -836,33 +836,33 @@ mmhuman3d
     └── datasets
         └── mpi_inf_3dhp
             ├── mpi_inf_3dhp_test_set
-            │   ├── TS1
-            │   ├── TS2
-            │   ├── TS3
-            │   ├── TS4
-            │   ├── TS5
-            │   └── TS6
+            │   ├── TS1
+            │   ├── TS2
+            │   ├── TS3
+            │   ├── TS4
+            │   ├── TS5
+            │   └── TS6
             ├── S1
-            │   ├── Seq1
-            │   └── Seq2
+            │   ├── Seq1
+            │   └── Seq2
             ├── S2
-            │   ├── Seq1
-            │   └── Seq2
+            │   ├── Seq1
+            │   └── Seq2
             ├── S3
-            │   ├── Seq1
-            │   └── Seq2
+            │   ├── Seq1
+            │   └── Seq2
             ├── S4
-            │   ├── Seq1
-            │   └── Seq2
+            │   ├── Seq1
+            │   └── Seq2
             ├── S5
-            │   ├── Seq1
-            │   └── Seq2
+            │   ├── Seq1
+            │   └── Seq2
             ├── S6
-            │   ├── Seq1
-            │   └── Seq2
+            │   ├── Seq1
+            │   └── Seq2
             ├── S7
-            │   ├── Seq1
-            │   └── Seq2
+            │   ├── Seq1
+            │   └── Seq2
             └── S8
                 ├── Seq1
                 └── Seq2
@@ -1192,9 +1192,10 @@ mmhuman3d
 ├── tools
 ├── configs
 └── data
+    ├── checkpoints
+    |   └── spin.pth
     └── datasets
         └── vibe_data
             ├── mpi_inf_3dhp_train.npz
-            ├── pw3d_test.npz
-            └── spin.pth
+            └── pw3d_test.npz
 ```

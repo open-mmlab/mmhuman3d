@@ -57,6 +57,7 @@ DATASET_CONFIGS = dict(
     vibe=dict(
         type='VibeConverter',
         modes=['pw3d', 'mpi_inf_3dhp'],
+        pretrained_ckpt='data/checkpoints/spin.pth',
         prefix='vibe_data'))
 
 
