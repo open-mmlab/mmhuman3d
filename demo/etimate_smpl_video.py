@@ -135,16 +135,10 @@ def multi_person_with_mmtracking(args, frames_iter):
         init_model(args.mesh_reg_config, args.mesh_reg_checkpoint,
                    device=args.device.lower())
 
-    # The total number of people detected in a video or image sequence
     max_track_id = 0
-    # Maximum number of people appearing in the same frame
     max_instance = 0
-    # Used to save inference results
-    # mesh_results_list = []
     person_results_list = []
-    # Used to save the value of the total number of frames
     frame_num = 0
-    # Used to save the img index
     img_index = []
 
     # First stage: person tracking
@@ -175,9 +169,6 @@ def multi_person_with_mmtracking(args, frames_iter):
             bboxes = np.vstack(bboxes)
             mmcv.imshow_bboxes(
                 frame, bboxes, top_k=-1, thickness=2, show=False)
-            labels = [str(res['track_id']) for res in person_results]
-            labels = np.array(labels)
-            mmcv.imshow_det_bboxes(frame, bboxes, labels, show=False)
 
         person_results_list.append(person_results)
         img_index.append(i)

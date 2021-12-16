@@ -113,13 +113,12 @@ def multi_person_with_mmtracking(args, frames_iter):
         args.mesh_reg_checkpoint,
         device=args.device.lower())
 
-    mesh_results_list = []
-    # Used to save the value of the total number of frames
-    frame_num = 0
-    # Used to save the img index
-    img_index = []
-    max_instance = 0
     max_track_id = 0
+    max_instance = 0
+    mesh_results_list = []
+    frame_num = 0
+    img_index = []
+
     for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
 
         mmtracking_results = inference_mot(tracking_model, frame, frame_id=i)
@@ -150,9 +149,6 @@ def multi_person_with_mmtracking(args, frames_iter):
             bboxes = np.vstack(bboxes)
             mmcv.imshow_bboxes(
                 frame, bboxes, top_k=-1, thickness=2, show=False)
-            labels = [str(res['track_id']) for res in person_results]
-            labels = np.array(labels)
-            mmcv.imshow_det_bboxes(frame, bboxes, labels, show=False)
 
         mesh_results_list.append(mesh_results)
         img_index.append(i)
