@@ -28,7 +28,7 @@ class VibeConverter(BaseModeConverter):
 
     ACCEPTED_MODES = ['mpi_inf_3dhp', 'pw3d']
 
-    def __init__(self, modes: List = []) -> None:
+    def __init__(self, modes: List = [], pretrained_ckpt: dict = None) -> None:
         super(VibeConverter, self).__init__(modes)
         self.mapping_dict = {
             'mpi_inf_3dhp': 'mpi_inf_3dhp_train.npz',
@@ -46,6 +46,7 @@ class VibeConverter(BaseModeConverter):
         ])
         self.device = 'cuda'
         self.batch_size = 128
+        self.pretrained_ckpt = pretrained_ckpt
 
     @staticmethod
     def init_model(model_config, ckpt_path, device):
@@ -65,14 +66,15 @@ class VibeConverter(BaseModeConverter):
                 old_key = 'head.' + old_key
             return old_key
 
-        state_dict = torch.load(ckpt_path)['state_dict']
-        new_state_dict = OrderedDict()
+        if ckpt_path is not None:
+            state_dict = torch.load(ckpt_path)['state_dict']
+            new_state_dict = OrderedDict()
 
-        for key, value in state_dict.items():
-            new_key = key_transformation(key)
-            new_state_dict[new_key] = value
+            for key, value in state_dict.items():
+                new_key = key_transformation(key)
+                new_state_dict[new_key] = value
 
-        model.load_state_dict(new_state_dict, strict=False)
+            model.load_state_dict(new_state_dict, strict=False)
         return model.to(device)
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
@@ -137,7 +139,6 @@ class VibeConverter(BaseModeConverter):
             human_data['keypoints3d'] = keypoints3d_
 
         if 'pose' in data:
-            # has_smpl = data['has_smpl']
             smpl = {}
             smpl['body_pose'] = np.array(data['pose'][:, 3:]).reshape(
                 (-1, 23, 3))
@@ -145,7 +146,6 @@ class VibeConverter(BaseModeConverter):
                 (-1, 3))
             smpl['betas'] = np.array(data['shape']).reshape((-1, 10))
             human_data['smpl'] = smpl
-            # human_data['has_smpl'] = has_smpl
             human_data['has_smpl'] = np.ones(num_data)
 
         if 'gender' in data:
@@ -155,10 +155,9 @@ class VibeConverter(BaseModeConverter):
 
         # get features
         model_config = 'configs/hmr/resnet50_hmr_pw3d.py'
-        model_ckpt = os.path.join(dataset_path, 'spin.pth')
-        model = self.init_model(model_config, model_ckpt, self.device)
+        model = self.init_model(model_config, self.pretrained_ckpt,
+                                self.device)
         model.eval()
-
         img_root_path = os.path.join(dataset_path, '..', mode)
         video = []
         for center, scale, img_name in tqdm(
@@ -173,15 +172,13 @@ class VibeConverter(BaseModeConverter):
             transformed_results = self.transforms(results)
             video.append(transformed_results['img'].unsqueeze(0))
 
-        video = torch.cat(video).to(self.device)
+        video = torch.cat(video)
         features = []
         # split video into batches of frames
         img_batch_list = torch.split(video, self.batch_size)
         with torch.no_grad():
             for img_batch in img_batch_list:
-
-                # if not debug:
-                pred = model.backbone(img_batch)
+                pred = model.backbone(img_batch.to(self.device))
                 pred = pred[0].mean(dim=-1).mean(dim=-1)
                 features.append(pred.cpu())
                 del pred, img_batch
@@ -197,5 +194,6 @@ class VibeConverter(BaseModeConverter):
         # store the data struct
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
-        out_file = os.path.join(out_path, f'vibe_{mode}.npz')
+        seq_file = seq_file.replace('3dpw', 'pw3d')
+        out_file = os.path.join(out_path, f'vibe_{seq_file}')
         human_data.dump(out_file)
