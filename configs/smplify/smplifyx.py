@@ -94,5 +94,4 @@ camera = dict(
     in_ndc=False,
     focal_length=5000,
     image_size=(224, 224),
-    principal_point=(112, 112)
-)
+    principal_point=(112, 112))

@@ -3,12 +3,12 @@ from typing import List, Tuple, Union
 import torch
 from mmcv.runner import build_optimizer
 
+from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idx,
     get_keypoint_idxs_by_part,
 )
 from mmhuman3d.models.builder import build_body_model, build_loss
-from mmhuman3d.core.cameras import build_cameras
 from .builder import REGISTRANTS
 
 
@@ -511,7 +511,8 @@ class SMPLify(object):
             #     torch.zeros((bs, 3)).to(model_joints.device), 5000.0,
             #     torch.Tensor([self.img_res / 2,
             #                   self.img_res / 2]).to(model_joints.device))
-            projected_joints_xyd = self.camera.transform_points_screen(model_joints)
+            projected_joints_xyd = self.camera.transform_points_screen(
+                model_joints)
             projected_joints = projected_joints_xyd[..., :2]
 
             # normalize keypoints to [-1,1]
@@ -614,7 +615,7 @@ class SMPLify(object):
         # expand batch dimension to match batch size
         param_batch_size = param.shape[0]
         if param_batch_size != batch_size and param_batch_size == 1:
-            param = param.repeat(batch_size, *[1]*(param.ndim - 1))
+            param = param.repeat(batch_size, *[1] * (param.ndim - 1))
         else:
             raise ValueError(
                 'Init param does not match the batch size of keypoints, '

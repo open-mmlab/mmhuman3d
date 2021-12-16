@@ -10,7 +10,7 @@ batch_size = 2
 
 
 def test_smplify():
-    """ Test adaptive batch size """
+    """Test adaptive batch size."""
 
     smplify_config = dict(mmcv.Config.fromfile('configs/smplify/smplify.py'))
 
@@ -32,14 +32,15 @@ def test_smplify():
     smplify = build_registrant(smplify_config)
 
     # Generate keypoints
-    smpl = build_body_model(dict(
-        type='SMPL',
-        gender='neutral',
-        num_betas=10,
-        keypoint_src='smpl_45',
-        keypoint_dst='smpl_45',
-        model_path='data/body_models/smpl',
-        batch_size=batch_size)  # keypoints shape: (2, 45, 3)
+    smpl = build_body_model(
+        dict(
+            type='SMPL',
+            gender='neutral',
+            num_betas=10,
+            keypoint_src='smpl_45',
+            keypoint_dst='smpl_45',
+            model_path='data/body_models/smpl',
+            batch_size=batch_size)  # keypoints shape: (2, 45, 3)
     )
     keypoints3d = smpl()['joints'].detach().to(device=device)
     keypoints3d_conf = torch.ones(*keypoints3d.shape[:2], device=device)
@@ -90,15 +91,16 @@ def test_smplifyx():
 
     smplifyx = build_registrant(smplifyx_config)
 
-    smplx = build_body_model(dict(
-        type='SMPLX',
-        gender='neutral',
-        num_betas=10,
-        use_face_contour=True,
-        keypoint_src='smplx',
-        keypoint_dst='smplx',
-        model_path='data/body_models/smplx',
-        batch_size=batch_size)  # keypoints shape: (2, 144, 3)
+    smplx = build_body_model(
+        dict(
+            type='SMPLX',
+            gender='neutral',
+            num_betas=10,
+            use_face_contour=True,
+            keypoint_src='smplx',
+            keypoint_dst='smplx',
+            model_path='data/body_models/smplx',
+            batch_size=batch_size)  # keypoints shape: (2, 144, 3)
     )
     keypoints3d = smplx()['joints'].detach().to(device=device)
     keypoints3d_conf = torch.ones(*keypoints3d.shape[:2], device=device)
@@ -124,9 +126,8 @@ def test_smplifyx():
         init_right_hand_pose=torch.rand([1, 6]).to(device),
         init_expression=torch.rand([1, 10]).to(device),
         init_jaw_pose=torch.rand([1, 3]).to(device),
-        init_leye_pose = torch.rand([1, 3]).to(device),
-        init_reye_pose = torch.rand([1, 3]).to(device)
-    )
+        init_leye_pose=torch.rand([1, 3]).to(device),
+        init_reye_pose=torch.rand([1, 3]).to(device))
 
     for k, v in smplifyx_output.items():
         if isinstance(v, torch.Tensor):

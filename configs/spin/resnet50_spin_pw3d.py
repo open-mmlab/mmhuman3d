@@ -46,16 +46,15 @@ registrant = dict(
         reduction='sum'),
     ignore_keypoints=[
         'neck_openpose', 'right_hip_openpose', 'left_hip_openpose',
-        'right_hip_extra', 'left_hip_extra'],
+        'right_hip_extra', 'left_hip_extra'
+    ],
     camera=dict(
         type='PerspectiveCameras',
         convention='opencv',
         in_ndc=False,
         focal_length=5000,
         image_size=(img_res, img_res),
-        principal_point=(img_res / 2, img_res / 2)
-    )
-)
+        principal_point=(img_res / 2, img_res / 2)))
 
 # optimizer
 optimizer = dict(

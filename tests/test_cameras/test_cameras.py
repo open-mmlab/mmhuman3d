@@ -167,7 +167,8 @@ def test_perspective():
 
 def test_perspective_projection():
 
-    def perspective_projection(points, rotation, translation, focal_length, camera_center):
+    def perspective_projection(points, rotation, translation, focal_length,
+                               camera_center):
         batch_size = points.shape[0]
         K = torch.zeros([batch_size, 3, 3], device=points.device)
         K[:, 0, 0] = focal_length
@@ -191,14 +192,14 @@ def test_perspective_projection():
     image_size = (224, 224)
     principal_point = (112, 112)
 
-    camera = build_cameras(dict(
-        type='PerspectiveCameras',
-        convention='opencv',
-        in_ndc=False,
-        focal_length=focal_length,
-        image_size=image_size,
-        principal_point=principal_point
-    ))
+    camera = build_cameras(
+        dict(
+            type='PerspectiveCameras',
+            convention='opencv',
+            in_ndc=False,
+            focal_length=focal_length,
+            image_size=image_size,
+            principal_point=principal_point))
 
     test_keypoints = torch.rand(10, 100, 3)
 
@@ -211,7 +212,6 @@ def test_perspective_projection():
         rotation=torch.eye(3).view(1, 3, 3).expand(10, -1, -1),
         translation=torch.zeros(10, 3),
         focal_length=focal_length,
-        camera_center=torch.Tensor((112, 112))
-    )
+        camera_center=torch.Tensor((112, 112)))
 
     assert torch.allclose(projected_keypoints, projected_keypoints_alt)
