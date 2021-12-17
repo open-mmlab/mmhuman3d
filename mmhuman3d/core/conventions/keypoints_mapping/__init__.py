@@ -63,7 +63,6 @@ def convert_kps(
     approximate: bool = False,
     mask: Optional[Union[np.ndarray, torch.Tensor]] = None,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
-    read_cache: bool = True
 ) -> Tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
     """Convert keypoints following the mapping correspondence between src and
     dst keypoints definition. Supported conventions by now: agora, coco, smplx,
@@ -83,10 +82,6 @@ def convert_kps(
             Defaults to None.
         keypoints_factory (dict, optional): A class to store the attributes.
             Defaults to keypoints_factory.
-        read_cache (bool, optional):
-            Whether to read mapping from cache to speed up.
-            No matter what value read_cache is, cache will be updated.
-            Defaults to True.
     Returns:
         Tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]
             : tuple of (out_keypoints, mask). out_keypoints and mask will be of
@@ -125,7 +120,7 @@ def convert_kps(
         raise TypeError('keypoints should be torch.Tensor or np.ndarray')
 
     dst_idxs, src_idxs, _ = \
-        get_mapping(src, dst, approximate, keypoints_factory, read_cache)
+        get_mapping(src, dst, approximate, keypoints_factory)
     out_keypoints[:, dst_idxs] = keypoints[:, src_idxs]
     out_shape = extra_dims + (len(dst_names), keypoints.shape[-1])
     out_keypoints = out_keypoints.reshape(out_shape)
@@ -161,8 +156,7 @@ def compress_converted_kps(
 def get_mapping(src: str,
                 dst: str,
                 approximate: bool = False,
-                keypoints_factory: dict = KEYPOINTS_FACTORY,
-                read_cache: bool = True):
+                keypoints_factory: dict = KEYPOINTS_FACTORY):
     """Get mapping list from src to dst.
 
     Args:
@@ -171,18 +165,13 @@ def get_mapping(src: str,
         approximate (bool): control whether approximate mapping is allowed.
         keypoints_factory (dict, optional): A class to store the attributes.
             Defaults to keypoints_factory.
-        read_cache (bool, optional):
-            Whether to read mapping from cache to speed up.
-            No matter what value read_cache is, cache will be updated.
-            Defaults to True.
 
     Returns:
         list:
             [src_to_intersection_idx, dst_to_intersection_index,
              intersection_names]
     """
-    if read_cache and \
-        src in __KEYPOINTS_MAPPING_CACHE__ and \
+    if src in __KEYPOINTS_MAPPING_CACHE__ and \
         dst in __KEYPOINTS_MAPPING_CACHE__[src] and \
             __KEYPOINTS_MAPPING_CACHE__[src][dst][3] == approximate:
         return __KEYPOINTS_MAPPING_CACHE__[src][dst][:3]
