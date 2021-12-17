@@ -9,18 +9,17 @@ You can slice the cameras by index.
 - **Slice cameras:**
 
     ```python
-    In [1]: K.shape
-    Out[1]: (100, 4, 4)
-    In [2]: R.shape
-    Out[1]: (100, 3, 3)
-    In [3]: T.shape
-    Out[3]: (100, 3)
-    # Batch of K, R, T should be the same or all be 1.
-    In [4]: cameras = PerspectiveCameras(K=K, R=R, T=T)
-    In [5]: len(cameras)
-    Out[5]: 100
-    In [6]: len(cameras[:10])
-    Out[6]: 10
+    from mmhuman3d.core.cameras import PerspectiveCameras
+    import torch
+    K = torch.eye(4, 4)[None]
+    R = torch.eye(3, 3)[None]
+    T = torch.zeros(100, 3)
+    # Batch of K, R, T should all be the same or some of them could be 1. The final batch size will be the biggest one.
+    cam = PerspectiveCameras(K=K, R=R, T=T)
+    assert cam.R.shape == (100, 3, 3)
+    assert cam.K.shape == (100, 4, 4)
+    assert cam.T.shape == (100, 3)
+    assert (cam[:10].K == cam.K[:10]).all()
     ```
 - **Build cameras:**
 
@@ -29,13 +28,20 @@ You can slice the cameras by index.
     from mmhuman3d.core.cameras import build_cameras
 
     # Initialize a perspective camera with default matrix.
+    # in_ndc = False means the intrinsic matrix K defined in screen space. The focal_length and principal_point in K is defined in scale of pixels. This principal_points is (500, 500) pixels and focal_length is 1000 pixels.
     cam = build_cameras(
         dict(
             type='perspective',
-            in_ndc=True,
-            image_size=(1000, 1000)
+            in_ndc=False,
+            image_size=(1000, 1000),
+            princial_points=(500, 500),
+            focal_length=1000,
             ))
 
+    assert (cam.K[0] == torch.Tensor([[1000., 0.,  500.,    0.],
+                                      [0., 1000.,  500.,    0.],
+                                      [0.,    0.,    0.,    1.],
+                                      [0.,    0.,    1.,    0.]]).view(4, 4)).all()
     # Initialize a perspective camera with given K, R, T matrix.
     # It is recommend that the batches of K, R, T either the same or be 1.
     cam = build_cameras(

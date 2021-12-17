@@ -75,12 +75,14 @@ class NewAttributeCameras(cameras.CamerasBase):
                     focal_length = focal_length.repeat(2).view(-1, 2)
                 kwargs.update(focal_length=focal_length)
 
-            principal_point = kwargs.get('principal_point', None)
+            principal_point = kwargs.get('principal_points',
+                                         kwargs.get('principal_point', None))
             if principal_point is not None:
                 if isinstance(principal_point, (tuple, list)):
                     principal_point = torch.FloatTensor(principal_point)
                 principal_point = principal_point.view(-1, 2)
                 kwargs.update(principal_point=principal_point)
+
             K = self.get_default_projection_matrix(**kwargs)
             K, _, _ = convert_cameras(
                 K=K,
@@ -191,7 +193,8 @@ class NewAttributeCameras(cameras.CamerasBase):
             K=self.K[index],
             R=self.R[index],
             T=self.T[index],
-            image_size=self.get_image_size()[index],
+            image_size=self.get_image_size()[index]
+            if self.get_image_size() is not None else None,
             _in_ndc=self.in_ndc(),
             _is_perspective=self._is_perspective,
             convention=self.convention,
@@ -717,6 +720,7 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
         device = args.get('device', 'cpu')
         focal_length = args.get('focal_length')
         principal_point = args.get('principal_point')
+
         return cameras._get_sfm_calibration_matrix(
             N=batch_size,
             device=device,
