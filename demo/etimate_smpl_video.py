@@ -169,6 +169,11 @@ def multi_person_with_mmtracking(args, frames_iter):
             bboxes = np.vstack(bboxes)
             mmcv.imshow_bboxes(
                 frame, bboxes, top_k=-1, thickness=2, show=False)
+            labels = [
+                'track_id_' + str(res['track_id']) for res in person_results
+            ]
+            labels = np.array(labels)
+            mmcv.imshow_det_bboxes(frame, bboxes, labels, show=False)
 
         person_results_list.append(person_results)
         img_index.append(i)

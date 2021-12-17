@@ -15,12 +15,10 @@ from mmhuman3d.utils.demo_utils import (
 
 
 def test_inference_image_based_model():
-    if torch.cuda.is_available():
-        device_name = 'cuda:0'
-    else:
-        device_name = 'cpu'
-    mesh_model, _ = init_model(
-        'configs/spin/resnet50_spin_pw3d.py', None, device=device_name)
+    device_name = 'cpu'
+    config = mmcv.Config.fromfile('configs/spin/resnet50_spin_pw3d.py')
+    config.model.backbone.norm_cfg = dict(type='BN', requires_grad=True)
+    mesh_model, _ = init_model(config, None, device=device_name)
 
     if torch.cuda.is_available():
         frames_iter = np.ones([224, 224, 3])
@@ -34,13 +32,10 @@ def test_inference_image_based_model():
 
 
 def test_inference_video_based_model():
-    if torch.cuda.is_available():
-        device_name = 'cuda:0'
-    else:
-        device_name = 'cpu'
-
+    device_name = 'cpu'
     config = mmcv.Config.fromfile('configs/vibe/resnet50_vibe_pw3d.py')
     config.extractor.checkpoint = None
+    config.extractor.backbone.norm_cfg = dict(type='BN', requires_grad=True)
     mesh_model, extractor = init_model(config, None, device=device_name)
     if torch.cuda.is_available():
         frames_iter = np.ones([224, 224, 3])
@@ -58,3 +53,8 @@ def test_inference_video_based_model():
             mesh_model,
             extracted_results=feature_results_seq,
             with_track_id=False)
+
+
+if __name__ == '__main__':
+    test_inference_image_based_model()
+    test_inference_video_based_model()
