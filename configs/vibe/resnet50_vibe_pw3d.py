@@ -89,7 +89,7 @@ extractor_pipeline = [
     dict(
         type='Collect',
         keys=['img', 'sample_idx'],
-        meta_keys=['image_path', 'center', 'scale', 'rotation', 'bbox_xyhh'])
+        meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 inference_pipeline = test_pipeline
 data = dict(

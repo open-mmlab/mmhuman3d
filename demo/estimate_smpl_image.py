@@ -189,7 +189,6 @@ def multi_person_with_mmtracking(args, frames_iter):
 
 
 def main(args):
-
     # prepare input
     frames_iter = prepare_frames(args.image_path, args.video_path)
 

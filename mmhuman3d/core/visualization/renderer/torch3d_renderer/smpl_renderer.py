@@ -285,7 +285,7 @@ class SMPLRenderer(MeshBaseRenderer):
             lights.direction = -1 * cameras.get_camera_plane_normals()
         elif isinstance(self.lights, PointLights):
             lights = self.lights.clone()
-            lights.location = cameras.get_camera_plane_normals(
+            lights.location = -1 * cameras.get_camera_plane_normals(
             ) + cameras.get_camera_center()
         else:
             raise TypeError(f'Wrong light type: {type(self.lights)}.')

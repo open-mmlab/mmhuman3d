@@ -157,8 +157,7 @@ def inference_image_based_model(
                                    int) else input_size[0] / input_size[1]
 
     for i, bbox in enumerate(bboxes_xywh):
-        x, y, w, h, _ = bbox
-        center, scale = box2cs(x, y, w, h, aspect_ratio, bbox_scale_factor=1.1)
+        center, scale = box2cs(bbox, aspect_ratio, bbox_scale_factor=1.1)
         # prepare data
         data = {
             'image_path': img_or_path,
@@ -198,6 +197,94 @@ def inference_image_based_model(
         mesh_result['smpl_beta'] = results['smpl_beta'][idx]
         mesh_result['vertices'] = results['vertices'][idx]
         mesh_result['keypoints_3d'] = results['keypoints_3d'][idx]
+        mesh_results.append(mesh_result)
+    return mesh_results
+
+
+def inference_video_based_model(model,
+                                extracted_results,
+                                with_track_id=True,
+                                causal=True):
+    """Inference SMPL parameters from extracted featutres using a video-based
+    model.
+
+    Args:
+        model (nn.Module): The loaded mesh estimation model.
+        extracted_results (List[List[Dict]]): Multi-frame feature extraction
+            results stored in a nested list. Each element of the outer list
+            is the feature extraction results of a single frame, and each
+            element of the inner list is the feature information of one person,
+            which contains:
+                features (ndarray): extracted features
+                track_id (int): unique id of each person, required when
+                    ``with_track_id==True```
+                bbox ((4, ) or (5, )): left, right, top, bottom, [score]
+        with_track_id: If True, the element in extracted_results is expected to
+            contain "track_id", which will be used to gather the feature
+            sequence of a person from multiple frames. Otherwise, the extracted
+            results in each frame are expected to have a consistent number and
+            order of identities. Default is True.
+        causal (bool): If True, the target frame is the first frame in
+            a sequence. Otherwise, the target frame is in the middle of a
+            sequence.
+
+    Returns:
+        list[dict]: Each item in the list is a dictionary, which contains:
+            SMPL parameters, vertices, kp3d, and camera.
+    """
+    cfg = model.cfg
+    device = next(model.parameters()).device
+    seq_len = cfg.data.test.seq_len
+    mesh_results = []
+    # build the data pipeline
+    inference_pipeline = Compose(cfg.inference_pipeline)
+    target_idx = 0 if causal else len(extracted_results) // 2
+
+    input_features = _gather_input_features(extracted_results)
+    feature_sequences = _collate_feature_sequence(input_features,
+                                                  with_track_id, target_idx)
+    if not feature_sequences:
+        return mesh_results
+
+    batch_data = []
+
+    for i, seq in enumerate(feature_sequences):
+
+        data = {
+            'features': seq['features'],
+            'sample_idx': i,
+        }
+
+        data = inference_pipeline(data)
+        batch_data.append(data)
+
+    batch_data = collate(batch_data, samples_per_gpu=len(batch_data))
+
+    if next(model.parameters()).is_cuda:
+        # scatter not work so just move image to cuda device
+        batch_data['features'] = batch_data['features'].to(device)
+
+    with torch.no_grad():
+        results = model(
+            features=batch_data['features'],
+            img_metas=batch_data['img_metas'],
+            sample_idx=batch_data['sample_idx'])
+
+    results['camera'] = results['camera'].reshape(-1, seq_len, 3)
+    results['smpl_pose'] = results['smpl_pose'].reshape(-1, seq_len, 24, 3, 3)
+    results['smpl_beta'] = results['smpl_beta'].reshape(-1, seq_len, 10)
+    results['vertices'] = results['vertices'].reshape(-1, seq_len, 6890, 3)
+    results['keypoints_3d'] = results['keypoints_3d'].reshape(
+        -1, seq_len, 17, 3)
+
+    for idx in range(len(feature_sequences)):
+        mesh_result = dict()
+        # mesh_result['track_id'] = feature_sequences[idx]['track_id']
+        mesh_result['camera'] = results['camera'][idx, target_idx]
+        mesh_result['smpl_pose'] = results['smpl_pose'][idx, target_idx]
+        mesh_result['smpl_beta'] = results['smpl_beta'][idx, target_idx]
+        mesh_result['vertices'] = results['vertices'][idx, target_idx]
+        mesh_result['keypoints_3d'] = results['keypoints_3d'][idx, target_idx]
         mesh_results.append(mesh_result)
     return mesh_results
 
@@ -272,17 +359,14 @@ def feature_extract(
                                    int) else input_size[0] / input_size[1]
 
     for i, bbox in enumerate(bboxes_xywh):
-        x, y, w, h, confidence = bbox
-        center, scale = box2cs(x, y, w, h, aspect_ratio, bbox_scale_factor=1.1)
-        bbox_xyhh = [center[0], center[1], scale[0], scale[1], confidence]
-
+        center, scale = box2cs(bbox, aspect_ratio, bbox_scale_factor=1.1)
         # prepare data
         data = {
             'image_path': img_or_path,
             'center': center,
             'scale': scale,
             'rotation': 0,
-            'bbox_xyhh': bbox_xyhh,
+            'bbox_score': bbox[4] if len(bbox) == 5 else 1,
             'sample_idx': i,
         }
         data = extractor_pipeline(data)
@@ -429,91 +513,3 @@ def _collate_feature_sequence(extracted_features,
         feature_sequences.append(feature_seq)
 
     return feature_sequences
-
-
-def inference_video_based_model(model,
-                                extracted_results,
-                                with_track_id=True,
-                                causal=True):
-    """Inference SMPL parameters from extracted featutres using a video-based
-    model.
-
-    Args:
-        model (nn.Module): The loaded mesh estimation model.
-        extracted_results (List[List[Dict]]): Multi-frame feature extraction
-            results stored in a nested list. Each element of the outer list
-            is the feature extraction results of a single frame, and each
-            element of the inner list is the feature information of one person,
-            which contains:
-                features (ndarray): extracted features
-                track_id (int): unique id of each person, required when
-                    ``with_track_id==True```
-                bbox ((4, ) or (5, )): left, right, top, bottom, [score]
-        with_track_id: If True, the element in extracted_results is expected to
-            contain "track_id", which will be used to gather the feature
-            sequence of a person from multiple frames. Otherwise, the extracted
-            results in each frame are expected to have a consistent number and
-            order of identities. Default is True.
-        causal (bool): If True, the target frame is the first frame in
-            a sequence. Otherwise, the target frame is in the middle of a
-            sequence.
-
-    Returns:
-        list[dict]: Each item in the list is a dictionary, which contains:
-            SMPL parameters, vertices, kp3d, and camera.
-    """
-    cfg = model.cfg
-    device = next(model.parameters()).device
-    seq_len = cfg.data.test.seq_len
-    mesh_results = []
-    # build the data pipeline
-    inference_pipeline = Compose(cfg.inference_pipeline)
-    target_idx = 0 if causal else len(extracted_results) // 2
-
-    input_features = _gather_input_features(extracted_results)
-    feature_sequences = _collate_feature_sequence(input_features,
-                                                  with_track_id, target_idx)
-    if not feature_sequences:
-        return mesh_results
-
-    batch_data = []
-
-    for i, seq in enumerate(feature_sequences):
-
-        data = {
-            'features': seq['features'],
-            'sample_idx': i,
-        }
-
-        data = inference_pipeline(data)
-        batch_data.append(data)
-
-    batch_data = collate(batch_data, samples_per_gpu=len(batch_data))
-
-    if next(model.parameters()).is_cuda:
-        # scatter not work so just move image to cuda device
-        batch_data['features'] = batch_data['features'].to(device)
-
-    with torch.no_grad():
-        results = model(
-            features=batch_data['features'],
-            img_metas=batch_data['img_metas'],
-            sample_idx=batch_data['sample_idx'])
-
-    results['camera'] = results['camera'].reshape(-1, seq_len, 3)
-    results['smpl_pose'] = results['smpl_pose'].reshape(-1, seq_len, 24, 3, 3)
-    results['smpl_beta'] = results['smpl_beta'].reshape(-1, seq_len, 10)
-    results['vertices'] = results['vertices'].reshape(-1, seq_len, 6890, 3)
-    results['keypoints_3d'] = results['keypoints_3d'].reshape(
-        -1, seq_len, 17, 3)
-
-    for idx in range(len(feature_sequences)):
-        mesh_result = dict()
-        # mesh_result['track_id'] = feature_sequences[idx]['track_id']
-        mesh_result['camera'] = results['camera'][idx, target_idx]
-        mesh_result['smpl_pose'] = results['smpl_pose'][idx, target_idx]
-        mesh_result['smpl_beta'] = results['smpl_beta'][idx, target_idx]
-        mesh_result['vertices'] = results['vertices'][idx, target_idx]
-        mesh_result['keypoints_3d'] = results['keypoints_3d'][idx, target_idx]
-        mesh_results.append(mesh_result)
-    return mesh_results

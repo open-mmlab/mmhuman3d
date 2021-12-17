@@ -6,7 +6,7 @@ import mmcv
 import numpy as np
 
 from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
-from mmhuman3d.utils.demo_utils import box2cs
+from mmhuman3d.utils.demo_utils import box2cs, xyxy2xywh
 from ..builder import PIPELINES
 from .transforms import (
     _rotate_smpl_pose,
@@ -413,15 +413,11 @@ class RandomDPG(object):
                 max(ymin + 2,
                     bbox[3] + np.random.normal(-0.0013, 0.0711) * ht),
                 imgheight - 3)
-
-        results['bbox'] = [xmin, ymin, xmax, ymax]
+        bbox_xyxy = np.array([xmin, ymin, xmax, ymax])
+        bbox_xywh = xyxy2xywh(bbox_xyxy)
         center, scale = box2cs(
-            xmin,
-            ymin,
-            xmax - xmin,
-            ymax - ymin,
-            aspect_ratio=1.0,
-            scale_mult=1.0)
+            bbox_xywh, aspect_ratio=1.0, bbox_scale_factor=1.0)
+        results['bbox'] = bbox_xyxy
         results['center'] = center
         results['scale'] = scale
 

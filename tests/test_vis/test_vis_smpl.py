@@ -295,7 +295,7 @@ def test_visualize_smpl_pose():
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
     pred_cam = torch.ones(10, 4)
-    bbox = torch.tensor([0, 0, 100, 100]).view(1, 4).repeat(10, 1)
+    bbox = np.array([0, 0, 100, 100]).reshape(1, 4).repeat(10, 1)
     visualize_smpl_vibe(
         poses=pose_dict,
         model_type='smplx',

@@ -25,6 +25,9 @@ def xyxy2xywh(bbox_xyxy):
         np.ndarray: Bounding boxes (with scores),
           shaped (n, 4) or (n, 5). (left, top, width, height, [score])
     """
+    if not isinstance(bbox_xyxy, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bbox_xyxy)}, which should be numpy.ndarray.')
     bbox_xywh = bbox_xyxy.copy()
     bbox_xywh[..., 2] = bbox_xywh[..., 2] - bbox_xywh[..., 0]
     bbox_xywh[..., 3] = bbox_xywh[..., 3] - bbox_xywh[..., 1]
@@ -43,6 +46,9 @@ def xywh2xyxy(bbox_xywh):
         np.ndarray: Bounding boxes (with scores),
           shaped (n, 4) or (n, 5). (left, top, right, bottom, [score])
     """
+    if not isinstance(bbox_xywh, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bbox_xywh)}, which should be numpy.ndarray.')
     bbox_xyxy = bbox_xywh.copy()
     bbox_xyxy[..., 2] = bbox_xyxy[..., 2] + bbox_xyxy[..., 0] - 1
     bbox_xyxy[..., 3] = bbox_xyxy[..., 3] + bbox_xyxy[..., 1] - 1
@@ -50,66 +56,40 @@ def xywh2xyxy(bbox_xywh):
     return bbox_xyxy
 
 
-def box2cs(x, y, w, h, aspect_ratio=1.0, bbox_scale_factor=1.25):
+def box2cs(bbox_xywh, aspect_ratio=1.0, bbox_scale_factor=1.25):
     """Convert xywh coordinates to center and scale.
 
     Args:
-    x (Union[numpy.ndarray,float]): the x coordinate of the bbox_xywh.
-        When the type is `numpy.ndarray`, the shape can be
-        (frame, num_person) or (frame,)
-    y (Union[numpy.ndarray,float]): the y coordinate of the bbox_xywh
-    w (Union[numpy.ndarray,float]): the width of the bbox_xywh
-    h (Union[numpy.ndarray,float]): the height of the bbox_xywh
+    bbox_xywh (numpy.ndarray): the height of the bbox_xywh
     aspect_ratio (int, optional): Defaults to 1.0
     bbox_scale_factor (float, optional): Defaults to 1.25
     Returns:
         numpy.ndarray: center of the bbox
         numpy.ndarray: the scale of the bbox w & h
     """
+    if not isinstance(bbox_xywh, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bbox_xywh)}, which should be numpy.ndarray.')
+
+    bbox_xywh = bbox_xywh.copy()
     pixel_std = 1
-    center = np.stack([x + w * 0.5, y + h * 0.5], -1)
+    center = np.stack([
+        bbox_xywh[..., 0] + bbox_xywh[..., 2] * 0.5,
+        bbox_xywh[..., 1] + bbox_xywh[..., 3] * 0.5
+    ], -1)
 
-    mask_h = w > aspect_ratio * h
+    mask_h = bbox_xywh[..., 2] > aspect_ratio * bbox_xywh[..., 3]
     mask_w = ~mask_h
-    if isinstance(x, np.ndarray):
-        h[mask_h] = w[mask_h] / aspect_ratio
-        w[mask_w] = h[mask_w] * aspect_ratio
-    else:
-        if mask_h:
-            h = w / aspect_ratio
-        if mask_w:
-            w = h * aspect_ratio
 
-    scale = np.stack([w * 1.0 / pixel_std, h * 1.0 / pixel_std], -1)
+    bbox_xywh[mask_h, 3] = bbox_xywh[mask_h, 2] / aspect_ratio
+    bbox_xywh[mask_w, 2] = bbox_xywh[mask_w, 3] * aspect_ratio
+    scale = np.stack([
+        bbox_xywh[..., 2] * 1.0 / pixel_std,
+        bbox_xywh[..., 3] * 1.0 / pixel_std
+    ], -1)
     scale = scale * bbox_scale_factor
 
     return center, scale
-
-
-def xywh2cs(bbox_xywh, aspect_ratio=1, bbox_scale_factor=1.25):
-    """Convert bbox_xywh coordinates to center and scale.
-
-    Args:
-        bbox_xywh (numpy.ndarry): Bounding boxes, shaped (n, 4)
-        (left, top, width, height, [score])
-        aspect_ratio (int, optional): Defaults to 1.0
-        bbox_scale_factor (float, optional): Defaults to 1.25
-
-    Returns:
-        numpy.ndarray: Bounding boxes, shaped (n, 4)
-        (center_x, center_y, scale_x, scale_y)
-    """
-    bbox_xywh = bbox_xywh[..., :4].copy()
-    x, y, w, h = [x[..., -1] for x in np.split(bbox_xywh, 4, -1)]
-    center, scale = box2cs(
-        x,
-        y,
-        w,
-        h,
-        aspect_ratio=aspect_ratio,
-        bbox_scale_factor=bbox_scale_factor)
-    bbox_cs = np.concatenate([center, scale], axis=-1)
-    return bbox_cs
 
 
 def convert_crop_cam_to_orig_img(cam: np.ndarray,
@@ -143,12 +123,17 @@ def convert_crop_cam_to_orig_img(cam: np.ndarray,
     Returns:
         orig_cam: shape = (frame, 4) or (frame, num_person, 4)
     """
+    if not isinstance(bbox, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bbox)}, which should be numpy.ndarray.')
     bbox = bbox.copy()
     if bbox_format == 'xyxy':
         bbox_xywh = xyxy2xywh(bbox)
-        bbox_cs = xywh2cs(bbox_xywh, aspect_ratio, bbox_scale_factor)
+        center, scale = box2cs(bbox_xywh, aspect_ratio, bbox_scale_factor)
+        bbox_cs = np.concatenate([center, scale], axis=-1)
     elif bbox_format == 'xywh':
-        bbox_cs = xywh2cs(bbox, aspect_ratio, bbox_scale_factor)
+        center, scale = box2cs(bbox, aspect_ratio, bbox_scale_factor)
+        bbox_cs = np.concatenate([center, scale], axis=-1)
     elif bbox_format == 'cs':
         bbox_cs = bbox
     else:
@@ -184,6 +169,9 @@ def convert_bbox_to_intrinsic(bboxes: np.ndarray,
     Returns:
         np.ndarray: (frame, num_person, 3, 3) or  (frame, 3, 3)
     """
+    if not isinstance(bboxes, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bboxes)}, which should be numpy.ndarray.')
     assert bbox_format in ['xyxy', 'xywh']
 
     if bbox_format == 'xyxy':

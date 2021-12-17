@@ -28,7 +28,7 @@ from mmhuman3d.data.datasets.pipelines.hybrik_transforms import (
     bbox_clip_xyxy,
     bbox_xywh_to_xyxy,
 )
-from mmhuman3d.utils.demo_utils import box2cs
+from mmhuman3d.utils.demo_utils import box2cs, xyxy2xywh
 
 
 def get_3d_keypoints_vis(keypoints):
@@ -100,16 +100,10 @@ def _load_test_data():
     info['img_prefix'] = None
     info['image_path'] = os.path.join(img_prefix, data['image_path'][index])
 
-    bbox_xywh = data['bbox_xywh'][index]
-    info['bbox'] = bbox_xywh[:4]
-    xmin, ymin, xmax, ymax, _ = bbox_xywh
-    center, scale = box2cs(
-        xmin,
-        ymin,
-        xmax - xmin,
-        ymax - ymin,
-        aspect_ratio=1.0,
-        scale_mult=1.25)
+    bbox_xyxy = data['bbox_xywh'][index]
+    info['bbox'] = bbox_xyxy[:4]
+    bbox_xywh = xyxy2xywh(bbox_xyxy)
+    center, scale = box2cs(bbox_xywh, aspect_ratio=1.0, bbox_scale_factor=1.25)
 
     info['center'] = center
     info['scale'] = scale
