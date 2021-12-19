@@ -520,7 +520,7 @@ def test_visualize_smpl_pose():
         device=device_name)
 
     image_array = np.random.randint(
-        low=0, high=255, size=(1, 128, 128, 3), dtype=np.uint8)
+        low=0, high=255, size=(3, 128, 128, 3), dtype=np.uint8)
     array_to_images(image_array, '/tmp/temp_images', img_format='%06d.png')
 
     bbox = np.zeros((3, 1, 4))
@@ -579,3 +579,65 @@ def test_visualize_smpl_pose():
         overwrite=True,
         palette=np.ones((1, 3)),
         device=device_name)
+
+    visualize_smpl_hmr(
+        poses=torch.zeros(3, 3, 165),
+        model_type='smplx',
+        model_path=model_path,
+        bbox=np.zeros((3, 3, 4)),
+        cam_transl=torch.zeros(3, 3, 3),
+        output_path='/tmp/1.mp4',
+        origin_frames='/tmp/temp_images',
+        img_format='%06d.png',
+        resolution=(128, 128),
+        overwrite=True,
+        mesh_file_path='/tmp',
+        palette=np.ones((1, 3)),
+        device=device_name)
+
+    visualize_smpl_hmr(
+        poses=torch.zeros(3, 3, 165),
+        model_type='smplx',
+        model_path=model_path,
+        bbox=np.zeros((3, 3, 4)),
+        cam_transl=torch.zeros(3, 3, 3),
+        output_path='/tmp/1.mp4',
+        origin_frames='/tmp/temp_images',
+        img_format='%06d.png',
+        resolution=(128, 128),
+        overwrite=True,
+        mesh_file_path='/tmp',
+        palette='random',
+        device=device_name)
+
+    with pytest.raises(ValueError):
+        visualize_smpl_hmr(
+            poses=torch.zeros(3, 3, 165),
+            model_type='smplx',
+            model_path=model_path,
+            bbox=np.zeros((3, 3, 4)),
+            cam_transl=torch.zeros(3, 3, 3),
+            output_path='/tmp/1.mp4',
+            origin_frames='/tmp/temp_images',
+            img_format='%06d.png',
+            resolution=(128, 128),
+            overwrite=True,
+            mesh_file_path='/tmp',
+            palette='wrong_palette',
+            device=device_name)
+
+    with pytest.raises(ValueError):
+        visualize_smpl_hmr(
+            poses=torch.zeros(3, 3, 165),
+            model_type='smplx',
+            model_path=model_path,
+            bbox=np.zeros((3, 3, 4)),
+            cam_transl=torch.zeros(3, 3, 3),
+            output_path='/tmp/1.mp4',
+            origin_frames='/tmp/temp_images',
+            img_format='%06d.png',
+            resolution=(128, 128),
+            overwrite=True,
+            mesh_file_path='/tmp',
+            palette=None,
+            device=device_name)

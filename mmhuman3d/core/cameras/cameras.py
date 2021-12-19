@@ -116,7 +116,7 @@ class NewAttributeCameras(cameras.CamerasBase):
         Returns:
             torch.Tensor: shape will be (N, 3)
         """
-        normals = torch.Tensor([0, 0, -1]).view(1, 3).to(self.device)
+        normals = torch.Tensor([0, 0, 1]).view(1, 3).to(self.device)
         w2v_trans = self.get_world_to_view_transform(**kwargs)
         normals = w2v_trans.inverse().transform_normals(normals)
         return normals.view(-1, 3)
