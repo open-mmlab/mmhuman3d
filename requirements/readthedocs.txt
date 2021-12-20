@@ -1,3 +1,4 @@
 mmcv
+pytorch3d
 torch
 torchvision

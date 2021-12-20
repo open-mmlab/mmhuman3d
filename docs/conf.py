@@ -44,7 +44,7 @@ extensions = [
     'sphinx_markdown_tables', 'sphinx_copybutton', 'myst_parser'
 ]
 
-autodoc_mock_imports = ['mmhuman3d.version', 'mmcv.ops', 'pytorch3d']
+autodoc_mock_imports = ['mmhuman3d.version', 'mmcv.ops']
 
 # Ignore >>> when copying code
 copybutton_prompt_text = r'>>> |\.\.\. '
