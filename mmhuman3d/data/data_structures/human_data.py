@@ -747,7 +747,7 @@ class HumanData(dict):
         invalid zeros will be removed and f'{key}_mask' will be locked.
 
         Raises:
-            ValueError:
+            KeyError:
                 A key contains 'keypoints' has been found
                 but its corresponding mask is missing.
         """
@@ -782,7 +782,7 @@ class HumanData(dict):
         will be unlocked.
 
         Raises:
-            ValueError:
+            KeyError:
                 A key contains 'keypoints' has been found
                 but its corresponding mask is missing.
         """
