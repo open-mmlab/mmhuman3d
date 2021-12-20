@@ -1,6 +1,5 @@
 from mmhuman3d.utils import (
     camera_utils,
-    collect_env,
     demo_utils,
     dist_utils,
     ffmpeg_utils,
@@ -16,6 +15,7 @@ from mmhuman3d.utils.camera_utils import (
     convert_smpl_from_opencv_calibration,
     project_points,
 )
+from mmhuman3d.utils.collect_env import collect_env
 from mmhuman3d.utils.demo_utils import (
     box2cs,
     conver_verts_to_cam_coord,
