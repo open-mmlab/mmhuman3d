@@ -1,15 +1,23 @@
+import math
 import os
 from pathlib import Path
 from typing import Iterable, Union
 
+import cv2
 import mmcv
 import torch
+from pytorch3d.io import load_objs_as_meshes
 from pytorch3d.structures.meshes import Meshes
+from torch.nn.functional import grid_sample
+from tqdm import trange
 
 import mmhuman3d
 from mmhuman3d.core.cameras import compute_orbit_cameras
 from mmhuman3d.core.conventions.cameras import convert_cameras
+from mmhuman3d.utils.ffmpeg_utils import images_to_video
 from .builder import build_renderer
+
+osj = os.path.join
 
 
 def render(
@@ -39,7 +47,7 @@ def render(
             device=device,
             resolution=resolution,
             projection=projection,
-            output_path=output_path,
+            output_path='flow.mp4',
             return_tensor=True,
             in_ndc=in_ndc,
             **RENDER_CONFIGS[render_choice]))
@@ -66,10 +74,7 @@ def render(
         is_perspective=is_perspective,
         convention_src=convention,
         convention_dst='pytorch3d')
-    print(K.shape, R.shape, T.shape)
-    # for i in trange(math.ceil(num_frames // batch_size)):
-    #     indexs = list(
-    #         range(i * batch_size, min((i + 1) * batch_size, num_frames)))
+
     from pytorch3d.io import load_objs_as_meshes
     meshes_texture = load_objs_as_meshes(
         ['/home/SENSETIME/wangwenjia/programs/data/cow_mesh/cow.obj'])
@@ -79,19 +84,28 @@ def render(
             device=device,
             resolution=resolution,
             projection=projection,
-            output_path=output_path,
+            output_path='texture.mp4',
             in_ndc=in_ndc,
             return_tensor=True,
             **RENDER_CONFIGS['hq']))
 
-    image_texture = base_renderer(
-        meshes_texture.extend(2), K=K, R=R, T=T, indexs=[0, 1])
+    image_texture = []
+    for i in range(math.ceil(len(meshes) // batch_size)):
+        indexs = list(
+            range(i * batch_size, min((i + 1) * batch_size, len(meshes))))
+        texture = base_renderer(
+            meshes_texture.extend(len(indexs)),
+            K=K[indexs],
+            R=R[indexs],
+            T=T[indexs],
+            indexs=indexs)
+        image_texture.append(texture)
+    base_renderer.export()
 
+    image_texture = torch.cat(image_texture)
     # base_renderer.forward(meshes, K=K, R=R, T=T, indexs=[1, 2])
-    flow = renderer.forward_by_batch(meshes, K=K, R=R, T=T, batch_size=2)
-    from IPython import embed
-    from torch.nn.functional import grid_sample
-    import cv2
+    flow = renderer.forward_by_batch(
+        meshes, K=K, R=R, T=T, batch_size=batch_size)
 
     new_h = torch.linspace(-1, 1,
                            resolution[0]).view(-1, 1).repeat(1, resolution[1])
@@ -99,10 +113,29 @@ def render(
     base_grid = torch.cat((new_w.unsqueeze(2), new_h.unsqueeze(2)), dim=2)
     base_grid = base_grid.unsqueeze(0).to(device)
 
-    image = image_texture[:1, ..., :3].permute(0, 3, 1, 2)
+    image = image_texture[:-1, ..., :3].permute(0, 3, 1, 2)
     grid_flow = base_grid + flow
+    out = grid_sample(image, grid=grid_flow[:-1], mode='bilinear')
 
-    out = grid_sample(image, grid=grid_flow[:1], mode='bilinear')
-    out_image = out[0].permute(1, 2, 0).cpu().numpy() * 255
-    cv2.imwirte('cow_grid2.png', out_image)
-    embed()
+    os.makedirs('temp', exist_ok=True)
+    for index in trange(len(out)):
+        out_image = out[index].permute(1, 2, 0).cpu().numpy() * 255
+        cv2.imwrite(osj('temp', '%06d.png' % index), out_image)
+    images_to_video('temp', 'warped.mp4')
+
+
+meshes = load_objs_as_meshes(
+    ['/home/SENSETIME/wangwenjia/programs/data/cow_mesh/cow.obj'])
+
+meshes = meshes.extend(100)
+
+device = torch.device('cuda')
+render(
+    convention='pytorch3d',
+    render_choice='opticalflow',
+    device=device,
+    meshes=meshes,
+    resolution=(400, 500),
+    output_path='flow.mp4',
+    orbit_speed=3,
+    dist_speed=0)
