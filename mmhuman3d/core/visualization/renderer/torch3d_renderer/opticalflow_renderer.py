@@ -31,7 +31,6 @@ class OpticalFlowRenderer(MeshBaseRenderer):
                  in_ndc: bool = True,
                  **kwargs) -> None:
         """OpticalFlowRenderer for neural rendering, visualization and warping.
-
         Args:
             resolution (Iterable[int]):
                 (width, height) of the rendered images resolution.
