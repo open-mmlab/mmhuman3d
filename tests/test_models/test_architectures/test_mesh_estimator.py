@@ -316,6 +316,15 @@ def test_run_registration():
         extra_joints_regressor='data/body_models/J_regressor_extra.npy',
         batch_size=batch_size)
 
+    camera = build_cameras(
+        dict(
+            type='PerspectiveCameras',
+            convention='opencv',
+            in_ndc=False,
+            focal_length=5000,
+            image_size=(224, 224),
+            principal_point=(112, 112)))
+
     registrant = dict(
         type='SMPLify',
         body_model=body_model,
@@ -334,16 +343,8 @@ def test_run_registration():
             loss_weight=1.0,
             reduction='sum',
             sigma=100),
-        device=torch.device('cpu'))
-
-    camera = build_cameras(dict(
-        type='PerspectiveCameras',
-        convention='opencv',
-        in_ndc=False,
-        focal_length=5000,
-        image_size=(224, 224),
-        principal_point=(112, 112))
-    )
+        device=torch.device('cpu'),
+        camera=camera)
 
     model = ImageBodyModelEstimator(
         body_model_train=body_model, registrant=registrant)
