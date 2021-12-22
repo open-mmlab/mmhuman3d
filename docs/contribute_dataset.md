@@ -4,9 +4,9 @@
 
 For this example, we create `mmhuman3d/data/data_converters/lsp.py` for the LSP dataset we are adding.
 
-We have two types of converters that we inherit from: 
+We have two types of converters that we inherit from:
 
-(1) BaseConverter (refer to `mmhuman3d/data/data_converters/coco.py` for an example) 
+(1) BaseConverter (refer to `mmhuman3d/data/data_converters/coco.py` for an example)
 
 CocoConverter has a `convert` function to output a single preprocessed .npz file.
 ```
@@ -57,7 +57,7 @@ keypoints2d_, mask = convert_kps(keypoints2d_, 'lsp', 'human_data')
 
 ```
 
-Our data pipeline use `HumanData` structure for storing and loading. You can refer to further explanation of its functionalities [here](https://github.com/open-mmlab/mmhuman3d/blob/main/docs/human_data.md). 
+Our data pipeline use `HumanData` structure for storing and loading. You can refer to further explanation of its functionalities [here](https://github.com/open-mmlab/mmhuman3d/blob/main/docs/human_data.md).
 
 ```
     # use HumanData to store all data
@@ -114,7 +114,7 @@ where `lsp` is an example of a `dataset-name`. The available modes are `train` a
 
 ### 4. Add your dataset license and recommended folder structure to `preprocess_dataset.md`
 
-Example of dataset citation in `lsp.py`: 
+Example of dataset citation in `lsp.py`:
 - https://github.com/open-mmlab/mmhuman3d/blob/9ec38db89cb896c318ff830c12ec007f60c447ad/mmhuman3d/data/data_converters/lsp.py#L15-L22
 
 Example of dataset citation, download link and folder structure in `preprocess_dataset.md`
