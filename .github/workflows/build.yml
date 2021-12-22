@@ -9,14 +9,14 @@ on:
     - main
    paths-ignore:
      - 'README.md'
-     - 'README_zh-CN.md'
+     - 'README_CN.md'
      - 'docs/**'
      - 'docs_zh-CN/**'
 
   pull_request:
    paths-ignore:
      - 'README.md'
-     - 'README_zh-CN.md'
+     - 'README_CN.md'
      - 'docs/**'
      - 'docs_zh-CN/**'
 
