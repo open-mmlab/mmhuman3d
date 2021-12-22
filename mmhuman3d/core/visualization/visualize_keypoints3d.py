@@ -19,7 +19,7 @@ def _norm_pose(pose_numpy: np.ndarray, min_value: Union[float, int],
     axis_num = 3
     axis_stat = np.zeros(shape=[axis_num, 4])
     for axis_index in range(axis_num):
-        axis_data = pose_np_normed[..., axis_index]
+        axis_data = pose_np_normed[..., mask, axis_index]
         axis_min = np.min(axis_data)
         axis_max = np.max(axis_data)
         axis_mid = (axis_min + axis_max) / 2.0
@@ -46,7 +46,7 @@ def visualize_kp3d(
     data_source: str = 'coco',
     mask: Optional[Union[list, tuple, np.ndarray]] = None,
     start: int = 0,
-    end: int = -1,
+    end: Optional[int] = None,
     resolution: Union[list, Tuple[int, int]] = (1024, 1024),
     fps: Union[float, int] = 30,
     frame_names: Optional[Union[List[str], str]] = None,
@@ -78,7 +78,10 @@ def visualize_kp3d(
         mask (Optional[Union[list, tuple, np.ndarray]], optional):
             mask to mask out the incorrect points. Defaults to None.
         start (int, optional): start frame index. Defaults to 0.
-        end (int, optional): end frame index. Defaults to -1.
+        end (int, optional): end frame index.
+            Could be positive int or negative int or None.
+            None represents include all the frames.
+            Defaults to None.
         resolution (Union[list, Tuple[int, int]], optional):
             (width, height) of the output video
             will be the same size as the original images if not specified.
@@ -158,8 +161,8 @@ def visualize_kp3d(
             allowed_suffix=['.mp4', '.gif', ''])
 
     # slice the frames
-    end = (min(end, num_frames - 1) + num_frames) % num_frames
-    kp3d = kp3d[start:end + 1]
+    end = num_frames if end is None else end
+    kp3d = kp3d[start:end]
     # norm the coordinates
     if value_range is not None:
         # norm pose location to value_range (70% value range)

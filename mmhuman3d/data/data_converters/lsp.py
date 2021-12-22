@@ -52,7 +52,7 @@ class LspConverter(BaseModeConverter):
         annot_file = os.path.join(dataset_path, 'joints.mat')
         keypoints2d = sio.loadmat(annot_file)['joints']
         img_dir = os.path.join(dataset_path, 'images')
-        img_count = len(os.listdir(img_dir))
+        img_count = len([i for i in os.listdir(img_dir) if '.jpg' in i])
 
         # we use LSP dataset original for train and LSP dataset for test
         if mode == 'train':

@@ -212,3 +212,29 @@ def test_vis_kp2d():
         overwrite=True,
     )
     assert images_to_array(output_folder).shape
+
+    # img_format
+    output_folder = 'tests/data/test_vis_kp2d/1/'
+    kp2d = np.random.randint(low=0, high=16, size=(10, 133, 2), dtype=np.uint8)
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+    visualize_kp2d(
+        kp2d,
+        output_path=output_folder,
+        frame_list=[
+            'tests/data/test_vis_kp2d/%06d.png' % 0,
+            'tests/data/test_vis_kp2d/%06d.png' % 1
+        ],
+        img_format=None,
+        overwrite=True,
+    )
+    assert images_to_array(output_folder).shape
+
+    visualize_kp2d(
+        kp2d,
+        output_path=output_folder,
+        origin_frames='tests/data/test_vis_kp2d/',
+        img_format='%06d.png',
+        overwrite=True,
+    )
+    assert images_to_array(output_folder).shape
