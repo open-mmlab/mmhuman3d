@@ -404,18 +404,7 @@ class WeakPerspectiveCameras(NewAttributeCameras):
             **kwargs) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute intrinsic camera matrix from orig_cam parameter of smpl.
 
-        Args:
-            orig_cam (torch.Tensor): shape should be (N, 4).
-            znear (Union[torch.Tensor, float], optional):
-                near clipping plane of the view frustrum.
-                Defaults to 0.0.
-            aspect_ratio (Union[torch.Tensor, float], optional):
-                aspect ratio of the image pixels. 1.0 indicates square pixels.
-                Defaults to 1.0.
-
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-            opencv intrinsic matrix: (N, 4, 4)
+        .. code-block:: python
 
             r > 1::
 
@@ -440,6 +429,19 @@ class WeakPerspectiveCameras(NewAttributeCameras):
             translation matrix: (N, 3)::
 
                 [0, 0, -znear]
+
+        Args:
+            orig_cam (torch.Tensor): shape should be (N, 4).
+            znear (Union[torch.Tensor, float], optional):
+                near clipping plane of the view frustrum.
+                Defaults to 0.0.
+            aspect_ratio (Union[torch.Tensor, float], optional):
+                aspect ratio of the image pixels. 1.0 indicates square pixels.
+                Defaults to 1.0.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            opencv intrinsic matrix: (N, 4, 4)
         """
         znear = kwargs.get('znear', -1.0)
         aspect_ratio = kwargs.get('aspect_ratio', 1.0)
@@ -475,6 +477,8 @@ class WeakPerspectiveCameras(NewAttributeCameras):
         Args:
             K (torch.Tensor):
                 opencv orthographics intrinsic matrix: (N, 4, 4)
+
+            .. code-block:: python
 
                 K = [[sx*r,   0,    0,   tx*sx*r],
                      [0,     sy,    0,   ty*sy],
@@ -924,13 +928,7 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
         """Class method. Calculate the projective transformation matrix by
         default parameters.
 
-        Args:
-            **kwargs: parameters for the projection can be passed in as keyword
-                arguments to override the default values.
-
-        Return:
-            a `torch.Tensor` which represents a batch of projection matrices K
-            of shape (N, 4, 4)
+        .. code-block:: python
 
             fx = focal_length[:,0]
             fy = focal_length[:,1]
@@ -941,6 +939,14 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
                  [0,   fy,    0,  py],
                  [0,    0,    1,   0],
                  [0,    0,    0,   1],]
+
+        Args:
+            **kwargs: parameters for the projection can be passed in as keyword
+                arguments to override the default values.
+
+        Return:
+            a `torch.Tensor` which represents a batch of projection matrices K
+            of shape (N, 4, 4)
         """
         batch_size = args.get('batch_size', 1)
         device = args.get('device', 'cpu')
@@ -1032,13 +1038,7 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
         """Class method. Calculate the projective transformation matrix by
         default parameters.
 
-        Args:
-            **kwargs: parameters for the projection can be passed in as keyword
-                arguments to override the default values.
-
-        Return:
-            a `torch.Tensor` which represents a batch of projection matrices K
-            of shape (N, 4, 4)
+        .. code-block:: python
 
             scale_x = 2 / (max_x - min_x)
             scale_y = 2 / (max_y - min_y)
@@ -1051,6 +1051,14 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
                  [0,        scale_y,         0,  -mix_y],
                  [0,              0,  -scale_z,  -mid_z],
                  [0,              0,         0,       1],]
+
+        Args:
+            **kwargs: parameters for the projection can be passed in as keyword
+                arguments to override the default values.
+
+        Return:
+            a `torch.Tensor` which represents a batch of projection matrices K
+            of shape (N, 4, 4)
         """
         znear = args.get('znear', 1.0)
         zfar = args.get('zfar', 100.0)

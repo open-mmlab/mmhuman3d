@@ -1,8 +1,15 @@
-from .inference import inference_model, init_model
-from .test import multi_gpu_test, single_gpu_test
-from .train import set_random_seed, train_model
+from mmhuman3d.apis import inference, test, train
+from mmhuman3d.apis.inference import LoadImage, inference_model, init_model
+from mmhuman3d.apis.test import (
+    collect_results_cpu,
+    collect_results_gpu,
+    multi_gpu_test,
+    single_gpu_test,
+)
+from mmhuman3d.apis.train import set_random_seed, train_model
 
 __all__ = [
-    'set_random_seed', 'train_model', 'init_model', 'inference_model',
-    'multi_gpu_test', 'single_gpu_test'
+    'LoadImage', 'collect_results_cpu', 'collect_results_gpu', 'inference',
+    'inference_model', 'init_model', 'multi_gpu_test', 'set_random_seed',
+    'single_gpu_test', 'test', 'train', 'train_model'
 ]
