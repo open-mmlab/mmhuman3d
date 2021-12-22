@@ -1,8 +1,8 @@
-## Cameras
+# Cameras
 
-### Camera Initialize
+## Camera Initialize
 
-We follow `pytorch3d` cameras. The extrinsic matrix is defined in `view_to_world` and `right matrix multiplication`, and intrinsic matrix is defined as `left matrix multiplication`.
+We follow `Pytorch3D` cameras. The extrinsic matrix is defined in `view_to_world` and `right matrix multiplication`, and intrinsic matrix is defined as `left matrix multiplication`.
 In mmhuman3d, the recommended way to initialize a camera is by passing `K`, `R`, `T` matrix directly.
 You can slice the cameras by index.
 
@@ -23,57 +23,56 @@ You can slice the cameras by index.
     ```
 - **Build cameras:**
 
-    Warped by mmcv.Registry. Take the usually used `PerspectiveCameras` and `WeakPerspectiveCameras` as examples. If `K`, `R`, `T` are not specified, the K will use default K by `compute_default_projection_matrix` with default focal_length and principal_point and `R` will be identical matrix, `T` will be zeros. You can also specify by overwriting the parameters for `compute_default_projection_matrix`.
+    Warped by mmcv.Registry. Take the usually used `PerspectiveCameras` and `WeakPerspectiveCameras` as examples. If `K`, `R`, `T` are not specified, the `K` will use default `K` by `compute_default_projection_matrix` with default `focal_length` and `principal_point` and `R` will be identical matrix, `T` will be zeros. You can also specify by overwriting the parameters for `compute_default_projection_matrix`.
     ```python
     from mmhuman3d.core.cameras import build_cameras
 
-    # Initialize a perspective camera with default matrix.
-    # in_ndc = False means the intrinsic matrix K defined in screen space. The focal_length and principal_point in K is defined in scale of pixels. This principal_points is (500, 500) pixels and focal_length is 1000 pixels.
+    # Initialize a perspective camera with given K, R, T matrix.
+    # It is recommended that the batches of K, R, T either the same or be 1.
+    K = torch.eye(4, 4)[None]
+    R = torch.eye(3, 3)[None]
+    T = torch.zeros(10, 3)
+    cam1 = build_cameras(
+        dict(
+            type='perspective',
+            K=K,
+            R=R,
+            T=T,
+            in_ndc=True,
+            image_size=(1000, 1000),
+            convention='opencv',
+            ))
+    # This is the same as:
+    cam2 = PerspectiveCameras(
+            K=K,
+            R=R,
+            T=T,
+            in_ndc=True,
+            image_size=(1000, 1000),
+            convention='opencv',
+            )
+    assert cam1.K.shape == cam2.K.shape == (10, 4, 4)
+    assert cam1.R.shape == cam2.R.shape == (10, 3, 3)
+    assert cam1.T.shape == cam2.T.shape == (10, 3)
+
+    # Initialize a perspective camera with specific `image_size`, `principal_points`, `focal_length`.
+    # `in_ndc = False` means the intrinsic matrix `K` defined in screen space. The `focal_length` and `principal_point` in `K` is defined in scale of pixels. This `principal_points` is (500, 500) pixels and `focal_length` is 1000 pixels.
     cam = build_cameras(
         dict(
             type='perspective',
             in_ndc=False,
             image_size=(1000, 1000),
-            princial_points=(500, 500),
+            principal_points=(500, 500),
             focal_length=1000,
+            convention='opencv',
             ))
 
     assert (cam.K[0] == torch.Tensor([[1000., 0.,  500.,    0.],
                                       [0., 1000.,  500.,    0.],
                                       [0.,    0.,    0.,    1.],
                                       [0.,    0.,    1.,    0.]]).view(4, 4)).all()
-    # Initialize a perspective camera with given K, R, T matrix.
-    # It is recommend that the batches of K, R, T either the same or be 1.
-    cam = build_cameras(
-        dict(
-            type='perspective',
-            K=K,
-            R=R,
-            T=T,
-            in_ndc=True,
-            image_size=(1000, 1000)
-            ))
-    # This is the same as:
-    cam = PerspectiveCameras(
-            K=K,
-            R=R,
-            T=T,
-            in_ndc=True,
-            image_size=(1000, 1000)
-            )
 
-    # Initialize a perspective camera with given focal_length and principal_point.
-    # The K will be computed according to focal_length and principal_point.
-    cam = build_cameras(
-        dict(
-            type='perspective',
-            principal_point=(500, 500),
-            focal_length=(1000, 1000),
-            in_ndc=False,
-            image_size=(1000, 1000)
-            ))
-
-    # Initialize a weakperspective camera with given K, R, T.
+    # Initialize a weakperspective camera with given K, R, T. weakperspective camera support `in_ndc = True` only.
     cam = build_cameras(
         dict(
             type='weakperspective',
@@ -83,27 +82,19 @@ You can slice the cameras by index.
             image_size=(1000, 1000)
             ))
 
-    # Initialize a weakperspective camera with orig_cam from VIBE.
-    cam = build_cameras(
-        dict(
-            type='weakperspective',
-            orig_cam=orig_cam,
-            image_size=(1000, 1000)
-            ))
-
-    # Initialize a in_ndc perspective camera with default matrix.
-    # Then convert it to screen.
+    # If no `K`, `R`, `T` information provided
+    # Initialize a `in_ndc` perspective camera with default matrix.
     cam = build_cameras(
         dict(
             type='perspective',
             in_ndc=True,
-            K=K,
-            R=R,
-            T=T,
             image_size=(1000, 1000),
             ))
+    # Then convert it to screen. This operation requires `image_size`.
     cam.to_screen_()
     ```
+
+## Camera Projection Matrixs
 - **Perspective:**
 
     format of intrinsic matrix:
@@ -116,7 +107,7 @@ You can slice the cameras by index.
             [0,    0,    1,   0],
         ]
     ```
-    Detailed infomation refer to [pytorch3d](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py#L895).
+    Detailed infomation refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py#L895).
 
 - **WeakPerspective:**
 
@@ -130,13 +121,13 @@ You can slice the cameras by index.
         ]
     ```
     `WeakPerspectiveCameras` is orthographics indeed, mainly for SMPL(x) projection.
-    Detailed infomation refer to [mmhuman3d](mmhuman3d/core/cameras/cameras.py#L40).
+    Detailed infomation refer to [mmhuman3d cameras](mmhuman3d/core/cameras/cameras.py#L40).
     This can be converted from SMPL predicted camera parameter by:
     ```python
     from mmhuman3d.core.cameras import WeakPerspectiveCameras
-    K = WeakPerspectiveCameras.convert_orig_cam_to_matrix(pred_cam)
+    K = WeakPerspectiveCameras.convert_orig_cam_to_matrix(orig_cam)
     ```
-    The pred_cam is array/tensor of shape (frame, 4) consists of [scale_x, scale_y, transl_x, transl_y]. See in [Vibe](https://github.com/mkocabas/VIBE/blob/master/lib/utils/renderer.py#L40-L47).
+    The pred_cam is array/tensor of shape (frame, 4) consists of [scale_x, scale_y, transl_x, transl_y]. See in [VIBE](https://github.com/mkocabas/VIBE/blob/master/lib/utils/renderer.py#L40-L47).
 
 - **FoVPerspective:**
     ```python
@@ -148,7 +139,7 @@ You can slice the cameras by index.
             [0,    0,    1,   0],
         ]
     ```
-    s1, s2, w1, h1, f1, f2 is related to FoV parameters, detailed infomation refer to [pytorch3d](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
+    s1, s2, w1, h1, f1, f2 is related to FoV parameters, detailed infomation refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
 
 - **Orthographics:**
 
@@ -161,7 +152,7 @@ You can slice the cameras by index.
             [0,    0,    0,   1],
     ]
     ```
-    Detailed infomation refer to [pytorch3d](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
+    Detailed infomation refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
 
 - **FoVOrthographics:**
     ```python
@@ -172,16 +163,16 @@ You can slice the cameras by index.
             [0,              0,         0,       1],
     ]
     ```
-    scale_x, scale_y, scale_z, mid_x, mid_y, mid_z is related to FoV parameters, related infomation refer to [pytorch3d](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
+    scale_x, scale_y, scale_z, mid_x, mid_y, mid_z is related to FoV parameters, related infomation refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
 
-### Camera Conventions
+## Camera Conventions
 - **Convert between different cameras:**
 
     We name intrinsic matrix as `K`, rotation matrix as `R` and translation matrix as `T`.
-    Different camera conventions have different axis directions, and some defined as left matrix multiplication and some as right. Intrinsic and extrinsic matrix should be of the same multiplication convention, but some conventions like `pytorch3d` uses right matrix multiplication in computation procedure but passes left matrix multiplication `K` when initializing the cameras(mainly for better understanding).
+    Different camera conventions have different axis directions, and some defined as left matrix multiplication and some as right. Intrinsic and extrinsic matrix should be of the same multiplication convention, but some conventions like `Pytorch3D` uses right matrix multiplication in computation procedure but passes left matrix multiplication `K` when initializing the cameras(mainly for better understanding).
     Conversion between `NDC` and `screen` also influence the intrinsic matrix, this is independent to camera conventions but should also be included.
     If you want to use an existing convention, choose in `['opengl', 'opencv', 'pytorch3d', 'pyrender', 'open3d']`.
-    E.g., you want to convert your opencv calibration camera to pytorch3d NDC defined camera for rendering, you can do:
+    E.g., you want to convert your opencv calibrated camera to Pytorch3D NDC defined camera for rendering, you can do:
     ```python
     from mmhuman3d.core.conventions.cameras import convert_cameras
     import torch
@@ -199,14 +190,14 @@ You can slice the cameras by index.
     Input K could be None, or `array`/`tensor` of shape (batch_size, 3, 3) or (batch_size, 4, 4).
     Input R could be None, or `array`/`tensor` of shape (batch_size, 3, 3).
     Input T could be None, or `array`/`tensor` of shape (batch_size, 3).
-    If the original `K` is `None`, it will remain `None`. If the original `R` is `None`, it will be set as identity matrix. If the original `T` is `None`, it will be set as zeros.
-    If you do not know about `NDC` defined camera and `screen` defined camera, please refer to [pytorch3d](https://github.com/facebookresearch/pytorch3d/blob/main/docs/notes/cameras.md).
+    If the original `K` is `None`, it will remain `None`. If the original `R` is `None`, it will be set as identity matrix. If the original `T` is `None`, it will be set as zeros matrix.
+    If you do not know about `NDC` defined camera and `screen` defined camera, please refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/docs/notes/cameras.md).
 
 - **Define your new camera convention:**
 
-    If want to use a new convention, define your convention in [CAMERA_CONVENTION_FACTORY](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/cameras/__init__.py) by the order of right to, up to, and off screen. E.g., the first one is pyrender and its convention should be '+x+y+z'. '+' could be ignored. The second one is opencv and its convention should be '+x-y-z'. The third one is pytorch3d and its convention should be '-xyz'.
+    If want to use a new convention, define your convention in [CAMERA_CONVENTION_FACTORY](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/cameras/__init__.py) by the order of right to, up to, and off screen. E.g., the first one is pyrender and its convention should be '+x+y+z'. '+' could be ignored. The second one is opencv and its convention should be '+x-y-z'. The third one is Pytorch3D and its convention should be '-xyz'.
     ```
-    opengl(pyrender)       opencv             pytorch3d
+    OpenGL(PyRender)       OpenCV             Pytorch3D
         y                   z                     y
         |                  /                      |
         |                 /                       |
@@ -216,7 +207,7 @@ You can slice the cameras by index.
     z /                y |                    z /
     ```
 
-### Some Convert Functions
+## Some Convert Functions
 Convert functions are also defined in conventions.cameras.
 - **NDC & screen:**
 
@@ -262,7 +253,7 @@ Convert functions are also defined in conventions.cameras.
         K, zmean, in_ndc=False, resolution, convention='pytorch3d')
     ```
 
-### Some Compute Functions
+## Some Compute Functions
 
 - **Project 3D coordinates to screen:**
 
@@ -280,7 +271,7 @@ Convert functions are also defined in conventions.cameras.
 
 - **Compute normal of meshes:**
 
-    Use `pytorch3d` to compute normal of meshes. Example culd be found in [NormalRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/visualization/renderer/torch3d_renderer/normal_renderer.py).
+    Use `Pytorch3D` to compute normal of meshes. Example culd be found in [NormalRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/visualization/renderer/torch3d_renderer/normal_renderer.py).
     ```python
     normals = cameras.compute_normal_of_meshes(meshes)
     ```

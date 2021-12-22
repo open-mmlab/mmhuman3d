@@ -24,12 +24,12 @@ assert mask.all()==1
 ```
 
 The output `mask` should be all ones if the `dst` convention is the subset of the `src` convention.
-You can use the mask as the confidence of the keypoints since those keypoints with no correspondence are set to a default value with 0 confidence.
+You can use the `mask` as the confidence of the keypoints since those keypoints with no correspondence are set to a default value with 0 confidence.
 
 
-### Converting with mask
+### Converting with confidence
 
-If you have occlusion information of your keypoints, you can use an original mask to mark it, then the information will be updated into the returned mask.
+If you have confidential information of your keypoints, you can use an original mask to mark it, then the information will be updated into the returned mask.
 E.g., you want to convert a `smpl` keypoints to `coco` keypoints, and you know its `left_shoulder` is occluded. You want to carry forward this information during the converting. So you can set an original_mask and convert it to `coco` by doing:
 
 ```python
@@ -37,26 +37,28 @@ import numpy as np
 from mmhuman3d.core.conventions.keypoints_mapping import KEYPOINTS_FACTORY, convert_kps
 
 keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
-original_mask = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
-original_mask[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] = 0
+confidence = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
 
-_, mask_coco = convert_kps(
-    keypoints=keypoints, mask=original_mask, src='smpl', dst='coco')
-_, mask_coco_full = convert_kps(
+# assume that 'left_shoulder' point is invalid.
+confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] = 0
+
+_, conf_coco = convert_kps(
+    keypoints=keypoints, confidence=confidence, src='smpl', dst='coco')
+_, conf_coco_full = convert_kps(
     keypoints=keypoints, src='smpl', dst='coco')
 
-assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_shoulder')] == 0
-mask_coco[KEYPOINTS_FACTORY['coco'].index('left_shoulder')] = 1
-assert (mask_coco == mask_coco_full).all()
+assert conf_coco[KEYPOINTS_FACTORY['coco'].index('left_shoulder')] == 0
+conf_coco[KEYPOINTS_FACTORY['coco'].index('left_shoulder')] = 1
+assert (conf_coco == conf_coco_full).all()
 ```
 
-Our mask represents valid information, its' dtype is uint8, while keypoint confidence usually ranges from 0 to 1.
+Our mask represents valid information, its dtype is uint8, while keypoint confidence usually ranges from 0 to 1.
 E.g., you want to convert a `smpl` keypoints to `coco` keypoints, and you know its `left_shoulder` is occluded. You want to carry forward this information during the converting. So you can set an original_mask and convert it to `coco` by doing:
 
 ```python
 confidence = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
 confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] = 0.5
-kp_smpl = np.concatenate([kp_smpl, original_mask], -1)
+kp_smpl = np.concatenate([kp_smpl, confidence], -1)
 kp_smpl_converted, mask = convert_kps(kp_smpl, src='smpl', dst='coco')
 new_confidence =  kp_smpl_converted[..., 2:]
 assert new_confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] == 0.5
