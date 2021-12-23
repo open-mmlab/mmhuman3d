@@ -52,6 +52,32 @@ def test_load_json():
     assert len(cam_para.get_value('translation')) == 3
 
 
+def test_type():
+    cam_para = CameraParameter(name='src_cam')
+    # wrong distortion value type
+    with pytest.raises(TypeError):
+        cam_para.set_value('k1', '1.0')
+    with pytest.raises(TypeError):
+        cam_para.set_value('k1', np.ones(shape=(3))[0])
+    cam_para.set_value('k1', 1.0)
+    cam_para.reset_distort()
+
+    mat_3x3 = np.eye(3)
+    # wrong mat type
+    with pytest.raises(TypeError):
+        cam_para.set_mat_list('in_mat', mat_3x3)
+    with pytest.raises(TypeError):
+        cam_para.set_value('in_mat', mat_3x3)
+    cam_para.set_mat_np('in_mat', mat_3x3)
+    mat_3x3_list = mat_3x3.tolist()
+    with pytest.raises(TypeError):
+        cam_para.set_mat_np('rotation_mat', mat_3x3_list)
+    cam_para.set_mat_list('rotation_mat', mat_3x3_list)
+    dumped_str = cam_para.to_string()
+    assert isinstance(dumped_str, str)
+    assert len(dumped_str) > 0
+
+
 def test_vibe_camera():
     cam_para = CameraParameter(name='src_cam')
     dumped_dict = json.load(open(dump_path))
