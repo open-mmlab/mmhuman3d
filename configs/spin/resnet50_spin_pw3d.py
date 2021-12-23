@@ -1,6 +1,8 @@
 _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
+img_res = 224
+
 body_model = dict(
     type='SMPL',
     keypoint_src='smpl_54',
@@ -45,7 +47,14 @@ registrant = dict(
     ignore_keypoints=[
         'neck_openpose', 'right_hip_openpose', 'left_hip_openpose',
         'right_hip_extra', 'left_hip_extra'
-    ])
+    ],
+    camera=dict(
+        type='PerspectiveCameras',
+        convention='opencv',
+        in_ndc=False,
+        focal_length=5000,
+        image_size=(img_res, img_res),
+        principal_point=(img_res / 2, img_res / 2)))
 
 # optimizer
 optimizer = dict(
@@ -61,8 +70,6 @@ log_config = dict(
         dict(type='TextLoggerHook'),
         # dict(type='TensorboardLoggerHook')
     ])
-
-img_res = 224
 
 # model settings
 model = dict(

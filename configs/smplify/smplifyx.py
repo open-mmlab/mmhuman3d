@@ -71,7 +71,7 @@ optimizer = dict(
     type='LBFGS', max_iter=20, lr=1e-2, line_search_fn='strong_wolfe')
 
 keypoints2d_loss = dict(
-    type='KeypointMSELoss', loss_weight=0, reduction='sum', sigma=100)
+    type='KeypointMSELoss', loss_weight=1.0, reduction='sum', sigma=100)
 
 keypoints3d_loss = dict(
     type='KeypointMSELoss', loss_weight=10, reduction='sum', sigma=100)
@@ -87,3 +87,11 @@ joint_prior_loss = dict(
     use_full_body=True)
 
 smooth_loss = dict(type='SmoothJointLoss', loss_weight=0, reduction='sum')
+
+camera = dict(
+    type='PerspectiveCameras',
+    convention='opencv',
+    in_ndc=False,
+    focal_length=5000,
+    image_size=(224, 224),
+    principal_point=(112, 112))

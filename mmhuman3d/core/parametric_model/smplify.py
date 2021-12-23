@@ -3,53 +3,13 @@ from typing import List, Tuple, Union
 import torch
 from mmcv.runner import build_optimizer
 
+from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idx,
     get_keypoint_idxs_by_part,
 )
 from mmhuman3d.models.builder import build_body_model, build_loss
 from .builder import REGISTRANTS
-
-
-def perspective_projection(points: torch.Tensor, rotation: torch.Tensor,
-                           translation: torch.Tensor,
-                           focal_length: Union[torch.Tensor, float],
-                           camera_center: Union[torch.Tensor]):
-    """Computes the perspective projection of a set of points.
-
-    Notes:
-        B: batch size
-        K: number of keypoints
-        D: shape dimension
-
-    Args:
-        points: 3D points of shape (B, K, 3)
-        rotation: Camera rotation of shape (B, 3, 3)
-        translation: Camera translation of shape (B, 3)
-        focal_length: Focal length of shape (B,) or scalar
-        camera_center: Camera center of shape (B, 2)
-
-    Returns:
-        None
-    """
-    batch_size = points.shape[0]
-    K = torch.zeros([batch_size, 3, 3], device=points.device)
-    K[:, 0, 0] = focal_length
-    K[:, 1, 1] = focal_length
-    K[:, 2, 2] = 1.
-    K[:, :-1, -1] = camera_center
-
-    # Transform points
-    points = torch.einsum('bij,bkj->bki', rotation, points)
-    points = points + translation.unsqueeze(1)
-
-    # Apply perspective distortion
-    projected_points = points / points[:, :, -1].unsqueeze(-1)
-
-    # Apply camera intrinsics
-    projected_points = torch.einsum('bij,bkj->bki', K, projected_points)
-
-    return projected_points[:, :, :-1]
 
 
 class OptimizableParameters():
@@ -85,13 +45,17 @@ class OptimizableParameters():
 
 @REGISTRANTS.register_module()
 class SMPLify(object):
-    """Re-implementation of SMPLify with extended features."""
+    """Re-implementation of SMPLify with extended features.
+
+    - video input
+    - 3D keypoints
+    """
 
     def __init__(
         self,
-        body_model: dict,
+        body_model: Union[dict, torch.nn.Module],
         num_epochs: int = 20,
-        camera: object = None,
+        camera: Union[dict, torch.nn.Module] = None,
         img_res: Union[Tuple[int], int] = 224,
         stages: dict = None,
         optimizer: dict = None,
@@ -108,11 +72,9 @@ class SMPLify(object):
     ) -> None:
         """
         Args:
-            body_model: config of body model. Note that the correct batch_size
-                should be included in the config if no initial parameters to
-                provide when calling SMPLify.
+            body_model: config or an object of body model.
             num_epochs: number of epochs of registration
-            camera: config of camera
+            camera: config or an object of camera
             img_res: image resolution. If tuple, values are (width, height)
             stages: config of registration stages
             optimizer: config of optimizer
@@ -158,7 +120,23 @@ class SMPLify(object):
             self.pose_prior_loss = self.pose_prior_loss.to(self.device)
 
         # initialize body model
-        self.body_model = build_body_model(body_model).to(self.device)
+        if isinstance(body_model, dict):
+            self.body_model = build_body_model(body_model).to(self.device)
+        elif isinstance(body_model, torch.nn.Module):
+            self.body_model = body_model.to(self.device)
+        else:
+            raise TypeError(f'body_model should be either dict or '
+                            f'torch.nn.Module, but got {type(body_model)}')
+
+        # initialize camera
+        if camera is not None:
+            if isinstance(camera, dict):
+                self.camera = build_cameras(camera).to(self.device)
+            elif isinstance(camera, torch.nn.Module):
+                self.camera = camera.to(device)
+            else:
+                raise TypeError(f'camera should be either dict or '
+                                f'torch.nn.Module, but got {type(camera)}')
 
         self.ignore_keypoints = ignore_keypoints
         self.verbose = verbose
@@ -204,28 +182,28 @@ class SMPLify(object):
             ret: a dictionary that includes body model parameters,
                 and optional attributes such as vertices and joints
         """
-
         assert keypoints2d is not None or keypoints3d is not None, \
             'Neither of 2D nor 3D keypoints are provided.'
         assert not (keypoints2d is not None and keypoints3d is not None), \
             'Do not provide both 2D and 3D keypoints.'
+        batch_size = keypoints2d.shape[0] if keypoints2d is not None \
+            else keypoints3d.shape[0]
 
-        global_orient = init_global_orient.detach().clone() \
-            if init_global_orient is not None \
-            else self.body_model.global_orient.detach().clone()
-        transl = init_transl.detach().clone() \
-            if init_transl is not None \
-            else self.body_model.transl.detach().clone()
-        body_pose = init_body_pose.detach().clone() \
-            if init_body_pose is not None \
-            else self.body_model.body_pose.detach().clone()
-        if init_betas is not None:
-            betas = init_betas.detach().clone()
-        elif self.use_one_betas_per_video:
+        global_orient = self._match_init_batch_size(
+            init_global_orient, self.body_model.global_orient, batch_size)
+        transl = self._match_init_batch_size(init_transl,
+                                             self.body_model.transl,
+                                             batch_size)
+        body_pose = self._match_init_batch_size(init_body_pose,
+                                                self.body_model.body_pose,
+                                                batch_size)
+        if init_betas is None and self.use_one_betas_per_video:
             betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
                 self.device)
         else:
-            betas = self.body_model.betas.detach().clone()
+            betas = self._match_init_batch_size(init_betas,
+                                                self.body_model.betas,
+                                                batch_size)
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
@@ -443,9 +421,11 @@ class SMPLify(object):
             return_full_pose=return_full_pose)
 
         model_joints = body_model_output['joints']
+        model_joint_mask = body_model_output['joint_mask']
 
         loss_dict = self._compute_loss(
             model_joints,
+            model_joint_mask,
             keypoints2d=keypoints2d,
             keypoints2d_conf=keypoints2d_conf,
             keypoints2d_weight=keypoints2d_weight,
@@ -473,6 +453,7 @@ class SMPLify(object):
 
     def _compute_loss(self,
                       model_joints: torch.Tensor,
+                      model_joint_conf: torch.Tensor,
                       keypoints2d: torch.Tensor = None,
                       keypoints2d_conf: torch.Tensor = None,
                       keypoints2d_weight: float = None,
@@ -491,10 +472,14 @@ class SMPLify(object):
 
         Notes:
             B: batch size
+            K: number of keypoints
             D: shape dimension
 
         Args:
-            model_joints: 3D joints regressed from body model
+            model_joints: 3D joints regressed from body model of shape (B, K)
+            model_joint_conf: 3D joint confidence of shape (B, K). It is
+                normally all 1, except for zero-pads due to convert_kps in
+                the SMPL wrapper.
             keypoints2d: 2D keypoints of shape (B, K, 2)
             keypoints2d_conf: 2D keypoint confidence of shape (B, K)
             keypoints2d_weight: weight of 2D keypoint loss
@@ -519,16 +504,16 @@ class SMPLify(object):
 
         # 2D keypoint loss
         if keypoints2d is not None:
-            # TODO: temp!
-            # projected_joints = \
-            # self.camera.transform_points(model_joints)[:, :, :2]
-            bs = model_joints.shape[0]
-            projected_joints = perspective_projection(
-                model_joints,
-                torch.eye(3).expand((bs, 3, 3)).to(model_joints.device),
-                torch.zeros((bs, 3)).to(model_joints.device), 5000.0,
-                torch.Tensor([self.img_res / 2,
-                              self.img_res / 2]).to(model_joints.device))
+            # bs = model_joints.shape[0]
+            # projected_joints = perspective_projection(
+            #     model_joints,
+            #     torch.eye(3).expand((bs, 3, 3)).to(model_joints.device),
+            #     torch.zeros((bs, 3)).to(model_joints.device), 5000.0,
+            #     torch.Tensor([self.img_res / 2,
+            #                   self.img_res / 2]).to(model_joints.device))
+            projected_joints_xyd = self.camera.transform_points_screen(
+                model_joints)
+            projected_joints = projected_joints_xyd[..., :2]
 
             # normalize keypoints to [-1,1]
             projected_joints = 2 * projected_joints / (self.img_res - 1) - 1
@@ -536,6 +521,7 @@ class SMPLify(object):
 
             keypoint2d_loss = self.keypoints2d_mse_loss(
                 pred=projected_joints,
+                pred_conf=model_joint_conf,
                 target=keypoints2d,
                 target_conf=keypoints2d_conf,
                 keypoint_weight=weight,
@@ -547,6 +533,7 @@ class SMPLify(object):
         if keypoints3d is not None:
             keypoints3d_loss = self.keypoints3d_mse_loss(
                 pred=model_joints,
+                pred_conf=model_joint_conf,
                 target=keypoints3d,
                 target_conf=keypoints3d_conf,
                 keypoint_weight=weight,
@@ -603,6 +590,43 @@ class SMPLify(object):
         losses['total_loss'] = total_loss
 
         return losses
+
+    def _match_init_batch_size(self, init_param: torch.Tensor,
+                               init_param_body_model: torch.Tensor,
+                               batch_size: int) -> torch.Tensor:
+        """A helper function to ensure body model parameters have the same
+        batch size as the input keypoints.
+
+        Args:
+            init_param: input initial body model parameters, may be None
+            init_param_body_model: initial body model parameters from the
+                body model
+            batch_size: batch size of keypoints
+
+        Returns:
+            param: body model parameters with batch size aligned
+        """
+
+        # param takes init values
+        param = init_param.detach().clone() \
+            if init_param is not None \
+            else init_param_body_model.detach().clone()
+
+        # expand batch dimension to match batch size
+        param_batch_size = param.shape[0]
+        if param_batch_size != batch_size:
+            if param_batch_size == 1:
+                param = param.repeat(batch_size, *[1] * (param.ndim - 1))
+            else:
+                raise ValueError('Init param does not match the batch size of '
+                                 'keypoints, and is not 1.')
+
+        # shape check
+        assert param.shape[0] == batch_size
+        assert param.shape[1:] == init_param_body_model.shape[1:], \
+            f'Shape mismatch: {param.shape} vs {init_param_body_model.shape}'
+
+        return param
 
     def _set_keypoint_idxs(self) -> None:
         """Set keypoint indices to 1) body parts to be assigned different
@@ -696,7 +720,11 @@ class SMPLify(object):
 
 @REGISTRANTS.register_module()
 class SMPLifyX(SMPLify):
-    """Re-implementation of SMPLify-X with extended features."""
+    """Re-implementation of SMPLify-X with extended features.
+
+    - video input
+    - 3D keypoints
+    """
 
     def __call__(self,
                  keypoints2d: torch.Tensor = None,
@@ -756,40 +784,40 @@ class SMPLifyX(SMPLify):
             'Neither of 2D nor 3D keypoints are provided.'
         assert not (keypoints2d is not None and keypoints3d is not None), \
             'Do not provide both 2D and 3D keypoints.'
+        batch_size = keypoints2d.shape[0] if keypoints2d is not None \
+            else keypoints3d.shape[0]
 
-        global_orient = init_global_orient if init_global_orient is not None \
-            else self.body_model.global_orient
-        transl = init_transl if init_transl is not None \
-            else self.body_model.transl
-        body_pose = init_body_pose if init_body_pose is not None \
-            else self.body_model.body_pose
-
-        left_hand_pose = init_left_hand_pose \
-            if init_left_hand_pose is not None \
-            else self.body_model.left_hand_pose
-        right_hand_pose = init_right_hand_pose \
-            if init_right_hand_pose is not None \
-            else self.body_model.right_hand_pose
-        expression = init_expression \
-            if init_expression is not None \
-            else self.body_model.expression
-        jaw_pose = init_jaw_pose \
-            if init_jaw_pose is not None \
-            else self.body_model.jaw_pose
-        leye_pose = init_leye_pose \
-            if init_leye_pose is not None \
-            else self.body_model.leye_pose
-        reye_pose = init_reye_pose \
-            if init_reye_pose is not None \
-            else self.body_model.reye_pose
-
-        if init_betas is not None:
-            betas = init_betas
-        elif self.use_one_betas_per_video:
+        global_orient = self._match_init_batch_size(
+            init_global_orient, self.body_model.global_orient, batch_size)
+        transl = self._match_init_batch_size(init_transl,
+                                             self.body_model.transl,
+                                             batch_size)
+        body_pose = self._match_init_batch_size(init_body_pose,
+                                                self.body_model.body_pose,
+                                                batch_size)
+        left_hand_pose = self._match_init_batch_size(
+            init_left_hand_pose, self.body_model.left_hand_pose, batch_size)
+        right_hand_pose = self._match_init_batch_size(
+            init_right_hand_pose, self.body_model.right_hand_pose, batch_size)
+        expression = self._match_init_batch_size(init_expression,
+                                                 self.body_model.expression,
+                                                 batch_size)
+        jaw_pose = self._match_init_batch_size(init_jaw_pose,
+                                               self.body_model.jaw_pose,
+                                               batch_size)
+        leye_pose = self._match_init_batch_size(init_leye_pose,
+                                                self.body_model.leye_pose,
+                                                batch_size)
+        reye_pose = self._match_init_batch_size(init_reye_pose,
+                                                self.body_model.reye_pose,
+                                                batch_size)
+        if init_betas is None and self.use_one_betas_per_video:
             betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
                 self.device)
         else:
-            betas = self.body_model.betas
+            betas = self._match_init_batch_size(init_betas,
+                                                self.body_model.betas,
+                                                batch_size)
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
@@ -1038,9 +1066,11 @@ class SMPLifyX(SMPLify):
             return_full_pose=return_full_pose)
 
         model_joints = body_model_output['joints']
+        model_joint_mask = body_model_output['joint_mask']
 
         loss_dict = self._compute_loss(
             model_joints,
+            model_joint_mask,
             keypoints2d=keypoints2d,
             keypoints2d_conf=keypoints2d_conf,
             keypoints2d_weight=keypoints2d_weight,
