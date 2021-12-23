@@ -5,20 +5,20 @@ name: build
 
 on:
   push:
-   branches:
-    - main
-   paths-ignore:
-     - 'README.md'
-     - 'README_CN.md'
-     - 'docs/**'
-     - 'docs_zh-CN/**'
+    branches:
+     - main
+    paths-ignore:
+      - 'README.md'
+      - 'README_CN.md'
+      - 'docs/**'
+      - 'docs_zh-CN/**'
 
   pull_request:
-   paths-ignore:
-     - 'README.md'
-     - 'README_CN.md'
-     - 'docs/**'
-     - 'docs_zh-CN/**'
+    paths-ignore:
+      - 'README.md'
+      - 'README_CN.md'
+      - 'docs/**'
+      - 'docs_zh-CN/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
