@@ -16,7 +16,6 @@ from mmhuman3d.utils.mesh_utils import (
     join_batch_meshes_as_scene,
     mesh_to_pointcloud_vc,
 )
-from .base_renderer import MeshBaseRenderer
 from .depth_renderer import DepthRenderer
 from .normal_renderer import NormalRenderer
 from .pointcloud_renderer import PointCloudRenderer
@@ -28,7 +27,7 @@ except ImportError:
     from typing_extensions import Literal
 
 
-class SMPLRenderer(MeshBaseRenderer):
+class SMPLRenderer:
     """Render SMPL(X) with different render choices."""
 
     def __init__(self,

@@ -135,7 +135,7 @@ class MeshBaseRenderer(nn.Module):
         assert raster_params is not None
         assert material_params is not None
         assert blend_params is not None
-        self.shader_type = shader_params.pop('shader_type', 'phong')
+        self.shader_type = shader_params.get('shader_type', 'phong')
 
         self.materials = Materials(device=self.device, **material_params)
         default_resolution = raster_params.pop('resolution', None)

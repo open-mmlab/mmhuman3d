@@ -717,7 +717,7 @@ def render_smpl(
         os.path.join(
             Path(mmhuman3d.__file__).parents[1],
             'configs/render/smpl.py'))['RENDER_CONFIGS']
-
+    render_param_dict = copy.deepcopy(RENDER_CONFIGS[render_choice.lower()])
     if isinstance(resolution, int):
         resolution = (resolution, resolution)
     elif isinstance(resolution, list):
@@ -790,8 +790,6 @@ def render_smpl(
             'pointcloud', 'normal'
     ]:
         raise ValueError('Please choose the right render_choice.')
-
-    render_param_dict = copy.deepcopy(RENDER_CONFIGS[render_choice.lower()])
 
     # body part colorful visualization should use flat shader to be sharper.
     if isinstance(palette, str):
