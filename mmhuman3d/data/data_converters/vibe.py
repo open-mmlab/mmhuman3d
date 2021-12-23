@@ -44,7 +44,8 @@ class VibeConverter(BaseModeConverter):
             dict(type='Normalize', **self.img_norm_cfg),
             dict(type='ImageToTensor', keys=['img']),
         ])
-        self.device = 'cuda'
+        self.device = torch.device(
+            'cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.batch_size = 128
         self.pretrained_ckpt = pretrained_ckpt
 
