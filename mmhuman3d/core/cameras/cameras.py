@@ -346,7 +346,6 @@ class WeakPerspectiveCameras(NewAttributeCameras):
     This intrinsic matrix is orthographics indeed, but could serve as
     weakperspective for single smpl mesh.
     """
-    is_perspective = False
 
     def __init__(
         self,
@@ -402,8 +401,8 @@ class WeakPerspectiveCameras(NewAttributeCameras):
             _in_ndc=True,
             _is_perspective=False,
         )
-        kwargs.pop('in_ndc')
-        kwargs.pop('is_perspective')
+        kwargs.pop('in_ndc', None)
+        kwargs.pop('is_perspective', None)
         super().__init__(
             scale_x=scale_x,
             scale_y=scale_y,
@@ -919,6 +918,7 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
             _in_ndc=in_ndc,
         )
         kwargs.pop('is_perspective', None)
+        kwargs.pop('in_ndc', None)
         super(cameras.OrthographicCameras, self).__init__(
             device=device,
             focal_length=focal_length,
@@ -1028,7 +1028,7 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
             device (Union[torch.device, str], optional):  Defaults to 'cpu'.
             convention (str, optional):  Defaults to 'pytorch3d'.
         """
-        kwargs.update(_is_perspective=True, _in_ndc=True)
+        kwargs.update(_is_perspective=False, _in_ndc=True)
         kwargs.pop('in_ndc', None)
         kwargs.pop('is_perspective', None)
         super(cameras.FoVOrthographicCameras, self).__init__(
