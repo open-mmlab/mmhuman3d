@@ -21,7 +21,7 @@ from pytorch3d.structures import Meshes
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
-from .builder import build_lights, build_shader
+from .builder import RENDERER, build_lights, build_shader
 
 try:
     from typing import Literal
@@ -29,15 +29,14 @@ except ImportError:
     from typing_extensions import Literal
 
 
+@RENDERER.register_module(name=['base', 'Base', 'MeshBaseRenderer'])
 class MeshBaseRenderer(nn.Module):
 
     def __init__(self,
                  resolution: Tuple[int, int] = (1024, 1024),
                  device: Union[torch.device, str] = 'cpu',
-                 obj_path: Optional[str] = None,
                  output_path: Optional[str] = None,
                  return_tensor: bool = False,
-                 img_format: str = '%06d.png',
                  out_img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
@@ -58,6 +57,13 @@ class MeshBaseRenderer(nn.Module):
             return_tensor (bool, optional):
                 Boolean of whether return the rendered tensor.
                 Defaults to False.
+            out_img_format (str, optional): The image format string for
+                saving the images.
+                Defaults to '%06d.png'.
+            projection (Literal[, optional): Projection type of the cameras.
+                Defaults to 'weakperspective'.
+            in_ndc (bool, optional): Whether defined in NDC.
+                Defaults to True.
 
         **kwargs is used for render setting.
         You can set up your render kwargs like:
@@ -99,6 +105,7 @@ class MeshBaseRenderer(nn.Module):
         Returns:
             None
         """
+
         super().__init__()
         self.device = device
         self.output_path = output_path
@@ -106,11 +113,7 @@ class MeshBaseRenderer(nn.Module):
         self.resolution = resolution
         self.projection = projection
         self.temp_path = None
-        self.obj_path = obj_path
         self.in_ndc = in_ndc
-        if self.obj_path is not None:
-            mmcv.mkdir_or_exist(self.obj_path)
-        self.img_format = img_format
         self.out_img_format = out_img_format
         if output_path is not None:
             if check_path_suffix(output_path, ['.mp4', '.gif']):

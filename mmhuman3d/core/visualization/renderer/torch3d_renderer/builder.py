@@ -14,6 +14,7 @@ from pytorch3d.renderer import (
 from .shader import NoLightShader
 from .textures import TexturesClosest
 
+RENDERER = Registry('renderer')
 LIGHTS = Registry('lights')
 LIGHTS.register_module(
     name=['directional', 'directional_lights', 'DirectionalLights'],
@@ -55,3 +56,8 @@ def build_shader(cfg):
 def build_lights(cfg):
     """Build lights."""
     return LIGHTS.build(cfg)
+
+
+def build_renderer(cfg):
+    """Build renderers."""
+    return RENDERER.build(cfg)

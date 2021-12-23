@@ -12,6 +12,7 @@ from pytorch3d.renderer import (
 from pytorch3d.structures import Pointclouds
 
 from mmhuman3d.core.cameras import build_cameras
+from .builder import RENDERER
 
 try:
     from typing import Literal
@@ -19,6 +20,8 @@ except ImportError:
     from typing_extensions import Literal
 
 
+@RENDERER.register_module(
+    name=['PointCloud', 'pointcloud', 'PointCloudRenderer'])
 class PointCloudRenderer(nn.Module):
 
     def __init__(self,
@@ -26,7 +29,7 @@ class PointCloudRenderer(nn.Module):
                  device: Union[torch.device, str] = 'cpu',
                  ply_path: Optional[str] = None,
                  return_tensor: bool = False,
-                 img_format: str = '%06d.png',
+                 out_img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
                                      'fovorthographics'] = 'weakperspective',
@@ -46,19 +49,22 @@ class PointCloudRenderer(nn.Module):
             return_tensor (bool, optional):
                 Boolean of whether return the rendered tensor.
                 Defaults to False.
-            img_format (str, optional): name format for temp images.
+            out_img_format (str, optional): name format for temp images.
                 Defaults to '%06d.png'.
             projection (Literal[, optional): projection type of camera.
                 Defaults to 'weakperspective'.
             in_ndc (bool, optional): cameras whether defined in NDC.
                 Defaults to True.
             radius (float, optional): radius of points. Defaults to 0.008.
+
+        Returns:
+            None
         """
         self.device = device
         self.resolution = resolution
         self.ply_path = ply_path
         self.return_tensor = return_tensor
-        self.img_format = img_format
+        self.out_img_format = out_img_format
         self.radius = radius
         self.projection = projection
         self.set_render_params(**kwargs)

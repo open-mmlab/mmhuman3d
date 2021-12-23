@@ -73,7 +73,7 @@ class SMPLRenderer:
             output_path=output_path,
             return_tensor=return_tensor,
             alpha=alpha,
-            img_format=img_format,
+            out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)

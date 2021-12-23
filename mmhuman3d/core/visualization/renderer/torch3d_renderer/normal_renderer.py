@@ -9,6 +9,7 @@ from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.structures import Meshes
 
 from .base_renderer import MeshBaseRenderer
+from .builder import RENDERER
 
 try:
     from typing import Literal
@@ -16,6 +17,7 @@ except ImportError:
     from typing_extensions import Literal
 
 
+@RENDERER.register_module(name=['Normal', 'normal', 'NormalRenderer'])
 class NormalRenderer(MeshBaseRenderer):
     """Render depth map with the help of camera system."""
 
@@ -25,7 +27,7 @@ class NormalRenderer(MeshBaseRenderer):
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         return_tensor: bool = True,
-        img_format: str = '%06d.png',
+        out_img_format: str = '%06d.png',
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
@@ -46,12 +48,15 @@ class NormalRenderer(MeshBaseRenderer):
             return_tensor (bool, optional):
                 Boolean of whether return the rendered tensor.
                 Defaults to False.
-            img_format (str, optional): name format for temp images.
+            out_img_format (str, optional): name format for temp images.
                 Defaults to '%06d.png'.
             projection (Literal[, optional): projection type of camera.
                 Defaults to 'weakperspective'.
             in_ndc (bool, optional): cameras whether defined in NDC.
                 Defaults to True.
+
+        Returns:
+            None
         """
         super().__init__(
             resolution=resolution,
@@ -59,7 +64,7 @@ class NormalRenderer(MeshBaseRenderer):
             output_path=output_path,
             obj_path=None,
             return_tensor=return_tensor,
-            img_format=img_format,
+            out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
@@ -112,7 +117,7 @@ class NormalRenderer(MeshBaseRenderer):
                 folder = self.temp_path if self.temp_path is not None else\
                     self.output_path
                 cv2.imwrite(
-                    osp.join(folder, self.img_format % real_idx),
+                    osp.join(folder, self.out_img_format % real_idx),
                     output_images[idx])
         if self.return_tensor:
             return rendered_images
