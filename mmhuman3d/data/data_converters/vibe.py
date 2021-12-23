@@ -52,6 +52,8 @@ class VibeConverter(BaseModeConverter):
     @staticmethod
     def init_model(model_config, ckpt_path, device):
         config = mmcv.Config.fromfile(model_config)
+        # modify config to support single gpu/cpu
+        config.model.backbone.norm_cfg = {'type': 'BN', 'requires_grad': True}
         model = build_architecture(config.model)
 
         head_keys = [
