@@ -432,7 +432,7 @@ mmhuman3d
 
 </details>
 
-For [COCO-WholeBody](https://github.com/jin-s13/COCO-WholeBody/) datatset, images can be downloaded from [COCO download](http://cocodataset.org/#download), 2017 Train/Val is needed for COCO keypoints training and validation.
+For [COCO-WholeBody](https://github.com/jin-s13/COCO-WholeBody/) dataset, images can be downloaded from [COCO download](http://cocodataset.org/#download), 2017 Train/Val is needed for COCO keypoints training and validation.
 Download and extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
 
 ```text

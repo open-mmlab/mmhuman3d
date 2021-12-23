@@ -127,7 +127,7 @@ class HumanData(dict):
 
         Args:
             source_dict (dict, optional):
-                A dict with items in HumanData fasion.
+                A dict with items in HumanData fashion.
                 Defaults to None.
             key_strict (bool, optional):
                 Whether to raise error when setting unsupported keys.
