@@ -126,11 +126,15 @@ class SMPL(_SMPL):
             joint_mask = torch.tensor(
                 joint_mask, dtype=torch.uint8, device=joints.device)
 
+        batch_size = joints.shape[0]
+        joint_mask = joint_mask.reshape(1, -1).expand(batch_size, -1)
+
         output = dict(
             global_orient=smpl_output.global_orient,
             body_pose=smpl_output.body_pose,
             joints=joints,
             joint_mask=joint_mask,
+            keypoints=torch.cat([joints, joint_mask[:, :, None]], dim=-1),
             betas=smpl_output.betas)
 
         if return_verts:
@@ -299,11 +303,15 @@ class SMPLX(_SMPLX):
             joint_mask = torch.tensor(
                 joint_mask, dtype=torch.uint8, device=joints.device)
 
+        batch_size = joints.shape[0]
+        joint_mask = joint_mask.reshape(1, -1).expand(batch_size, -1)
+
         output = dict(
             global_orient=smplx_output.global_orient,
             body_pose=smplx_output.body_pose,
             joints=joints,
             joint_mask=joint_mask,
+            keypoints=torch.cat([joints, joint_mask[:, :, None]], dim=-1),
             betas=smplx_output.betas)
 
         if return_verts:
