@@ -29,7 +29,8 @@ except ImportError:
     from typing_extensions import Literal
 
 
-@RENDERER.register_module(name=['base', 'Base', 'MeshBaseRenderer'])
+@RENDERER.register_module(
+    name=['base', 'Base', 'base_renderer', 'MeshBaseRenderer'])
 class MeshBaseRenderer(nn.Module):
 
     def __init__(self,

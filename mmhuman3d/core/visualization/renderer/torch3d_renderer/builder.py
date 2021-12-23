@@ -24,23 +24,40 @@ LIGHTS.register_module(
 
 SHADER = Registry('shader')
 
-SHADER.register_module(name=['flat', 'HardFlatShader'], module=HardFlatShader)
 SHADER.register_module(
-    name=['gouraud', 'SoftGouraudShader'], module=SoftGouraudShader)
+    name=[
+        'flat', 'hard_flat_shader', 'hard_flat', 'HardFlat', 'HardFlatShader'
+    ],
+    module=HardFlatShader)
 SHADER.register_module(
-    name=['phong', 'SoftPhongShader'], module=SoftPhongShader)
+    name=['gouraud', 'soft_gouraud', 'SoftGouraud', 'SoftGouraudShader'],
+    module=SoftGouraudShader)
 SHADER.register_module(
-    name=['silhouette', 'SoftSilhouetteShader'], module=SoftSilhouetteShader)
-SHADER.register_module(name=['nolight', 'NoLightShader'], module=NoLightShader)
+    name=['phong', 'soft_phong', 'SoftPhong', 'SoftPhongShader'],
+    module=SoftPhongShader)
+SHADER.register_module(
+    name=[
+        'silhouette', 'soft_silhouette', 'SoftSilhouette',
+        'SoftSilhouetteShader'
+    ],
+    module=SoftSilhouetteShader)
+SHADER.register_module(
+    name=['nolight', 'nolight_shader', 'NoLight', 'NoLightShader'],
+    module=NoLightShader)
 
 TEXTURES = Registry('textures')
 
-TEXTURES.register_module(name=['TexturesAtlas', 'atlas'], module=TexturesAtlas)
 TEXTURES.register_module(
-    name=['TexturesClosest', 'closest'], module=TexturesClosest)
-TEXTURES.register_module(name=['TexturesUV', 'uv'], module=TexturesUV)
+    name=['TexturesAtlas', 'textures_atlas', 'atlas', 'Atlas'],
+    module=TexturesAtlas)
 TEXTURES.register_module(
-    name=['TexturesVertex', 'vertex', 'vc'], module=TexturesVertex)
+    name=['TexturesClosest', 'textures_closest', 'closest', 'Closest'],
+    module=TexturesClosest)
+TEXTURES.register_module(
+    name=['TexturesUV', 'textures_uv', 'uv'], module=TexturesUV)
+TEXTURES.register_module(
+    name=['TexturesVertex', 'textures_vertex', 'vertex', 'vc'],
+    module=TexturesVertex)
 
 
 def build_textures(cfg):

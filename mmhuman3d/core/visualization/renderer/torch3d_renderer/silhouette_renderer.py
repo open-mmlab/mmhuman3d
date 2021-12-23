@@ -12,8 +12,9 @@ except ImportError:
     from typing_extensions import Literal
 
 
-@RENDERER.register_module(
-    name=['silhouette', 'Silhouette', 'SilhouetteRenderer'])
+@RENDERER.register_module(name=[
+    'silhouette', 'silhouette_renderer', 'Silhouette', 'SilhouetteRenderer'
+])
 class SilhouetteRenderer(MeshBaseRenderer):
     """Silhouette renderer."""
 

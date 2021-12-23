@@ -40,7 +40,6 @@ class SMPLRenderer:
                  return_tensor: bool = False,
                  alpha: float = 1.0,
                  model_type='smpl',
-                 img_format: str = '%06d.png',
                  out_img_format: str = '%06d.png',
                  render_choice='mq',
                  projection: Literal['weakperspective', 'fovperspective',

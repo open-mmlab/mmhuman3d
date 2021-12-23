@@ -18,7 +18,8 @@ except ImportError:
     from typing_extensions import Literal
 
 
-@RENDERER.register_module(name=['Depth', 'depth', 'DepthRenderer'])
+@RENDERER.register_module(
+    name=['Depth', 'depth', 'depth_renderer', 'DepthRenderer'])
 class DepthRenderer(MeshBaseRenderer):
     """Render depth map with the help of camera system."""
 

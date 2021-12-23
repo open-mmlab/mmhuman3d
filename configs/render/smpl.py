@@ -52,7 +52,7 @@ RENDER_CONFIGS = {
             'cull_backfaces': True,
         },
         'shader': {
-            'shader_type': 'flat',
+            'type': 'flat',
         },
         'blend': white_blend_params,
     },
@@ -67,7 +67,7 @@ RENDER_CONFIGS = {
             'cull_backfaces': True,
         },
         'shader': {
-            'shader_type': 'gouraud',
+            'type': 'gouraud',
         },
         'blend': white_blend_params,
     },
@@ -82,7 +82,7 @@ RENDER_CONFIGS = {
             'cull_backfaces': False,
         },
         'shader': {
-            'shader_type': 'phong',
+            'type': 'phong',
         },
         'blend': white_blend_params,
     },
@@ -97,7 +97,7 @@ RENDER_CONFIGS = {
             'cull_backfaces': True,
         },
         'shader': {
-            'shader_type': 'silhouette',
+            'type': 'silhouette',
         },
         'blend': black_blend_params,
     },
@@ -112,7 +112,7 @@ RENDER_CONFIGS = {
             'cull_backfaces': True,
         },
         'shader': {
-            'shader_type': 'nolight',
+            'type': 'nolight',
         },
         'blend': black_blend_params,
     },
@@ -127,7 +127,7 @@ RENDER_CONFIGS = {
             'cull_backfaces': False,
         },
         'shader': {
-            'shader_type': 'nolight',
+            'type': 'nolight',
         },
         'blend': white_blend_params,
     },
@@ -142,22 +142,7 @@ RENDER_CONFIGS = {
             'cull_backfaces': False,
         },
         'shader': {
-            'shader_type': 'nolight',
-        },
-        'blend': white_blend_params,
-    },
-    'opticalflow': {
-        'light': base_directional_light,
-        'material': base_material,
-        'raster': {
-            'resolution': [512, 512],
-            'blur_radius': 0.0,
-            'faces_per_pixel': 1,
-            'cull_to_frustum': False,
-            'cull_backfaces': False,
-        },
-        'shader': {
-            'shader_type': 'nolight',
+            'type': 'nolight',
         },
         'blend': white_blend_params,
     },
@@ -168,7 +153,7 @@ RENDER_CONFIGS = {
             'resolution': [512, 512]
         },
         'shader': {
-            'shader_type': 'nolight',
+            'type': 'nolight',
         },
         'blend': white_blend_params,
         'bg_color': [
