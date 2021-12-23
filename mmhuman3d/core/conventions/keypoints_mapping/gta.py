@@ -1,7 +1,110 @@
-GTA_KEYPOINTS = [  # idx - original name
-    'gta_head_top',  # 00  - head_top
-    'head',  # 01  - head_center
-    'neck',  # 02  - neck
+# ORIGINAL_NAMES = [
+#     'head_top',             # 00, extrapolate 02-01
+#     'head_center',          # 01
+#     'neck',                 # 02
+#     'right_clavicle',       # 03
+#     'right_shoulder',       # 04
+#     'right_elbow',          # 05
+#     'right_wrist',          # 06
+#     'left_clavicle',        # 07
+#     'left_shoulder',        # 08
+#     'left_elbow',           # 09
+#     'left_wrist',           # 10
+#     'spine0',               # 11
+#     'spine1',               # 12
+#     'spine2',               # 13
+#     'spine3',               # 14
+#     'spine4',               # 15
+#     'right_hip',            # 16
+#     'right_knee',           # 17
+#     'right_ankle',          # 18
+#     'left_hip',             # 19
+#     'left_knee',            # 20
+#     'left_ankle',           # 21
+#     'SKEL_ROOT',            # 22
+#     'FB_R_Brow_Out_000',    # 23
+#     'SKEL_L_Toe0',          # 24
+#     'MH_R_Elbow',           # 25
+#     'SKEL_L_Finger01',      # 26
+#     'SKEL_L_Finger02',      # 27
+#     'SKEL_L_Finger31',      # 28
+#     'SKEL_L_Finger32',      # 29
+#     'SKEL_L_Finger41',      # 30
+#     'SKEL_L_Finger42',      # 31
+#     'SKEL_L_Finger11',      # 32
+#     'SKEL_L_Finger12',      # 33
+#     'SKEL_L_Finger21',      # 34
+#     'SKEL_L_Finger22',      # 35
+#     'RB_L_ArmRoll',         # 36
+#     'IK_R_Hand',            # 37
+#     'RB_R_ThighRoll',       # 38
+#     'FB_R_Lip_Corner_000',  # 39
+#     'SKEL_Pelvis',          # 40
+#     'IK_Head',              # 41
+#     'MH_R_Knee',            # 42
+#     'FB_LowerLipRoot_000',  # 43
+#     'FB_R_Lip_Top_000',     # 44
+#     'FB_R_CheekBone_000',   # 45
+#     'FB_UpperLipRoot_000',  # 46
+#     'FB_L_Lip_Top_000',     # 47
+#     'FB_LowerLip_000',      # 48
+#     'SKEL_R_Toe0',          # 49
+#     'FB_L_CheekBone_000',   # 50
+#     'MH_L_Elbow',           # 51
+#     'RB_L_ThighRoll',       # 52
+#     'PH_R_Foot',            # 53
+#     'FB_L_Eye_000',         # 54
+#     'SKEL_L_Finger00',      # 55
+#     'SKEL_L_Finger10',      # 56
+#     'SKEL_L_Finger20',      # 57
+#     'SKEL_L_Finger30',      # 58
+#     'SKEL_L_Finger40',      # 59
+#     'FB_R_Eye_000',         # 60
+#     'PH_R_Hand',            # 61
+#     'FB_L_Lip_Corner_000',  # 62
+#     'IK_R_Foot',            # 63
+#     'RB_Neck_1',            # 64
+#     'IK_L_Hand',            # 65
+#     'RB_R_ArmRoll',         # 66
+#     'FB_Brow_Centre_000',   # 67
+#     'FB_R_Lid_Upper_000',   # 68
+#     'RB_R_ForeArmRoll',     # 69
+#     'FB_L_Lid_Upper_000',   # 70
+#     'MH_L_Knee',            # 71
+#     'FB_Jaw_000',           # 72
+#     'FB_L_Lip_Bot_000',     # 73
+#     'FB_Tongue_000',        # 74
+#     'FB_R_Lip_Bot_000',     # 75
+#     'IK_Root',              # 76
+#     'PH_L_Foot',            # 77
+#     'FB_L_Brow_Out_000',    # 78
+#     'SKEL_R_Finger00',      # 79
+#     'SKEL_R_Finger10',      # 80
+#     'SKEL_R_Finger20',      # 81
+#     'SKEL_R_Finger30',      # 82
+#     'SKEL_R_Finger40',      # 83
+#     'PH_L_Hand',            # 84
+#     'RB_L_ForeArmRoll',     # 85
+#     'FB_UpperLip_000',      # 86
+#     'SKEL_R_Finger01',      # 87
+#     'SKEL_R_Finger02',      # 88
+#     'SKEL_R_Finger31',      # 89
+#     'SKEL_R_Finger32',      # 90
+#     'SKEL_R_Finger41',      # 91
+#     'SKEL_R_Finger42',      # 92
+#     'SKEL_R_Finger11',      # 93
+#     'SKEL_R_Finger12',      # 94
+#     'SKEL_R_Finger21',      # 95
+#     'SKEL_R_Finger22',      # 96
+#     'FACIAL_facialRoot',    # 97
+#     'IK_L_Foot',            # 98
+#     'interpolated_nose'     # 99, mid-point of 45-50
+# ]
+
+GTA_KEYPOINTS = [
+    'gta_head_top',  # 00
+    'head',  # 01 - head_center
+    'neck',  # 02 - neck
     'gta_right_clavicle',  # 03
     'right_shoulder',  # 04  - right_shoulder
     'right_elbow',  # 05  - right_elbow
