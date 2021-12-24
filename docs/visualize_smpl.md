@@ -165,7 +165,7 @@
     This is independent of cameras and you could directly set `render_choice` as `silhouette`. The output video/images will be binary masks.
 
 - **visualize body part silhouette:**
-    This is independent of cameras and you could directly set `render_choice` as `part_silhouette`. The output video/images will be body part segementation masks.
+    This is independent of cameras and you could directly set `render_choice` as `part_silhouette`. The output video/images will be body part segmentation masks.
 
 - **visualize depth map:**
     This is independent of cameras and you could directly set `render_choice` as `depth`.

@@ -32,7 +32,7 @@ def batch_inverse_kinematics_transform(pose_skeleton,
             Rotation on bone axis parameters with shape (Bx23x2)
         rest_pose (torch.tensor):
             Locations of rest (Template) pose with shape (Bx29x3)
-        children (List[int]): list of indexes of kinematic chidren with len 29
+        children (List[int]): list of indexes of kinematic children with len 29
         parents (List[int]): list of indexes of kinematic parents with len 29
         dtype (torch.dtype, optional):
             Data type of the created tensors. Default: torch.float32
@@ -239,7 +239,7 @@ def batch_get_pelvis_orient_svd(rel_pose_skeleton, rel_rest_pose, parents,
         rel_rest_pose (torch.tensor):
             Locations of rest/ template pose with shape (Bx29x3)
         parents (List[int]): list of indexes of kinematic parents with len 29
-        children (List[int]): list of indexes of kinematic chidren with len 29
+        children (List[int]): list of indexes of kinematic children with len 29
         dtype (torch.dtype, optional):
             Data type of the created tensors, the default is torch.float32
 
@@ -289,7 +289,7 @@ def batch_get_pelvis_orient(rel_pose_skeleton, rel_rest_pose, parents,
         rel_rest_pose (torch.tensor):
             Locations of rest/ template pose with shape (Bx29x3)
         parents (List[int]): list of indexes of kinematic parents with len 29
-        children (List[int]): list of indexes of kinematic chidren with len 29
+        children (List[int]): list of indexes of kinematic children with len 29
         dtype (torch.dtype, optional):
             Data type of the created tensors, the default is torch.float32
 
@@ -394,7 +394,7 @@ def batch_get_3children_orient_svd(rel_pose_skeleton, rel_rest_pose,
             Locations of rest/ template pose with shape (Bx29x3)
         rot_mat_chain_parents (torch.tensor):
             parent's rotation matrix with shape (Bx3x3)
-        children (List[int]): list of indexes of kinematic chidren with len 29
+        children (List[int]): list of indexes of kinematic children with len 29
         dtype (torch.dtype, optional):
             Data type of the created tensors, the default is torch.float32
 

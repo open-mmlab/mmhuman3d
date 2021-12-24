@@ -171,7 +171,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         return info
 
     def prepare_data(self, idx: int):
-        """Generate and transform datas."""
+        """Generate and transform data."""
         info = self.prepare_raw_data(idx)
         return self.pipeline(info)
 

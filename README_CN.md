@@ -10,7 +10,7 @@
 
 [![Documentation](https://readthedocs.org/projects/mmhuman3d/badge/?version=latest)](https://mmhuman3d.readthedocs.io/en/latest/?badge=latest)
 [![actions](https://github.com/open-mmlab/mmhuman3d/workflows/build/badge.svg)](https://github.com/open-mmlab/mmhuman3d/actions)
-[![codecov](https://codecov.io/gh/open-mmlab/mmhuman3d/branch/master/graph/badge.svg)](https://codecov.io/gh/open-mmlab/mmhuman3d)
+[![codecov](https://codecov.io/gh/open-mmlab/mmhuman3d/branch/main/graph/badge.svg)](https://codecov.io/gh/open-mmlab/mmhuman3d)
 [![PyPI](https://img.shields.io/pypi/v/mmhuman3d)](https://pypi.org/project/mmhuman3d/)
 [![LICENSE](https://img.shields.io/github/license/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/blob/main/LICENSE)
 [![Percentage of issues still open](https://isitmaintained.com/badge/open/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/issues)
@@ -96,7 +96,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 我们将跟进学界的最新进展，并支持更多算法和框架。
 
-如果您对MMHuman3D有任何功能需求，请随时在[愿望清单](https://github.com/open-mmlab/mmhuman3d/issues/3)中留言。
+如果您对MMHuman3D有任何功能需求，请随时在[愿望清单](https://github.com/open-mmlab/mmhuman3d/discussions/47)中留言。
 
 
 ## 快速入门

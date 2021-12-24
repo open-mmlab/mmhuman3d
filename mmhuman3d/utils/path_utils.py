@@ -20,7 +20,7 @@ def check_path_suffix(path_str: str,
         allowed_suffix (List[str], optional):
             What extension names are allowed.
             Offer a list like ['.jpg', ',jpeg'].
-            When it's [], all will be recieved.
+            When it's [], all will be received.
             Use [''] then directory is allowed.
             Defaults to [].
 

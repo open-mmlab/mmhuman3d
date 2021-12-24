@@ -131,7 +131,7 @@ class Axes3dBaseRenderer(object):
             visual_range (np.ndarray):
                 Return value of _get_visual_range().
             axis_len (float, optional):
-                The lenth of every axis.
+                The length of every axis.
                 Defaults to 1.0.
             cam_elev_angle (int, optional):
                 Pitch angle of the camera.
