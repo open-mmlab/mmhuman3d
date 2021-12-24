@@ -1,6 +1,6 @@
 import os.path as osp
 import warnings
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -25,7 +25,7 @@ class DepthRenderer(MeshBaseRenderer):
 
     def __init__(
         self,
-        resolution: Iterable[int] = [1024, 1024],
+        resolution: Tuple[int, int],
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         return_tensor: bool = True,
@@ -70,6 +70,11 @@ class DepthRenderer(MeshBaseRenderer):
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
+        self.norm_scale = None
+
+    def set_norm_scale(self, vertices, cameras):
+        verts_depth = cameras.compute_depth_of_points(vertices)
+        self.norm_scale = torch.max(verts_depth).clone()
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
@@ -78,7 +83,8 @@ class DepthRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                indexs: Optional[Iterable[int]] = None):
+                indexs: Optional[Iterable[int]] = None,
+                **kwargs):
         """Render depth map.
 
         The params are the same as MeshBaseRenderer.
@@ -98,8 +104,10 @@ class DepthRenderer(MeshBaseRenderer):
             vertices = meshes.verts_padded()
         verts_depth = cameras.compute_depth_of_points(vertices)
         verts_depth_rgb = verts_depth.repeat(1, 1, 3)
-        norm_scale = torch.max(verts_depth).clone()
-        verts_depth_rgb /= norm_scale
+
+        self.norm_scale = torch.max(verts_depth).clone(
+        ) if self.norm_scale is None else self.norm_scale
+        verts_depth_rgb /= self.norm_scale
         meshes.textures = TexturesVertex(verts_features=verts_depth_rgb)
         renderer = self.init_renderer(cameras, self.lights)
 
@@ -125,6 +133,6 @@ class DepthRenderer(MeshBaseRenderer):
                     output_images[idx])
 
         if self.return_tensor:
-            return rendered_images * norm_scale
+            return rendered_images * self.norm_scale
         else:
             return None

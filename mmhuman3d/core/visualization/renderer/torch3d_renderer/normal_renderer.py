@@ -1,9 +1,5 @@
-import os.path as osp
-import warnings
 from typing import Iterable, Optional, Union
 
-import cv2
-import numpy as np
 import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.structures import Meshes
@@ -76,24 +72,37 @@ class NormalRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                indexs: Optional[Iterable[int]] = None):
-        """Render normal map.
+                images: Optional[torch.Tensor] = None,
+                indexs: Optional[Iterable[int]] = None,
+                **kwargs):
+        """Render Meshes.
 
-        The params are the same as MeshBaseRenderer.
+        Args:
+            meshes (Optional[Meshes], optional): meshes to be rendered.
+                Defaults to None.
+            vertices (Optional[torch.Tensor], optional): vertices to be
+                rendered. Should be passed together with faces.
+                Defaults to None.
+            faces (Optional[torch.Tensor], optional): faces of the meshes,
+                should be passed together with the vertices.
+                Defaults to None.
+            K (Optional[torch.Tensor], optional): Camera intrinsic matrixs.
+                Defaults to None.
+            R (Optional[torch.Tensor], optional): Camera rotation matrixs.
+                Defaults to None.
+            T (Optional[torch.Tensor], optional): Camera tranlastion matrixs.
+                Defaults to None.
+            images (Optional[torch.Tensor], optional): background images.
+                Defaults to None.
+            indexs (Optional[Iterable[int]], optional): indexs for the images.
+                Defaults to None.
+
+        Returns:
+            Union[torch.Tensor, None]: return tensor or None.
         """
-        cameras = self.init_cameras(K=K, R=R, T=T)
-        if meshes is None:
-            assert (vertices is not None) and (faces is not None),\
-                'No mesh data input.'
+        meshes = self.prepare_meshes(meshes, vertices, faces)
 
-            meshes = Meshes(
-                verts=vertices.to(self.device),
-                faces=faces.to(self.device),
-            )
-        else:
-            if (vertices is not None) or (faces is not None):
-                warnings.warn('Redundant input, will only use meshes.')
-            meshes = meshes.to(self.device)
+        cameras = self.init_cameras(K=K, R=R, T=T)
         verts_normals = cameras.compute_normal_of_meshes(meshes)
         verts_depth_rgb = verts_normals.clone()
         meshes.textures = TexturesVertex(verts_features=verts_depth_rgb)
@@ -109,16 +118,11 @@ class NormalRenderer(MeshBaseRenderer):
                  G.unsqueeze(-1),
                  B.unsqueeze(-1)], -1)
             scene = (scene + 1) / 2
-            output_images = (scene - scene.min()) / (scene.max() - scene.min())
-            output_images = (output_images.detach().cpu().numpy() *
-                             255).astype(np.uint8)
+            rendered_images = (scene - scene.min()) / (
+                scene.max() - scene.min())
+            rendered_images = torch.cat([rendered_images, valid_mask], -1)
+            self.write_images(rendered_images, images, indexs)
 
-            for idx, real_idx in enumerate(indexs):
-                folder = self.temp_path if self.temp_path is not None else\
-                    self.output_path
-                cv2.imwrite(
-                    osp.join(folder, self.out_img_format % real_idx),
-                    output_images[idx])
         if self.return_tensor:
             return rendered_images
         else:

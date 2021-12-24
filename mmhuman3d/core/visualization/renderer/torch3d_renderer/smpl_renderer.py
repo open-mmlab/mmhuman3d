@@ -4,7 +4,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import torch
-from pytorch3d.renderer import TexturesVertex
+import torch.nn as nn
 from pytorch3d.renderer.lighting import DirectionalLights, PointLights
 from pytorch3d.structures import Meshes
 from torch.nn.functional import interpolate
@@ -16,10 +16,7 @@ from mmhuman3d.utils.mesh_utils import (
     join_batch_meshes_as_scene,
     mesh_to_pointcloud_vc,
 )
-from .depth_renderer import DepthRenderer
-from .normal_renderer import NormalRenderer
-from .pointcloud_renderer import PointCloudRenderer
-from .textures import TexturesClosest
+from .builder import build_renderer
 
 try:
     from typing import Literal
@@ -27,7 +24,7 @@ except ImportError:
     from typing_extensions import Literal
 
 
-class SMPLRenderer:
+class SMPLRenderer(nn.Module):
     """Render SMPL(X) with different render choices."""
 
     def __init__(self,
@@ -51,12 +48,11 @@ class SMPLRenderer:
                  in_ndc: bool = True,
                  final_resolution: Tuple[int, int] = None,
                  **kwargs) -> None:
-        if plot_kps:
-            self.alpha = max(min(0.8, alpha), 0.1)
-        else:
-            self.alpha = max(min(1.0, alpha), 0.1)
+        super.__init__()
+
         self.model_type = model_type
         self.render_choice = render_choice
+        self.output_path = output_path
         self.raw_faces = torch.LongTensor(faces.astype(
             np.int32)) if isinstance(faces, np.ndarray) else faces
         self.colors = torch.Tensor(colors) if isinstance(
@@ -66,48 +62,57 @@ class SMPLRenderer:
         self.vis_kp_index = vis_kp_index
         self.out_img_format = out_img_format
         self.final_resolution = final_resolution
-        super().__init__(
-            resolution,
-            device=device,
-            output_path=output_path,
-            return_tensor=return_tensor,
-            alpha=alpha,
-            out_img_format=out_img_format,
-            projection=projection,
-            in_ndc=in_ndc,
-            **kwargs)
+        self.segmentation = body_segmentation(self.model_type)
+
+        renderer_type = kwargs.pop('renderer_type', 'base')
+        self.image_renderer = build_renderer(
+            dict(
+                type=renderer_type,
+                device=device,
+                resolution=resolution,
+                projection=projection,
+                in_ndc=in_ndc,
+                return_tensor=True,
+                **kwargs))
+
         if plot_kps:
-            self.joints_renderer = PointCloudRenderer(
-                resolution=resolution,
-                device=device,
-                return_tensor=True,
-                projection=projection,
-                in_ndc=in_ndc,
-                radius=0.008)
-        if self.render_choice == 'pointcloud':
-            self.pointcloud_renderer = PointCloudRenderer(
-                resolution=resolution,
-                device=device,
-                return_tensor=True,
-                projection=projection,
-                in_ndc=in_ndc,
-                radius=0.003)
-        elif self.render_choice == 'depth':
-            self.depth_renderer = DepthRenderer(
-                device=device,
-                resolution=resolution,
-                projection=projection,
-                in_ndc=in_ndc,
-                return_tensor=True,
-                **kwargs)
-        elif self.render_choice == 'normal':
-            self.normal_renderer = NormalRenderer(
-                device=device,
-                resolution=resolution,
-                projection=projection,
-                in_ndc=in_ndc,
-                return_tensor=True,
-                **kwargs)
+            self.alpha = max(min(0.8, alpha), 0.1)
+            self.joints_renderer = build_renderer(
+                dict(
+                    type='point',
+                    resolution=resolution,
+                    device=device,
+                    return_tensor=True,
+                    projection=projection,
+                    in_ndc=in_ndc,
+                    radius=0.008))
+        # else:
+        #     self.alpha = max(min(1.0, alpha), 0.1)
+
+        # if self.render_choice == 'pointcloud':
+        #     self.pointcloud_renderer = PointCloudRenderer(
+        #         resolution=resolution,
+        #         device=device,
+        #         return_tensor=True,
+        #         projection=projection,
+        #         in_ndc=in_ndc,
+        #         radius=0.003)
+        # elif self.render_choice == 'depth':
+        #     self.depth_renderer = DepthRenderer(
+        #         device=device,
+        #         resolution=resolution,
+        #         projection=projection,
+        #         in_ndc=in_ndc,
+        #         return_tensor=True,
+        #         **kwargs)
+        # elif self.render_choice == 'normal':
+        #     self.normal_renderer = NormalRenderer(
+        #         device=device,
+        #         resolution=resolution,
+        #         projection=projection,
+        #         in_ndc=in_ndc,
+        #         return_tensor=True,
+        #         **kwargs)
         """
         Render Mesh for SMPL and SMPL-X. For function render_smpl.
         2 modes: mesh render with different quality and palette,
@@ -142,14 +147,6 @@ class SMPLRenderer:
         Returns:
             None
         """
-
-    def set_render_params(self, **kwargs):
-        """update render params."""
-        super(SMPLRenderer, self).set_render_params(**kwargs)
-        self.Textures = TexturesVertex
-        self.segmentation = body_segmentation(self.model_type)
-        if self.render_choice == 'part_silhouette':
-            self.Textures = TexturesClosest
 
     def forward(
         self,
@@ -245,6 +242,7 @@ class SMPLRenderer:
             ) + cameras.get_camera_center()
         else:
             raise TypeError(f'Wrong light type: {type(self.lights)}.')
+
         if self.render_choice == 'pointcloud':
             pointclouds = mesh_to_pointcloud_vc(meshes, alpha=1.0)
             rendered_images = self.pointcloud_renderer(

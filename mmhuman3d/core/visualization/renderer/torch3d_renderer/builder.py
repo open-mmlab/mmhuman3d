@@ -2,7 +2,9 @@ from mmcv.utils import Registry
 from pytorch3d.renderer import (
     DirectionalLights,
     HardFlatShader,
+    MeshRasterizer,
     PointLights,
+    PointsRasterizer,
     SoftGouraudShader,
     SoftPhongShader,
     SoftSilhouetteShader,
@@ -15,6 +17,13 @@ from .shader import NoLightShader
 from .textures import TexturesClosest
 
 RENDERER = Registry('renderer')
+RASETER = Registry('raster')
+RASETER.register_module(
+    name=['mesh', 'mesh_rasterizer', 'MeshRasterizer'], module=MeshRasterizer)
+RASETER.register_module(
+    name=['point', 'point_rasterizer', 'PointsRasterizer'],
+    module=PointsRasterizer)
+
 LIGHTS = Registry('lights')
 LIGHTS.register_module(
     name=['directional', 'directional_lights', 'DirectionalLights'],
@@ -23,7 +32,6 @@ LIGHTS.register_module(
     name=['point', 'point_lights', 'PointLights'], module=PointLights)
 
 SHADER = Registry('shader')
-
 SHADER.register_module(
     name=[
         'flat', 'hard_flat_shader', 'hard_flat', 'HardFlat', 'HardFlatShader'
@@ -46,7 +54,6 @@ SHADER.register_module(
     module=NoLightShader)
 
 TEXTURES = Registry('textures')
-
 TEXTURES.register_module(
     name=['TexturesAtlas', 'textures_atlas', 'atlas', 'Atlas'],
     module=TexturesAtlas)
@@ -58,6 +65,11 @@ TEXTURES.register_module(
 TEXTURES.register_module(
     name=['TexturesVertex', 'textures_vertex', 'vertex', 'vc'],
     module=TexturesVertex)
+
+
+def build_raster(cfg):
+    """Build raster."""
+    return RASETER.build(cfg)
 
 
 def build_textures(cfg):

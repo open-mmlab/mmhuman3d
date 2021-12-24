@@ -163,32 +163,29 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
     return image_array, remove_folder, frames_folder
 
 
-def _prepare_body_model(model_type, body_model, model_path, gender):
-    """Prepare `body_model` from `model_path` or existing `body_model`."""
+def _prepare_body_model(model_type, body_model, body_model_config):
+    """Prepare `body_model` from `body_model_config` or existing
+    `body_model`."""
     if model_type not in ['smpl', 'smplx']:
         raise ValueError(
             f'Do not support {model_type}, please choose in `smpl` or `smplx.')
     if body_model is None:
-        if model_path is not None:
-            if osp.isdir(model_path):
+        if body_model_config is not None:
+            model_path = body_model_config.get('model_path', None)
+            body_model_config.update(type=model_type.lower())
+            if model_path and osp.isdir(model_path):
                 model_path = osp.join(model_path, model_type)
+                body_model_config.update(model_path=model_path)
+                body_model = build_body_model(**body_model_config)
             else:
                 raise FileNotFoundError('Wrong model_path.'
                                         ' File or directory does not exist.')
-            body_model = build_body_model(
-                dict(
-                    type=model_type,
-                    model_path=model_path,
-                    gender=gender,
-                    use_pca=False,
-                    use_face_contour=True,
-                    num_betas=10))
         else:
-            raise ValueError('Please input body_model or model_path.')
+            raise ValueError('Please input body_model_config.')
     else:
-        if model_path is not None:
+        if body_model_config is not None:
             warnings.warn('Redundant input, will take body_model directly'
-                          'and ignore model_path.')
+                          'and ignore body_model_config.')
     return body_model
 
 
@@ -423,9 +420,8 @@ def render_smpl(
     transl: Optional[Union[torch.Tensor, np.ndarray]] = None,
     verts: Optional[Union[torch.Tensor, np.ndarray]] = None,
     model_type: Literal['smpl', 'smplx'] = 'smpl',
-    gender: Literal['male', 'female', 'neutral'] = 'neutral',
-    model_path: Optional[str] = None,
     body_model: Optional[nn.Module] = None,
+    body_model_config: Optional[dict] = None,
     # camera paramters
     R: Optional[Union[torch.Tensor, np.ndarray]] = None,
     T: Optional[Union[torch.Tensor, np.ndarray]] = None,
@@ -519,16 +515,14 @@ def render_smpl(
         model_type (Literal[, optional): choose in 'smpl' or 'smplx'.
 
             Defaults to 'smpl'.
-        gender (Literal[, optional): chose in ['male', 'female', 'neutral'].
-
-            Defaults to 'neutral'.
-        model_path (str, optional): Directory of npz or pkl path.
-            Lower priority than `body_model`.
 
             Defaults to None.
         body_model (nn.Module, optional): body_model created from smplx.create.
-            Higher priority than `model_path`. Should not both be None.
+            Higher priority than `body_model_config`. Should not both be None.
 
+            Defaults to None.
+        body_model_config (dict, optional): body_model_config for build_model.
+            Lower priority than `body_model`. Should not both be None.
             Defaults to None.
 
         # camera parameters:
@@ -725,8 +719,7 @@ def render_smpl(
 
     verts, poses, betas, transl = _prepare_input_pose(verts, poses, betas,
                                                       transl)
-    body_model = _prepare_body_model(model_type, body_model, model_path,
-                                     gender)
+    body_model = _prepare_body_model(model_type, body_model, body_model_config)
     vertices, faces, joints, num_frames, num_person = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
     end = num_frames if end is None else end
@@ -1132,8 +1125,7 @@ def visualize_T_pose(num_frames,
         T=None,
         return_tensor=False,
         no_grad=True,
-        origin_frames=None,
-        gender='neutral')
+        origin_frames=None)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)

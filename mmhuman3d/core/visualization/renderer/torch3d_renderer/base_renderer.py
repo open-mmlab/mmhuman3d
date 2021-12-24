@@ -34,7 +34,7 @@ except ImportError:
 class MeshBaseRenderer(nn.Module):
 
     def __init__(self,
-                 resolution: Tuple[int, int] = (1024, 1024),
+                 resolution: Tuple[int, int],
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  return_tensor: bool = False,
@@ -106,7 +106,6 @@ class MeshBaseRenderer(nn.Module):
         Returns:
             None
         """
-
         super().__init__()
         self.device = device
         self.output_path = output_path
@@ -129,27 +128,28 @@ class MeshBaseRenderer(nn.Module):
 
     def set_render_params(self, **kwargs):
         """Set render params."""
-        material_params = kwargs.get('material')
-        light_params = kwargs.get('light')
-        shader_params = kwargs.get('shader')
-        raster_params = kwargs.get('raster')
-        blend_params = kwargs.get('blend')
-        assert light_params is not None
-        assert shader_params is not None
-        assert raster_params is not None
-        assert material_params is not None
-        assert blend_params is not None
-        self.shader_type = shader_params.get('shader_type', 'phong')
+        material_params = kwargs.get('material', None)
+        light_params = kwargs.get('light', None)
+        raster_params = kwargs.get('raster', None)
+        blend_params = kwargs.get('blend', None)
+        shader_params = kwargs.get('shader', None)
+        self.shader_type = shader_params.get('type', 'phong')
 
-        self.materials = Materials(device=self.device, **material_params)
         default_resolution = raster_params.pop('resolution', None)
         if self.resolution is None:
             self.resolution = default_resolution
 
+        self.materials = Materials(
+            device=self.device, **
+            material_params) if material_params is not None else None
+
         self.raster_settings = RasterizationSettings(
-            image_size=self.resolution, **raster_params)
-        self.lights = build_lights(light_params).to(self.device)
-        self.blend_params = BlendParams(**blend_params)
+            image_size=self.resolution, **
+            raster_params) if raster_params is not None else None
+        self.lights = build_lights(light_params).to(
+            self.device) if light_params is not None else None
+        self.blend_params = BlendParams(
+            **blend_params) if blend_params is not None else None
 
     def export(self):
         """Export output video if need."""
@@ -208,8 +208,11 @@ class MeshBaseRenderer(nn.Module):
                 dict(type=self.shader_type)))
         return renderer
 
-    def write_images(self, rgbs, valid_masks, images, indexs):
+    def write_images(self, rendered_images, images, indexs):
         """Write output/temp images."""
+        rgbs = rendered_images.clone()[..., :3] / rendered_images[
+            ..., :3].max()
+        valid_masks = (rendered_images[..., 3:] > 0) * 1.0
         if images is not None:
             output_images = rgbs * 255 * valid_masks + (1 -
                                                         valid_masks) * images
@@ -225,17 +228,28 @@ class MeshBaseRenderer(nn.Module):
                 osp.join(folder, self.out_img_format % real_idx),
                 output_images[idx])
 
-    def forward(
-            self,
-            meshes: Optional[Meshes] = None,
-            vertices: Optional[torch.Tensor] = None,
-            faces: Optional[torch.Tensor] = None,
-            K: Optional[torch.Tensor] = None,
-            R: Optional[torch.Tensor] = None,
-            T: Optional[torch.Tensor] = None,
-            images: Optional[torch.Tensor] = None,
-            indexs: Optional[Iterable[int]] = None
-    ) -> Union[torch.Tensor, None]:
+    def prepare_meshes(self, meshes, vertices, faces):
+        if meshes is None:
+            assert (vertices is not None) and (faces is not None),\
+                'No mesh data input.'
+            meshes = Meshes(
+                verts=vertices.to(self.device), faces=faces.to(self.device))
+        else:
+            if (vertices is not None) or (faces is not None):
+                warnings.warn('Redundant input, will only use meshes.')
+            meshes = meshes.to(self.device)
+
+    def forward(self,
+                meshes: Optional[Meshes] = None,
+                vertices: Optional[torch.Tensor] = None,
+                faces: Optional[torch.Tensor] = None,
+                K: Optional[torch.Tensor] = None,
+                R: Optional[torch.Tensor] = None,
+                T: Optional[torch.Tensor] = None,
+                images: Optional[torch.Tensor] = None,
+                lights: Optional[torch.Tensor] = None,
+                indexs: Optional[Iterable[int]] = None,
+                **kwargs) -> Union[torch.Tensor, None]:
         """Render Meshes.
 
         Args:
@@ -261,26 +275,14 @@ class MeshBaseRenderer(nn.Module):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        if meshes is None:
-            assert (vertices is not None) and (faces is not None),\
-                'No mesh data input.'
-            meshes = Meshes(
-                verts=vertices.to(self.device), faces=faces.to(self.device))
-        else:
-            if (vertices is not None) or (faces is not None):
-                warnings.warn('Redundant input, will only use meshes.')
-            meshes = meshes.to(self.device)
-            vertices = meshes.verts_padded()
+        meshes = self.prepare_meshes(meshes, vertices, faces)
         cameras = self.init_cameras(K=K, R=R, T=T)
-        renderer = self.init_renderer(cameras, self.lights)
+        renderer = self.init_renderer(cameras, lights)
 
         rendered_images = renderer(meshes)
-        rgbs = rendered_images.clone()[..., :3] / rendered_images[
-            ..., :3].max()
-        valid_masks = (rendered_images[..., 3:] > 0) * 1.0
 
         if self.output_path is not None:
-            self.write_images(rgbs, valid_masks, images, indexs)
+            self.write_images(rendered_images, images, indexs)
 
         if self.return_tensor:
             return rendered_images

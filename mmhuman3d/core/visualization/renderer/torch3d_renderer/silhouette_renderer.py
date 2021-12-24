@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import torch
 from pytorch3d.structures import Meshes
@@ -20,7 +20,7 @@ class SilhouetteRenderer(MeshBaseRenderer):
 
     def __init__(
         self,
-        resolution: Iterable[int] = [1024, 1024],
+        resolution: Tuple[int, int],
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         return_tensor: bool = True,
@@ -75,7 +75,9 @@ class SilhouetteRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                indexs: Iterable[str] = None):
+                images: Optional[torch.Tensor] = None,
+                indexs: Iterable[str] = None,
+                **kwargs):
         """The params are the same as MeshBaseRenderer."""
         rendered_images = super().forward(
             meshes=meshes,
@@ -84,7 +86,9 @@ class SilhouetteRenderer(MeshBaseRenderer):
             K=K,
             R=R,
             T=T,
-            images=None,
+            images=images,
             indexs=indexs)
-        alpha = rendered_images[..., 3:]
-        return alpha
+        if self.return_tensor:
+            return rendered_images[..., 0].long()
+        else:
+            return None
