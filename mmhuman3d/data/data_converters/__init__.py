@@ -22,6 +22,7 @@ from .pw3d_hybrik import Pw3dHybrIKConverter
 from .spin import SpinConverter
 from .surreal import SurrealConverter
 from .up3d import Up3dConverter
+from .vibe import VibeConverter
 
 __all__ = [
     'build_data_converter', 'AgoraConverter', 'MpiiConverter', 'H36mConverter',
@@ -31,5 +32,5 @@ __all__ = [
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
     'CocoHybrIKConverter', 'H36mHybrIKConverter', 'MpiInf3dhpHybrIKConverter',
     'Pw3dHybrIKConverter', 'SurrealConverter', 'InstaVibeConverter',
-    'SpinConverter', 'H36mSpinConverter'
+    'SpinConverter', 'H36mSpinConverter', 'VibeConverter'
 ]

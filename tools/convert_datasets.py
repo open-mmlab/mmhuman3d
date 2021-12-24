@@ -53,7 +53,12 @@ DATASET_CONFIGS = dict(
         type='H36mSpinConverter',
         modes=['train'],
         mosh_dir='data/datasets/h36m_extras/mosh_data',
-        prefix='h36m'))
+        prefix='h36m'),
+    vibe=dict(
+        type='VibeConverter',
+        modes=['pw3d', 'mpi_inf_3dhp'],
+        pretrained_ckpt='data/checkpoints/spin.pth',
+        prefix='vibe_data'))
 
 
 def parse_args():
