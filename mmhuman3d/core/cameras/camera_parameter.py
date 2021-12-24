@@ -10,8 +10,55 @@ from mmhuman3d.core.conventions.cameras import (
     convert_K_4x4_to_3x3,
 )
 
+_CameraParameter_SUPPORTED_KEYS = {
+    'H': {
+        'type': int,
+    },
+    'W': {
+        'type': int,
+    },
+    'in_mat': {
+        'type': list,
+        'len': 3,
+    },
+    'rotation_mat': {
+        'type': list,
+        'len': 3,
+    },
+    'translation': {
+        'type': list,
+        'len': 3,
+    },
+    'k1': {
+        'type': float,
+    },
+    'k2': {
+        'type': float,
+    },
+    'k3': {
+        'type': float,
+    },
+    'k4': {
+        'type': float,
+    },
+    'k5': {
+        'type': float,
+    },
+    'k6': {
+        'type': float,
+    },
+    'p1': {
+        'type': float,
+    },
+    'p2': {
+        'type': float,
+    },
+}
+
 
 class CameraParameter:
+    logger = None
+    SUPPORTED_KEYS = _CameraParameter_SUPPORTED_KEYS
 
     def __init__(self,
                  name: str = 'default',
@@ -32,19 +79,21 @@ class CameraParameter:
         self.parameters_dict['in_mat'] = in_mat
         for distort_name in __distort_coefficient_names__:
             self.parameters_dict[distort_name] = 0.0
+        self.check_item('H', H)
         self.parameters_dict['H'] = H
+        self.check_item('W', W)
         self.parameters_dict['W'] = W
         r_mat = __zero_mat_list__(3)
         self.parameters_dict['rotation_mat'] = r_mat
         t_list = [0.0, 0.0, 0.0]
         self.parameters_dict['translation'] = t_list
 
-    def reset_distort(self):
+    def reset_distort(self) -> None:
         """Reset all distort coefficients to zero."""
         for distort_name in __distort_coefficient_names__:
             self.parameters_dict[distort_name] = 0.0
 
-    def get_opencv_distort_mat(self):
+    def get_opencv_distort_mat(self) -> np.ndarray:
         """Get a numpy array of 8 distort coefficients, which is the distCoeffs
         arg of cv2.undistort.
 
@@ -105,13 +154,14 @@ class CameraParameter:
                 Key of the target matrix. in_mat or rotation_mat.
             mat_numpy (ndarray):
                 Matrix in numpy format.
-        Raises:
-            KeyError: mat_key not in self.parameters_dict
+
+            Raises:
+                TypeError:
+                    mat_numpy is not an np.ndarray.
         """
-        if mat_key not in self.parameters_dict:
-            raise KeyError(mat_key)
-        else:
-            self.parameters_dict[mat_key] = mat_numpy.tolist()
+        if not isinstance(mat_numpy, np.ndarray):
+            raise TypeError
+        self.set_mat_list(mat_key, mat_numpy.tolist())
 
     def set_mat_list(self, mat_key: str, mat_list: List[list]) -> None:
         """Set a matrix-type parameter to mat_list.
@@ -121,13 +171,9 @@ class CameraParameter:
                 Key of the target matrix. in_mat or rotation_mat.
             mat_list (List[list]):
                 Matrix in list format.
-        Raises:
-            KeyError: mat_key not in self.parameters_dict
         """
-        if mat_key not in self.parameters_dict:
-            raise KeyError(mat_key)
-        else:
-            self.parameters_dict[mat_key] = mat_list
+        self.check_item(mat_key, mat_list)
+        self.parameters_dict[mat_key] = mat_list
 
     def set_value(self, key: str, value: Any) -> None:
         """Set a parameter to value.
@@ -137,14 +183,9 @@ class CameraParameter:
                 Name of the parameter.
             value (object):
                 New value of the parameter.
-
-        Raises:
-            KeyError: key not in self.parameters_dict
         """
-        if key not in self.parameters_dict:
-            raise KeyError(key)
-        else:
-            self.parameters_dict[key] = value
+        self.check_item(key, value)
+        self.parameters_dict[key] = value
 
     def get_value(self, key: str) -> Any:
         """Get a parameter by key.
@@ -164,7 +205,7 @@ class CameraParameter:
         else:
             return self.parameters_dict[key]
 
-    def get_mat_np(self, key: str) -> Any:
+    def get_mat_np(self, key: str) -> np.ndarray:
         """Get a a matrix-type parameter by key.
 
         Args:
@@ -174,7 +215,7 @@ class CameraParameter:
             KeyError: key not in self.parameters_dict
 
         Returns:
-            object:
+            ndarray:
                 Value of the parameter.
         """
         if key not in self.parameters_dict:
@@ -295,7 +336,7 @@ class CameraParameter:
             resolution_dst=(height, width))
         k_3x3 = \
             convert_K_4x4_to_3x3(new_K, is_perspective=False)
-        k_3x3.numpy().squeeze(0)
+        k_3x3 = k_3x3.numpy().squeeze(0)
         r_3x3 = new_R.numpy().squeeze(0)
         t_3 = new_T.numpy().squeeze(0)
         self.name = name
@@ -342,6 +383,64 @@ class CameraParameter:
             'T': new_T,
         }
         return ret_dict
+
+    def check_item(self, key: Any, val: Any) -> None:
+        """Check whether the key and its value matches definition in
+        CameraParameter.SUPPORTED_KEYS.
+
+        Args:
+            key (Any):
+                Key in CameraParameter.
+            val (Any):
+                Value to the key.
+
+        Raises:
+            KeyError:
+                key cannot be found in
+                CameraParameter.SUPPORTED_KEYS.
+            TypeError:
+                Value's type doesn't match definition.
+        """
+        self.__check_key__(key)
+        self.__check_value_type__(key, val)
+
+    def __check_key__(self, key: Any) -> None:
+        """Check whether the key matches definition in
+        CameraParameter.SUPPORTED_KEYS.
+
+        Args:
+            key (Any):
+                Key in CameraParameter.
+
+        Raises:
+            KeyError:
+                key cannot be found in
+                CameraParameter.SUPPORTED_KEYS.
+        """
+        if key not in self.__class__.SUPPORTED_KEYS:
+            err_msg = 'Key check failed in CameraParameter:\n'
+            err_msg += f'key={str(key)}\n'
+            raise KeyError(err_msg)
+
+    def __check_value_type__(self, key: Any, val: Any) -> None:
+        """Check whether the type of value matches definition in
+        CameraParameter.SUPPORTED_KEYS.
+
+        Args:
+            key (Any):
+                Key in CameraParameter.
+            val (Any):
+                Value to the key.
+
+        Raises:
+            TypeError:
+                Value is supported but doesn't match definition.
+        """
+        if type(val) != self.__class__.SUPPORTED_KEYS[key]['type']:
+            err_msg = 'Type check failed in CameraParameter:\n'
+            err_msg += f'key={str(key)}\n'
+            err_msg += f'type(val)={type(val)}\n'
+            raise TypeError(err_msg)
 
 
 def __parse_chessboard_param__(chessboard_camera_param, name, inverse=True):

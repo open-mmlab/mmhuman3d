@@ -134,11 +134,11 @@ class H36mCamera():
         camera_name = f'S{subject}_{self.camera_ids[camera]}'
         camera_params = CameraParameter(camera_name, h, w)
         camera_params.set_K_R_T(K, R, T)
-        camera_params.set_value('k1', k[0])
-        camera_params.set_value('k2', k[1])
-        camera_params.set_value('k3', k[2])
-        camera_params.set_value('p1', p[0])
-        camera_params.set_value('p2', p[1])
+        camera_params.set_value('k1', float(k[0]))
+        camera_params.set_value('k2', float(k[1]))
+        camera_params.set_value('k3', float(k[2]))
+        camera_params.set_value('p1', float(p[0]))
+        camera_params.set_value('p2', float(p[1]))
         return camera_params.to_dict()
 
     def generate_cameras_dict(self) -> dict:
