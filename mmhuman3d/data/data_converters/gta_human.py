@@ -114,17 +114,6 @@ class GTAHumanConverter(BaseConverter):
             seq_idx, _ = os.path.splitext(base)  # -> seq_00000001
             num_frames = len(anno['body_pose'])
 
-            # keypoints_2d_gta_openpose = map_joints(
-            # annotation['keypoints_2d'],
-            # joint_mapper_gta_to_openpose,
-            # (num_frames, 25, 3))  # 25 joints, (x, y, conf)
-            # keypoints_2d_gta_joint24 = map_joints(annotation['keypoints_2d'],
-            # joint_mapper_gta_to_joint24,
-            # (num_frames, 24, 3))  # 24 joints, (x, y, conf)
-            # keypoints_3d_gta_joint24 = map_joints(annotation['keypoints_3d'],
-            # joint_mapper_gta_to_joint24,
-            # (num_frames, 24, 4))  # 24 joints, (x, y, z, conf)
-
             keypoints_2d_gta, keypoints_2d_gta_mask = convert_kps(
                 anno['keypoints_2d'], src='gta', dst='smpl_49')
             keypoints_3d_gta, keypoints_3d_gta_mask = convert_kps(
@@ -134,17 +123,6 @@ class GTAHumanConverter(BaseConverter):
             body_pose = anno['body_pose']
             betas = anno['betas']
             transl = anno['transl']
-
-            # keypoints_2d_smpl_openpose, \
-            # keypoints_2d_smpl_joint24, \
-            # keypoints_3d_smpl_openpose, \
-            # keypoints_3d_smpl_joint24 = \
-            #     extract_keypoints_from_smpl(smpl,
-            #     global_orient=torch.tensor(global_orient, device=device),
-            #     body_pose=torch.tensor(body_pose, device=device),
-            #     betas=torch.tensor(betas, device=device),
-            #     transl=torch.tensor(transl, device=device)
-            #     )
 
             output = self.smpl(
                 global_orient=torch.tensor(global_orient, device=self.device),
@@ -182,43 +160,7 @@ class GTAHumanConverter(BaseConverter):
                         and 0 < h < 1080):
                     continue
 
-                # center = [x + w / 2.0, y + h / 2.0]
-                # scale = max(w, h)
-
-                # keypoints_2d_gta_openpose_frame =
-                # keypoints_2d_gta_openpose[frame_idx]
-                # keypoints_2d_gta_joint24_frame =
-                # keypoints_2d_gta_joint24[frame_idx]
-                # keypoints_3d_gta_joint24_frame =
-                # keypoints_3d_gta_joint24[frame_idx]
-                #
-                # keypoints_2d_smpl_openpose_frame =
-                # keypoints_2d_smpl_openpose[frame_idx]
-                # keypoints_2d_smpl_joint24_frame =
-                # keypoints_2d_smpl_joint24[frame_idx]
-                # keypoints_3d_smpl_joint24_frame =
-                # keypoints_3d_smpl_joint24[frame_idx]
-
-                # # re-center 3d keypoints with the pelvis as the origin
-                # keypoints_3d_gta_joint24_frame[:, :3] =
-                # keypoints_3d_gta_joint24_frame[:, :3] -
-                # keypoints_3d_gta_joint24_frame[14, :3]
-                # keypoints_3d_smpl_joint24_frame[:, :3] =
-                # keypoints_3d_smpl_joint24_frame[:,:3] -
-                # keypoints_3d_smpl_joint24_frame[14, :3]
-
-                # # GTA 2D and 3D keypoints
-                # keypoints2d_gta.append(keypoints_2d_gta_joint24_frame)
-                # keypoints3d_gta.append(keypoints_3d_gta_joint24_frame)
-                #
-                # # SMPL-derived 2D and 3D keypoints
-                # keypoints2d_smpl_.append(keypoints_2d_smpl_joint24_frame)
-                # keypoints3d_smpl_.append(keypoints_3d_smpl_joint24_frame)
-                # openpose_smpl_.append(keypoints_2d_smpl_openpose_frame)
-
                 image_path_list.append(image_path)
-                # center_list.append(center)
-                # scale_list.append(scale)
                 bbox_xywh_list.append([x, y, w, h])
 
                 global_orient_list.append(global_orient[frame_idx])
@@ -257,20 +199,12 @@ class GTAHumanConverter(BaseConverter):
         human_data['keypoints3d_mask'] = keypoints3d_mask
 
         keypoints2d_gta = np.array(keypoints_2d_gta_list).reshape(-1, 49, 3)
-        # keypoints2d_gta = np.concatenate(
-        #     [keypoints2d_gta,
-        #      np.ones([keypoints2d_gta.shape[0], 49, 1])],
-        #     axis=-1)
         keypoints2d_gta, keypoints2d_gta_mask = \
             convert_kps(keypoints2d_gta, src='smpl_49', dst='human_data')
         human_data['keypoints2d_gta'] = keypoints2d_gta
         human_data['keypoints2d_gta_mask'] = keypoints2d_gta_mask
 
         keypoints3d_gta = np.array(keypoints_3d_gta_list).reshape(-1, 49, 4)
-        # keypoints3d_gta = np.concatenate(
-        #     [keypoints3d_gta,
-        #      np.ones([keypoints3d_gta.shape[0], 49, 1])],
-        #     axis=-1)
         keypoints3d_gta, keypoints3d_gta_mask = \
             convert_kps(keypoints3d_gta, src='smpl_49', dst='human_data')
         human_data['keypoints3d_gta'] = keypoints3d_gta
