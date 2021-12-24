@@ -426,7 +426,7 @@ def render_smpl(
     gender: Literal['male', 'female', 'neutral'] = 'neutral',
     model_path: Optional[str] = None,
     body_model: Optional[nn.Module] = None,
-    # camera paramters
+    # camera parameters
     R: Optional[Union[torch.Tensor, np.ndarray]] = None,
     T: Optional[Union[torch.Tensor, np.ndarray]] = None,
     K: Optional[Union[torch.Tensor, np.ndarray]] = None,
@@ -616,9 +616,9 @@ def render_smpl(
             will be in the same color.
 
             3). If you want to define your specific color, use an `array`
-            of shape (3,) for singe person and (N, 3) for multiple person.
+            of shape (3,) for single person and (N, 3) for multiple persons.
 
-            If (3,) for multiple person, all will be in the same color.
+            If (3,) for multiple persons, all will be in the same color.
 
             Your `array` should be in range [0, 255] for 8 bit color.
 
@@ -663,12 +663,12 @@ def render_smpl(
 
         # background frames, priority: image_array > frame_list > origin_frames
 
-        origin_frames (Optional[str], optional): origin brackground frame path,
+        origin_frames (Optional[str], optional): origin background frame path,
             could be `.mp4`, `.gif`(will be sliced into a folder) or an image
             folder.
 
             Defaults to None.
-        frame_list (Optional[List[str]], optional): list of origin brackground
+        frame_list (Optional[List[str]], optional): list of origin background
             frame paths, element in list each should be a image path like
             `*.jpg` or `*.png`.
             Use this when your file names is hard to sort or you only want to
@@ -676,7 +676,7 @@ def render_smpl(
 
             Defaults to None.
         image_array: (Optional[Union[np.ndarray, torch.Tensor]], optional):
-            origin brackground frame `tensor` or `array`, use this when you
+            origin background frame `tensor` or `array`, use this when you
             want your frames in memory as array or tensor.
         overwrite (bool, optional): whether overwriting the existing files.
 
@@ -1045,7 +1045,7 @@ def visualize_smpl_hmr(cam_transl,
                        det_height=224,
                        bbox_format='xyxy',
                        **kwargs) -> None:
-    """Simpliest way to visualize HMR or SPIN or Smplify pred smpl with orign
+    """Simplest way to visualize HMR or SPIN or Smplify pred smpl with origin
     frames and predicted cameras."""
     if kp2d is not None:
         bbox = convert_kp2d_to_bbox(kp2d, bbox_format=bbox_format)
@@ -1084,7 +1084,7 @@ def visualize_smpl_vibe(orig_cam=None,
                         output_path='sample.mp4',
                         resolution=None,
                         **kwargs) -> None:
-    """Simpliest way to visualize pred smpl with orign frames and predicted
+    """Simplest way to visualize pred smpl with origin frames and predicted
     cameras."""
     assert resolution is not None
     if pred_cam is not None and bbox is not None:
@@ -1115,7 +1115,7 @@ def visualize_T_pose(num_frames,
                      orbit_speed=1.0,
                      model_type='smpl',
                      **kwargs) -> None:
-    """Simpliest way to visualize a sequence of T pose."""
+    """Simplest way to visualize a sequence of T pose."""
     assert num_frames > 0, '`num_frames` is required.'
     if model_type == 'smpl':
         poses = torch.zeros(num_frames, 72)
@@ -1143,9 +1143,10 @@ def visualize_T_pose(num_frames,
 
 
 def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
-    """Simpliest way to visualize a sequence of smpl pose.
+    """Simplest way to visualize a sequence of smpl pose.
 
-    Cameras will focus on the center of smpl mesh. `orbit speed` is recomended.
+    Cameras will focus on the center of smpl mesh. `orbit speed` is
+    recommended.
     """
     assert (poses
             is not None) or (verts

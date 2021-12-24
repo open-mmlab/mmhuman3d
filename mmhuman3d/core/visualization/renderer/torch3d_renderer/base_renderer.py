@@ -204,7 +204,7 @@ class MeshBaseRenderer(nn.Module):
                 dict(type=self.shader_type)))
         return renderer
 
-    def write_images(self, rgbs, valid_masks, images, indexs):
+    def write_images(self, rgbs, valid_masks, images, indexes):
         """Write output/temp images."""
         if images is not None:
             output_images = rgbs * 255 * valid_masks + (1 -
@@ -214,7 +214,7 @@ class MeshBaseRenderer(nn.Module):
         else:
             output_images = (rgbs.detach().cpu().numpy() * 255).astype(
                 np.uint8)
-        for idx, real_idx in enumerate(indexs):
+        for idx, real_idx in enumerate(indexes):
             folder = self.temp_path if self.temp_path is not None else\
                 self.output_path
             cv2.imwrite(
@@ -230,7 +230,7 @@ class MeshBaseRenderer(nn.Module):
             R: Optional[torch.Tensor] = None,
             T: Optional[torch.Tensor] = None,
             images: Optional[torch.Tensor] = None,
-            indexs: Optional[Iterable[int]] = None
+            indexes: Optional[Iterable[int]] = None
     ) -> Union[torch.Tensor, None]:
         """Render Meshes.
 
@@ -251,7 +251,7 @@ class MeshBaseRenderer(nn.Module):
                 Defaults to None.
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
-            indexs (Optional[Iterable[int]], optional): indexs for the images.
+            indexes (Optional[Iterable[int]], optional): indexes for images.
                 Defaults to None.
 
         Returns:
@@ -276,7 +276,7 @@ class MeshBaseRenderer(nn.Module):
         valid_masks = (rendered_images[..., 3:] > 0) * 1.0
 
         if self.output_path is not None:
-            self.write_images(rgbs, valid_masks, images, indexs)
+            self.write_images(rgbs, valid_masks, images, indexes)
 
         if self.return_tensor:
             return rendered_images

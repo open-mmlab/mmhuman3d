@@ -68,7 +68,7 @@ class RenderDataset(Dataset):
     def __getitem__(self, index):
         """clip the index and get item."""
         result_dict = {
-            'indexs': index,
+            'indexes': index,
         }
 
         for k in self.vars:

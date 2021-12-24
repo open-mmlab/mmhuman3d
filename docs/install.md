@@ -64,7 +64,7 @@ conda install pytorch3d -c pytorch3d
 ```
 Please refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details.
 
-Your installation has successed if you can do these in command line.
+Your installation is successful if you can do these in command line.
 
 ```shell
 echo "import pytorch3d;print(pytorch3d.__version__); \
