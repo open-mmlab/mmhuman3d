@@ -616,9 +616,9 @@ def render_smpl(
             will be in the same color.
 
             3). If you want to define your specific color, use an `array`
-            of shape (3,) for single person and (N, 3) for multiple person.
+            of shape (3,) for single person and (N, 3) for multiple persons.
 
-            If (3,) for multiple person, all will be in the same color.
+            If (3,) for multiple persons, all will be in the same color.
 
             Your `array` should be in range [0, 255] for 8 bit color.
 
