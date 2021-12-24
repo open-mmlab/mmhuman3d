@@ -1,5 +1,9 @@
 ## How to add a dataset converter to mmhuman3d
 
+### Overview
+
+All datasets are first preprocessed (using respective converters) into the same convention before they are loaded during training or testing. This documentation outlines how to add a new converter to support a new dataset.
+
 ### 1. Create a python script for your converter
 
 For this example, we create `mmhuman3d/data/data_converters/lsp.py` for the LSP dataset we are adding.
@@ -29,8 +33,7 @@ class CocoConverter(BaseConverter):
 
 (2) BaseModeConverter (refer to `mmhuman3d/data/data_converters/lsp.py` for an example)
 
-LspConverter has a `convert_by_mode` function which outputs multiple preprocessed .npz file with
-different modes defined in ACCEPTED_MODES.
+If your dataset requires different handling (modes) for training and test set, you can inherit BaseModeConverter. For instance, LspConverter has a `convert_by_mode` function which outputs multiple preprocessed .npz file with different modes defined in ACCEPTED_MODES.
 ```
 @DATA_CONVERTERS.register_module()
 class LspConverter(BaseModeConverter):
@@ -128,7 +131,7 @@ Check that running this command
 
 ```bash
 python tools/convert_datasets.py \
-  --datasets lsp \
+  --datasets lsp \ # dataset-name defined in DATASET_CONFIGS
   --root_path data/datasets \
   --output_path data/preprocessed_datasets
 ```
