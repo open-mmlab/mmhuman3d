@@ -54,6 +54,7 @@ These are the supported conventions:
   - [COCO](#coco)
   - [COCO-WHOLEBODY](#coco-wholebody)
   - [CrowdPose](#crowdpose)
+  - [GTA-Human](#gta-human)
   - [Human3.6M](#human36m)
   - human_data
   - [HybrIK](#hybrik)
@@ -169,8 +170,24 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### HybrIK
+#### GTA-Human
 
+<details>
+<summary align="right"><a href="https://gta-human.com/">GTA-Human (arXiv'2021)</a></summary>
+
+```bibtex
+@article{cai2021playing,
+  title={Playing for 3D Human Recovery},
+  author={Cai, Zhongang and Zhang, Mingyuan and Ren, Jiawei and Wei, Chen and Ren, Daxuan and Li, Jiatong and Lin, Zhengyu and Zhao, Haiyu and Yi, Shuai and Yang, Lei and others},
+  journal={arXiv preprint arXiv:2110.07588},
+  year={2021}
+}
+```
+
+</details>
+
+
+#### HybrIK
 
 <details>
 <summary align="right"><a href="https://openaccess.thecvf.com/content/CVPR2021/html/Li_HybrIK_A_Hybrid_Analytical-Neural_Inverse_Kinematics_Solution_for_3D_Human_CVPR_2021_paper.html">HybrIK (CVPR'2021)</a></summary>
