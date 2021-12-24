@@ -11,6 +11,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idx,
 )
+from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.models.builder import build_body_model
 from .base_converter import BaseConverter
@@ -19,36 +20,6 @@ from .builder import DATA_CONVERTERS
 # TODO:
 # 1. camera parameters
 # 2. root align using mid-point of hips
-
-
-def perspective_projection(points: torch.Tensor, focal_length: float,
-                           camera_center: Tuple):
-    """This function computes the perspective projection of a set of points.
-
-    Input:
-        points (bs, N, 3): 3D points
-        focal_length (bs,) or scalar: Focal length
-        camera_center (bs, 2): Camera center
-    """
-    batch_size = points.shape[0]
-    K = torch.zeros([batch_size, 3, 3], device=points.device)
-    K[:, 0, 0] = focal_length
-    K[:, 1, 1] = focal_length
-    K[:, 2, 2] = 1.
-
-    K[:, 0, -1] = camera_center[0]
-    K[:, 1, -1] = camera_center[1]
-
-    points = torch.transpose(points, 1, 2)  # (bs, 3, N)
-    projected_points = torch.matmul(K, points)  # (bs, 3, N)
-    projected_points = torch.transpose(projected_points, 1, 2)  # (bs, N, 3)
-    projected_points = projected_points[:, :, :
-                                        2] / projected_points[:, :,
-                                                              2].unsqueeze(
-                                                                  -1
-                                                              )  # (bs, N, 2)
-
-    return projected_points
 
 
 @DATA_CONVERTERS.register_module()
@@ -60,7 +31,8 @@ class GTAHumanConverter(BaseConverter):
     """
 
     focal_length = 1158.0337
-    camera_center = (960, 540)
+    camera_center = (960, 540)  # xy
+    image_size = (1080, 1920)  # (height, width)
 
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -73,6 +45,15 @@ class GTAHumanConverter(BaseConverter):
             model_path='data/body_models/smpl',
             extra_joints_regressor='data/body_models/J_regressor_extra.npy')
     ).to(device)
+
+    camera = build_cameras(
+        dict(
+            type='PerspectiveCameras',
+            convention='opencv',
+            in_ndc=False,
+            focal_length=focal_length,
+            image_size=image_size,
+            principal_point=camera_center))
 
     def convert(self, dataset_path: str, out_path: str) -> dict:
         """
@@ -129,9 +110,9 @@ class GTAHumanConverter(BaseConverter):
                 return_joints=True)
 
             keypoints_3d = output['joints']
-            keypoints_2d = perspective_projection(keypoints_3d,
-                                                  self.focal_length,
-                                                  self.camera_center)
+            keypoints_2d_xyd = self.camera.transform_points_screen(keypoints_3d)
+            keypoints_2d = keypoints_2d_xyd[..., :2]
+
             keypoints_3d = keypoints_3d.cpu().numpy()
             keypoints_2d = keypoints_2d.cpu().numpy()
 
