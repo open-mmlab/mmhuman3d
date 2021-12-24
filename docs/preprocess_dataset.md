@@ -755,8 +755,8 @@ mmhuman3d
     └── datasets
         └── lsp
             ├── images
-            |  ├── im0001.jpg
-            |  ├── im0002.jpg
+            |  ├── im0001.jpg
+            |  ├── im0002.jpg
             |  └── ...
             └── joints.mat
 ```
@@ -1159,4 +1159,43 @@ mmhuman3d
               ├── run0
               ├── run1
               └── run2
+```
+
+
+### VIBE
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1912.05656.pdf">VIBE (CVPR'2020)</a></summary>
+
+```BibTeX
+@inproceedings{VIBE,
+  author    = {Muhammed Kocabas and
+               Nikos Athanasiou and
+               Michael J. Black},
+  title     = {{VIBE}: Video Inference for Human Body Pose and Shape Estimation},
+  booktitle = {CVPR},
+  year      = {2020}
+}
+```
+
+</details>
+
+For [VIBE](https://github.com/mkocabas/VIBE), please download the [preprocessed mpi_inf_3dhp and pw3d npz files from SPIN](https://github.com/nkolot/SPIN/blob/master/fetch_data.sh) and pretrained frame feature extractor [spin.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/vibe/spin.pth?versionId=CAEQHhiBgIDrxqbU6xciIGIzOWFkMWYyNzMwMjRhMzBiYzM3NDFiMmVkY2JkZTVh). Place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── checkpoints
+    |   └── spin.pth
+    └── datasets
+        └── vibe_data
+            ├── mpi_inf_3dhp_train.npz
+            └── pw3d_test.npz
 ```
