@@ -1,17 +1,16 @@
 import glob
 import os
 import pickle
-from typing import Tuple
 
 import numpy as np
 import torch
 from tqdm import tqdm
 
+from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idx,
 )
-from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.models.builder import build_body_model
 from .base_converter import BaseConverter
@@ -110,7 +109,8 @@ class GTAHumanConverter(BaseConverter):
                 return_joints=True)
 
             keypoints_3d = output['joints']
-            keypoints_2d_xyd = self.camera.transform_points_screen(keypoints_3d)
+            keypoints_2d_xyd = self.camera.transform_points_screen(
+                keypoints_3d)
             keypoints_2d = keypoints_2d_xyd[..., :2]
 
             keypoints_3d = keypoints_3d.cpu().numpy()
