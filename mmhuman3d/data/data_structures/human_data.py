@@ -550,12 +550,10 @@ class HumanData(dict):
         Args:
             key (Any):
                 Key in HumanData.
-            val (Any):
-                Value to the key.
 
         Returns:
-            bool:
-                True for matched, ortherwise False.
+            _KeyCheck:
+                PASS, WARN or ERROR.
 
         Raises:
             KeyError:
