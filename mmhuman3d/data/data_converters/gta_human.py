@@ -80,27 +80,27 @@ class GTAHumanConverter(BaseConverter):
         image_path_, bbox_xywh_, keypoints_2d_gta_, keypoints_3d_gta_, \
             keypoints_2d_, keypoints_3d_ = [], [], [], [], [], []
 
-        anno_paths = sorted(
+        ann_paths = sorted(
             glob.glob(os.path.join(dataset_path, 'annotations', '*.pkl')))
 
-        for anno_path in tqdm(anno_paths):
+        for ann_path in tqdm(ann_paths):
 
-            with open(anno_path, 'rb') as f:
-                anno = pickle.load(f, encoding='latin1')
+            with open(ann_path, 'rb') as f:
+                ann = pickle.load(f, encoding='latin1')
 
-            base = os.path.basename(anno_path)  # -> seq_00000001.pkl
+            base = os.path.basename(ann_path)  # -> seq_00000001.pkl
             seq_idx, _ = os.path.splitext(base)  # -> seq_00000001
-            num_frames = len(anno['body_pose'])
+            num_frames = len(ann['body_pose'])
 
             keypoints_2d_gta, keypoints_2d_gta_mask = convert_kps(
-                anno['keypoints_2d'], src='gta', dst='smpl_49')
+                ann['keypoints_2d'], src='gta', dst='smpl_49')
             keypoints_3d_gta, keypoints_3d_gta_mask = convert_kps(
-                anno['keypoints_3d'], src='gta', dst='smpl_49')
+                ann['keypoints_3d'], src='gta', dst='smpl_49')
 
-            global_orient = anno['global_orient']
-            body_pose = anno['body_pose']
-            betas = anno['betas']
-            transl = anno['transl']
+            global_orient = ann['global_orient']
+            body_pose = ann['body_pose']
+            betas = ann['betas']
+            transl = ann['transl']
 
             output = self.smpl(
                 global_orient=torch.tensor(global_orient, device=self.device),
@@ -126,7 +126,7 @@ class GTAHumanConverter(BaseConverter):
 
                 image_path = os.path.join('images', seq_idx,
                                           '{:08d}.jpeg'.format(frame_idx))
-                bbox_xywh = anno['bbox_xywh'][frame_idx]
+                bbox_xywh = ann['bbox_xywh'][frame_idx]
 
                 # reject examples with bbox center outside the frame
                 x, y, w, h = bbox_xywh
