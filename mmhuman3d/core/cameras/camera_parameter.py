@@ -417,10 +417,7 @@ class CameraParameter:
                 key cannot be found in
                 CameraParameter.SUPPORTED_KEYS.
         """
-        check_passed = True
         if key not in self.__class__.SUPPORTED_KEYS:
-            check_passed = False
-        if not check_passed:
             err_msg = 'Key check failed in CameraParameter:\n'
             err_msg += f'key={str(key)}\n'
             raise KeyError(err_msg)
@@ -439,10 +436,7 @@ class CameraParameter:
             TypeError:
                 Value is supported but doesn't match definition.
         """
-        check_passed = True
         if type(val) != self.__class__.SUPPORTED_KEYS[key]['type']:
-            check_passed = False
-        if not check_passed:
             err_msg = 'Type check failed in CameraParameter:\n'
             err_msg += f'key={str(key)}\n'
             err_msg += f'type(val)={type(val)}\n'
