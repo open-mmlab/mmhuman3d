@@ -43,156 +43,114 @@ black_blend_params = {'background_color': (0.0, 0.0, 0.0)}
 RENDER_CONFIGS = {
     'lq': {
         'renderer_type': 'base',
+        'shader_type': 'flat',
+        'texture_type': 'vertex',
         'light': base_directional_light,
         'material': base_material,
         'raster': {
             'type': 'mesh',
-            'resolution': [256, 256],
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': True,
             'cull_backfaces': True,
-        },
-        'shader': {
-            'type': 'flat',
-        },
-        'texture': {
-            'type': 'vertex'
         },
         'blend': white_blend_params,
     },
     'mq': {
         'renderer_type': 'base',
+        'shader_type': 'gouraud',
+        'texture_type': 'vertex',
         'light': base_directional_light,
         'material': base_material,
         'raster': {
             'type': 'mesh',
-            'resolution': [512, 512],
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': True,
             'cull_backfaces': True,
         },
-        'shader': {
-            'type': 'gouraud',
-        },
-        'texture': {
-            'type': 'vertex'
-        },
         'blend': white_blend_params,
     },
     'hq': {
         'renderer_type': 'base',
+        'shader_type': 'phong',
+        'texture_type': 'vertex',
         'light': base_directional_light,
         'material': base_material,
         'raster': {
             'type': 'mesh',
-            'resolution': [1024, 1024],
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
             'cull_backfaces': False,
-        },
-        'shader': {
-            'type': 'phong',
-        },
-        'texture': {
-            'type': 'vertex'
         },
         'blend': white_blend_params,
     },
     'silhouette': {
         'renderer_type': 'silhouette',
-        'light': None,
+        'shader_type': 'silhouette',
+        'texture_type': 'vertex',
         'material': silhouete_material,
         'raster': {
             'type': 'mesh',
-            'resolution': [512, 512],
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
             'cull_backfaces': True,
-        },
-        'shader': {
-            'type': 'silhouette',
-        },
-        'texture': {
-            'type': 'vertex'
         },
         'blend': black_blend_params,
     },
     'part_silhouette': {
         'renderer_type': 'base',
+        'shader_type': 'nolight',
+        'texture_type': 'closet',
         'light': None,
         'material': None,
         'raster': {
             'type': 'mesh',
-            'resolution': [512, 512],
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
             'cull_backfaces': True,
         },
-        'shader': {
-            'type': 'nolight',
-        },
-        'texture': {
-            'type': 'closet'
-        },
         'blend': black_blend_params,
     },
     'depth': {
         'renderer_type': 'depth',
+        'shader_type': 'nolight',
+        'texture_type': 'vertex',
         'light': None,
         'material': None,
         'raster': {
             'type': 'mesh',
-            'resolution': [512, 512],
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
             'cull_backfaces': False,
-        },
-        'shader': {
-            'type': 'nolight',
-        },
-        'texture': {
-            'type': 'vertex'
         },
         'blend': white_blend_params,
     },
     'normal': {
         'renderer_type': 'normal',
+        'shader_type': 'nolight',
+        'texture_type': 'vertex',
         'light': None,
         'material': None,
         'raster': {
             'type': 'mesh',
-            'resolution': [512, 512],
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
             'cull_backfaces': False,
         },
-        'shader': {
-            'type': 'nolight',
-        },
-        'texture': {
-            'type': 'vertex'
-        },
         'blend': white_blend_params,
     },
     'pointcloud': {
         'renderer_type': 'pointcloud',
-        'light': base_directional_light,
+        'shader_type': 'nolight',
+        'texture_type': 'vertex',
+        'light': None,
         'material': None,
-        'raster': {
-            'type': 'point',
-            'resolution': [512, 512]
-        },
-        'shader': {
-            'type': 'nolight',
-        },
-        'texture': None,
         'blend': white_blend_params,
         'bg_color': [
             1.0,
@@ -200,6 +158,9 @@ RENDER_CONFIGS = {
             1.0,
             0.0,
         ],
+        'raster': {
+            'type': 'point'
+        },
         'points_per_pixel': 10,
         'radius': 0.003
     }

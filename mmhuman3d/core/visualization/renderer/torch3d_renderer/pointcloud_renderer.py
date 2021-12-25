@@ -2,18 +2,16 @@ import warnings
 from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
-import torch.nn as nn
 from pytorch3d.renderer import (
     AlphaCompositor,
     PointsRasterizationSettings,
-    PointsRasterizer,
     PointsRenderer,
 )
 from pytorch3d.structures import Meshes, Pointclouds
 
-from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
-from .builder import RENDERER
+from .base_renderer import MeshBaseRenderer
+from .builder import RENDERER, build_raster
 
 try:
     from typing import Literal
@@ -21,9 +19,11 @@ except ImportError:
     from typing_extensions import Literal
 
 
-@RENDERER.register_module(
-    name=['PointCloud', 'pointcloud', 'PointCloudRenderer'])
-class PointCloudRenderer(nn.Module):
+@RENDERER.register_module(name=[
+    'PointCloud', 'pointcloud', 'point_cloud', 'pointcloud_renderer',
+    'PointCloudRenderer'
+])
+class PointCloudRenderer(MeshBaseRenderer):
 
     def __init__(self,
                  resolution: Tuple[int, int],
@@ -34,7 +34,7 @@ class PointCloudRenderer(nn.Module):
                                      'orthographics', 'perspective',
                                      'fovorthographics'] = 'weakperspective',
                  in_ndc: bool = True,
-                 radius: float = 0.008,
+                 radius: Optional[float] = None,
                  **kwargs) -> None:
         """PointCloud renderer.
 
@@ -53,7 +53,7 @@ class PointCloudRenderer(nn.Module):
                 Defaults to 'weakperspective'.
             in_ndc (bool, optional): cameras whether defined in NDC.
                 Defaults to True.
-            radius (float, optional): radius of points. Defaults to 0.008.
+            radius (float, optional): radius of points. Defaults to None.
 
         Returns:
             None
@@ -66,10 +66,10 @@ class PointCloudRenderer(nn.Module):
         self.projection = projection
         self.set_render_params(**kwargs)
         self.in_ndc = in_ndc
-        super().__init__()
 
     def set_render_params(self, **kwargs):
         """Set render params."""
+        raster_params = kwargs.get('raster')
         self.bg_color = torch.tensor(
             kwargs.get('bg_color', [
                 1.0,
@@ -79,28 +79,20 @@ class PointCloudRenderer(nn.Module):
             ]),
             dtype=torch.float32,
             device=self.device)
+        self.raster_type = raster_params.pop('type', None)
         self.raster_settings = PointsRasterizationSettings(
             image_size=self.resolution,
             radius=self.radius
-            if kwargs.get('radius') is None else kwargs.get('radius'),
+            if self.radius is not None else kwargs.get('radius'),
             points_per_pixel=kwargs.get('points_per_pixel', 10))
-
-    def init_cameras(self, K, R, T):
-        """Initialize cameras."""
-        cameras = build_cameras(
-            dict(
-                type=self.projection,
-                K=K,
-                R=R,
-                T=T,
-                image_size=self.resolution,
-                _in_ndc=self.in_ndc)).to(self.device)
-        return cameras
 
     def init_renderer(self, cameras):
         renderer = PointsRenderer(
-            rasterizer=PointsRasterizer(
-                cameras=cameras, raster_settings=self.raster_settings),
+            rasterizer=build_raster(
+                dict(
+                    type=self.raster_type,
+                    cameras=cameras,
+                    raster_settings=self.raster_settings)),
             compositor=AlphaCompositor(background_color=self.bg_color))
         return renderer
 

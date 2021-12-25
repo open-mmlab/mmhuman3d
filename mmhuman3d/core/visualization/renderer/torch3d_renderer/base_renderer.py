@@ -12,7 +12,6 @@ import torch.nn as nn
 from pytorch3d.renderer import (
     BlendParams,
     Materials,
-    MeshRasterizer,
     MeshRenderer,
     RasterizationSettings,
 )
@@ -21,7 +20,7 @@ from pytorch3d.structures import Meshes
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
-from .builder import RENDERER, build_lights, build_shader
+from .builder import RENDERER, build_lights, build_raster, build_shader
 
 try:
     from typing import Literal
@@ -128,28 +127,21 @@ class MeshBaseRenderer(nn.Module):
 
     def set_render_params(self, **kwargs):
         """Set render params."""
-        material_params = kwargs.get('material', None)
-        light_params = kwargs.get('light', None)
-        raster_params = kwargs.get('raster', None)
-        blend_params = kwargs.get('blend', None)
-        shader_params = kwargs.get('shader', None)
-        self.shader_type = shader_params.get('type', 'phong')
+        material_params = kwargs.get('material', {})
+        light_params = kwargs.get('light', {'type': 'directional'})
+        raster_params = kwargs.get('raster', {'type': 'mesh'})
+        blend_params = kwargs.get('blend', {})
+        self.shader_type = kwargs.get('shader_type', 'phong')
 
-        default_resolution = raster_params.pop('resolution', None)
+        default_resolution = raster_params.pop('resolution', [1024, 1024])
         if self.resolution is None:
             self.resolution = default_resolution
 
-        self.materials = Materials(
-            device=self.device, **
-            material_params) if material_params is not None else None
-
+        self.materials = Materials(device=self.device, **material_params)
         self.raster_settings = RasterizationSettings(
-            image_size=self.resolution, **
-            raster_params) if raster_params is not None else None
-        self.lights = build_lights(light_params).to(
-            self.device) if light_params is not None else None
-        self.blend_params = BlendParams(
-            **blend_params) if blend_params is not None else None
+            image_size=self.resolution, **raster_params)
+        self.lights = build_lights(light_params).to(self.device)
+        self.blend_params = BlendParams(**blend_params)
 
     def export(self):
         """Export output video if need."""
@@ -193,9 +185,13 @@ class MeshBaseRenderer(nn.Module):
 
     def init_renderer(self, cameras, lights):
         """Initial renderer."""
+        raster = build_raster(
+            dict(
+                type='mesh',
+                cameras=cameras,
+                raster_settings=self.raster_settings))
         renderer = MeshRenderer(
-            rasterizer=MeshRasterizer(
-                cameras=cameras, raster_settings=self.raster_settings),
+            rasterizer=raster,
             shader=build_shader(
                 dict(
                     type=self.shader_type,

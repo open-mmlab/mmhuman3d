@@ -1,4 +1,5 @@
 import os.path as osp
+import warnings
 from typing import Iterable, Optional, Tuple, Union
 
 import cv2
@@ -19,8 +20,8 @@ except ImportError:
 
 @RENDERER.register_module(
     name=['Depth', 'depth', 'depth_renderer', 'DepthRenderer'])
-class DepthRenderer(MeshBaseRenderer):
-    """Render depth map with the help of camera system."""
+class SegmentationRenderer(MeshBaseRenderer):
+    """Render segmentation map into a segmentation index tensor."""
 
     def __init__(
         self,
@@ -35,7 +36,7 @@ class DepthRenderer(MeshBaseRenderer):
         in_ndc: bool = True,
         **kwargs,
     ) -> None:
-        """Renderer for depth map of meshes.
+        """Renderer for segmentation map of meshes.
 
         Args:
             resolution (Iterable[int]):
@@ -84,8 +85,18 @@ class DepthRenderer(MeshBaseRenderer):
         The params are the same as MeshBaseRenderer.
         """
         cameras = self.init_cameras(K=K, R=R, T=T)
-        meshes = self.prepare_meshes(meshes, vertices, faces)
-        vertices = meshes.verts_padded()
+        if meshes is None:
+            assert (vertices is not None) and (faces is not None),\
+                'No mesh data input.'
+
+            meshes = Meshes(
+                verts=vertices.to(self.device),
+                faces=faces.to(self.device),
+            )
+        else:
+            if (vertices is not None) or (faces is not None):
+                warnings.warn('Redundant input, will only use meshes.')
+            vertices = meshes.verts_padded()
         verts_depth = cameras.compute_depth_of_points(vertices)
         verts_depth_rgb = verts_depth.repeat(1, 1, 3)
 
@@ -104,7 +115,6 @@ class DepthRenderer(MeshBaseRenderer):
             img_rescale = exposure.rescale_intensity(
                 output_images, in_range=(p2, p98))
 
-            # Adaptive Equalization
             output_images = (
                 exposure.equalize_adapthist(img_rescale, clip_limit=0.03) *
                 255).astype(np.uint8)
@@ -117,6 +127,6 @@ class DepthRenderer(MeshBaseRenderer):
                     output_images[idx])
 
         if self.return_tensor:
-            return rendered_images
+            return rendered_images * self.norm_scale
         else:
             return None

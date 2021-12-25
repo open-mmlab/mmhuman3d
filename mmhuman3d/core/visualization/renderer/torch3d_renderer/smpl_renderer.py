@@ -12,11 +12,8 @@ from torch.nn.functional import interpolate
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
 from mmhuman3d.utils.keypoint_utils import get_different_colors
-from mmhuman3d.utils.mesh_utils import (
-    join_batch_meshes_as_scene,
-    mesh_to_pointcloud_vc,
-)
-from .builder import build_renderer
+from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
+from .builder import build_renderer, build_textures
 
 try:
     from typing import Literal
@@ -65,6 +62,7 @@ class SMPLRenderer(nn.Module):
         self.segmentation = body_segmentation(self.model_type)
 
         renderer_type = kwargs.pop('renderer_type', 'base')
+        self.texture_type = kwargs.pop()
         self.image_renderer = build_renderer(
             dict(
                 type=renderer_type,
@@ -86,8 +84,8 @@ class SMPLRenderer(nn.Module):
                     projection=projection,
                     in_ndc=in_ndc,
                     radius=0.008))
-        # else:
-        #     self.alpha = max(min(1.0, alpha), 0.1)
+        else:
+            self.alpha = max(min(1.0, alpha), 0.1)
 
         # if self.render_choice == 'pointcloud':
         #     self.pointcloud_renderer = PointCloudRenderer(
@@ -227,8 +225,10 @@ class SMPLRenderer(nn.Module):
             mesh = Meshes(
                 verts=vertices[:, person_idx].to(self.device),
                 faces=faces.to(self.device),
-                textures=self.Textures(
-                    verts_features=verts_rgb.to(self.device)))
+                textures=build_textures(
+                    dict(
+                        type=self.texture_type,
+                        verts_features=verts_rgb.to(self.device))))
             mesh_list.append(mesh)
         meshes = join_batch_meshes_as_scene(mesh_list)
 
@@ -243,30 +243,15 @@ class SMPLRenderer(nn.Module):
         else:
             raise TypeError(f'Wrong light type: {type(self.lights)}.')
 
-        if self.render_choice == 'pointcloud':
-            pointclouds = mesh_to_pointcloud_vc(meshes, alpha=1.0)
-            rendered_images = self.pointcloud_renderer(
-                pointclouds=pointclouds, K=K, R=R, T=T)
-            rgbs = rendered_images.clone()[..., :3]
-            rgbs = rgbs / rgbs.max()
-            # initial renderer
-        elif self.render_choice == 'depth':
-            rendered_images = self.depth_renderer(meshes, K=K, R=R, T=T)
-            rgbs = rendered_images.clone()[..., :3]
-            rgbs = rgbs / rgbs.max()
-        elif self.render_choice == 'normal':
-            rendered_images = self.normal_renderer(meshes, K=K, R=R, T=T)
+        rendered_images = self.image_renderer(
+            meshes=meshes, K=K, R=R, T=T, lights=lights)
+
+        if self.render_choice == 'normal':
             rgbs = rendered_images.clone()[..., :3]
             rgbs = (rgbs + 1) / 2
-        else:
-            renderer = self.init_renderer(cameras, lights)
-
-            # process render tensor and mask
-            rendered_images = renderer(meshes)
-            rgbs = rendered_images.clone()[..., :3]
-            rgbs = rgbs / rgbs.max()
-
+        rgbs = rgbs / rgbs.max()
         valid_masks = (rendered_images[..., 3:] > 0) * 1.0
+
         if self.render_choice == 'part_silhouette':
             rendered_silhouettes = rgbs[None] * 100
             part_silhouettes = []

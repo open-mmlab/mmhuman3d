@@ -68,6 +68,10 @@ class SilhouetteRenderer(MeshBaseRenderer):
             in_ndc=in_ndc,
             **kwargs)
 
+    def set_render_params(self, **kwargs):
+        super().set_render_params(**kwargs)
+        self.shader_type = 'silhouette'
+
     def forward(self,
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
@@ -89,6 +93,6 @@ class SilhouetteRenderer(MeshBaseRenderer):
             images=images,
             indexs=indexs)
         if self.return_tensor:
-            return rendered_images[..., 0].long()
+            return rendered_images[..., 0:1].long()
         else:
             return None

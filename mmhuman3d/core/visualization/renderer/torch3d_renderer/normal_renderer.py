@@ -13,7 +13,8 @@ except ImportError:
     from typing_extensions import Literal
 
 
-@RENDERER.register_module(name=['Normal', 'normal', 'NormalRenderer'])
+@RENDERER.register_module(
+    name=['Normal', 'normal', 'normal_renderer', 'NormalRenderer'])
 class NormalRenderer(MeshBaseRenderer):
     """Render depth map with the help of camera system."""
 
@@ -64,6 +65,10 @@ class NormalRenderer(MeshBaseRenderer):
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
+
+    def set_render_params(self, **kwargs):
+        super().set_render_params(**kwargs)
+        self.shader_type = 'nolight'
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
