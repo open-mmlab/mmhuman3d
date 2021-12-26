@@ -107,7 +107,7 @@ You can slice the cameras by index.
             [0,    0,    1,   0],
         ]
     ```
-    Detailed infomation refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py#L895).
+    Detailed information refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py#L895).
 
 - **WeakPerspective:**
 
@@ -121,7 +121,7 @@ You can slice the cameras by index.
         ]
     ```
     `WeakPerspectiveCameras` is orthographics indeed, mainly for SMPL(x) projection.
-    Detailed infomation refer to [mmhuman3d cameras](mmhuman3d/core/cameras/cameras.py#L40).
+    Detailed information refer to [mmhuman3d cameras](mmhuman3d/core/cameras/cameras.py#L40).
     This can be converted from SMPL predicted camera parameter by:
     ```python
     from mmhuman3d.core.cameras import WeakPerspectiveCameras
@@ -139,7 +139,7 @@ You can slice the cameras by index.
             [0,    0,    1,   0],
         ]
     ```
-    s1, s2, w1, h1, f1, f2 is related to FoV parameters, detailed infomation refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
+    s1, s2, w1, h1, f1, f2 is related to FoV parameters, detailed information refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
 
 - **Orthographics:**
 
@@ -152,7 +152,7 @@ You can slice the cameras by index.
             [0,    0,    0,   1],
     ]
     ```
-    Detailed infomation refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
+    Detailed information refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
 
 - **FoVOrthographics:**
     ```python
@@ -163,7 +163,7 @@ You can slice the cameras by index.
             [0,              0,         0,       1],
     ]
     ```
-    scale_x, scale_y, scale_z, mid_x, mid_y, mid_z is related to FoV parameters, related infomation refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
+    scale_x, scale_y, scale_z, mid_x, mid_y, mid_z is related to FoV parameters, related information refer to [Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
 
 ## Camera Conventions
 - **Convert between different cameras:**

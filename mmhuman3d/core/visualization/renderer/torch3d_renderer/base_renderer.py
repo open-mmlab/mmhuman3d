@@ -215,7 +215,6 @@ class MeshBaseRenderer(nn.Module):
         else:
             output_images = (rgbs.detach().cpu().numpy() * 255).astype(
                 np.uint8)
-
         for idx, real_idx in enumerate(indexes):
             folder = self.temp_path if self.temp_path is not None else\
                 self.output_path
