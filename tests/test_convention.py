@@ -67,7 +67,7 @@ def test_conventions():
     original_mask = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
     original_mask[KEYPOINTS_FACTORY['smpl'].index('right_ankle')] = 0
     _, mask_coco = convert_kps(
-        keypoints=keypoints, confidence=original_mask, src='smpl', dst='coco')
+        keypoints=keypoints, mask=original_mask, src='smpl', dst='coco')
     _, mask_coco_full = convert_kps(
         keypoints=keypoints, src='smpl', dst='coco')
     assert mask_coco[KEYPOINTS_FACTORY['coco'].index('right_ankle')] == 0
@@ -159,7 +159,7 @@ def test_cache():
     for dst_key in KEYPOINTS_FACTORY:
         convert_kps(
             keypoints=coco_wb_keypoints2d,
-            confidence=coco_wb_mask,
+            mask=coco_wb_mask,
             src='coco_wholebody',
             dst=dst_key)
     without_cache_time = time.time() - start_time
@@ -168,7 +168,7 @@ def test_cache():
     for dst_key in KEYPOINTS_FACTORY:
         convert_kps(
             keypoints=coco_wb_keypoints2d,
-            confidence=coco_wb_mask,
+            mask=coco_wb_mask,
             src='coco_wholebody',
             dst=dst_key)
     with_cache_time = time.time() - start_time
