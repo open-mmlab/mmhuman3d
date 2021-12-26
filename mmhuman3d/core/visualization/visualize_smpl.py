@@ -722,7 +722,7 @@ def render_smpl(
                                                       transl)
 
     body_model = _prepare_body_model(model_type, body_model, body_model_config)
-    model_type = body_model.name.replace('-', '').lower()
+    model_type = body_model.name().replace('-', '').lower()
     assert model_type in ['smpl', 'smplx']
 
     vertices, faces, joints, num_frames, num_person = _prepare_mesh(
