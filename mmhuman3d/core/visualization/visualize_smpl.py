@@ -172,8 +172,19 @@ def _prepare_body_model(model_type, body_model, body_model_config):
     if body_model is None:
         if body_model_config is not None:
             model_path = body_model_config.get('model_path', None)
+
+            use_pca = body_model_config.get('use_pca', False)
+            body_model_config.update(use_pca=use_pca)
+
             model_type = body_model_config.get('type', model_type)
             body_model_config.update(type=model_type.lower())
+
+            use_face_contour = body_model_config.get('use_face_contour', True)
+            body_model_config.update(use_face_contour=use_face_contour)
+
+            num_betas = body_model_config.get('num_betas', 10)
+            body_model_config.update(num_betas=num_betas)
+
             if model_path and osp.isdir(model_path):
                 model_path = osp.join(model_path, model_type)
                 body_model_config.update(model_path=model_path)
