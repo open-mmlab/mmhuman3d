@@ -1,16 +1,12 @@
-import os.path as osp
-import warnings
 from typing import Iterable, Optional, Tuple, Union
 
-import cv2
-import numpy as np
 import torch
-from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.structures import Meshes
-from skimage import exposure
 
+from mmhuman3d.utils.keypoint_utils import get_different_colors
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER
+from .textures import TexturesClosest
 
 try:
     from typing import Literal
@@ -18,25 +14,26 @@ except ImportError:
     from typing_extensions import Literal
 
 
-@RENDERER.register_module(
-    name=['Depth', 'depth', 'depth_renderer', 'DepthRenderer'])
+@RENDERER.register_module(name=[
+    'seg', 'segmentation', 'segmentation_renderer', 'Segmentation',
+    'SegmentationRenderer'
+])
 class SegmentationRenderer(MeshBaseRenderer):
     """Render segmentation map into a segmentation index tensor."""
 
-    def __init__(
-        self,
-        resolution: Tuple[int, int],
-        device: Union[torch.device, str] = 'cpu',
-        output_path: Optional[str] = None,
-        return_tensor: bool = True,
-        out_img_format: str = '%06d.png',
-        projection: Literal['weakperspective', 'fovperspective',
-                            'orthographics', 'perspective',
-                            'fovorthographics'] = 'weakperspective',
-        in_ndc: bool = True,
-        **kwargs,
-    ) -> None:
-        """Renderer for segmentation map of meshes.
+    def __init__(self,
+                 resolution: Tuple[int, int],
+                 device: Union[torch.device, str] = 'cpu',
+                 output_path: Optional[str] = None,
+                 return_type: Optional[Literal['tensor', 'rgba']] = None,
+                 out_img_format: str = '%06d.png',
+                 projection: Literal['weakperspective', 'fovperspective',
+                                     'orthographics', 'perspective',
+                                     'fovorthographics'] = 'weakperspective',
+                 in_ndc: bool = True,
+                 **kwargs) -> None:
+        """Render vertex-color mesh into a segmentation map of a (B, H, W)
+        tensor.
 
         Args:
             resolution (Iterable[int]):
@@ -47,15 +44,21 @@ class SegmentationRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_tensor (bool, optional):
-                Boolean of whether return the rendered tensor.
-                Defaults to False.
-            out_img_format (str, optional): name format for temp images.
+            return_type (Optional[Literal[, optional): the type of tensor to be
+                returned. 'tensor' denotes return the determined tensor. E.g.,
+                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
+                'rgba' denotes the colorful RGBA tensor to be written.
+                Will be same for MeshBaseRenderer.
+                Defaults to None.
+            out_img_format (str, optional): The image format string for
+                saving the images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): projection type of camera.
+            projection (Literal[, optional): Projection type of the cameras.
                 Defaults to 'weakperspective'.
-            in_ndc (bool, optional): cameras whether defined in NDC.
+            in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
+            num_class (int, optional): number of segmentation parts.
+                Defaults to 1.
 
         Returns:
             None
@@ -65,68 +68,67 @@ class SegmentationRenderer(MeshBaseRenderer):
             device=device,
             output_path=output_path,
             obj_path=None,
-            return_tensor=return_tensor,
+            return_type=return_type,
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
 
+    def set_render_params(self, **kwargs):
+        super().set_render_params(**kwargs)
+        self.shader_type = 'nolight'
+        self.num_class = kwargs.get('num_class', 1)
+
     def forward(self,
                 meshes: Optional[Meshes] = None,
-                vertices: Optional[torch.Tensor] = None,
-                faces: Optional[torch.Tensor] = None,
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                indexs: Optional[Iterable[int]] = None,
+                images: Optional[torch.Tensor] = None,
+                indexes: Optional[Iterable[int]] = None,
                 **kwargs):
-        """Render depth map.
+        """Render segmentation map.
 
-        The params are the same as MeshBaseRenderer.
+        Args:
+            meshes (Optional[Meshes], optional): meshes to be rendered.
+                Require the textures type is `TexturesClosest`.
+                The color indicates the class index of the triangle.
+                Defaults to None.
+            K (Optional[torch.Tensor], optional): Camera intrinsic matrixs.
+                Defaults to None.
+            R (Optional[torch.Tensor], optional): Camera rotation matrixs.
+                Defaults to None.
+            T (Optional[torch.Tensor], optional): Camera tranlastion matrixs.
+                Defaults to None.
+            images (Optional[torch.Tensor], optional): background images.
+                Defaults to None.
+            indexes (Optional[Iterable[int]], optional): indexes for images.
+                Defaults to None.
+
+        Returns:
+            Union[torch.Tensor, None]: return tensor or None.
         """
+        # To exclude inappropriate interpolation, please use `TexturesClosest`
+        # to make sure the segmentation map is sharp.
+        assert isinstance(meshes.textures, TexturesClosest)
         cameras = self.init_cameras(K=K, R=R, T=T)
-        if meshes is None:
-            assert (vertices is not None) and (faces is not None),\
-                'No mesh data input.'
-
-            meshes = Meshes(
-                verts=vertices.to(self.device),
-                faces=faces.to(self.device),
-            )
-        else:
-            if (vertices is not None) or (faces is not None):
-                warnings.warn('Redundant input, will only use meshes.')
-            vertices = meshes.verts_padded()
-        verts_depth = cameras.compute_depth_of_points(vertices)
-        verts_depth_rgb = verts_depth.repeat(1, 1, 3)
-
-        self.norm_scale = torch.max(verts_depth).clone(
-        ) if self.norm_scale is None else self.norm_scale
-        verts_depth_rgb /= self.norm_scale
-        meshes.textures = TexturesVertex(verts_features=verts_depth_rgb)
-        renderer = self.init_renderer(cameras, self.lights)
+        renderer = self.init_renderer(cameras, None)
 
         rendered_images = renderer(meshes)
-        rgbs, _ = rendered_images[
-            ..., :3], (rendered_images[..., 3:] > 0) * 1.0
-        if self.output_path is not None:
-            output_images = rgbs.detach().cpu().numpy()
-            p2, p98 = np.percentile(output_images, (2, 98))
-            img_rescale = exposure.rescale_intensity(
-                output_images, in_range=(p2, p98))
 
-            output_images = (
-                exposure.equalize_adapthist(img_rescale, clip_limit=0.03) *
-                255).astype(np.uint8)
+        segmentation_map = rendered_images[..., 0].long()
 
-            for idx, real_idx in enumerate(indexs):
-                folder = self.temp_path if self.temp_path is not None else\
-                    self.output_path
-                cv2.imwrite(
-                    osp.join(folder, self.out_img_format % real_idx),
-                    output_images[idx])
+        if self.output_path is not None or 'rgba' in self.return_type:
+            valid_masks = (rendered_images[..., 3:] > 0) * 1.0
+            color = torch.Tensor(get_different_colors(self.num_class))
+            color = torch.cat([torch.zeros(1, 3), color]).to(self.device)
+            rgbs = color[segmentation_map] * valid_masks
+            if self.output_path is not None:
+                self.write_images(rgbs, valid_masks, images, indexes)
 
-        if self.return_tensor:
-            return rendered_images * self.norm_scale
-        else:
-            return None
+        results = {}
+        if 'tensor' in self.return_type:
+            results.update(tensor=segmentation_map)
+        if 'rgba' in self.return_type:
+            results.update(rgba=torch.cat([rgbs, valid_masks], -1))
+        return results

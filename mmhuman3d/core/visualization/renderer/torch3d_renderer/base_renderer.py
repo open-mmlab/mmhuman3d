@@ -2,7 +2,7 @@ import os.path as osp
 import shutil
 import warnings
 from pathlib import Path
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import cv2
 import mmcv
@@ -36,7 +36,7 @@ class MeshBaseRenderer(nn.Module):
                  resolution: Tuple[int, int],
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
-                 return_tensor: bool = False,
+                 return_type: List = [],
                  out_img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
@@ -54,9 +54,12 @@ class MeshBaseRenderer(nn.Module):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_tensor (bool, optional):
-                Boolean of whether return the rendered tensor.
-                Defaults to False.
+            return_type (List, optional): the type of tensor to be
+                returned. 'tensor' denotes return the determined tensor. E.g.,
+                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
+                'rgba' denotes the colorful RGBA tensor to be written.
+                Will be same for MeshBaseRenderer.
+                Defaults to None.
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
@@ -68,16 +71,14 @@ class MeshBaseRenderer(nn.Module):
         **kwargs is used for render setting.
         You can set up your render kwargs like:
             {
+                'shader_type': 'flat',
+                'texture_type': 'closet',
                 'light': {
                     'light_type': 'directional',
                     'direction': [[1.0, 1.0, 1.0]],
                     'ambient_color': [[0.5, 0.5, 0.5]],
                     'diffuse_color': [[0.5, 0.5, 0.5]],
                     'specular_color': [[1.0, 1.0, 1.0]],
-                },
-                'camera': {
-                    'camera_type': 'weakpespective',
-                    'orbit_speed': None,
                 },
                 'material': {
                     'ambient_color': [[1, 1, 1]],
@@ -86,14 +87,11 @@ class MeshBaseRenderer(nn.Module):
                     'shininess': 60.0,
                 },
                 'raster': {
-                    'resolution': (256, 256),
+                    'type': 'mesh',
                     'blur_radius': 0.0,
                     'faces_per_pixel': 1,
                     'cull_to_frustum': True,
                     'cull_backfaces': True,
-                },
-                'shader': {
-                    'shader_type': 'flat',
                 },
                 'blend': {
                     'background_color': (1.0, 1.0, 1.0)
@@ -108,7 +106,7 @@ class MeshBaseRenderer(nn.Module):
         super().__init__()
         self.device = device
         self.output_path = output_path
-        self.return_tensor = return_tensor
+        self.return_type = return_type
         self.resolution = resolution
         self.projection = projection
         self.temp_path = None
@@ -129,7 +127,8 @@ class MeshBaseRenderer(nn.Module):
         """Set render params."""
         material_params = kwargs.get('material', {})
         light_params = kwargs.get('light', {'type': 'directional'})
-        raster_params = kwargs.get('raster', {'type': 'mesh'})
+        self.raster_type = kwargs.get('raster_type', 'mesh')
+        raster_params = kwargs.get('raster_setting', {})
         blend_params = kwargs.get('blend', {})
         self.shader_type = kwargs.get('shader_type', 'phong')
 
@@ -140,7 +139,8 @@ class MeshBaseRenderer(nn.Module):
         self.materials = Materials(device=self.device, **material_params)
         self.raster_settings = RasterizationSettings(
             image_size=self.resolution, **raster_params)
-        self.lights = build_lights(light_params).to(self.device)
+        self.lights = build_lights(light_params).to(
+            self.device) if light_params is not None else None
         self.blend_params = BlendParams(**blend_params)
 
     def export(self):
@@ -187,7 +187,7 @@ class MeshBaseRenderer(nn.Module):
         """Initial renderer."""
         raster = build_raster(
             dict(
-                type='mesh',
+                type=self.raster_type,
                 cameras=cameras,
                 raster_settings=self.raster_settings))
         renderer = MeshRenderer(
@@ -204,11 +204,9 @@ class MeshBaseRenderer(nn.Module):
                 dict(type=self.shader_type)))
         return renderer
 
-    def write_images(self, rendered_images, images, indexs):
+    def write_images(self, rgbs, valid_masks, images, indexes):
         """Write output/temp images."""
-        rgbs = rendered_images.clone()[..., :3] / rendered_images[
-            ..., :3].max()
-        valid_masks = (rendered_images[..., 3:] > 0) * 1.0
+        rgbs = rgbs.clone()[..., :3] / rgbs[..., :3].max()
         if images is not None:
             output_images = rgbs * 255 * valid_masks + (1 -
                                                         valid_masks) * images
@@ -217,7 +215,8 @@ class MeshBaseRenderer(nn.Module):
         else:
             output_images = (rgbs.detach().cpu().numpy() * 255).astype(
                 np.uint8)
-        for idx, real_idx in enumerate(indexs):
+
+        for idx, real_idx in enumerate(indexes):
             folder = self.temp_path if self.temp_path is not None else\
                 self.output_path
             cv2.imwrite(
@@ -234,6 +233,7 @@ class MeshBaseRenderer(nn.Module):
             if (vertices is not None) or (faces is not None):
                 warnings.warn('Redundant input, will only use meshes.')
             meshes = meshes.to(self.device)
+        return meshes
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
@@ -244,7 +244,7 @@ class MeshBaseRenderer(nn.Module):
                 T: Optional[torch.Tensor] = None,
                 images: Optional[torch.Tensor] = None,
                 lights: Optional[torch.Tensor] = None,
-                indexs: Optional[Iterable[int]] = None,
+                indexes: Optional[Iterable[int]] = None,
                 **kwargs) -> Union[torch.Tensor, None]:
         """Render Meshes.
 
@@ -265,7 +265,7 @@ class MeshBaseRenderer(nn.Module):
                 Defaults to None.
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
-            indexs (Optional[Iterable[int]], optional): indexs for the images.
+            indexes (Optional[Iterable[int]], optional): indexes for images.
                 Defaults to None.
 
         Returns:
@@ -277,10 +277,16 @@ class MeshBaseRenderer(nn.Module):
 
         rendered_images = renderer(meshes)
 
-        if self.output_path is not None:
-            self.write_images(rendered_images, images, indexs)
+        if self.output_path is not None or 'rgba' in self.return_type:
+            valid_masks = (rendered_images[..., 3:] > 0
+                           ) * 1.0 if images is not None else None
+            if self.output_path is not None:
+                self.write_images(rendered_images, valid_masks, images,
+                                  indexes)
 
-        if self.return_tensor:
-            return rendered_images
-        else:
-            return None
+        results = {}
+        if 'tensor' in self.return_type:
+            results.update(tensor=rendered_images)
+        if 'rgba' in self.return_type:
+            results.update(rgba=rendered_images)
+        return results

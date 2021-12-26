@@ -36,6 +36,10 @@ silhouete_material = {
     'shininess': 1.0,
 }
 
+empty_light = None
+
+empty_material = {}
+
 white_blend_params = {'background_color': (1.0, 1.0, 1.0)}
 
 black_blend_params = {'background_color': (0.0, 0.0, 0.0)}
@@ -45,10 +49,10 @@ RENDER_CONFIGS = {
         'renderer_type': 'base',
         'shader_type': 'flat',
         'texture_type': 'vertex',
+        'raster_type': 'mesh',
         'light': base_directional_light,
         'material': base_material,
-        'raster': {
-            'type': 'mesh',
+        'raster_setting': {
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': True,
@@ -60,10 +64,10 @@ RENDER_CONFIGS = {
         'renderer_type': 'base',
         'shader_type': 'gouraud',
         'texture_type': 'vertex',
+        'raster_type': 'mesh',
         'light': base_directional_light,
         'material': base_material,
-        'raster': {
-            'type': 'mesh',
+        'raster_setting': {
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': True,
@@ -75,10 +79,10 @@ RENDER_CONFIGS = {
         'renderer_type': 'base',
         'shader_type': 'phong',
         'texture_type': 'vertex',
+        'raster_type': 'mesh',
         'light': base_directional_light,
         'material': base_material,
-        'raster': {
-            'type': 'mesh',
+        'raster_setting': {
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
@@ -90,9 +94,9 @@ RENDER_CONFIGS = {
         'renderer_type': 'silhouette',
         'shader_type': 'silhouette',
         'texture_type': 'vertex',
+        'raster_type': 'mesh',
         'material': silhouete_material,
-        'raster': {
-            'type': 'mesh',
+        'raster_setting': {
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
@@ -101,13 +105,13 @@ RENDER_CONFIGS = {
         'blend': black_blend_params,
     },
     'part_silhouette': {
-        'renderer_type': 'base',
+        'renderer_type': 'segmentation',
         'shader_type': 'nolight',
-        'texture_type': 'closet',
-        'light': None,
-        'material': None,
-        'raster': {
-            'type': 'mesh',
+        'texture_type': 'closest',
+        'raster_type': 'mesh',
+        'light': base_directional_light,
+        'material': base_material,
+        'raster_setting': {
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
@@ -119,10 +123,10 @@ RENDER_CONFIGS = {
         'renderer_type': 'depth',
         'shader_type': 'nolight',
         'texture_type': 'vertex',
-        'light': None,
-        'material': None,
-        'raster': {
-            'type': 'mesh',
+        'raster_type': 'mesh',
+        'light': empty_light,
+        'material': empty_material,
+        'raster_setting': {
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
@@ -134,10 +138,10 @@ RENDER_CONFIGS = {
         'renderer_type': 'normal',
         'shader_type': 'nolight',
         'texture_type': 'vertex',
-        'light': None,
-        'material': None,
-        'raster': {
-            'type': 'mesh',
+        'raster_type': 'mesh',
+        'light': empty_light,
+        'material': empty_material,
+        'raster_setting': {
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
@@ -149,8 +153,9 @@ RENDER_CONFIGS = {
         'renderer_type': 'pointcloud',
         'shader_type': 'nolight',
         'texture_type': 'vertex',
-        'light': None,
-        'material': None,
+        'raster_type': 'point',
+        'light': empty_light,
+        'material': empty_material,
         'blend': white_blend_params,
         'bg_color': [
             1.0,
@@ -158,9 +163,6 @@ RENDER_CONFIGS = {
             1.0,
             0.0,
         ],
-        'raster': {
-            'type': 'point'
-        },
         'points_per_pixel': 10,
         'radius': 0.003
     }

@@ -11,7 +11,7 @@ def test_preprocess():
     output_path = '/tmp/preprocessed_npzs'
     os.makedirs(output_path, exist_ok=True)
 
-    PW3D_ROOT = osp.join(root_path, '3DPW')
+    PW3D_ROOT = osp.join(root_path, 'pw3d')
     cfg = dict(type='Pw3dConverter', modes=['train', 'test'])
     data_converter = build_data_converter(cfg)
     data_converter.convert(PW3D_ROOT, output_path)
@@ -168,11 +168,20 @@ def test_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/' +
                           'hybrik_coco_2017_train.npz')
 
-    INSTA_VIBE_ROOT = os.path.join(root_path, 'vibe_data')
+    VIBE_ROOT = os.path.join(root_path, 'vibe_data')
     cfg = dict(type='InstaVibeConverter')
     data_converter = build_data_converter(cfg)
-    data_converter.convert(INSTA_VIBE_ROOT, output_path)
+    data_converter.convert(VIBE_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'insta_variety.npz')
+    cfg = dict(
+        type='VibeConverter',
+        modes=['mpi_inf_3dhp', 'pw3d'],
+        pretrained_ckpt=None)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(VIBE_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/' +
+                          'vibe_mpi_inf_3dhp_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'vibe_pw3d_test.npz')
 
     SPIN_ROOT = os.path.join(root_path, 'spin_data')
     cfg = dict(

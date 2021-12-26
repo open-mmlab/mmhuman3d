@@ -74,14 +74,14 @@ def render(
 
     images = []
     for i in range(math.ceil(num_frames // batch_size)):
-        indexs = list(
+        indexes = list(
             range(i * batch_size, min((i + 1) * batch_size, len(meshes))))
         images_batch = renderer(
-            images.extend(len(indexs)),
-            K=K[indexs],
-            R=R[indexs],
-            T=T[indexs],
-            indexs=indexs)
+            images.extend(len(indexes)),
+            K=K[indexes],
+            R=R[indexes],
+            T=T[indexes],
+            indexes=indexes)
         images.append(images_batch)
 
     images = torch.cat(images)

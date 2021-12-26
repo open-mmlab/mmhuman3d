@@ -23,7 +23,7 @@ class NormalRenderer(MeshBaseRenderer):
         resolution: Iterable[int] = [1024, 1024],
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
-        return_tensor: bool = True,
+        return_type: Optional[Literal['tensor', 'rgba']] = None,
         out_img_format: str = '%06d.png',
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
@@ -42,14 +42,18 @@ class NormalRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_tensor (bool, optional):
-                Boolean of whether return the rendered tensor.
-                Defaults to False.
-            out_img_format (str, optional): name format for temp images.
+            return_type (Optional[Literal[, optional): the type of tensor to be
+                returned. 'tensor' denotes return the determined tensor. E.g.,
+                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
+                'rgba' denotes the colorful RGBA tensor to be written.
+                Will be same for MeshBaseRenderer.
+                Defaults to None.
+            out_img_format (str, optional): The image format string for
+                saving the images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): projection type of camera.
+            projection (Literal[, optional): Projection type of the cameras.
                 Defaults to 'weakperspective'.
-            in_ndc (bool, optional): cameras whether defined in NDC.
+            in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
 
         Returns:
@@ -60,7 +64,7 @@ class NormalRenderer(MeshBaseRenderer):
             device=device,
             output_path=output_path,
             obj_path=None,
-            return_tensor=return_tensor,
+            return_type=return_type,
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
@@ -78,7 +82,7 @@ class NormalRenderer(MeshBaseRenderer):
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
                 images: Optional[torch.Tensor] = None,
-                indexs: Optional[Iterable[int]] = None,
+                indexes: Optional[Iterable[int]] = None,
                 **kwargs):
         """Render Meshes.
 
@@ -99,7 +103,8 @@ class NormalRenderer(MeshBaseRenderer):
                 Defaults to None.
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
-            indexs (Optional[Iterable[int]], optional): indexs for the images.
+            indexes (Optional[Iterable[int]], optional): indexes for the
+                images.
                 Defaults to None.
 
         Returns:
@@ -109,26 +114,20 @@ class NormalRenderer(MeshBaseRenderer):
 
         cameras = self.init_cameras(K=K, R=R, T=T)
         verts_normals = cameras.compute_normal_of_meshes(meshes)
-        verts_depth_rgb = verts_normals.clone()
-        meshes.textures = TexturesVertex(verts_features=verts_depth_rgb)
+        verts_normal_rgb = (verts_normals + 1) / 2
+        meshes.textures = TexturesVertex(verts_features=verts_normal_rgb)
         renderer = self.init_renderer(cameras, self.lights)
         rendered_images = renderer(meshes)
-        rgbs, valid_mask = rendered_images[
+        rgbs, valid_masks = rendered_images[
             ..., :3], (rendered_images[..., 3:] > 0) * 1.0
+        normal = rgbs * 2 - 1
+        normal_map = torch.cat([normal * valid_masks, valid_masks], -1)
         if self.output_path is not None:
-            scene = rgbs * valid_mask
-            R, G, B = torch.unbind(scene, -1)
-            scene = torch.cat(
-                [R.unsqueeze(-1),
-                 G.unsqueeze(-1),
-                 B.unsqueeze(-1)], -1)
-            scene = (scene + 1) / 2
-            rendered_images = (scene - scene.min()) / (
-                scene.max() - scene.min())
-            rendered_images = torch.cat([rendered_images, valid_mask], -1)
-            self.write_images(rendered_images, images, indexs)
+            self.write_images(rgbs, valid_masks, images, indexes)
 
-        if self.return_tensor:
-            return rendered_images
-        else:
-            return None
+        results = {}
+        if 'tensor' in self.return_type:
+            results.update(tensor=normal_map)
+        if 'rgba' in self.return_type:
+            results.update(rgba=torch.cat([rgbs, valid_masks], -1))
+        return results

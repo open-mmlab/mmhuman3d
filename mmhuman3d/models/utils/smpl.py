@@ -523,7 +523,7 @@ class GenderedSMPL(torch.nn.Module):
             J: number of joints of model, J = 23 (SMPL)
             K: number of keypoints
         Args:
-            *args: extra arugments
+            *args: extra arguments
             betas: Tensor([B, 10]), human body shape parameters of SMPL model.
             body_pose: Tensor([B, J*3] or [B, J, 3, 3]), human body pose
                 parameters of SMPL model. It should be axis-angle vector

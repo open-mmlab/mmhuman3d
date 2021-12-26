@@ -28,7 +28,8 @@ class PointCloudRenderer(MeshBaseRenderer):
     def __init__(self,
                  resolution: Tuple[int, int],
                  device: Union[torch.device, str] = 'cpu',
-                 return_tensor: bool = False,
+                 output_path: Optional[str] = None,
+                 return_type: bool = False,
                  out_img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
@@ -44,9 +45,15 @@ class PointCloudRenderer(MeshBaseRenderer):
             device (Union[torch.device, str], optional):
                 You can pass a str or torch.device for cpu or gpu render.
                 Defaults to 'cpu'.
-            return_tensor (bool, optional):
-                Boolean of whether return the rendered tensor.
-                Defaults to False.
+            output_path (Optional[str], optional):
+                Output path of the video or images to be saved.
+                Defaults to None.
+            return_type (Optional[Literal[, optional): the type of tensor to be
+                returned. 'tensor' denotes return the determined tensor. E.g.,
+                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
+                'rgba' denotes the colorful RGBA tensor to be written.
+                Will be same for MeshBaseRenderer.
+                Defaults to None.
             out_img_format (str, optional): name format for temp images.
                 Defaults to '%06d.png'.
             projection (Literal[, optional): projection type of camera.
@@ -59,17 +66,21 @@ class PointCloudRenderer(MeshBaseRenderer):
             None
         """
         self.device = device
+        self.output_path = output_path
         self.resolution = resolution
-        self.return_tensor = return_tensor
+        self.return_type = return_type
         self.out_img_format = out_img_format
         self.radius = radius
         self.projection = projection
         self.set_render_params(**kwargs)
         self.in_ndc = in_ndc
+        self.set_render_params(**kwargs)
+        super(MeshBaseRenderer, self).__init__()
 
     def set_render_params(self, **kwargs):
         """Set render params."""
-        raster_params = kwargs.get('raster')
+        self.raster_type = kwargs.get('raster_type', 'point')
+        self.shader_type = None
         self.bg_color = torch.tensor(
             kwargs.get('bg_color', [
                 1.0,
@@ -79,7 +90,6 @@ class PointCloudRenderer(MeshBaseRenderer):
             ]),
             dtype=torch.float32,
             device=self.device)
-        self.raster_type = raster_params.pop('type', None)
         self.raster_settings = PointsRasterizationSettings(
             image_size=self.resolution,
             radius=self.radius
@@ -106,7 +116,7 @@ class PointCloudRenderer(MeshBaseRenderer):
         R: Optional[torch.Tensor] = None,
         T: Optional[torch.Tensor] = None,
         images: Optional[torch.Tensor] = None,
-        indexs: Optional[Iterable[int]] = None,
+        indexes: Optional[Iterable[int]] = None,
         **kwargs,
     ) -> Union[None, torch.Tensor]:
         """Render pointclouds.
@@ -128,7 +138,8 @@ class PointCloudRenderer(MeshBaseRenderer):
                 Defaults to None.
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
-            indexs (Optional[Iterable[int]], optional): indexs for the images.
+            indexes (Optional[Iterable[int]], optional): indexes for the
+                images.
                 Defaults to None.
 
         Returns:
@@ -156,10 +167,15 @@ class PointCloudRenderer(MeshBaseRenderer):
 
         rendered_images = renderer(pointclouds)
 
-        if self.output_path is not None:
-            self.write_images(rendered_images, images, indexs)
+        if self.output_path is not None or 'rgba' in self.return_type:
+            rgbs, valid_masks = rendered_images[
+                ..., :3], (rendered_images[..., 3:] > 0) * 1.0
+            if self.output_path is not None:
+                self.write_images(rgbs, valid_masks, images, indexes)
 
-        if self.return_tensor:
-            return rendered_images
-        else:
-            return None
+        results = {}
+        if 'tensor' in self.return_type:
+            results.update(tensor=rendered_images)
+        if 'rgba' in self.return_type:
+            results.update(rgba=rendered_images)
+        return results
