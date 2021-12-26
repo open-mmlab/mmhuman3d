@@ -37,7 +37,7 @@ class NewAttributeCameras(cameras.CamerasBase):
             This mainly depends on how you get the matrixs. E.g., you get the
             `K` `R`, `T` by calibration with opencv, you should set
             `convention = opencv`. To figure out your camera convention,
-            please see the definition of its extrinsic and instrinsic matrixs.
+            please see the definition of its extrinsic and intrinsic matrixs.
             For projection and rendering, the matrixs will be converted to
             `pytorch3d` finally since the `transforms3d` called in rendering
             and projection are defined as `pytorch3d` convention.
