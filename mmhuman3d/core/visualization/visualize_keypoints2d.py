@@ -269,6 +269,7 @@ def _check_frame_path(frame_list):
 
 
 def _check_temp_path(temp_folder, frame_list, overwrite):
+    """Check temp frame folder path."""
     if not overwrite and frame_list is not None and len(frame_list) > 0:
         if Path(temp_folder).absolute() == \
                 Path(frame_list[0]).parent.absolute():
@@ -285,6 +286,7 @@ class _CavasProducer:
                  kp2d,
                  image_array=None,
                  default_scale=1.5):
+        """Initialize a canvas writer."""
         # check the origin background frames
         if frame_list is not None:
             _check_frame_path(frame_list)
@@ -313,6 +315,7 @@ class _CavasProducer:
             self.len = self.image_array.shape[0]
 
     def get_data(self, frame_index):
+        """Get frame data from frame_list of image_array."""
         # frame file exists, resolution not set
         if frame_index < self.len and self.resolution is None:
             if self.image_array is not None:
@@ -377,10 +380,11 @@ def update_frame_list(frame_list, origin_frames, img_format, start, end):
                     ]:
                         frame_list.append(osp.join(origin_frames, im_name))
             else:
-                frame_list = [
-                    osp.join(origin_frames, img_format % index)
-                    for index in range(end - start + 1)
-                ]
+                frame_list = []
+                for index in range(start, end):
+                    frame_path = osp.join(origin_frames, img_format % index)
+                    if osp.exists(frame_path):
+                        frame_list.append(frame_path)
             frame_list.sort()
     return frame_list, input_temp_folder
 
@@ -397,7 +401,7 @@ def visualize_kp2d(
         mask: Optional[Union[list, np.ndarray]] = None,
         img_format: str = '%06d.png',
         start: int = 0,
-        end: int = -1,
+        end: Optional[int] = None,
         overwrite: bool = False,
         with_file_name: bool = True,
         resolution: Optional[Union[Tuple[int, int], list]] = None,
@@ -440,7 +444,9 @@ def visualize_kp2d(
                 Defaults to None.
         img_format (str, optional): input image format. Default to '%06d.png',
         start (int, optional): start frame index. Defaults to 0.
-        end (int, optional): end frame index. Defaults to -1.
+        end (int, optional): end frame index. Exclusive.
+                Could be positive int or negative int or None.
+                None represents include all the frames.
         overwrite (bool, optional): whether replace the origin frames.
                 Defaults to False.
         with_file_name (bool, optional): whether write origin frame name on
@@ -476,15 +482,16 @@ def visualize_kp2d(
         Union[None, np.ndarray].
     """
 
-    # check the input array shape, reshape to (num_frame, num_person, J, 2)
+    # check the input array shape, reshape to (num_frames, num_person, J, 2)
     kp2d = kp2d[..., :2].copy()
     if kp2d.ndim == 3:
         kp2d = kp2d[:, np.newaxis]
     assert kp2d.ndim == 4
-    num_frame, num_person = kp2d.shape[0], kp2d.shape[1]
+    num_frames, num_person = kp2d.shape[0], kp2d.shape[1]
     # slice the input array temporally
-    end = (min(num_frame - 1, end) + num_frame) % num_frame
-    kp2d = kp2d[start:end + 1]
+    end = (min(num_frames - 1, end) +
+           num_frames) % num_frames if end is not None else num_frames
+    kp2d = kp2d[start:end]
 
     if image_array is not None:
         origin_frames = None
@@ -496,8 +503,8 @@ def visualize_kp2d(
             frame_list, origin_frames, img_format, start, end)
 
     if frame_list is not None:
-        num_frame = min(len(frame_list), num_frame)
-    kp2d = kp2d[:num_frame]
+        num_frames = min(len(frame_list), num_frames)
+    kp2d = kp2d[:num_frames]
 
     # check output path
     if output_path is not None:
