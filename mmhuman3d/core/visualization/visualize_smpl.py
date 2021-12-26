@@ -172,6 +172,7 @@ def _prepare_body_model(model_type, body_model, body_model_config):
     if body_model is None:
         if body_model_config is not None:
             model_path = body_model_config.get('model_path', None)
+            model_type = body_model_config.get('type', model_type)
             body_model_config.update(type=model_type.lower())
             if model_path and osp.isdir(model_path):
                 model_path = osp.join(model_path, model_type)
@@ -719,7 +720,11 @@ def render_smpl(
 
     verts, poses, betas, transl = _prepare_input_pose(verts, poses, betas,
                                                       transl)
+
     body_model = _prepare_body_model(model_type, body_model, body_model_config)
+    model_type = body_model.name.replace('-', '').lower()
+    assert model_type in ['smpl', 'smplx']
+
     vertices, faces, joints, num_frames, num_person = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
     end = num_frames if end is None else end
