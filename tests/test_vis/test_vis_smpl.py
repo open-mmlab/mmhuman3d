@@ -40,7 +40,6 @@ def test_visualize_smpl_pose():
         visualize_smpl_pose(
             poses=torch.zeros(2, 164),
             body_model_config=dict(model_path=model_path),
-            model_path=model_path,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
