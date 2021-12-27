@@ -66,7 +66,7 @@ class SilhouetteRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                indexs: Iterable[str] = None):
+                indexes: Iterable[str] = None):
         """The params are the same as MeshBaseRenderer."""
         rendered_images = super().forward(
             meshes=meshes,
@@ -76,6 +76,6 @@ class SilhouetteRenderer(MeshBaseRenderer):
             R=R,
             T=T,
             images=None,
-            indexs=indexs)
+            indexes=indexes)
         alpha = rendered_images[..., 3:]
         return alpha

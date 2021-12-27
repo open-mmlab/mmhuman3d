@@ -420,13 +420,13 @@ def visualize_kp2d(
         kp2d (np.ndarray): should be array of shape (f * J * 2)
                                 or (f * n * J * 2)]
         output_path (str): output video path or image folder.
-        frame_list (Optional[List[str]], optional): list of origin brackground
+        frame_list (Optional[List[str]], optional): list of origin background
             frame paths, element in list each should be a image path like
             `*.jpg` or `*.png`. Higher priority than `origin_frames`.
             Use this when your file names is hard to sort or you only want to
             render a small number frames.
             Defaults to None.
-        origin_frames (Optional[str], optional): origin brackground frame path,
+        origin_frames (Optional[str], optional): origin background frame path,
             could be `.mp4`, `.gif`(will be sliced into a folder) or an image
             folder. Lower priority than `frame_list`.
             Defaults to None.

@@ -10,7 +10,7 @@
 
 [![Documentation](https://readthedocs.org/projects/mmhuman3d/badge/?version=latest)](https://mmhuman3d.readthedocs.io/en/latest/?badge=latest)
 [![actions](https://github.com/open-mmlab/mmhuman3d/workflows/build/badge.svg)](https://github.com/open-mmlab/mmhuman3d/actions)
-[![codecov](https://codecov.io/gh/open-mmlab/mmhuman3d/branch/master/graph/badge.svg)](https://codecov.io/gh/open-mmlab/mmhuman3d)
+[![codecov](https://codecov.io/gh/open-mmlab/mmhuman3d/branch/main/graph/badge.svg)](https://codecov.io/gh/open-mmlab/mmhuman3d)
 [![PyPI](https://img.shields.io/pypi/v/mmhuman3d)](https://pypi.org/project/mmhuman3d/)
 [![LICENSE](https://img.shields.io/github/license/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/blob/main/LICENSE)
 [![Percentage of issues still open](https://isitmaintained.com/badge/open/open-mmlab/mmhuman3d.svg)](https://github.com/open-mmlab/mmhuman3d/issues)
@@ -96,7 +96,7 @@ Supported datasets:
 
 We will keep up with the latest progress of the community, and support more popular methods and frameworks.
 
-If you have any feature requests, please feel free to leave a comment in the [wishlist](https://github.com/open-mmlab/mmhuman3d/issues/3).
+If you have any feature requests, please feel free to leave a comment in the [wishlist](https://github.com/open-mmlab/mmhuman3d/discussions/47).
 
 ## Get Started
 

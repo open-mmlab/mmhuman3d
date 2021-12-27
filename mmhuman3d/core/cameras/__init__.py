@@ -1,8 +1,10 @@
-from .builder import build_cameras
-from .camera_parameter import CameraParameter
-from .cameras import (
+from mmhuman3d.core.cameras import builder, camera_parameter, cameras
+from mmhuman3d.core.cameras.builder import CAMERAS, build_cameras
+from mmhuman3d.core.cameras.camera_parameter import CameraParameter
+from mmhuman3d.core.cameras.cameras import (
     FoVOrthographicCameras,
     FoVPerspectiveCameras,
+    NewAttributeCameras,
     OrthographicCameras,
     PerspectiveCameras,
     WeakPerspectiveCameras,
@@ -10,7 +12,8 @@ from .cameras import (
 )
 
 __all__ = [
-    'WeakPerspectiveCameras', 'CameraParameter', 'compute_orbit_cameras',
-    'FoVOrthographicCameras', 'FoVPerspectiveCameras', 'PerspectiveCameras',
-    'OrthographicCameras', 'build_cameras'
+    'CAMERAS', 'CameraParameter', 'FoVOrthographicCameras',
+    'FoVPerspectiveCameras', 'NewAttributeCameras', 'OrthographicCameras',
+    'PerspectiveCameras', 'WeakPerspectiveCameras', 'build_cameras', 'builder',
+    'camera_parameter', 'cameras', 'compute_orbit_cameras'
 ]

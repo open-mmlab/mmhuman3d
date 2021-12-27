@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'MMHuman3D'
-copyright = '2018-2021, OpenMMLab'
+copyright = '2021, OpenMMLab'
 author = 'MMHuman3D Authors'
 version_file = '../mmhuman3d/version.py'
 
@@ -44,7 +44,11 @@ extensions = [
     'sphinx_markdown_tables', 'sphinx_copybutton', 'myst_parser'
 ]
 
-autodoc_mock_imports = ['mmhuman3d.version', 'mmcv.ops']
+autodoc_mock_imports = [
+    'mmhuman3d.version',
+    'mmhuman3d.core.visualization.renderer.torch3d_renderer', 'mmcv.ops',
+    'pytorch3d'
+]
 
 # Ignore >>> when copying code
 copybutton_prompt_text = r'>>> |\.\.\. '
@@ -78,7 +82,7 @@ html_theme_options = {
     'menu': [
         {
             'name': 'GitHub',
-            'url': 'https://github.com/open-mmlab/mmdetection'
+            'url': 'https://github.com/open-mmlab/mmhuman3d'
         },
         {
             'name':

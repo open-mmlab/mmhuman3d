@@ -35,7 +35,7 @@ model = dict(
         extra_joints_regressor='data/body_models/J_regressor_h36m.npy'),
     loss_beta=dict(type='MSELoss', loss_weight=1),
     loss_theta=dict(type='MSELoss', loss_weight=0.01),
-    loss_twist=dict(type='MSELoss', loss_weight=0.01),
+    loss_twist=dict(type='MSELoss', loss_weight=0.2),
     loss_uvd=dict(type='L1Loss', loss_weight=1),
 )
 
@@ -86,14 +86,14 @@ keypoints_maps = [
 
 train_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='RandomDPG', dpg_prob=0.5),
+    dict(type='RandomDPG', dpg_prob=0.9),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
-    dict(type='RandomOcclusion', occlusion_prob=0.5),
+    dict(type='RandomOcclusion', occlusion_prob=0.9),
     dict(type='HybrIKRandomFlip', flip_prob=0.5, flip_pairs=flip_pairs),
     dict(type='NewKeypointsSelection', maps=keypoints_maps),
     dict(type='HybrIKAffine', img_res=256),
     dict(type='GenerateHybrIKTarget', img_res=256, test_mode=False),
-    dict(type='RandomChannelNoise', noise_factor=0.2),
+    dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),

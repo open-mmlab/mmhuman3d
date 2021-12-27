@@ -1,5 +1,5 @@
 from .compose import Compose
-from .formating import (
+from .formatting import (
     Collect,
     ImageToTensor,
     ToNumpy,

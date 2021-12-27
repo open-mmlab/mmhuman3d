@@ -156,7 +156,7 @@ def get_default_hmr_intrinsic(num_frame=1,
                               focal_length=1000,
                               det_width=224,
                               det_height=224) -> np.ndarray:
-    """Get default hmr instrinsic, defined by how you trained.
+    """Get default hmr intrinsic, defined by how you trained.
 
     Args:
         num_frame (int, optional): num of frames. Defaults to 1.
@@ -223,7 +223,7 @@ def conver_verts_to_cam_coord(verts, pred_cams, bboxes_xy, focal_length=5000.):
     Returns:
         np.ndarray: The vertices in the camera coordinate.
             The shape is (frame,num_person,6890,3) or (frame,6890,3).
-        np.ndarray: The instrinsic parameters of the pred_cam.
+        np.ndarray: The intrinsic parameters of the pred_cam.
             The shape is (num_frame, 3, 3).
     """
     K0 = get_default_hmr_intrinsic(
