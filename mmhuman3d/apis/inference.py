@@ -157,7 +157,7 @@ def inference_image_based_model(
                                    int) else input_size[0] / input_size[1]
 
     for i, bbox in enumerate(bboxes_xywh):
-        center, scale = box2cs(bbox, aspect_ratio, bbox_scale_factor=1.1)
+        center, scale = box2cs(bbox, aspect_ratio, bbox_scale_factor=1.25)
         # prepare data
         data = {
             'image_path': img_or_path,
@@ -359,7 +359,7 @@ def feature_extract(
                                    int) else input_size[0] / input_size[1]
 
     for i, bbox in enumerate(bboxes_xywh):
-        center, scale = box2cs(bbox, aspect_ratio, bbox_scale_factor=1.1)
+        center, scale = box2cs(bbox, aspect_ratio, bbox_scale_factor=1.25)
         # prepare data
         data = {
             'image_path': img_or_path,

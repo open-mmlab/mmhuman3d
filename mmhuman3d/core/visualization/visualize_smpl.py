@@ -1086,7 +1086,7 @@ def visualize_smpl_vibe(orig_cam=None,
                         output_path='sample.mp4',
                         resolution=None,
                         aspect_ratio=1.0,
-                        bbox_scale_factor=1.1,
+                        bbox_scale_factor=1.25,
                         bbox_format='xyxy',
                         **kwargs) -> None:
     """Simpliest way to visualize pred smpl with orign frames and predicted
