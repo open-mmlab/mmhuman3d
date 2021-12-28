@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Union
+from typing import Iterable, List, Optional, Union
 
 import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
@@ -23,7 +23,7 @@ class NormalRenderer(MeshBaseRenderer):
         resolution: Iterable[int] = [1024, 1024],
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
-        return_type: Optional[Literal['tensor', 'rgba']] = None,
+        return_type: Optional[List] = None,
         out_img_format: str = '%06d.png',
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
@@ -42,11 +42,13 @@ class NormalRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_type (Optional[Literal[, optional): the type of tensor to be
+            return_type (List, optional): the type of tensor to be
                 returned. 'tensor' denotes return the determined tensor. E.g.,
                 return silhouette tensor of (B, H, W) for SilhouetteRenderer.
                 'rgba' denotes the colorful RGBA tensor to be written.
                 Will be same for MeshBaseRenderer.
+                Will return a normal_map for 'tensor' and a normalize normal
+                map for 'rgba'.
                 Defaults to None.
             out_img_format (str, optional): The image format string for
                 saving the images.

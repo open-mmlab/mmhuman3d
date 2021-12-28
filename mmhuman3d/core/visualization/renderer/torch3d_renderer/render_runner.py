@@ -6,6 +6,7 @@ from typing import Iterable, Union
 import mmcv
 import torch
 from pytorch3d.structures.meshes import Meshes
+from tqdm import trange
 
 import mmhuman3d
 from mmhuman3d.core.cameras import compute_orbit_cameras
@@ -19,7 +20,7 @@ def render(
     output_path: str,
     device: Union[str, torch.device] = 'cpu',
     meshes: Meshes = None,
-    render_choice: str = 'mesh',
+    render_choice: str = 'base',
     batch_size: int = 5,
     K: torch.Tensor = None,
     R: torch.Tensor = None,
@@ -31,6 +32,8 @@ def render(
     in_ndc: bool = True,
     resolution=[1024, 1024],
     convention: str = 'pytorch3d',
+    no_grad: bool = False,
+    return_tensor: bool = True,
 ):
     RENDER_CONFIGS = mmcv.Config.fromfile(
         os.path.join(
@@ -38,12 +41,12 @@ def render(
             'configs/render/smpl.py'))['RENDER_CONFIGS'][render_choice]
     renderer = build_renderer(
         dict(
-            type=render_choice,
+            type=RENDER_CONFIGS['renderer_type'],
             device=device,
             resolution=resolution,
             projection=projection,
             output_path=output_path,
-            return_tensor=True,
+            return_type=['tensor'] if return_tensor else None,
             in_ndc=in_ndc,
             **RENDER_CONFIGS))
 
@@ -73,15 +76,24 @@ def render(
         convention_dst='pytorch3d')
 
     tensors = []
-    for i in range(math.ceil(num_frames // batch_size)):
+    for i in trange(math.ceil(num_frames // batch_size)):
         indexes = list(
             range(i * batch_size, min((i + 1) * batch_size, len(meshes))))
-        images_batch = renderer(
-            meshes[indexes],
-            K=K[indexes],
-            R=R[indexes],
-            T=T[indexes],
-            indexes=indexes)
+        if no_grad:
+            with torch.no_grad():
+                images_batch = renderer(
+                    meshes=meshes[indexes],
+                    K=K[indexes],
+                    R=R[indexes],
+                    T=T[indexes],
+                    indexes=indexes)
+        else:
+            images_batch = renderer(
+                meshes=meshes[indexes],
+                K=K[indexes],
+                R=R[indexes],
+                T=T[indexes],
+                indexes=indexes)
         tensors.append(images_batch['tensor'])
 
     tensors = torch.cat(tensors)

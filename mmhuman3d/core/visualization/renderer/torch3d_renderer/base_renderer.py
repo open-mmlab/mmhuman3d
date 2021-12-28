@@ -36,7 +36,7 @@ class MeshBaseRenderer(nn.Module):
                  resolution: Tuple[int, int],
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
-                 return_type: List = [],
+                 return_type: Optional[List] = None,
                  out_img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
@@ -222,7 +222,7 @@ class MeshBaseRenderer(nn.Module):
                 self.output_path
             cv2.imwrite(
                 osp.join(folder, self.out_img_format % real_idx),
-                output_images[idx], cv2.COLOR_RGB2BGR)
+                output_images[idx])
 
     def prepare_meshes(self, meshes, vertices, faces):
         if meshes is None:

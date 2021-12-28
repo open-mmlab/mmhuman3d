@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
 from pytorch3d.structures import Meshes
@@ -25,7 +25,7 @@ class SegmentationRenderer(MeshBaseRenderer):
                  resolution: Tuple[int, int],
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
-                 return_type: Optional[Literal['tensor', 'rgba']] = None,
+                 return_type: Optional[List] = None,
                  out_img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
@@ -48,7 +48,9 @@ class SegmentationRenderer(MeshBaseRenderer):
                 returned. 'tensor' denotes return the determined tensor. E.g.,
                 return silhouette tensor of (B, H, W) for SilhouetteRenderer.
                 'rgba' denotes the colorful RGBA tensor to be written.
-                Will be same for MeshBaseRenderer.
+                Will return a colorful segmentation image for 'rgba' and a
+                segmentation map for 'tensor' (could be used as segmnentation
+                GT).
                 Defaults to None.
             out_img_format (str, optional): The image format string for
                 saving the images.

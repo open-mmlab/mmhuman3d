@@ -1,6 +1,9 @@
+import os.path as osp
 import warnings
+from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
+import mmcv
 import torch
 from pytorch3d.renderer import (
     AlphaCompositor,
@@ -10,6 +13,7 @@ from pytorch3d.renderer import (
 from pytorch3d.structures import Meshes, Pointclouds
 
 from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
+from mmhuman3d.utils.path_utils import check_path_suffix
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER, build_raster
 
@@ -29,7 +33,7 @@ class PointCloudRenderer(MeshBaseRenderer):
                  resolution: Tuple[int, int],
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
-                 return_type: bool = False,
+                 return_type: Optional[List] = None,
                  out_img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
@@ -48,11 +52,12 @@ class PointCloudRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_type (Optional[Literal[, optional): the type of tensor to be
+            return_type (List, optional): the type of tensor to be
                 returned. 'tensor' denotes return the determined tensor. E.g.,
                 return silhouette tensor of (B, H, W) for SilhouetteRenderer.
                 'rgba' denotes the colorful RGBA tensor to be written.
                 Will be same for MeshBaseRenderer.
+                Will return a pointcloud image for 'tensor' and for 'rgba'.
                 Defaults to None.
             out_img_format (str, optional): name format for temp images.
                 Defaults to '%06d.png'.
@@ -72,8 +77,16 @@ class PointCloudRenderer(MeshBaseRenderer):
         self.out_img_format = out_img_format
         self.radius = radius
         self.projection = projection
-        self.set_render_params(**kwargs)
         self.in_ndc = in_ndc
+        if output_path is not None:
+            if check_path_suffix(output_path, ['.mp4', '.gif']):
+                self.temp_path = osp.join(
+                    Path(output_path).parent,
+                    Path(output_path).name + '_output_temp')
+                mmcv.mkdir_or_exist(self.temp_path)
+                print('make dir', self.temp_path)
+            else:
+                self.temp_path = output_path
         self.set_render_params(**kwargs)
         super(MeshBaseRenderer, self).__init__()
 
