@@ -6,9 +6,12 @@
   * [Obtain preprocessed datasets](#obtain-preprocessed-datasets) -->
 - [Datasets for supported algorithms](#datasets-for-supported-algorithms)
 - [Folder structure](#folder-structure)
+  * [AGORA](#agora)
   * [COCO](#coco)
   * [COCO-WholeBody](#coco-wholebody)
   * [CrowdPose](#crowdpose)
+  * [EFT](#eft)
+  * [GTA-Human](#gta-human)
   * [Human3.6M](#human36m)
   * [Human3.6M Mosh](#human36m-mosh)
   * [HybrIK](#hybrik)
@@ -17,8 +20,10 @@
   * [MPI-INF-3DHP](#mpi-inf-3dhp)
   * [MPII](#mpii)
   * [PoseTrack18](#posetrack18)
+  * [Penn Action](#penn-action)
   * [PW3D](#pw3d)
   * [SPIN](#spin)
+  * [SURREAL](#surreal)
 
 
 ## Overview
@@ -34,6 +39,7 @@ These are our supported converters and their respective `dataset-name`:
 - CocoWholebodyConverter (`coco_wholebody`)
 - CrowdposeConverter (`crowdpose`)
 - EftConverter (`eft`)
+- GTAHumanConverter (`gta_human`)
 - H36mConverter (`h36m_p1`, `h36m_p2`)
 - H36mHybrIKConverter (`h36m_hybrik`)
 - H36mSpinConverter (`h36m_spin`)
@@ -546,6 +552,27 @@ mmhuman3d
            └── MPII_fit
                └── MPII_ver01.json
 ```
+
+### GTA-Human
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://gta-human.com/">GTA-Human (arXiv'2021)</a></summary>
+
+```bibtex
+@article{cai2021playing,
+  title={Playing for 3D Human Recovery},
+  author={Cai, Zhongang and Zhang, Mingyuan and Ren, Jiawei and Wei, Chen and Ren, Daxuan and Li, Jiatong and Lin, Zhengyu and Zhao, Haiyu and Yi, Shuai and Yang, Lei and others},
+  journal={arXiv preprint arXiv:2110.07588},
+  year={2021}
+}
+```
+
+More details are coming soon!
+
+
+</details>
 
 ### Human3.6M
 

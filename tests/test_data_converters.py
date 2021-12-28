@@ -204,6 +204,12 @@ def test_preprocess():
     data_converter.convert(H36M_ROOT, output_path)
     assert osp.exists(osp.join(output_path, 'spin_h36m_train.npz'))
 
+    GTA_HUMAN_ROOT = os.path.join(root_path, 'gta_human_data')
+    cfg = dict(type='GTAHumanConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(GTA_HUMAN_ROOT, output_path)
+    assert os.path.exists('/tmp/preprocessed_npzs/gta_human.npz')
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'
@@ -217,7 +223,8 @@ def test_preprocessed_npz():
         'keypoints3d17_relative_mask', 'keypoints3d_relative',
         'keypoints3d17_cam', 'keypoints3d17', 'keypoints3d17_relative',
         'keypoints3d_cam', 'keypoints3d_relative_mask', 'phi', 'phi_weight',
-        'features', 'has_smpl'
+        'features', 'has_smpl', 'keypoints2d_gta', 'keypoints3d_gta',
+        'keypoints2d_gta_mask', 'keypoints3d_gta_mask'
     ]
 
     for npf in os.listdir(npz_folder):
@@ -356,8 +363,3 @@ def test_preprocessed_npz():
 
             elif k == 'features':
                 assert npfile[k].shape == (N, 2048)
-
-
-if __name__ == '__main__':
-    test_preprocess()
-    test_preprocessed_npz()

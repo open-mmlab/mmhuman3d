@@ -6,6 +6,7 @@ from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
 from .crowdpose import CrowdposeConverter
 from .eft import EftConverter
+from .gta_human import GTAHumanConverter
 from .h36m import H36mConverter
 from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_spin import H36mSpinConverter
@@ -30,7 +31,7 @@ __all__ = [
     'H36mConverter', 'LspExtendedConverter', 'LspConverter',
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
-    'CocoHybrIKConverter', 'H36mHybrIKConverter', 'MpiInf3dhpHybrIKConverter',
-    'Pw3dHybrIKConverter', 'SurrealConverter', 'InstaVibeConverter',
-    'SpinConverter', 'H36mSpinConverter', 'VibeConverter'
+    'GTAHumanConverter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
+    'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter', 'SurrealConverter',
+    'InstaVibeConverter', 'SpinConverter', 'H36mSpinConverter', 'VibeConverter'
 ]
