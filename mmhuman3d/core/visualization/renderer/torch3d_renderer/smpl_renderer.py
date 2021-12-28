@@ -298,6 +298,10 @@ class SMPLRenderer(MeshBaseRenderer):
                 output_images = output_images * (
                     1 - pointcloud_mask) + pointcloud_mask * pointcloud_rgb
 
+            output_images = torch.cat([
+                output_images[..., 0, None], output_images[..., 1, None],
+                output_images[..., 2, None]
+            ], -1)
             output_images = (output_images.detach().cpu().numpy() *
                              255).astype(np.uint8)
 
@@ -323,9 +327,10 @@ class SMPLRenderer(MeshBaseRenderer):
         # return
         if self.return_tensor:
             rendered_map = render_results['tensor']
+
             if self.final_resolution != self.resolution:
-                rendered_images = interpolate(
+                rendered_map = interpolate(
                     rendered_map, size=self.final_resolution, mode='bilinear')
-                return rendered_images
+            return rendered_map
         else:
             return None

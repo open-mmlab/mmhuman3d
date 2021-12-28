@@ -65,8 +65,7 @@ class NewAttributeCameras(cameras.CamerasBase):
         kwargs.pop('is_perspective', None)
 
         image_size = kwargs.get('image_size', kwargs.get('resolution', None))
-        kwargs.update(image_size=image_size)
-        kwargs.update(resolution=image_size)
+
         if image_size is not None:
             if isinstance(image_size, (int, float)):
                 image_size = (image_size, image_size)
@@ -76,8 +75,6 @@ class NewAttributeCameras(cameras.CamerasBase):
                 if image_size.numel() == 1:
                     image_size = image_size.repeat(2)
                 image_size = image_size.view(-1, 2)
-            kwargs.update(image_size=image_size)
-            kwargs.update(resolution=image_size)
 
         if kwargs.get('K') is None:
             focal_length = kwargs.get('focal_length', None)
@@ -90,8 +87,7 @@ class NewAttributeCameras(cameras.CamerasBase):
                     focal_length = focal_length.repeat(2).view(-1, 2)
                 kwargs.update(focal_length=focal_length)
 
-            principal_point = kwargs.get('principal_points',
-                                         kwargs.get('principal_point', None))
+            principal_point = kwargs.get('principal_point', None)
             if principal_point is not None:
                 if isinstance(principal_point, (tuple, list)):
                     principal_point = torch.FloatTensor(principal_point)
@@ -122,7 +118,14 @@ class NewAttributeCameras(cameras.CamerasBase):
             resolution_src=image_size,
             resolution_dst=image_size)
 
+        if image_size is not None:
+            if image_size.shape[0] == 1:
+                image_size = image_size.repeat(K.shape[0], 1)
+            kwargs.update(image_size=image_size)
+            kwargs.update(resolution=image_size)
+
         kwargs.update(K=K, R=R, T=T)
+
         super().__init__(**kwargs)
 
     def get_camera_plane_normals(self, **kwargs) -> torch.Tensor:
@@ -210,9 +213,9 @@ class NewAttributeCameras(cameras.CamerasBase):
             T=self.T[index],
             image_size=self.get_image_size()[index]
             if self.get_image_size() is not None else None,
-            _in_ndc=self.in_ndc(),
+            in_ndc=self.in_ndc(),
             _is_perspective=self._is_perspective,
-            convention=self.convention,
+            convention='pytorch3d',
             device=self.device)
 
     def extend(self, N):
@@ -328,6 +331,11 @@ class NewAttributeCameras(cameras.CamerasBase):
                 in_ndc=True,
                 resolution=self.image_size,
                 is_perspective=self._is_perspective)
+
+    def concat(self, others):
+        if isinstance(others, type(self)):
+            others = [others]
+        return concat_cameras([self] + others)
 
 
 @CAMERAS.register_module(
@@ -1131,6 +1139,46 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
     def to_screen(self, **kwargs):
         """Not implemented."""
         raise NotImplementedError()
+
+
+def concat_cameras(
+        cameras_list: List[NewAttributeCameras]) -> NewAttributeCameras:
+    """Concat a list of cameras of the same type.
+
+    Args:
+        cameras_list (List[cameras.CamerasBase]): a list of cameras.
+
+    Returns:
+        NewAttributeCameras: the returned cameras concated following the batch
+            dim.
+    """
+    K = []
+    R = []
+    T = []
+    is_perspective = cameras_list[0].is_perspective()
+    in_ndc = cameras_list[0].in_ndc()
+    cam_cls = type(cameras_list[0])
+    image_size = cameras_list[0].get_image_size()
+    convention = cameras_list[0].convention
+    for cam in cameras_list:
+        assert type(cam) is cam_cls
+        assert cam.in_ndc() is in_ndc
+        assert cam.is_perspective() is is_perspective
+        K.append(cam.K)
+        R.append(cam.R)
+        T.append(cam.T)
+    K = torch.cat(K)
+    R = torch.cat(R)
+    T = torch.cat(T)
+    concated_cameras = cam_cls(
+        K=K,
+        R=R,
+        T=T,
+        is_perspective=is_perspective,
+        in_ndc=in_ndc,
+        image_size=image_size,
+        convention=convention)
+    return concated_cameras
 
 
 def compute_orbit_cameras(

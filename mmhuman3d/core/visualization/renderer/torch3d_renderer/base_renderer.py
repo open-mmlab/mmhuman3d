@@ -201,26 +201,28 @@ class MeshBaseRenderer(nn.Module):
                     materials=self.materials,
                     blend_params=self.blend_params))
             if self.shader_type != 'silhouette' else build_shader(
-                dict(type=self.shader_type)))
+                dict(type=self.shader_type, blend_params=self.blend_params)))
         return renderer
 
     def write_images(self, rgbs, valid_masks, images, indexes):
         """Write output/temp images."""
         rgbs = rgbs.clone()[..., :3] / rgbs[..., :3].max()
+        bgrs = torch.cat(
+            [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]], -1)
         if images is not None:
-            output_images = rgbs * 255 * valid_masks + (1 -
+            output_images = bgrs * 255 * valid_masks + (1 -
                                                         valid_masks) * images
             output_images = output_images.detach().cpu().numpy().astype(
                 np.uint8)
         else:
-            output_images = (rgbs.detach().cpu().numpy() * 255).astype(
+            output_images = (bgrs.detach().cpu().numpy() * 255).astype(
                 np.uint8)
         for idx, real_idx in enumerate(indexes):
             folder = self.temp_path if self.temp_path is not None else\
                 self.output_path
             cv2.imwrite(
                 osp.join(folder, self.out_img_format % real_idx),
-                output_images[idx])
+                output_images[idx], cv2.COLOR_RGB2BGR)
 
     def prepare_meshes(self, meshes, vertices, faces):
         if meshes is None:

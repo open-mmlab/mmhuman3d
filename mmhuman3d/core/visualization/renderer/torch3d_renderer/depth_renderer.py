@@ -73,7 +73,6 @@ class DepthRenderer(MeshBaseRenderer):
     def set_render_params(self, **kwargs):
         super().set_render_params(**kwargs)
         self.shader_type = 'nolight'
-        self.max = None
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
@@ -123,17 +122,15 @@ class DepthRenderer(MeshBaseRenderer):
         depth_map = renderer(meshes)
 
         if self.output_path is not None or 'rgba' in self.return_type:
-            self.max = torch.max(
-                verts_depth).clone() if self.max is None else self.max
-            rgbs, valid_mask = depth_map[..., :3] / self.max, (
-                depth_map[..., 3:] > 0) * 1.0
+            rgbs, valid_mask = depth_map[
+                ..., :3], (depth_map[..., 3:] > 0) * 1.0
 
             if self.output_path is not None:
                 self.write_images(rgbs, valid_mask, images, indexes)
 
         results = {}
         if 'tensor' in self.return_type:
-            results.update(tensor=depth_map)
+            results.update(tensor=depth_map[..., 0])
         if 'rgba' in self.return_type:
             results.update(rgba=torch.cat([rgbs, valid_mask], -1))
         return results

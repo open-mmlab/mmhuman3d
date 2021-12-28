@@ -295,14 +295,14 @@ def convert_cameras(
         # src in ndc, dst in screen
 
         if in_ndc_src is True and (in_ndc_dst is False):
-            convert_ndc_to_screen(
+            new_K = convert_ndc_to_screen(
                 K=new_K,
                 is_perspective=is_perspective,
                 sign=sign.to(new_K.device),
                 resolution=resolution_dst)
         # src in screen, dst in ndc
         elif in_ndc_src is False and in_ndc_dst is True:
-            convert_screen_to_ndc(
+            new_K = convert_screen_to_ndc(
                 K=new_K,
                 is_perspective=is_perspective,
                 sign=sign.to(new_K.device),

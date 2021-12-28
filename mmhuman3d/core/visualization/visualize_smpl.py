@@ -401,8 +401,7 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
                 elif palette[person_idx] == 'segmentation':
                     verts_labels = torch.zeros(num_verts)
                     color_person = torch.ones(1, num_verts, 3)
-                    color_part = get_different_colors(
-                        len(list(body_segger.keys())))
+                    color_part = get_different_colors(len(body_segger))
                     for part_idx, k in enumerate(body_segger.keys()):
                         index = body_segger[k]
                         verts_labels[index] = part_idx
@@ -453,7 +452,7 @@ def render_smpl(
     start: int = 0,
     end: Optional[int] = None,
     alpha: float = 1.0,
-    no_grad: bool = False,
+    no_grad: bool = True,
     batch_size: int = 10,
     device: Union[torch.device, str] = 'cuda',
     # file io parameters
@@ -1042,13 +1041,11 @@ def visualize_smpl_calibration(
         projection='perspective',
         convention='opencv',
         orig_cam=None,
-        in_ndc=False,
-        return_tensor=False,
-        no_grad=True)
+        in_ndc=False)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(K=K, R=R, T=T, resolution=resolution, **kwargs)
+    return func(K=K, R=R, T=T, resolution=resolution, **kwargs)
 
 
 def visualize_smpl_hmr(cam_transl,
@@ -1076,8 +1073,6 @@ def visualize_smpl_hmr(cam_transl,
         in_ndc=False,
         K=None,
         R=None,
-        return_tensor=False,
-        no_grad=True,
         orig_cam=None,
     )
     if isinstance(cam_transl, np.ndarray):
@@ -1089,7 +1084,7 @@ def visualize_smpl_hmr(cam_transl,
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(Ks=Ks, K=K, T=T, **kwargs)
+    return func(Ks=Ks, K=K, T=T, **kwargs)
 
 
 def visualize_smpl_vibe(orig_cam=None,
@@ -1112,13 +1107,11 @@ def visualize_smpl_vibe(orig_cam=None,
         projection='weakperspective',
         convention='opencv',
         in_ndc=True,
-        return_tensor=False,
-        no_grad=True,
     )
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(
+    return func(
         orig_cam=orig_cam,
         output_path=output_path,
         resolution=resolution,
@@ -1146,13 +1139,12 @@ def visualize_T_pose(num_frames,
         K=None,
         R=None,
         T=None,
-        return_tensor=False,
-        no_grad=True,
         origin_frames=None)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(poses=poses, model_type=model_type, orbit_speed=orbit_speed, **kwargs)
+    return func(
+        poses=poses, model_type=model_type, orbit_speed=orbit_speed, **kwargs)
 
 
 def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
@@ -1172,12 +1164,10 @@ def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
         R=None,
         T=None,
         in_ndc=True,
-        return_tensor=False,
-        no_grad=True,
         origin_frames=None,
         frame_list=None,
         image_array=None)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(poses=poses, **kwargs)
+    return func(poses=poses, **kwargs)

@@ -72,18 +72,18 @@ def render(
         convention_src=convention,
         convention_dst='pytorch3d')
 
-    images = []
+    tensors = []
     for i in range(math.ceil(num_frames // batch_size)):
         indexes = list(
             range(i * batch_size, min((i + 1) * batch_size, len(meshes))))
         images_batch = renderer(
-            images.extend(len(indexes)),
+            meshes[indexes],
             K=K[indexes],
             R=R[indexes],
             T=T[indexes],
             indexes=indexes)
-        images.append(images_batch)
+        tensors.append(images_batch['tensor'])
 
-    images = torch.cat(images)
+    tensors = torch.cat(tensors)
     renderer.export()
-    return images
+    return tensors
