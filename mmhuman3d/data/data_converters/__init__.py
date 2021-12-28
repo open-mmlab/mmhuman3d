@@ -31,7 +31,7 @@ __all__ = [
     'H36mConverter', 'LspExtendedConverter', 'LspConverter',
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
-    'GTAHumanConverter','CocoHybrIKConverter', 'H36mHybrIKConverter', 
-    'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter', 'SurrealConverter', 
+    'GTAHumanConverter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
+    'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter', 'SurrealConverter',
     'InstaVibeConverter', 'SpinConverter', 'H36mSpinConverter', 'VibeConverter'
 ]
