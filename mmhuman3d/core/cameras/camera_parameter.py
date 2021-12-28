@@ -58,6 +58,51 @@ _CameraParameter_SUPPORTED_KEYS = {
     },
 }
 
+_CameraParameter_SUPPORTED_KEYS = {
+    'H': {
+        'type': int,
+    },
+    'W': {
+        'type': int,
+    },
+    'in_mat': {
+        'type': list,
+        'len': 3,
+    },
+    'rotation_mat': {
+        'type': list,
+        'len': 3,
+    },
+    'translation': {
+        'type': list,
+        'len': 3,
+    },
+    'k1': {
+        'type': float,
+    },
+    'k2': {
+        'type': float,
+    },
+    'k3': {
+        'type': float,
+    },
+    'k4': {
+        'type': float,
+    },
+    'k5': {
+        'type': float,
+    },
+    'k6': {
+        'type': float,
+    },
+    'p1': {
+        'type': float,
+    },
+    'p2': {
+        'type': float,
+    },
+}
+
 
 class CameraParameter:
     logger = None
