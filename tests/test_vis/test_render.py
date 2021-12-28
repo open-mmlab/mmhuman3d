@@ -14,10 +14,10 @@ def test_render_runner():
             'hq', 'lq', 'mq', 'pointcloud', 'normal', 'depth', 'silhouette'
     ]:
         render_runner.render(
-            meshes=meshes.extend(10),
+            meshes=meshes.extend(2),
             render_choice=render_choice,
             orbit_speed=1.0,
             dist_speed=0.0,
             device=device,
-            batch_size=5,
+            batch_size=2,
             output_path=f'/tmp/{render_choice}.mp4')
