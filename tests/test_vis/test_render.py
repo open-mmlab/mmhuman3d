@@ -17,6 +17,7 @@ def test_render_runner():
             meshes=meshes.extend(2),
             render_choice=render_choice,
             orbit_speed=1.0,
+            no_grad=True,
             dist_speed=0.0,
             device=device,
             batch_size=2,
