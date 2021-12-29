@@ -311,11 +311,12 @@ class CameraParameter:
         self.load_from_dict(camera_param_dict)
 
     @classmethod
-    def load_from_cameras(cls,
-                          cam,
-                          name: str,
-                          resolution: Union[List, Tuple] = None):
-        """Load name and parameters from a dict.
+    def load_from_perspective_cameras(cls,
+                                      cam,
+                                      name: str,
+                                      resolution: Union[List, Tuple] = None):
+        """Load parameters from a PerspectiveCameras and return a
+        CameraParameter.
 
         Args:
             cam (mmhuman3d.core.cameras.cameras.PerspectiveCameras):
@@ -369,8 +370,8 @@ class CameraParameter:
         cam_param.parameters_dict.update(W=width)
         return cam_param
 
-    def export_to_cameras(self) -> PerspectiveCameras:
-        """Export to a opencv defined PerspectiveCameras.
+    def export_to_perspective_cameras(self) -> PerspectiveCameras:
+        """Export to a opencv defined screen space PerspectiveCameras.
 
         Returns:
             Same defined PerspectiveCameras of batch_size 1.
@@ -397,7 +398,6 @@ class CameraParameter:
                 T=new_T.float(),
                 convention='opencv',
                 in_ndc=False,
-                is_perspective=True,
                 resolution=(height, width)))
         return cam
 

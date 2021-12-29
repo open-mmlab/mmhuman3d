@@ -1,7 +1,6 @@
 import torch
 
 from mmhuman3d.core.cameras import (
-    CameraParameter,
     FoVOrthographicCameras,
     FoVPerspectiveCameras,
     OrthographicCameras,
@@ -9,6 +8,7 @@ from mmhuman3d.core.cameras import (
     WeakPerspectiveCameras,
     build_cameras,
 )
+from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.core.conventions.cameras import convert_cameras
 
 
@@ -54,8 +54,8 @@ def test_cameras_parameter():
         principal_point=(540, 960),
         R=torch.eye(3, 3)[None],
         in_ndc=False)
-    cam_param = CameraParameter.load_from_NewAttributeCameras(cam, name='1')
-    cam1 = cam_param.export_to_NewAttributeCameras()
+    cam_param = CameraParameter.load_from_perspective_cameras(cam, name='1')
+    cam1 = cam_param.export_to_perspective_cameras()
     check_camera_close(cam[0], cam1)
 
 
