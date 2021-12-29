@@ -4,7 +4,6 @@ from typing import Optional
 
 import numpy as np
 import torch
-from models.utils.inverse_kinematics import batch_inverse_kinematics_transform
 from smplx import SMPL as _SMPL
 from smplx.lbs import batch_rigid_transform, blend_shapes, vertices2joints
 
@@ -14,6 +13,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 )
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.models.builder import BODY_MODELS
+from mmhuman3d.models.utils import batch_inverse_kinematics_transform
 from mmhuman3d.utils.transforms import quat_to_rotmat, rotmat_to_quat
 
 
