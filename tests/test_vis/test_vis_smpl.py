@@ -20,7 +20,7 @@ from mmhuman3d.utils.ffmpeg_utils import (
 body_model_config = {
     'use_pca': False,
     'use_face_contour': True,
-    'model_path': '/home/SENSETIME/wangwenjia/programs/data/smpl_models'
+    'model_path': 'data/body_models'
 }
 
 
