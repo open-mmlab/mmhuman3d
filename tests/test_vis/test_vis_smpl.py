@@ -17,7 +17,11 @@ from mmhuman3d.utils.ffmpeg_utils import (
     video_to_array,
 )
 
-model_path = 'data/body_models'
+body_model_config = {
+    'use_pca': False,
+    'use_face_contour': True,
+    'model_path': 'data/body_models'
+}
 
 
 def test_visualize_smpl_pose():
@@ -25,27 +29,28 @@ def test_visualize_smpl_pose():
         device_name = 'cuda:0'
     else:
         device_name = 'cpu'
-    # wrong input shape
+    # wrong input tensor shape for smpl
     with pytest.raises(ValueError):
         visualize_smpl_pose(
             poses=torch.zeros(2, 71),
             model_type='smpl',
-            model_path=model_path,
+            body_model_config=body_model_config,
             output_path='/tmp/1.mp4',
             render_choice='hq',
             resolution=(128, 128),
             overwrite=True,
             device=device_name)
+    # wrong input tensor shape for smplx
     with pytest.raises(ValueError):
         visualize_smpl_pose(
             poses=torch.zeros(2, 164),
-            model_type='smplx',
-            model_path=model_path,
+            body_model_config=body_model_config,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
             overwrite=True,
             device=device_name)
+    # wrong input tensor shape for smpl dict
     with pytest.raises(RuntimeError):
         pose_dict = {
             'body_pose': torch.zeros(2, 68),
@@ -54,12 +59,13 @@ def test_visualize_smpl_pose():
         visualize_smpl_pose(
             poses=pose_dict,
             model_type='smpl',
-            model_path=model_path,
+            body_model_config=body_model_config,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
             overwrite=True,
             device=device_name)
+    # wrong input tensor shape for smplx dict
     with pytest.raises(RuntimeError):
         pose_dict = {
             'body_pose': torch.zeros(2, 64),
@@ -73,13 +79,13 @@ def test_visualize_smpl_pose():
         visualize_smpl_pose(
             poses=pose_dict,
             model_type='smplx',
-            model_path=model_path,
+            body_model_config=body_model_config,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
             overwrite=True,
             device=device_name)
-    # wrong input keys
+    # wrong input dict keys for smpl dict
     with pytest.raises(KeyError):
         pose_dict = {
             'wrong_smpl_name': torch.zeros(2, 69),
@@ -88,13 +94,13 @@ def test_visualize_smpl_pose():
         visualize_smpl_pose(
             poses=pose_dict,
             model_type='smpl',
-            model_path=model_path,
+            body_model_config=body_model_config,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
             overwrite=True,
             device=device_name)
-
+    # wrong input dict keys for smplx dict
     with pytest.raises(KeyError):
         pose_dict = {
             'wrong_smplx_name': torch.zeros(2, 63),
@@ -108,13 +114,13 @@ def test_visualize_smpl_pose():
         visualize_smpl_pose(
             poses=pose_dict,
             model_type='smplx',
-            model_path=model_path,
+            body_model_config=body_model_config,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             render_choice='hq',
             overwrite=True,
             device=device_name)
-    # wrong output path
+    # wrong output path, write to existing file path without overwrite=True
     with pytest.raises(FileExistsError):
         v = np.zeros((3, 512, 512, 3))
         array_to_video(v, output_path='/tmp/1.mp4')
@@ -122,14 +128,16 @@ def test_visualize_smpl_pose():
             poses=torch.zeros(2, 72),
             model_type='smpl',
             output_path='/tmp/1.mp4',
-            model_path=model_path,
+            body_model_config=body_model_config,
             resolution=(128, 128),
             render_choice='hq',
             overwrite=False,
             device=device_name)
 
-    # wrong body model weight path
+    # wrong body model weight path, folder does not exist
     with pytest.raises(FileNotFoundError):
+        body_model_config_ = body_model_config.copy()
+        body_model_config_.update(model_path='/321')
         command = ['touch', '/tmp/1.mp4']
         subprocess.call(command)
         visualize_smpl_pose(
@@ -137,130 +145,135 @@ def test_visualize_smpl_pose():
             model_type='smpl',
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
-            model_path='/312',
+            body_model_config=body_model_config_,
             render_choice='hq',
             overwrite=True,
             device=device_name)
 
+    # wrong body model weight path, folder exist without body model file
     with pytest.raises(AssertionError):
         command = ['touch', '/tmp/1.mp4']
         subprocess.call(command)
+        body_model_config_ = body_model_config.copy()
+        body_model_config_.update(model_path='/tmp')
         visualize_smpl_pose(
             poses=torch.zeros(2, 72),
             model_type='smpl',
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
-            model_path='/tmp',
+            body_model_config=body_model_config_,
             render_choice='hq',
             overwrite=True,
             device=device_name)
 
-    with pytest.raises(FileNotFoundError):
-        command = ['touch', '/tmp/1.mp4']
-        subprocess.call(command)
-        visualize_smpl_pose(
-            poses=torch.zeros(2, 72),
-            model_type='smpl',
-            output_path='/tmp/1.mp4',
-            resolution=(128, 128),
-            model_path='/123',
-            render_choice='hq',
-            overwrite=True,
-            device=device_name)
-
+    # render single frame single person of smpl mesh
     visualize_smpl_pose(
         poses=torch.zeros(1, 72),
         model_type='smpl',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
         overwrite=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (1, 48, 48, 3)
 
+    # render single frame multiple person of same betas of smpl mesh
     visualize_smpl_pose(
         poses=torch.zeros(1, 2, 72),
         model_type='smpl',
         betas=torch.zeros(1, 10),
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(128, 128),
         overwrite=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (1, 128, 128, 3)
 
+    # render single frame multiple person of different betas of smpl mesh
     visualize_smpl_pose(
         poses=torch.zeros(1, 2, 72),
         betas=torch.zeros(1, 2, 10),
         model_type='smpl',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(128, 128),
         overwrite=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (1, 128, 128, 3)
 
+    # when render multiple person, betas number should be one or same as person
+    # number
     with pytest.raises(ValueError):
         visualize_smpl_pose(
             poses=torch.zeros(1, 3, 72),
             betas=torch.zeros(1, 2, 10),
             model_type='smpl',
-            model_path=model_path,
+            body_model_config=body_model_config,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             overwrite=True,
             device=device_name)
+
+    # when render multiple person, transl number should be one or same as
+    # person number
     with pytest.raises(ValueError):
         visualize_smpl_pose(
             poses=torch.zeros(1, 3, 72),
             transl=torch.zeros(1, 2, 3),
             model_type='smpl',
-            model_path=model_path,
+            body_model_config=body_model_config,
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
             overwrite=True,
             device=device_name)
 
+    # render multiple person, betas and transl will be sliced according to
+    # the person number indicated by poses
     visualize_smpl_pose(
         poses=torch.zeros(1, 2, 72),
         betas=torch.zeros(1, 3, 10),
         transl=torch.zeros(1, 3, 3),
         model_type='smpl',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(128, 128),
         overwrite=True,
         device=device_name)
+
+    # render 10 frames of single smpl mesh using single betas.
     visualize_smpl_pose(
         poses=torch.zeros(10, 72),
         betas=torch.zeros(1, 10),
         model_type='smpl',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(128, 128),
         overwrite=True,
         device=device_name)
 
+    # render 1 frame of single smplx mesh using default betas.
     visualize_smpl_pose(
         poses=torch.zeros(1, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
         overwrite=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (1, 48, 48, 3)
 
+    # render 1 frame of single smpl mesh using default betas.
     visualize_smpl_pose(
         poses=torch.zeros(1, 72),
         model_type='smpl',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
         overwrite=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (1, 48, 48, 3)
 
+    # use pose_dict to render single smpl mesh using default betas.
     pose_dict = {
         'body_pose': torch.zeros(2, 69),
         'global_orient': torch.zeros(2, 3)
@@ -268,13 +281,14 @@ def test_visualize_smpl_pose():
     visualize_smpl_pose(
         poses=pose_dict,
         model_type='smpl',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
         overwrite=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # use pose_dict to render single smplx mesh using default betas.
     pose_dict = {
         'body_pose': torch.zeros(2, 63),
         'global_orient': torch.zeros(2, 3),
@@ -287,13 +301,15 @@ def test_visualize_smpl_pose():
     visualize_smpl_pose(
         poses=pose_dict,
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
         overwrite=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # use vibe camera outputs to render single smplx mesh using
+    # function visualize_smpl_vibe.
     pred_cam = torch.ones(10, 4)
     bbox = torch.tensor([0, 0, 100, 100]).view(1, 4).repeat(10, 1)
     visualize_smpl_vibe(
@@ -301,18 +317,19 @@ def test_visualize_smpl_pose():
         model_type='smplx',
         pred_cam=pred_cam,
         bbox=bbox,
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
         overwrite=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # test function visualize_T_pose to render smplx mesh
     visualize_T_pose(
         num_frames=2,
         model_type='smplx',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
         batch_size=5,
@@ -320,11 +337,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render colorful smpl mesh
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='/tmp/1.mp4',
         palette='segmentation',
         resolution=(48, 48),
@@ -333,11 +351,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render normal map of smpl mesh
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         render_choice='normal',
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
@@ -346,11 +365,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render depth map of smpl mesh
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         render_choice='depth',
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
@@ -359,11 +379,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render pointcloud of smpl mesh
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         render_choice='pointcloud',
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
@@ -372,11 +393,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render silhouette mask of smpl mesh
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         render_choice='silhouette',
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
@@ -385,11 +407,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render body part silhouette of smpl mesh
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         render_choice='part_silhouette',
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
@@ -398,11 +421,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render smpl mesh in medium quaility
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         render_choice='mq',
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
@@ -411,11 +435,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render smpl mesh in low quaility
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         render_choice='lq',
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
@@ -424,11 +449,12 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # render smpl mesh in high quaility
     visualize_T_pose(
         num_frames=2,
         model_type='smpl',
         orbit_speed=(1.0, 0.5),
-        model_path=model_path,
+        body_model_config=body_model_config,
         render_choice='hq',
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
@@ -437,6 +463,7 @@ def test_visualize_smpl_pose():
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (2, 48, 48, 3)
 
+    # test function visualize_smpl_calibration
     K = torch.zeros(1, 4, 4)
     K[:, 0, 0] = 1
     K[:, 1, 1] = 1
@@ -447,7 +474,7 @@ def test_visualize_smpl_pose():
     visualize_smpl_calibration(
         poses=pose_dict,
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         K=K,
         R=R,
         T=T,
@@ -456,6 +483,7 @@ def test_visualize_smpl_pose():
         overwrite=True,
         device=device_name)
 
+    # test function visualize_smpl_calibration with betas and transl
     K = torch.zeros(1, 4, 4)
     K[:, 0, 0] = 1
     K[:, 1, 1] = 1
@@ -468,7 +496,7 @@ def test_visualize_smpl_pose():
     visualize_smpl_calibration(
         poses=pose_dict,
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         betas=betas,
         transl=transl,
         K=K,
@@ -479,12 +507,13 @@ def test_visualize_smpl_pose():
         overwrite=True,
         device=device_name)
 
+    # use function visualize_smpl_hmr to render smplx mesh
     bbox = np.zeros((3, 1, 4))
     cam_transl = torch.zeros(3, 1, 3)
     visualize_smpl_hmr(
         poses=torch.zeros(3, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=bbox,
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
@@ -492,12 +521,13 @@ def test_visualize_smpl_pose():
         overwrite=True,
         device=device_name)
 
+    # render smpl mesh by passing verts
     bbox = np.zeros((3, 1, 4))
     cam_transl = torch.zeros(3, 1, 3)
     visualize_smpl_hmr(
         verts=torch.zeros(3, 6890, 3),
         model_type='smpl',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=bbox,
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
@@ -505,12 +535,13 @@ def test_visualize_smpl_pose():
         overwrite=True,
         device=device_name)
 
+    # render smplx mesh with background images from video
     bbox = np.zeros((3, 1, 4))
     T = torch.zeros(3, 1, 3)
     visualize_smpl_hmr(
         poses=torch.zeros(3, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=bbox,
         cam_transl=cam_transl,
         origin_frames='/tmp/1.mp4',
@@ -519,6 +550,7 @@ def test_visualize_smpl_pose():
         overwrite=True,
         device=device_name)
 
+    # render smplx mesh with background images from image folder
     image_array = np.random.randint(
         low=0, high=255, size=(3, 128, 128, 3), dtype=np.uint8)
     array_to_images(image_array, '/tmp/temp_images', img_format='%06d.png')
@@ -528,7 +560,7 @@ def test_visualize_smpl_pose():
     visualize_smpl_hmr(
         poses=torch.zeros(3, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=bbox,
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
@@ -537,12 +569,13 @@ def test_visualize_smpl_pose():
         overwrite=True,
         device=device_name)
 
+    # render smplx mesh with background images from video
     bbox = np.zeros((3, 1, 4))
     cam_transl = torch.zeros(3, 1, 3)
     visualize_smpl_hmr(
         poses=torch.zeros(3, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=bbox,
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
@@ -552,10 +585,11 @@ def test_visualize_smpl_pose():
         overwrite=True,
         device=device_name)
 
+    # render smplx mesh with specified palette from a numpy array
     visualize_smpl_hmr(
         poses=torch.zeros(3, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=bbox,
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
@@ -566,10 +600,11 @@ def test_visualize_smpl_pose():
         palette=np.ones((1, 3)),
         device=device_name)
 
+    # render multi-person smplx mesh with specified palette from a numpy array
     visualize_smpl_hmr(
         poses=torch.zeros(3, 3, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=np.zeros((3, 3, 4)),
         cam_transl=torch.zeros(3, 3, 3),
         output_path='/tmp/1.mp4',
@@ -580,10 +615,11 @@ def test_visualize_smpl_pose():
         palette=np.ones((1, 3)),
         device=device_name)
 
+    # export the smplx mesh file as ply into the `mesh_file_path` folder
     visualize_smpl_hmr(
         poses=torch.zeros(3, 3, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=np.zeros((3, 3, 4)),
         cam_transl=torch.zeros(3, 3, 3),
         output_path='/tmp/1.mp4',
@@ -595,10 +631,11 @@ def test_visualize_smpl_pose():
         palette=np.ones((1, 3)),
         device=device_name)
 
+    # render multi-person smplx mesh with random palette from colormap
     visualize_smpl_hmr(
         poses=torch.zeros(3, 3, 165),
         model_type='smplx',
-        model_path=model_path,
+        body_model_config=body_model_config,
         bbox=np.zeros((3, 3, 4)),
         cam_transl=torch.zeros(3, 3, 3),
         output_path='/tmp/1.mp4',
@@ -610,11 +647,13 @@ def test_visualize_smpl_pose():
         palette='random',
         device=device_name)
 
+    # wrong palette, should be numpy or tensor of shape (N, 3) or a string
+    # in pre-defined range
     with pytest.raises(ValueError):
         visualize_smpl_hmr(
             poses=torch.zeros(3, 3, 165),
             model_type='smplx',
-            model_path=model_path,
+            body_model_config=body_model_config,
             bbox=np.zeros((3, 3, 4)),
             cam_transl=torch.zeros(3, 3, 3),
             output_path='/tmp/1.mp4',
@@ -626,11 +665,13 @@ def test_visualize_smpl_pose():
             palette='wrong_palette',
             device=device_name)
 
+    # wrong palette, should be numpy or tensor of shape (N, 3) or a string
+    # in pre-defined range
     with pytest.raises(ValueError):
         visualize_smpl_hmr(
             poses=torch.zeros(3, 3, 165),
             model_type='smplx',
-            model_path=model_path,
+            body_model_config=body_model_config,
             bbox=np.zeros((3, 3, 4)),
             cam_transl=torch.zeros(3, 3, 3),
             output_path='/tmp/1.mp4',

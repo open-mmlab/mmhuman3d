@@ -1,26 +1,21 @@
 import os.path as osp
+from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
 import cv2
+import mmcv
 import numpy as np
 import torch
-from pytorch3d.renderer import TexturesVertex
 from pytorch3d.renderer.lighting import DirectionalLights, PointLights
 from pytorch3d.structures import Meshes
 from torch.nn.functional import interpolate
 
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
-from mmhuman3d.utils.keypoint_utils import get_different_colors
-from mmhuman3d.utils.mesh_utils import (
-    join_batch_meshes_as_scene,
-    mesh_to_pointcloud_vc,
-)
+from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
+from mmhuman3d.utils.path_utils import check_path_suffix
 from .base_renderer import MeshBaseRenderer
-from .depth_renderer import DepthRenderer
-from .normal_renderer import NormalRenderer
-from .pointcloud_renderer import PointCloudRenderer
-from .textures import TexturesClosest
+from .builder import build_renderer, build_textures
 
 try:
     from typing import Literal
@@ -41,7 +36,6 @@ class SMPLRenderer(MeshBaseRenderer):
                  return_tensor: bool = False,
                  alpha: float = 1.0,
                  model_type='smpl',
-                 img_format: str = '%06d.png',
                  out_img_format: str = '%06d.png',
                  render_choice='mq',
                  projection: Literal['weakperspective', 'fovperspective',
@@ -53,12 +47,15 @@ class SMPLRenderer(MeshBaseRenderer):
                  in_ndc: bool = True,
                  final_resolution: Tuple[int, int] = None,
                  **kwargs) -> None:
-        if plot_kps:
-            self.alpha = max(min(0.8, alpha), 0.1)
-        else:
-            self.alpha = max(min(1.0, alpha), 0.1)
+        super(MeshBaseRenderer, self).__init__()
+
+        self.device = device
+        self.projection = projection
+        self.resolution = resolution
         self.model_type = model_type
+        self.in_ndc = in_ndc
         self.render_choice = render_choice
+        self.output_path = output_path
         self.raw_faces = torch.LongTensor(faces.astype(
             np.int32)) if isinstance(faces, np.ndarray) else faces
         self.colors = torch.Tensor(colors) if isinstance(
@@ -68,48 +65,44 @@ class SMPLRenderer(MeshBaseRenderer):
         self.vis_kp_index = vis_kp_index
         self.out_img_format = out_img_format
         self.final_resolution = final_resolution
-        super().__init__(
-            resolution,
-            device=device,
-            output_path=output_path,
-            return_tensor=return_tensor,
-            alpha=alpha,
-            img_format=img_format,
-            projection=projection,
-            in_ndc=in_ndc,
-            **kwargs)
+        self.segmentation = body_segmentation(self.model_type)
+        self.return_tensor = return_tensor
+        if output_path is not None:
+            if check_path_suffix(output_path, ['.mp4', '.gif']):
+                self.temp_path = osp.join(
+                    Path(output_path).parent,
+                    Path(output_path).name + '_output_temp')
+                mmcv.mkdir_or_exist(self.temp_path)
+                print('make dir', self.temp_path)
+            else:
+                self.temp_path = output_path
+
+        renderer_type = kwargs.pop('renderer_type', 'base')
+        self.texture_type = kwargs.pop('texture_type', 'vertex')
+
+        self.image_renderer = build_renderer(
+            dict(
+                type=renderer_type,
+                device=device,
+                resolution=resolution,
+                projection=projection,
+                in_ndc=in_ndc,
+                return_type=['tensor', 'rgba'] if return_tensor else ['rgba'],
+                **kwargs))
+
         if plot_kps:
-            self.joints_renderer = PointCloudRenderer(
-                resolution=resolution,
-                device=device,
-                return_tensor=True,
-                projection=projection,
-                in_ndc=in_ndc,
-                radius=0.008)
-        if self.render_choice == 'pointcloud':
-            self.pointcloud_renderer = PointCloudRenderer(
-                resolution=resolution,
-                device=device,
-                return_tensor=True,
-                projection=projection,
-                in_ndc=in_ndc,
-                radius=0.003)
-        elif self.render_choice == 'depth':
-            self.depth_renderer = DepthRenderer(
-                device=device,
-                resolution=resolution,
-                projection=projection,
-                in_ndc=in_ndc,
-                return_tensor=True,
-                **kwargs)
-        elif self.render_choice == 'normal':
-            self.normal_renderer = NormalRenderer(
-                device=device,
-                resolution=resolution,
-                projection=projection,
-                in_ndc=in_ndc,
-                return_tensor=True,
-                **kwargs)
+            self.alpha = max(min(0.8, alpha), 0.1)
+            self.joints_renderer = build_renderer(
+                dict(
+                    type='pointcloud',
+                    resolution=resolution,
+                    device=device,
+                    return_type=['rgba'],
+                    projection=projection,
+                    in_ndc=in_ndc,
+                    radius=0.008))
+        else:
+            self.alpha = max(min(1.0, alpha), 0.1)
         """
         Render Mesh for SMPL and SMPL-X. For function render_smpl.
         2 modes: mesh render with different quality and palette,
@@ -144,14 +137,6 @@ class SMPLRenderer(MeshBaseRenderer):
         Returns:
             None
         """
-
-    def set_render_params(self, **kwargs):
-        """update render params."""
-        super(SMPLRenderer, self).set_render_params(**kwargs)
-        self.Textures = TexturesVertex
-        self.segmentation = body_segmentation(self.model_type)
-        if self.render_choice == 'part_silhouette':
-            self.Textures = TexturesClosest
 
     def forward(
         self,
@@ -232,119 +217,93 @@ class SMPLRenderer(MeshBaseRenderer):
             mesh = Meshes(
                 verts=vertices[:, person_idx].to(self.device),
                 faces=faces.to(self.device),
-                textures=self.Textures(
-                    verts_features=verts_rgb.to(self.device)))
+                textures=build_textures(
+                    dict(
+                        type=self.texture_type,
+                        verts_features=verts_rgb.to(self.device))))
             mesh_list.append(mesh)
         meshes = join_batch_meshes_as_scene(mesh_list)
 
         cameras = self.init_cameras(K, R, T)
-        if isinstance(self.lights, DirectionalLights):
-            lights = self.lights.clone()
-            lights.direction = cameras.get_camera_plane_normals()
-        elif isinstance(self.lights, PointLights):
-            lights = self.lights.clone()
-            lights.location = cameras.get_camera_plane_normals(
-            ) + cameras.get_camera_center()
-        else:
-            raise TypeError(f'Wrong light type: {type(self.lights)}.')
-        if self.render_choice == 'pointcloud':
-            pointclouds = mesh_to_pointcloud_vc(meshes, alpha=1.0)
-            rendered_images = self.pointcloud_renderer(
-                pointclouds=pointclouds, K=K, R=R, T=T)
-            rgbs = rendered_images.clone()[..., :3]
-            rgbs = rgbs / rgbs.max()
-            # initial renderer
-        elif self.render_choice == 'depth':
-            rendered_images = self.depth_renderer(meshes, K=K, R=R, T=T)
-            rgbs = rendered_images.clone()[..., :3]
-            rgbs = rgbs / rgbs.max()
-        elif self.render_choice == 'normal':
-            rendered_images = self.normal_renderer(meshes, K=K, R=R, T=T)
-            rgbs = rendered_images.clone()[..., :3]
-            rgbs = (rgbs + 1) / 2
-        else:
-            renderer = self.init_renderer(cameras, lights)
 
-            # process render tensor and mask
-            rendered_images = renderer(meshes)
-            rgbs = rendered_images.clone()[..., :3]
-            rgbs = rgbs / rgbs.max()
+        lights = getattr(self.image_renderer, 'lights', None)
+        if isinstance(lights, DirectionalLights):
+            lights = lights.clone()
+            lights.direction = -cameras.get_camera_plane_normals()
+        elif isinstance(lights, PointLights):
+            lights = lights.clone()
+            lights.location = -cameras.get_camera_plane_normals(
+            ) - cameras.get_camera_center()
 
+        elif lights is None:
+            assert self.image_renderer.shader_type in [
+                'silhouette', 'nolight', None
+            ]
+            lights = None
+        else:
+            raise TypeError(
+                f'Wrong light type: {type(self.image_renderer.lights)}.')
+
+        render_results = self.image_renderer(
+            meshes=meshes, K=K, R=R, T=T, lights=lights, indexes=indexes)
+        rendered_images = render_results['rgba']
+
+        rgbs = rendered_images[..., :3]
         valid_masks = (rendered_images[..., 3:] > 0) * 1.0
-        if self.render_choice == 'part_silhouette':
-            rendered_silhouettes = rgbs[None] * 100
-            part_silhouettes = []
-            for i in range(len(self.segmentation)):
-                part_silhouettes.append(1.0 *
-                                        (rendered_silhouettes == (i + 1)) *
-                                        rendered_silhouettes / (i + 1))
-            part_silhouettes = torch.cat(part_silhouettes, 0)
-            alphas = part_silhouettes[..., 0].permute(1, 2, 3, 0)
-        else:
-            alphas = rendered_images[..., 3] / (rendered_images[..., 3] + 1e-9)
 
         # write temp images for the output video
         if self.output_path is not None:
-            if self.render_choice == 'silhouette':
-                output_images = (alphas * 255).detach().cpu().numpy().astype(
-                    np.uint8)
 
-            elif self.render_choice == 'part_silhouette':
-                colors = get_different_colors(alphas.shape[-1])
-                output_images = torch.tensor(colors).to(
-                    self.device) * alphas[..., None]
-                output_images = torch.sum(
-                    output_images, -2).detach().cpu().numpy().astype(np.uint8)
+            if images is not None:
+                output_images = rgbs * valid_masks * self.alpha + \
+                    images * valid_masks * (
+                        1 - self.alpha) + (1 - valid_masks) * images
+
             else:
-                if images is not None:
-                    output_images = rgbs * 255 * valid_masks * self.alpha + \
-                        images * valid_masks * (
-                            1 - self.alpha) + (1 - valid_masks) * images
+                output_images = rgbs
 
-                else:
-                    output_images = rgbs * 255 * valid_masks * self.alpha + \
-                        + 255 - valid_masks * self.alpha * 255
-
-                if self.plot_kps:
-                    joints = joints.to(self.device)
-                    joints_2d = cameras.transform_points_screen(
-                        joints, image_size=self.resolution)[..., :2]
-                    if joints_gt is None:
-                        joints_padded = joints
-                        num_joints = joints_padded.shape[1]
-                        joints_rgb_padded = torch.ones(
-                            num_frames, num_joints, 4) * (
-                                torch.tensor([0.0, 1.0, 0.0, 1.0]).view(
-                                    1, 1, 4))
-                    else:
-                        joints_gt = joints_gt.to(self.device)
-                        joints_padded = torch.cat([joints, joints_gt], dim=1)
-                        num_joints = joints.shape[1]
-                        num_joints_gt = joints_gt.shape[1]
-                        joints_rgb = torch.ones(num_frames, num_joints, 4) * (
+            if self.plot_kps:
+                joints = joints.to(self.device)
+                joints_2d = cameras.transform_points_screen(
+                    joints, image_size=self.resolution)[..., :2]
+                if joints_gt is None:
+                    joints_padded = joints
+                    num_joints = joints_padded.shape[1]
+                    joints_rgb_padded = torch.ones(
+                        num_frames, num_joints, 4) * (
                             torch.tensor([0.0, 1.0, 0.0, 1.0]).view(1, 1, 4))
-                        joints_rgb_gt = torch.ones(
-                            num_frames, num_joints_gt, 4) * (
-                                torch.tensor([1.0, 0.0, 0.0, 1.0]).view(
-                                    1, 1, 4))
-                        joints_rgb_padded = torch.cat(
-                            [joints_rgb, joints_rgb_gt], dim=1)
+                else:
+                    joints_gt = joints_gt.to(self.device)
+                    joints_padded = torch.cat([joints, joints_gt], dim=1)
+                    num_joints = joints.shape[1]
+                    num_joints_gt = joints_gt.shape[1]
+                    joints_rgb = torch.ones(num_frames, num_joints, 4) * (
+                        torch.tensor([0.0, 1.0, 0.0, 1.0]).view(1, 1, 4))
+                    joints_rgb_gt = torch.ones(
+                        num_frames, num_joints_gt, 4) * (
+                            torch.tensor([1.0, 0.0, 0.0, 1.0]).view(1, 1, 4))
+                    joints_rgb_padded = torch.cat([joints_rgb, joints_rgb_gt],
+                                                  dim=1)
 
-                    pointcloud_images = self.joints_renderer(
-                        vertices=joints_padded,
-                        verts_rgba=joints_rgb_padded.to(self.device),
-                        K=K,
-                        R=R,
-                        T=T)
+                pointcloud_images = self.joints_renderer(
+                    vertices=joints_padded,
+                    verts_rgba=joints_rgb_padded.to(self.device),
+                    K=K,
+                    R=R,
+                    T=T)['rgba']
 
-                    pointcloud_rgb = pointcloud_images[..., :3]
-                    pointcloud_mask = (pointcloud_images[..., 3:] > 0) * 1.0
-                    output_images = output_images * (
-                        1 - pointcloud_mask
-                    ) + pointcloud_mask * pointcloud_rgb * 255
+                pointcloud_rgb = pointcloud_images[..., :3]
+                pointcloud_mask = (pointcloud_images[..., 3:] > 0) * 1.0
+                output_images = output_images * (
+                    1 - pointcloud_mask) + pointcloud_mask * pointcloud_rgb
 
-                output_images = output_images.detach().cpu().numpy().astype(
-                    np.uint8)
+            output_images = torch.cat([
+                output_images[..., 0, None], output_images[..., 1, None],
+                output_images[..., 2, None]
+            ], -1)
+            output_images = (output_images.detach().cpu().numpy() *
+                             255).astype(np.uint8)
+
             for frame_idx, real_idx in enumerate(indexes):
                 folder = self.temp_path if self.temp_path is not None else\
                     self.output_path
@@ -366,17 +325,11 @@ class SMPLRenderer(MeshBaseRenderer):
 
         # return
         if self.return_tensor:
-            if 'silhouette' in self.render_choice:
-                if self.final_resolution != self.resolution:
-                    alphas = interpolate(
-                        alphas, size=self.final_resolution, mode='bilinear')
-                return alphas
-            else:
-                if self.final_resolution != self.resolution:
-                    rendered_images = interpolate(
-                        rendered_images,
-                        size=self.final_resolution,
-                        mode='bilinear')
-                return rendered_images
+            rendered_map = render_results['tensor']
+
+            if self.final_resolution != self.resolution:
+                rendered_map = interpolate(
+                    rendered_map, size=self.final_resolution, mode='bilinear')
+            return rendered_map
         else:
             return None

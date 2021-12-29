@@ -4,8 +4,7 @@ import os
 import numpy as np
 import pytest
 
-from mmhuman3d.core.cameras.camera_parameter import CameraParameter
-from mmhuman3d.core.cameras.cameras import WeakPerspectiveCameras
+from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.utils.path_utils import Existence, check_path_existence
 
 chessboard_path = 'tests/data/camera/' +\
@@ -76,29 +75,6 @@ def test_type():
     dumped_str = cam_param.to_string()
     assert isinstance(dumped_str, str)
     assert len(dumped_str) > 0
-
-
-def test_vibe_camera():
-    cam_param = CameraParameter(name='src_cam')
-    dumped_dict = json.load(open(dump_path))
-    cam_param.load_from_dict(dumped_dict)
-    vibe_cam_arg = cam_param.get_vibe_dict()
-    assert len(vibe_cam_arg) > 0
-    vibe_cam = WeakPerspectiveCameras(**vibe_cam_arg)
-    empty_param = CameraParameter(name='dst_cam')
-    empty_param.load_from_vibe(vibe_cam, name='dst_cam', batch_index=0)
-    src_mat = cam_param.get_mat_np('in_mat')
-    dst_mat = empty_param.get_mat_np('in_mat')
-    k_diff = (src_mat - dst_mat).sum()
-    assert k_diff == 0
-    src_mat = cam_param.get_mat_np('rotation_mat')
-    dst_mat = empty_param.get_mat_np('rotation_mat')
-    r_diff = (src_mat - dst_mat).sum()
-    assert r_diff == 0
-    src_tran = np.asarray(cam_param.get_value('translation'))
-    dst_tran = np.asarray(empty_param.get_value('translation'))
-    t_diff = (src_tran - dst_tran).sum()
-    assert t_diff == 0
 
 
 def test_misc():

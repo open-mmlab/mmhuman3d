@@ -17,32 +17,47 @@ from .builder import CAMERAS
 
 
 class NewAttributeCameras(cameras.CamerasBase):
-    """Inherited from pytorch3d CamerasBase and provide some new functions."""
+    """Inherited from Pytorch3D CamerasBase and provide some new functions."""
 
     def __init__(self, **kwargs) -> None:
         """Initialize your cameras with `build_cameras` following:
 
-        1): provide K, R, T, resolution/image_size directly.
+        1): provide `K`, `R`, `T`, `resolution`/`image_size` directly.
             `K` should be shape of (N, 3, 3) or (N, 4, 4).
             `R` should be shape of (N, 3, 3).
             `T` should be shape of (N, 3).
         2): if `K` is not provided, will use `get_default_projection_matrix`
-            to generate K from camera intrinsic parameters. E.g., you can pass
-            `focal_length`, `principal_point` for perspective camers.
+            to generate K from camera intrinsic parameters.
+            E.g., you can pass `focal_length`, `principal_point` for
+            perspective camers.
             If these args are not provided, will use default args.
         3): if `R` is not provided, will use Identity matrix as default.
         4): if `T` is not provided, will use zeros matrix as default.
-        5): `convention` means your source parameter camera convention. For
-            projection and rendering, the matrixs will be converted to
-            `pytorch3d` finally.
+        5): `convention` means your source parameter camera convention.
+            This mainly depends on how you get the matrixs. E.g., you get the
+            `K` `R`, `T` by calibration with opencv, you should set
+            `convention = opencv`. To figure out your camera convention,
+            please see the definition of its extrinsic and intrinsic matrixs.
+            For projection and rendering, the matrixs will be converted to
+            `pytorch3d` finally since the `transforms3d` called in rendering
+            and projection are defined as `pytorch3d` convention.
         6): `image_size` euals `resolution`.
-        7): set `in_ndc` True or False for 'PerspectiveCameras' and
-            'OrthographicCameras', other cameras are fixed.
+        7): `in_ndc` could be set for 'PerspectiveCameras' and
+            'OrthographicCameras', other cameras are fixed for this arg.
+            `in_ndc = True` means your projection matrix is defined as `camera
+            space to NDC space`. Under this cirecumstance you need to set
+            `image_size` or `resolution` (they are equal) when you need to do
+            `transform_points_screen`.
+            `in_ndc = False` means your projections matrix is defined as
+            `cameras space to screen space`. Under this cirecumstance you do
+            not need to set `image_size` or `resolution` (they are equal) when
+            you need to do `transform_points_screen` since the projection
+            matrix is defined as view space to screen space.
         """
         for k in kwargs:
             if isinstance(kwargs.get(k), np.ndarray):
                 kwargs.update({k: torch.Tensor(kwargs[k])})
-        convention = kwargs.pop('convention', 'pytorch3d')
+        convention = kwargs.pop('convention', 'pytorch3d').lower()
         self.convention = convention
         in_ndc = kwargs.pop('in_ndc', kwargs.get('_in_ndc'))
         kwargs.update(_in_ndc=in_ndc)
@@ -50,8 +65,7 @@ class NewAttributeCameras(cameras.CamerasBase):
         kwargs.pop('is_perspective', None)
 
         image_size = kwargs.get('image_size', kwargs.get('resolution', None))
-        kwargs.update(image_size=image_size)
-        kwargs.update(resolution=image_size)
+
         if image_size is not None:
             if isinstance(image_size, (int, float)):
                 image_size = (image_size, image_size)
@@ -61,8 +75,6 @@ class NewAttributeCameras(cameras.CamerasBase):
                 if image_size.numel() == 1:
                     image_size = image_size.repeat(2)
                 image_size = image_size.view(-1, 2)
-            kwargs.update(image_size=image_size)
-            kwargs.update(resolution=image_size)
 
         if kwargs.get('K') is None:
             focal_length = kwargs.get('focal_length', None)
@@ -81,6 +93,7 @@ class NewAttributeCameras(cameras.CamerasBase):
                     principal_point = torch.FloatTensor(principal_point)
                 principal_point = principal_point.view(-1, 2)
                 kwargs.update(principal_point=principal_point)
+
             K = self.get_default_projection_matrix(**kwargs)
             K, _, _ = convert_cameras(
                 K=K,
@@ -105,7 +118,14 @@ class NewAttributeCameras(cameras.CamerasBase):
             resolution_src=image_size,
             resolution_dst=image_size)
 
+        if image_size is not None:
+            if image_size.shape[0] == 1:
+                image_size = image_size.repeat(K.shape[0], 1)
+            kwargs.update(image_size=image_size)
+            kwargs.update(resolution=image_size)
+
         kwargs.update(K=K, R=R, T=T)
+
         super().__init__(**kwargs)
 
     def get_camera_plane_normals(self, **kwargs) -> torch.Tensor:
@@ -136,7 +156,7 @@ class NewAttributeCameras(cameras.CamerasBase):
         return world_to_view_points[..., 2:3]
 
     def compute_normal_of_meshes(self, meshes: Meshes) -> torch.Tensor:
-        """Compute depth of points to the camera plane.
+        """Compute normal of meshes in the camera view.
 
         Args:
             points ([torch.Tensor]): shape should be (batch_size, 3).
@@ -191,10 +211,11 @@ class NewAttributeCameras(cameras.CamerasBase):
             K=self.K[index],
             R=self.R[index],
             T=self.T[index],
-            image_size=self.get_image_size()[index],
-            _in_ndc=self.in_ndc(),
+            image_size=self.get_image_size()[index]
+            if self.get_image_size() is not None else None,
+            in_ndc=self.in_ndc(),
             _is_perspective=self._is_perspective,
-            convention=self.convention,
+            convention='pytorch3d',
             device=self.device)
 
     def extend(self, N):
@@ -311,11 +332,16 @@ class NewAttributeCameras(cameras.CamerasBase):
                 resolution=self.image_size,
                 is_perspective=self._is_perspective)
 
+    def concat(self, others):
+        if isinstance(others, type(self)):
+            others = [others]
+        return concat_cameras([self] + others)
+
 
 @CAMERAS.register_module(
     name=('WeakPerspectiveCameras', 'WeakPerspective', 'weakperspective'))
 class WeakPerspectiveCameras(NewAttributeCameras):
-    """Inherited from [pytorch3d cameras](https://github.com/facebookresearch/
+    """Inherited from [Pytorch3D cameras](https://github.com/facebookresearch/
     pytorch3d/blob/main/pytorch3d/renderer/cameras.py) and mimiced the code
     style. And re-inmplemented functions: compute_projection_matrix,
     get_projection_transform, unproject_points, is_perspective, in_ndc for
@@ -328,7 +354,6 @@ class WeakPerspectiveCameras(NewAttributeCameras):
     This intrinsic matrix is orthographics indeed, but could serve as
     weakperspective for single smpl mesh.
     """
-    is_perspective = False
 
     def __init__(
         self,
@@ -384,6 +409,8 @@ class WeakPerspectiveCameras(NewAttributeCameras):
             _in_ndc=True,
             _is_perspective=False,
         )
+        kwargs.pop('in_ndc', None)
+        kwargs.pop('is_perspective', None)
         super().__init__(
             scale_x=scale_x,
             scale_y=scale_y,
@@ -639,7 +666,7 @@ class WeakPerspectiveCameras(NewAttributeCameras):
 @CAMERAS.register_module(
     name=('PerspectiveCameras', 'perspective', 'Perspective'))
 class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
-    """Inherited from pytorch3d `PerspectiveCameras`."""
+    """Inherited from Pytorch3D `PerspectiveCameras`."""
 
     def __init__(
         self,
@@ -674,7 +701,7 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
             _in_ndc=in_ndc,
             _is_perspective=True,
         )
-
+        kwargs.pop('is_perspective', None)
         kwargs.pop('in_ndc', None)
 
         super(cameras.PerspectiveCameras, self).__init__(
@@ -721,6 +748,7 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
         device = args.get('device', 'cpu')
         focal_length = args.get('focal_length')
         principal_point = args.get('principal_point')
+
         return cameras._get_sfm_calibration_matrix(
             N=batch_size,
             device=device,
@@ -733,7 +761,7 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
     name=('FoVPerspectiveCameras', 'FoVPerspective', 'fovperspective'))
 class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
                             NewAttributeCameras):
-    """Inherited from pytorch3d `FoVPerspectiveCameras`."""
+    """Inherited from Pytorch3D `FoVPerspectiveCameras`."""
 
     def __init__(
         self,
@@ -767,6 +795,8 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
             _in_ndc=True,
             _is_perspective=True,
         )
+        kwargs.pop('in_ndc', None)
+        kwargs.pop('is_perspective', None)
         super(cameras.FoVPerspectiveCameras, self).__init__(
             device=device,
             znear=znear,
@@ -858,7 +888,7 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
 @CAMERAS.register_module(
     name=('OrthographicCameras', 'Orthographic', 'orthographic'))
 class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
-    """Inherited from pytorch3d `OrthographicCameras`."""
+    """Inherited from Pytorch3D `OrthographicCameras`."""
 
     def __init__(
         self,
@@ -895,6 +925,7 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
             _is_perspective=False,
             _in_ndc=in_ndc,
         )
+        kwargs.pop('is_perspective', None)
         kwargs.pop('in_ndc', None)
         super(cameras.OrthographicCameras, self).__init__(
             device=device,
@@ -965,7 +996,7 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
     name=('FoVOrthographicCameras', 'FoVOrthographic', 'fovorthographic'))
 class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
                              NewAttributeCameras):
-    """Inherited from pytorch3d `FoVOrthographicCameras`."""
+    """Inherited from Pytorch3D `FoVOrthographicCameras`."""
 
     def __init__(
             self,
@@ -1005,7 +1036,9 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
             device (Union[torch.device, str], optional):  Defaults to 'cpu'.
             convention (str, optional):  Defaults to 'pytorch3d'.
         """
-        kwargs.update(_is_perspective=True, _in_ndc=True)
+        kwargs.update(_is_perspective=False, _in_ndc=True)
+        kwargs.pop('in_ndc', None)
+        kwargs.pop('is_perspective', None)
         super(cameras.FoVOrthographicCameras, self).__init__(
             device=device,
             znear=znear,
@@ -1106,6 +1139,46 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
     def to_screen(self, **kwargs):
         """Not implemented."""
         raise NotImplementedError()
+
+
+def concat_cameras(
+        cameras_list: List[NewAttributeCameras]) -> NewAttributeCameras:
+    """Concat a list of cameras of the same type.
+
+    Args:
+        cameras_list (List[cameras.CamerasBase]): a list of cameras.
+
+    Returns:
+        NewAttributeCameras: the returned cameras concated following the batch
+            dim.
+    """
+    K = []
+    R = []
+    T = []
+    is_perspective = cameras_list[0].is_perspective()
+    in_ndc = cameras_list[0].in_ndc()
+    cam_cls = type(cameras_list[0])
+    image_size = cameras_list[0].get_image_size()
+    convention = cameras_list[0].convention
+    for cam in cameras_list:
+        assert type(cam) is cam_cls
+        assert cam.in_ndc() is in_ndc
+        assert cam.is_perspective() is is_perspective
+        K.append(cam.K)
+        R.append(cam.R)
+        T.append(cam.T)
+    K = torch.cat(K)
+    R = torch.cat(R)
+    T = torch.cat(T)
+    concated_cameras = cam_cls(
+        K=K,
+        R=R,
+        T=T,
+        is_perspective=is_perspective,
+        in_ndc=in_ndc,
+        image_size=image_size,
+        convention=convention)
+    return concated_cameras
 
 
 def compute_orbit_cameras(

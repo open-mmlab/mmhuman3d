@@ -163,32 +163,34 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
     return image_array, remove_folder, frames_folder
 
 
-def _prepare_body_model(model_type, body_model, model_path, gender):
-    """Prepare `body_model` from `model_path` or existing `body_model`."""
+def _prepare_body_model(model_type, body_model, body_model_config):
+    """Prepare `body_model` from `body_model_config` or existing
+    `body_model`."""
     if model_type not in ['smpl', 'smplx']:
         raise ValueError(
             f'Do not support {model_type}, please choose in `smpl` or `smplx.')
     if body_model is None:
-        if model_path is not None:
-            if osp.isdir(model_path):
+        if body_model_config is not None:
+            body_model_config = copy.deepcopy(body_model_config)
+            model_path = body_model_config.get('model_path', None)
+
+            model_type = body_model_config.get('type', model_type)
+            body_model_config.update(type=model_type.lower())
+
+            if model_path and osp.isdir(model_path):
                 model_path = osp.join(model_path, model_type)
+                body_model_config.update(model_path=model_path)
+                body_model = build_body_model(body_model_config)
+                assert os.path.isdir(model_path)
             else:
                 raise FileNotFoundError('Wrong model_path.'
                                         ' File or directory does not exist.')
-            body_model = build_body_model(
-                dict(
-                    type=model_type,
-                    model_path=model_path,
-                    gender=gender,
-                    use_pca=False,
-                    use_face_contour=True,
-                    num_betas=10))
         else:
-            raise ValueError('Please input body_model or model_path.')
+            raise ValueError('Please input body_model_config.')
     else:
-        if model_path is not None:
+        if body_model_config is not None:
             warnings.warn('Redundant input, will take body_model directly'
-                          'and ignore model_path.')
+                          'and ignore body_model_config.')
     return body_model
 
 
@@ -202,6 +204,9 @@ def _prepare_input_pose(verts, poses, betas, transl):
         poses = None
         transl = None
         betas = None
+    elif isinstance(poses, dict):
+        transl = poses.get('transl', transl)
+        betas = poses.get('betas', betas)
 
     if isinstance(verts, np.ndarray):
         verts = torch.Tensor(verts)
@@ -372,7 +377,7 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
     elif render_choice == 'part_silhouette':
         colors = torch.zeros(num_person, num_verts, 3)
         for i, k in enumerate(body_segger.keys()):
-            colors[:, body_segger[k]] = 0.01 * (i + 1)
+            colors[:, body_segger[k]] = i + 1
     else:
         if isinstance(palette, torch.Tensor):
             colors = palette.view(num_person,
@@ -392,8 +397,7 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
                 elif palette[person_idx] == 'segmentation':
                     verts_labels = torch.zeros(num_verts)
                     color_person = torch.ones(1, num_verts, 3)
-                    color_part = get_different_colors(
-                        len(list(body_segger.keys())))
+                    color_part = get_different_colors(len(body_segger))
                     for part_idx, k in enumerate(body_segger.keys()):
                         index = body_segger[k]
                         verts_labels[index] = part_idx
@@ -423,9 +427,8 @@ def render_smpl(
     transl: Optional[Union[torch.Tensor, np.ndarray]] = None,
     verts: Optional[Union[torch.Tensor, np.ndarray]] = None,
     model_type: Literal['smpl', 'smplx'] = 'smpl',
-    gender: Literal['male', 'female', 'neutral'] = 'neutral',
-    model_path: Optional[str] = None,
     body_model: Optional[nn.Module] = None,
+    body_model_config: Optional[dict] = None,
     # camera parameters
     R: Optional[Union[torch.Tensor, np.ndarray]] = None,
     T: Optional[Union[torch.Tensor, np.ndarray]] = None,
@@ -445,7 +448,7 @@ def render_smpl(
     start: int = 0,
     end: Optional[int] = None,
     alpha: float = 1.0,
-    no_grad: bool = False,
+    no_grad: bool = True,
     batch_size: int = 10,
     device: Union[torch.device, str] = 'cuda',
     # file io parameters
@@ -519,16 +522,14 @@ def render_smpl(
         model_type (Literal[, optional): choose in 'smpl' or 'smplx'.
 
             Defaults to 'smpl'.
-        gender (Literal[, optional): chose in ['male', 'female', 'neutral'].
-
-            Defaults to 'neutral'.
-        model_path (str, optional): Directory of npz or pkl path.
-            Lower priority than `body_model`.
 
             Defaults to None.
         body_model (nn.Module, optional): body_model created from smplx.create.
-            Higher priority than `model_path`. Should not both be None.
+            Higher priority than `body_model_config`. Should not both be None.
 
+            Defaults to None.
+        body_model_config (dict, optional): body_model_config for build_model.
+            Lower priority than `body_model`. Should not both be None.
             Defaults to None.
 
         # camera parameters:
@@ -725,8 +726,11 @@ def render_smpl(
 
     verts, poses, betas, transl = _prepare_input_pose(verts, poses, betas,
                                                       transl)
-    body_model = _prepare_body_model(model_type, body_model, model_path,
-                                     gender)
+
+    body_model = _prepare_body_model(model_type, body_model, body_model_config)
+    model_type = body_model.name().replace('-', '').lower()
+    assert model_type in ['smpl', 'smplx']
+
     vertices, faces, joints, num_frames, num_person = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
     end = num_frames if end is None else end
@@ -785,19 +789,24 @@ def render_smpl(
         kp3d = kp3d.view(num_frames, -1, 3)
 
     # prepare render_param_dict
+    render_param_dict = copy.deepcopy(RENDER_CONFIGS[render_choice.lower()])
+    if model_type == 'smpl':
+        render_param_dict.update(num_class=24)
+    elif model_type == 'smplx':
+        render_param_dict.update(num_class=27)
+
     if render_choice not in [
             'hq', 'mq', 'lq', 'silhouette', 'part_silhouette', 'depth',
             'pointcloud', 'normal'
     ]:
         raise ValueError('Please choose the right render_choice.')
 
-    render_param_dict = copy.deepcopy(RENDER_CONFIGS[render_choice.lower()])
-
     # body part colorful visualization should use flat shader to be sharper.
     if isinstance(palette, str):
         if (palette == 'segmentation') and ('silhouette'
                                             not in render_choice.lower()):
-            render_param_dict['shader']['shader_type'] = 'flat'
+            render_param_dict['shader_type'] = 'flat'
+
         palette = [palette] * num_person
     elif isinstance(palette, np.ndarray):
         palette = torch.Tensor(palette)
@@ -1028,13 +1037,11 @@ def visualize_smpl_calibration(
         projection='perspective',
         convention='opencv',
         orig_cam=None,
-        in_ndc=False,
-        return_tensor=False,
-        no_grad=True)
+        in_ndc=False)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(K=K, R=R, T=T, resolution=resolution, **kwargs)
+    return func(K=K, R=R, T=T, resolution=resolution, **kwargs)
 
 
 def visualize_smpl_hmr(cam_transl,
@@ -1062,8 +1069,6 @@ def visualize_smpl_hmr(cam_transl,
         in_ndc=False,
         K=None,
         R=None,
-        return_tensor=False,
-        no_grad=True,
         orig_cam=None,
     )
     if isinstance(cam_transl, np.ndarray):
@@ -1075,7 +1080,7 @@ def visualize_smpl_hmr(cam_transl,
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(Ks=Ks, K=K, T=T, **kwargs)
+    return func(Ks=Ks, K=K, T=T, **kwargs)
 
 
 def visualize_smpl_vibe(orig_cam=None,
@@ -1098,13 +1103,11 @@ def visualize_smpl_vibe(orig_cam=None,
         projection='weakperspective',
         convention='opencv',
         in_ndc=True,
-        return_tensor=False,
-        no_grad=True,
     )
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(
+    return func(
         orig_cam=orig_cam,
         output_path=output_path,
         resolution=resolution,
@@ -1132,14 +1135,12 @@ def visualize_T_pose(num_frames,
         K=None,
         R=None,
         T=None,
-        return_tensor=False,
-        no_grad=True,
-        origin_frames=None,
-        gender='neutral')
+        origin_frames=None)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(poses=poses, model_type=model_type, orbit_speed=orbit_speed, **kwargs)
+    return func(
+        poses=poses, model_type=model_type, orbit_speed=orbit_speed, **kwargs)
 
 
 def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
@@ -1159,12 +1160,10 @@ def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
         R=None,
         T=None,
         in_ndc=True,
-        return_tensor=False,
-        no_grad=True,
         origin_frames=None,
         frame_list=None,
         image_array=None)
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    func(poses=poses, **kwargs)
+    return func(poses=poses, **kwargs)

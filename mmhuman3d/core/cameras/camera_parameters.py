@@ -1,16 +1,19 @@
 import json
-from typing import Any, List
+import warnings
+from typing import Any, List, Tuple, Union
 
 import numpy as np
 import torch
 
+from mmhuman3d.core.cameras.cameras import PerspectiveCameras
 from mmhuman3d.core.conventions.cameras import (
     convert_cameras,
     convert_K_3x3_to_4x4,
     convert_K_4x4_to_3x3,
 )
+from .builder import build_cameras
 
-_CameraParameter_SUPPORTED_KEYS = {
+_CAMERA_PARAMETER_SUPPORTED_KEYS_ = {
     'H': {
         'type': int,
     },
@@ -58,7 +61,7 @@ _CameraParameter_SUPPORTED_KEYS = {
 
 class CameraParameter:
     logger = None
-    SUPPORTED_KEYS = _CameraParameter_SUPPORTED_KEYS
+    SUPPORTED_KEYS = _CAMERA_PARAMETER_SUPPORTED_KEYS_
 
     def __init__(self,
                  name: str = 'default',
@@ -307,82 +310,96 @@ class CameraParameter:
             __parse_chessboard_param__(chessboard_dict, name, inverse=inverse)
         self.load_from_dict(camera_param_dict)
 
-    def load_from_vibe(self,
-                       vibe_camera,
-                       name: str,
-                       batch_index: int = 0) -> None:
-        """Load name and parameters from a dict.
+    @classmethod
+    def load_from_perspective_cameras(cls,
+                                      cam,
+                                      name: str,
+                                      resolution: Union[List, Tuple] = None):
+        """Load parameters from a PerspectiveCameras and return a
+        CameraParameter.
 
         Args:
-            vibe_camera (mmhuman3d.core.cameras.
-            cameras.WeakPerspectiveCamerasVibe):
+            cam (mmhuman3d.core.cameras.cameras.PerspectiveCameras):
                 An instance.
             name (str):
                 Name of this camera.
         """
-        height = self.parameters_dict['H']
-        width = self.parameters_dict['W']
-        k_4x4 = vibe_camera.K[batch_index:batch_index + 1]  # shape (1, 4, 4)
-        r_3x3 = vibe_camera.R[batch_index:batch_index + 1]  # shape (1, 3, 3)
-        t_3 = vibe_camera.T[batch_index:batch_index + 1]  # shape (1, 3)
-        new_K, new_R, new_T = convert_cameras(
+        assert isinstance(cam, PerspectiveCameras
+                          ), 'Wrong input, support PerspectiveCameras only!'
+        if len(cam) > 1:
+            warnings.warn('Will only use the first camera in the batch.')
+        cam = cam[0]
+
+        resolution = resolution if resolution is not None else cam.resolution[
+            0].tolist()
+
+        height, width = int(resolution[0]), int(resolution[1])
+
+        cam_param = CameraParameter()
+        cam_param.__init__(H=height, W=width, name=name)
+
+        k_4x4 = cam.K  # shape (1, 4, 4)
+        r_3x3 = cam.R  # shape (1, 3, 3)
+        t_3 = cam.T  # shape (1, 3)
+        is_perspective = cam.is_perspective()
+        in_ndc = cam.in_ndc()
+
+        k_4x4, r_3x3, t_3 = convert_cameras(
             K=k_4x4,
             R=r_3x3,
             T=t_3,
             is_perspective=False,
+            in_ndc_dst=False,
+            in_ndc_src=in_ndc,
             convention_src='pytorch3d',
             convention_dst='opencv',
             resolution_src=(height, width),
             resolution_dst=(height, width))
-        k_3x3 = \
-            convert_K_4x4_to_3x3(new_K, is_perspective=False)
-        k_3x3 = k_3x3.numpy().squeeze(0)
-        r_3x3 = new_R.numpy().squeeze(0)
-        t_3 = new_T.numpy().squeeze(0)
-        self.name = name
-        self.set_mat_np('in_mat', k_3x3)
-        self.set_mat_np('rotation_mat', r_3x3)
-        self.set_value('translation', t_3.tolist())
 
-    def get_vibe_dict(self) -> dict:
-        """Get a dict of camera parameters, which contains all necessary args
-        for mmhuman3d.core.cameras.cameras.WeakPerspectiveCamerasVibe(). Use mm
-        human3d.core.cameras.cameras.WeakPerspectiveCamerasVibe(**return_dict)
-        to construct a camera.
+        k_3x3 = \
+            convert_K_4x4_to_3x3(k_4x4, is_perspective=is_perspective)
+
+        k_3x3 = k_3x3.numpy()[0]
+        r_3x3 = r_3x3.numpy()[0]
+        t_3 = t_3.numpy()[0]
+        cam_param.name = name
+        cam_param.set_mat_np('in_mat', k_3x3)
+        cam_param.set_mat_np('rotation_mat', r_3x3)
+        cam_param.set_value('translation', t_3.tolist())
+        cam_param.parameters_dict.update(H=height)
+        cam_param.parameters_dict.update(W=width)
+        return cam_param
+
+    def export_to_perspective_cameras(self) -> PerspectiveCameras:
+        """Export to a opencv defined screen space PerspectiveCameras.
 
         Returns:
-            dict:
-                A dict of camera parameters: name, dist, size, matrix, etc.
+            Same defined PerspectiveCameras of batch_size 1.
         """
         height = self.parameters_dict['H']
         width = self.parameters_dict['W']
         k_3x3 = self.get_mat_np('in_mat')  # shape (3, 3)
         k_3x3 = np.expand_dims(k_3x3, 0)  # shape (1, 3, 3)
         k_4x4 = convert_K_3x3_to_4x4(
-            K=k_3x3, is_perspective=False)  # shape (1, 4, 4)
+            K=k_3x3, is_perspective=True)  # shape (1, 4, 4)
         rotation = self.get_mat_np('rotation_mat')  # shape (3, 3)
         rotation = np.expand_dims(rotation, 0)  # shape (1, 3, 3)
         translation = self.get_value('translation')  # list, len==3
         translation = np.asarray(translation)
         translation = np.expand_dims(translation, 0)  # shape (1, 3)
-        new_K, new_R, new_T = convert_cameras(
-            K=k_4x4,
-            R=rotation,
-            T=translation,
-            is_perspective=False,
-            convention_src='opencv',
-            convention_dst='pytorch3d',
-            resolution_src=(height, width),
-            resolution_dst=(height, width))
-        new_K = torch.from_numpy(new_K)
-        new_R = torch.from_numpy(new_R)
-        new_T = torch.from_numpy(new_T)
-        ret_dict = {
-            'K': new_K,
-            'R': new_R,
-            'T': new_T,
-        }
-        return ret_dict
+        new_K = torch.from_numpy(k_4x4)
+        new_R = torch.from_numpy(rotation)
+        new_T = torch.from_numpy(translation)
+        cam = build_cameras(
+            dict(
+                type='PerspectiveCameras',
+                K=new_K.float(),
+                R=new_R.float(),
+                T=new_T.float(),
+                convention='opencv',
+                in_ndc=False,
+                resolution=(height, width)))
+        return cam
 
     def check_item(self, key: Any, val: Any) -> None:
         """Check whether the key and its value matches definition in

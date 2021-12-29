@@ -305,6 +305,7 @@ class _CavasProducer:
             tmp_image_array = cv2.imread(self.frame_list[0])
             self.auto_resolution = tmp_image_array.shape[:2]
         else:
+
             self.auto_resolution = [
                 int(np.max(kp2d) * default_scale),
                 int(np.max(kp2d) * default_scale)
@@ -505,7 +506,6 @@ def visualize_kp2d(
     if frame_list is not None:
         num_frames = min(len(frame_list), num_frames)
     kp2d = kp2d[:num_frames]
-
     # check output path
     if output_path is not None:
         output_temp_folder = _prepare_output_path(output_path, overwrite)

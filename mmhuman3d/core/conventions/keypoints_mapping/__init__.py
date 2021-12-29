@@ -69,7 +69,6 @@ def convert_kps(
     """Convert keypoints following the mapping correspondence between src and
     dst keypoints definition. Supported conventions by now: agora, coco, smplx,
     smpl, mpi_inf_3dhp, mpi_inf_3dhp_test, h36m, h36m_mmpose, pw3d, mpii, lsp.
-
     Args:
         keypoints [Union[np.ndarray, torch.Tensor]]: input keypoints array,
             could be (f * n * J * 3/2) or (f * J * 3/2).
