@@ -21,7 +21,7 @@ def init_model(config, checkpoint=None, device='cuda:0'):
 
     Returns:
         nn.Module: The constructed model.
-        (nn.Module, None): The constructed extrator model
+        (nn.Module, None): The constructed extractor model
     """
     if isinstance(config, str):
         config = mmcv.Config.fromfile(config)
