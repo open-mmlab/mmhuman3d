@@ -171,6 +171,7 @@ def _prepare_body_model(model_type, body_model, body_model_config):
             f'Do not support {model_type}, please choose in `smpl` or `smplx.')
     if body_model is None:
         if body_model_config is not None:
+            body_model_config = copy.deepcopy(body_model_config)
             model_path = body_model_config.get('model_path', None)
 
             model_type = body_model_config.get('type', model_type)

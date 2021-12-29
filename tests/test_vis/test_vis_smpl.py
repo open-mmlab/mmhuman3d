@@ -20,7 +20,7 @@ from mmhuman3d.utils.ffmpeg_utils import (
 body_model_config = {
     'use_pca': False,
     'use_face_contour': True,
-    'model_path': 'data/body_models'
+    'model_path': '/home/SENSETIME/wangwenjia/programs/data/smpl_models'
 }
 
 
@@ -136,6 +136,8 @@ def test_visualize_smpl_pose():
 
     # wrong body model weight path, folder does not exist
     with pytest.raises(FileNotFoundError):
+        body_model_config_ = body_model_config.copy()
+        body_model_config_.update(model_path='/321')
         command = ['touch', '/tmp/1.mp4']
         subprocess.call(command)
         visualize_smpl_pose(
@@ -143,7 +145,7 @@ def test_visualize_smpl_pose():
             model_type='smpl',
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
-            body_model_config=dict(model_path='/321'),
+            body_model_config=body_model_config_,
             render_choice='hq',
             overwrite=True,
             device=device_name)
@@ -152,12 +154,14 @@ def test_visualize_smpl_pose():
     with pytest.raises(AssertionError):
         command = ['touch', '/tmp/1.mp4']
         subprocess.call(command)
+        body_model_config_ = body_model_config.copy()
+        body_model_config_.update(model_path='/tmp')
         visualize_smpl_pose(
             poses=torch.zeros(2, 72),
             model_type='smpl',
             output_path='/tmp/1.mp4',
             resolution=(128, 128),
-            body_model_config=dict(model_path='/tmp'),
+            body_model_config=body_model_config_,
             render_choice='hq',
             overwrite=True,
             device=device_name)

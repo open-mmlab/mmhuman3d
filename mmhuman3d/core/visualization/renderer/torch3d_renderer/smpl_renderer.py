@@ -229,11 +229,12 @@ class SMPLRenderer(MeshBaseRenderer):
         lights = getattr(self.image_renderer, 'lights', None)
         if isinstance(lights, DirectionalLights):
             lights = lights.clone()
-            lights.direction = cameras.get_camera_plane_normals()
+            lights.direction = -cameras.get_camera_plane_normals()
         elif isinstance(lights, PointLights):
             lights = lights.clone()
-            lights.location = cameras.get_camera_plane_normals(
-            ) + cameras.get_camera_center()
+            lights.location = -cameras.get_camera_plane_normals(
+            ) - cameras.get_camera_center()
+
         elif lights is None:
             assert self.image_renderer.shader_type in [
                 'silhouette', 'nolight', None

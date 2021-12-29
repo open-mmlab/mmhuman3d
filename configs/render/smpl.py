@@ -50,6 +50,7 @@ RENDER_CONFIGS = {
         'light': base_directional_light,
         'material': base_material,
         'raster_setting': {
+            'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': True,
@@ -65,6 +66,7 @@ RENDER_CONFIGS = {
         'light': base_directional_light,
         'material': base_material,
         'raster_setting': {
+            'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': True,
@@ -80,6 +82,7 @@ RENDER_CONFIGS = {
         'light': base_directional_light,
         'material': base_material,
         'raster_setting': {
+            'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
@@ -94,6 +97,7 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'material': silhouete_material,
         'raster_setting': {
+            'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
         },
@@ -107,6 +111,7 @@ RENDER_CONFIGS = {
         'light': base_directional_light,
         'material': base_material,
         'raster_setting': {
+            'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
@@ -122,6 +127,7 @@ RENDER_CONFIGS = {
         'light': empty_light,
         'material': empty_material,
         'raster_setting': {
+            'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
@@ -137,6 +143,7 @@ RENDER_CONFIGS = {
         'light': empty_light,
         'material': empty_material,
         'raster_setting': {
+            'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
