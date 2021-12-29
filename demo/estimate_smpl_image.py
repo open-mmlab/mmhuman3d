@@ -4,19 +4,14 @@ import mmcv
 import numpy as np
 
 from mmhuman3d.apis import inference_image_based_model, init_model
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.visualization import visualize_smpl_calibration
-from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.utils.demo_utils import (
     conver_verts_to_cam_coord,
     prepare_frames,
     process_mmdet_results,
     process_mmtracking_results,
     smooth_process,
-    xyxy2xywh,
 )
-from mmhuman3d.utils.path_utils import prepare_output_path
-from mmhuman3d.utils.transforms import rotmat_to_aa
 
 try:
     from mmdet.apis import inference_detector, init_detector
@@ -40,10 +35,6 @@ def single_person_with_mmdet(args, frames_iter):
         args (object):  object of argparse.Namespace.
         frames_iter (np.ndarray,): prepared frames
 
-    Returns:
-        (np.ndarray): estimated vertices.
-        (np.ndarray): intrinsic parameters.
-        (list): index of the prepared frames.
     """
     person_det_model = init_detector(
         args.det_config, args.det_checkpoint, device=args.device.lower())
@@ -55,14 +46,13 @@ def single_person_with_mmdet(args, frames_iter):
 
     # Used to save the img index
     img_index = []
-    pred_cams, verts, poses, betas, kp3d, bboxes_xyxy = \
-        [], [], [], [], [], []
+    pred_cams, verts, bboxes_xyxy = [], [], []
     for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
         # test a single image, the resulting box is (x1, y1, x2, y2)
         mmdet_results = inference_detector(person_det_model, frame)
 
         # keep the person class bounding boxes.
-        person_det_results = \
+        person_results = \
             process_mmdet_results(
                 mmdet_results,
                 args.det_cat_id)
@@ -71,57 +61,28 @@ def single_person_with_mmdet(args, frames_iter):
         mesh_results = inference_image_based_model(
             mesh_model,
             frame,
-            person_det_results,
+            person_results,
             bbox_thr=args.bbox_thr,
             format='xyxy')
 
         # drop the frame with no detected results
         if mesh_results == []:
             continue
-
+        # vis bboxes
+        if args.draw_bbox:
+            bboxes = [res['bbox'] for res in person_results]
+            bboxes = np.vstack(bboxes)
+            mmcv.imshow_bboxes(
+                frame, bboxes, top_k=-1, thickness=2, show=False)
         img_index.append(i)
 
         pred_cams.append(mesh_results[0]['camera'])
         verts.append(mesh_results[0]['vertices'])
-        smpl_pose = rotmat_to_aa(mesh_results[0]['smpl_pose'])
-        poses.append(smpl_pose)
-        betas.append(mesh_results[0]['smpl_beta'])
-        kp3d.append(mesh_results[0]['keypoints_3d'])
         bboxes_xyxy.append(mesh_results[0]['bbox'])
 
     pred_cams = np.array(pred_cams)
     verts = np.array(verts)
-    poses = np.array(poses)
-    betas = np.array(betas)
-    kp3d = np.array(kp3d)
     bboxes_xyxy = np.array(bboxes_xyxy)
-
-    if args.output is not None:
-        prepare_output_path(
-            output_path=args.output,
-            path_type='file',
-            allowed_suffix=['.npz'],
-            overwrite=True)
-
-        smpl = {}
-        smpl['body_pose'] = poses[..., 1:, :]
-        smpl['global_orient'] = poses[..., 0, :]
-        smpl['betas'] = betas
-
-        bboxes_xywh = xyxy2xywh(bboxes_xyxy)
-        conf = np.ones(kp3d.shape[:-1])[..., None]
-        kp3d = np.concatenate([kp3d, conf], axis=-1)
-        keypoints3d_, keypoints3d_mask = \
-            convert_kps(kp3d, 'h36m', 'human_data')
-
-        human_data = HumanData()
-        human_data['bbox_xywh'] = bboxes_xywh
-        human_data['keypoints3d'] = keypoints3d_
-        human_data['keypoints3d_mask'] = keypoints3d_mask
-        human_data['smpl'] = smpl
-        human_data.compress_keypoints_by_mask()
-
-        human_data.dump(args.output)
 
     # convert vertices from world to camera
     verts, K0 = conver_verts_to_cam_coord(
@@ -132,11 +93,6 @@ def single_person_with_mmdet(args, frames_iter):
         verts = smooth_process(verts, smooth_type=args.smooth_type)
 
     if args.show_path is not None:
-        prepare_output_path(
-            output_path=args.show_path,
-            path_type='file',
-            allowed_suffix=['.mp4'],
-            overwrite=True)
 
         # Visualization
         visualize_smpl_calibration(
@@ -160,10 +116,7 @@ def multi_person_with_mmtracking(args, frames_iter):
     Args:
         args (object):  object of argparse.Namespace.
         frames_iter (np.ndarray,): prepared frames
-    Returns:
-        (np.ndarray): estimated vertices.
-        (np.ndarray): intrinsic parameters.
-        (list): index of the prepared frames.
+
     """
     tracking_model = init_tracking_model(
         args.tracking_config, None, device=args.device.lower())
@@ -214,9 +167,6 @@ def multi_person_with_mmtracking(args, frames_iter):
         img_index.append(i)
         frame_num += 1
 
-    poses = np.zeros([frame_num, max_track_id + 1, 24, 3])
-    betas = np.zeros([frame_num, max_track_id + 1, 10])
-    kp3d = np.zeros([frame_num, max_track_id + 1, 17, 3])
     verts = np.zeros([frame_num, max_track_id + 1, 6890, 3])
     pred_cams = np.zeros([frame_num, max_track_id + 1, 3])
     bboxes_xyxy = np.zeros([frame_num, max_track_id + 1, 5])
@@ -230,39 +180,9 @@ def multi_person_with_mmtracking(args, frames_iter):
             bboxes_xyxy[i, instance_id] = mesh_result['bbox']
             pred_cams[i, instance_id] = mesh_result['camera']
             verts[i, instance_id] = mesh_result['vertices']
-            smpl_pose = rotmat_to_aa(mesh_result['smpl_pose'])
-            poses[i, instance_id] = smpl_pose
-            betas[i, instance_id] = mesh_result['smpl_beta']
-            kp3d[i, instance_id] = mesh_result['keypoints_3d']
             track_ids.append(instance_id)
 
         track_ids_lists.append(track_ids)
-
-    if args.output is not None:
-        prepare_output_path(
-            output_path=args.output,
-            path_type='file',
-            allowed_suffix=['.npz'],
-            overwrite=True)
-        smpl = {}
-        smpl['body_pose'] = poses[..., 1:, :]
-        smpl['global_orient'] = poses[..., 0, :]
-        smpl['betas'] = betas
-
-        bboxes_xywh = xyxy2xywh(bboxes_xyxy)
-        conf = np.ones(kp3d.shape[:-1])[..., None]
-        kp3d = np.concatenate([kp3d, conf], axis=-1)
-        keypoints3d_, keypoints3d_mask = \
-            convert_kps(kp3d, 'h36m', 'human_data')
-
-        human_data = HumanData()
-        human_data['bbox_xywh'] = bboxes_xywh
-        human_data['keypoints3d'] = keypoints3d_
-        human_data['keypoints3d_mask'] = keypoints3d_mask
-        human_data['smpl'] = smpl
-        human_data.compress_keypoints_by_mask()
-
-        human_data.dump(args.output)
 
     verts, K0 = conver_verts_to_cam_coord(
         verts, pred_cams, bboxes_xyxy, focal_length=args.focal_length)
@@ -279,11 +199,6 @@ def multi_person_with_mmtracking(args, frames_iter):
         V[i, :instance_num] = verts[i, track_ids_list]
 
     if args.show_path is not None:
-        prepare_output_path(
-            output_path=args.show_path,
-            path_type='file',
-            allowed_suffix=['.mp4'],
-            overwrite=True)
 
         # Visualization
         visualize_smpl_calibration(
@@ -299,8 +214,6 @@ def multi_person_with_mmtracking(args, frames_iter):
             T=None,
             overwrite=True,
             palette=args.palette)
-
-    return V, K0, img_index
 
 
 def main(args):
