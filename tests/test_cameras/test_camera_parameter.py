@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pytest
 
-from mmhuman3d.core.cameras.camera_parameter import CameraParameter
+from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.utils.path_utils import Existence, check_path_existence
 
 chessboard_path = 'tests/data/camera/' +\

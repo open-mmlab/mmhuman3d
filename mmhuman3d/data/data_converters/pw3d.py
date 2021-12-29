@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.core.cameras.camera_parameter import CameraParameter
+from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.data.data_converters.builder import DATA_CONVERTERS
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter

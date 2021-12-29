@@ -10,7 +10,7 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.core.cameras.camera_parameter import CameraParameter
+from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter

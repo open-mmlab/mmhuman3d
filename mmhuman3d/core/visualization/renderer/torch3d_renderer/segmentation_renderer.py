@@ -6,7 +6,6 @@ from pytorch3d.structures import Meshes
 from mmhuman3d.utils.keypoint_utils import get_different_colors
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER
-from .textures import TexturesClosest
 
 try:
     from typing import Literal
@@ -33,7 +32,14 @@ class SegmentationRenderer(MeshBaseRenderer):
                  in_ndc: bool = True,
                  **kwargs) -> None:
         """Render vertex-color mesh into a segmentation map of a (B, H, W)
-        tensor.
+        tensor. For visualization, the output rgba image will be (B, H, W, 4),
+        and the color palette comes from `get_different_colors`. The
+        segmentation map is a tensor each pixel saves the classification index.
+        Please make sure you have allocate each pixel a correct classification
+        index by defining a textures of vertex color.
+
+        [CrossEntropyLoss](https://pytorch.org/docs/stable/generated/torch.nn.
+        CrossEntropyLoss.html)
 
         Args:
             resolution (Iterable[int]):
@@ -110,9 +116,9 @@ class SegmentationRenderer(MeshBaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        # To exclude inappropriate interpolation, please use `TexturesClosest`
-        # to make sure the segmentation map is sharp.
-        assert isinstance(meshes.textures, TexturesClosest)
+        # It is recommended that you use `TexturesClosest` to exclude
+        # inappropriate interpolation among the faces, to make sure the
+        # segmentation map is sharp.
         cameras = self.init_cameras(K=K, R=R, T=T)
         renderer = self.init_renderer(cameras, None)
 
