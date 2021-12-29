@@ -6,8 +6,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idxs_by_part,
 )
 from mmhuman3d.models.builder import REGISTRANTS
-
-from .smplify import SMPLify, OptimizableParameters
+from .smplify import OptimizableParameters, SMPLify
 
 
 @REGISTRANTS.register_module()

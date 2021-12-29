@@ -60,5 +60,3 @@ def build_discriminator(cfg):
 def build_registrant(cfg):
     """Build registrant."""
     return REGISTRANTS.build(cfg)
-
-

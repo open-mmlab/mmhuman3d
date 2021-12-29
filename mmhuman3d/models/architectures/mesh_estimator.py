@@ -19,7 +19,7 @@ from ..builder import (
     build_head,
     build_loss,
     build_neck,
-    build_registrant
+    build_registrant,
 )
 from .base_architecture import BaseArchitecture
 

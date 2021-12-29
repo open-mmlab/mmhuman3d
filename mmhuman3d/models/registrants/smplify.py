@@ -8,7 +8,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idx,
     get_keypoint_idxs_by_part,
 )
-from mmhuman3d.models.builder import build_body_model, build_loss, REGISTRANTS
+from mmhuman3d.models.builder import REGISTRANTS, build_body_model, build_loss
 
 
 class OptimizableParameters():
@@ -715,5 +715,3 @@ class SMPLify(object):
             betas_video = betas.view(1, feat_dim).expand(batch_size, feat_dim)
 
         return betas_video
-
-
