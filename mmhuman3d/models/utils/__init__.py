@@ -1,4 +1,4 @@
 from .res_layer import ResLayer, SimplifiedBasicBlock
-from .smpl import SMPL, HybrIKSMPL
+from .fits_dict import FitsDict
 
-__all__ = ['ResLayer', 'SimplifiedBasicBlock', 'SMPL', 'HybrIKSMPL']
+__all__ = ['ResLayer', 'SimplifiedBasicBlock']
