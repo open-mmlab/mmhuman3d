@@ -252,8 +252,6 @@ class SMPLRenderer(MeshBaseRenderer):
 
         # write temp images for the output video
         if self.output_path is not None:
-            output_images = (rgbs * 255).detach().cpu().numpy().astype(
-                np.uint8)
 
             if images is not None:
                 output_images = rgbs * valid_masks * self.alpha + \

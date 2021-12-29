@@ -126,7 +126,7 @@ class DepthRenderer(MeshBaseRenderer):
         if self.output_path is not None or 'rgba' in self.return_type:
             rgbs, valid_mask = depth_map[
                 ..., :3], (depth_map[..., 3:] > 0) * 1.0
-
+            rgbs = rgbs / rgbs.max()
             if self.output_path is not None:
                 self.write_images(rgbs, valid_mask, images, indexes)
 
@@ -135,4 +135,5 @@ class DepthRenderer(MeshBaseRenderer):
             results.update(tensor=depth_map[..., 0])
         if 'rgba' in self.return_type:
             results.update(rgba=torch.cat([rgbs, valid_mask], -1))
+
         return results

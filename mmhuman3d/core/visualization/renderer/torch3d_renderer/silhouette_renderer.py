@@ -93,9 +93,8 @@ class SilhouetteRenderer(MeshBaseRenderer):
 
         rendered_images = renderer(meshes)
         silhouette_map = rendered_images[..., 3:]
+        valid_masks = (silhouette_map > 0) * 1.0
         if self.output_path is not None or 'rgba' in self.return_type:
-            valid_masks = (rendered_images[..., 3:] > 0
-                           ) * 1.0 if images is not None else None
             rgbs = silhouette_map.repeat(1, 1, 1, 3)
             if self.output_path is not None:
                 self.write_images(rgbs, valid_masks, images, indexes)
@@ -104,6 +103,6 @@ class SilhouetteRenderer(MeshBaseRenderer):
         if 'tensor' in self.return_type:
             results.update(tensor=silhouette_map)
         if 'rgba' in self.return_type:
-            results.update(rgba=rendered_images)
+            results.update(rgba=valid_masks.repeat(1, 1, 1, 4))
 
         return results

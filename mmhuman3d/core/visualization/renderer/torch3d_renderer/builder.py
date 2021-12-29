@@ -1,5 +1,6 @@
 from mmcv.utils import Registry
 from pytorch3d.renderer import (
+    AmbientLights,
     DirectionalLights,
     HardFlatShader,
     MeshRasterizer,
@@ -30,6 +31,8 @@ LIGHTS.register_module(
     module=DirectionalLights)
 LIGHTS.register_module(
     name=['point', 'point_lights', 'PointLights'], module=PointLights)
+LIGHTS.register_module(
+    name=['ambient', 'ambient_lights', 'AmbientLights'], module=AmbientLights)
 
 SHADER = Registry('shader')
 SHADER.register_module(

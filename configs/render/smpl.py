@@ -15,11 +15,8 @@ base_point_light = {
 }
 
 base_ambient_light = {
-    'type': 'directional',
+    'type': 'ambient',
     'ambient_color': [[1.0, 1.0, 1.0]],
-    'diffuse_color': [[0, 0, 0]],
-    'specular_color': [[0, 0, 0]],
-    'direction': [[10.0, 10.0, -10.0]],
 }
 
 base_material = {
@@ -97,8 +94,8 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'material': silhouete_material,
         'raster_setting': {
-            'blur_radius': 0,
-            'faces_per_pixel': 50,
+            'blur_radius': 0.0,
+            'faces_per_pixel': 1,
         },
         'blend': black_blend_params,
     },
@@ -150,7 +147,6 @@ RENDER_CONFIGS = {
     'pointcloud': {
         'renderer_type': 'pointcloud',
         'shader_type': 'nolight',
-        'texture_type': 'vertex',
         'raster_type': 'point',
         'light': empty_light,
         'material': empty_material,
