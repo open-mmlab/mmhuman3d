@@ -42,12 +42,12 @@ def test_HybrIK_head():
     # initialize models
     head = HybrIKHead(
         smpl_mean_params=osp.join(tmpdir.name, 'h36m_mean_beta.npy'))
-    smpl = build_body_model(dict(
-        type='HybrIKSMPL',
-        model_path='data/body_models/smpl',
-        extra_joints_regressor=osp.join(
-            tmpdir.name,'J_regressor_h36m.npy')
-    ))
+    smpl = build_body_model(
+        dict(
+            type='HybrIKSMPL',
+            model_path='data/body_models/smpl',
+            extra_joints_regressor=osp.join(tmpdir.name,
+                                            'J_regressor_h36m.npy')))
 
     if torch.cuda.is_available():
         head = head.cuda()
