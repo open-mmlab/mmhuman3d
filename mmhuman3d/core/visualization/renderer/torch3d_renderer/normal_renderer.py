@@ -71,7 +71,7 @@ class NormalRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                indexs: Optional[Iterable[int]] = None):
+                indexes: Optional[Iterable[int]] = None):
         """Render normal map.
 
         The params are the same as MeshBaseRenderer.
@@ -108,7 +108,7 @@ class NormalRenderer(MeshBaseRenderer):
             output_images = (output_images.detach().cpu().numpy() *
                              255).astype(np.uint8)
 
-            for idx, real_idx in enumerate(indexs):
+            for idx, real_idx in enumerate(indexes):
                 folder = self.temp_path if self.temp_path is not None else\
                     self.output_path
                 cv2.imwrite(

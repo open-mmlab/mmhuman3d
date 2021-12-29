@@ -67,7 +67,7 @@ class video_writer:
             stderr=subprocess.PIPE,
         )
         if process.stdin is None or process.stderr is None:
-            raise BrokenPipeError('No buffer recieved.')
+            raise BrokenPipeError('No buffer received.')
         self.process = process
         self.num_frame = num_frame
         self.len = 0
@@ -158,7 +158,7 @@ def array_to_video(
         stderr=subprocess.PIPE,
     )
     if process.stdin is None or process.stderr is None:
-        raise BrokenPipeError('No buffer recieved.')
+        raise BrokenPipeError('No buffer received.')
     index = 0
     while True:
         if index >= image_array.shape[0]:
@@ -242,7 +242,7 @@ def array_to_images(
         bufsize=10**8,
         close_fds=True)
     if process.stdin is None or process.stderr is None:
-        raise BrokenPipeError('No buffer recieved.')
+        raise BrokenPipeError('No buffer received.')
     index = 0
     while True:
         if index >= image_array.shape[0]:
@@ -325,7 +325,7 @@ def video_to_array(
     # Execute FFmpeg as sub-process with stdout as a pipe
     process = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=10**8)
     if process.stdout is None:
-        raise BrokenPipeError('No buffer recieved.')
+        raise BrokenPipeError('No buffer received.')
     # Read decoded video frames from the PIPE until no more frames to read
     array = []
     while True:
@@ -349,7 +349,7 @@ def images_to_sorted_images(input_folder, output_folder, img_format='%06d'):
 
     Args:
         input_folder (str): input folder.
-        output_folder (str): utput folder.
+        output_folder (str): output folder.
         img_format (str, optional): image format name, do not need extension.
             Defaults to '%06d'.
 
@@ -462,7 +462,7 @@ def images_to_array(
         print(f'Running \"{" ".join(command)}\"')
     process = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=10**8)
     if process.stdout is None:
-        raise BrokenPipeError('No buffer recieved.')
+        raise BrokenPipeError('No buffer received.')
     # Read decoded video frames from the PIPE until no more frames to read
     array = []
     while True:
@@ -611,7 +611,7 @@ def video_to_images(input_path: str,
 
     Args:
         input_path (str): video file path
-        output_folder (str): ouput folder to store the images
+        output_folder (str): output folder to store the images
         resolution (Optional[Tuple[int, int]], optional):
             (height, width) of output. defaults to None.
         img_format (str, optional): format of images to be read.

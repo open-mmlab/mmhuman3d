@@ -25,7 +25,7 @@ class BaseArchitecture(BaseModule, metaclass=ABCMeta):
 
         Args:
             losses (dict): Raw output of the network, which usually contain
-                losses and other necessary infomation.
+                losses and other necessary information.
         Returns:
             tuple[Tensor, dict]: (loss, log_vars), loss is the loss tensor \
                 which may be a weighted sum of all losses, log_vars contains \

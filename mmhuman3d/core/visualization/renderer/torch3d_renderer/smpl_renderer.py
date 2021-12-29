@@ -162,7 +162,7 @@ class SMPLRenderer(MeshBaseRenderer):
         images: Optional[torch.Tensor] = None,
         joints: Optional[torch.Tensor] = None,
         joints_gt: Optional[torch.Tensor] = None,
-        indexs: Optional[Iterable[int]] = None,
+        indexes: Optional[Iterable[int]] = None,
     ) -> Union[None, torch.Tensor]:
         """Forward render procedure.
 
@@ -193,8 +193,8 @@ class SMPLRenderer(MeshBaseRenderer):
             joints_gt (Optional[torch.Tensor], optional):
                 ground-truth points passed.
                 Defaults to None.
-            indexs (Optional[Iterable[int]], optional):
-                indexs for writing images.
+            indexes (Optional[Iterable[int]], optional):
+                indexes for writing images.
                 Defaults to None.
 
         Returns:
@@ -217,8 +217,8 @@ class SMPLRenderer(MeshBaseRenderer):
                 self.frames_folder,
                 resolution=self.resolution,
                 img_format=self.img_format,
-                start=indexs[0],
-                end=indexs[-1],
+                start=indexes[0],
+                end=indexes[-1],
                 disable_log=True).astype(np.float64)
             images = torch.Tensor(images).to(self.device)
 
@@ -345,7 +345,7 @@ class SMPLRenderer(MeshBaseRenderer):
 
                 output_images = output_images.detach().cpu().numpy().astype(
                     np.uint8)
-            for frame_idx, real_idx in enumerate(indexs):
+            for frame_idx, real_idx in enumerate(indexes):
                 folder = self.temp_path if self.temp_path is not None else\
                     self.output_path
                 im = output_images[frame_idx]

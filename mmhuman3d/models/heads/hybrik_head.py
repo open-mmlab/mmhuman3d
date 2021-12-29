@@ -205,18 +205,18 @@ class HybrIKHead(BaseModule):
         uv_homo_jts = torch.cat(
             (uvd_jts_new[:, :, :2], torch.ones_like(uvd_jts_new)[:, :, 2:]),
             dim=2)
-        # batch-wise matrix multipy : (B,1,2,3) * (B,K,3,1) -> (B,K,2,1)
+        # batch-wise matrix multiply : (B,1,2,3) * (B,K,3,1) -> (B,K,2,1)
         uv_jts = torch.matmul(
             trans_inv.unsqueeze(1), uv_homo_jts.unsqueeze(-1))
         # transform (u,v,1) to (x,y,z)
         cam_2d_homo = torch.cat((uv_jts, torch.ones_like(uv_jts)[:, :, :1, :]),
                                 dim=2)
-        # batch-wise matrix multipy : (B,1,3,3) * (B,K,3,1) -> (B,K,3,1)
+        # batch-wise matrix multiply : (B,1,3,3) * (B,K,3,1) -> (B,K,3,1)
         xyz_jts = torch.matmul(intrinsic_param.unsqueeze(1), cam_2d_homo)
         xyz_jts = xyz_jts.squeeze(dim=3)
         # recover absolute z : (B,K) + (B,1)
         abs_z = dz + joint_root[:, 2].unsqueeze(-1)
-        # multipy absolute z : (B,K,3) * (B,K,1)
+        # multiply absolute z : (B,K,3) * (B,K,1)
         xyz_jts = xyz_jts * abs_z.unsqueeze(-1)
 
         if return_relative:

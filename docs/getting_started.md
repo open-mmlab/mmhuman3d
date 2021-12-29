@@ -59,7 +59,7 @@ python demo/estimate_smpl.py ${CONFIG_FILE} ${CHECKPOINT} [optional]
 ```
 
 ### Single-person
-Optional arugments include:
+Optional arguments include:
 - `--single_person_demo`: flag for single-person inference
 - `--det_config`: MMDetection config
 - `--det_checkpoint`: MMDetection checkpoint
@@ -84,7 +84,7 @@ Note that the MMHuman3D checkpoints can be downloaded from the [model zoo](model
 Here we take HMR (resnet50_hmr_pw3d.pth) as an example.
 
 ### Multi-person
-Optional arugments include:
+Optional arguments include:
 - `--multi_person_demo`: flag for multi_person inference
 - `--mmtracking_config`: MMTracking config
 - `--video_path`: input video load path
