@@ -41,7 +41,7 @@ class PointCloudRenderer(MeshBaseRenderer):
                  in_ndc: bool = True,
                  radius: Optional[float] = None,
                  **kwargs) -> None:
-        """PointCloud renderer.
+        """Point cloud renderer.
 
         Args:
             resolution (Iterable[int]):

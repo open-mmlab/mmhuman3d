@@ -6,7 +6,12 @@ from mmhuman3d.core.visualization import render_runner
 
 
 def test_render_runner():
-    device = torch.device('cuda:0')
+    if torch.cuda.is_available():
+        device_name = 'cuda:0'
+    else:
+        device_name = 'cpu'
+
+    device = torch.device(device_name)
     meshes = ico_sphere(3, device)
     meshes.textures = TexturesVertex(
         verts_features=torch.zeros_like(meshes.verts_padded()).to(device))

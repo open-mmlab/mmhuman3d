@@ -5,7 +5,7 @@ from typing import Any, List, Tuple, Union
 import numpy as np
 import torch
 
-from mmhuman3d.core.cameras.cameras import NewAttributeCameras
+from mmhuman3d.core.cameras.cameras import PerspectiveCameras
 from mmhuman3d.core.conventions.cameras import (
     convert_cameras,
     convert_K_3x3_to_4x4,
@@ -13,52 +13,7 @@ from mmhuman3d.core.conventions.cameras import (
 )
 from .builder import build_cameras
 
-_CameraParameter_SUPPORTED_KEYS = {
-    'H': {
-        'type': int,
-    },
-    'W': {
-        'type': int,
-    },
-    'in_mat': {
-        'type': list,
-        'len': 3,
-    },
-    'rotation_mat': {
-        'type': list,
-        'len': 3,
-    },
-    'translation': {
-        'type': list,
-        'len': 3,
-    },
-    'k1': {
-        'type': float,
-    },
-    'k2': {
-        'type': float,
-    },
-    'k3': {
-        'type': float,
-    },
-    'k4': {
-        'type': float,
-    },
-    'k5': {
-        'type': float,
-    },
-    'k6': {
-        'type': float,
-    },
-    'p1': {
-        'type': float,
-    },
-    'p2': {
-        'type': float,
-    },
-}
-
-_CameraParameter_SUPPORTED_KEYS = {
+_CAMERA_PARAMETER_SUPPORTED_KEYS_ = {
     'H': {
         'type': int,
     },
@@ -106,7 +61,7 @@ _CameraParameter_SUPPORTED_KEYS = {
 
 class CameraParameter:
     logger = None
-    SUPPORTED_KEYS = _CameraParameter_SUPPORTED_KEYS
+    SUPPORTED_KEYS = _CAMERA_PARAMETER_SUPPORTED_KEYS_
 
     def __init__(self,
                  name: str = 'default',
@@ -356,20 +311,20 @@ class CameraParameter:
         self.load_from_dict(camera_param_dict)
 
     @classmethod
-    def load_from_NewAttributeCameras(cls,
-                                      cam,
-                                      name: str,
-                                      resolution: Union[List, Tuple] = None):
+    def load_from_cameras(cls,
+                          cam,
+                          name: str,
+                          resolution: Union[List, Tuple] = None):
         """Load name and parameters from a dict.
 
         Args:
-            cam (mmhuman3d.core.cameras.
-            cameras.NewAttributeCameras):
+            cam (mmhuman3d.core.cameras.cameras.PerspectiveCameras):
                 An instance.
             name (str):
                 Name of this camera.
         """
-
+        assert isinstance(cam, PerspectiveCameras
+                          ), 'Wrong input, support PerspectiveCameras only!'
         if len(cam) > 1:
             warnings.warn('Will only use the first camera in the batch.')
         cam = cam[0]
@@ -414,15 +369,11 @@ class CameraParameter:
         cam_param.parameters_dict.update(W=width)
         return cam_param
 
-    def export_to_NewAttributeCameras(self) -> NewAttributeCameras:
-        """Get a dict of camera parameters, which contains all necessary args
-        for mmhuman3d.core.cameras.cameras.WeakPerspectiveCamerasVibe(). Use mm
-        human3d.core.cameras.cameras.WeakPerspectiveCamerasVibe(**return_dict)
-        to construct a camera.
+    def export_to_cameras(self) -> PerspectiveCameras:
+        """Export to a opencv defined PerspectiveCameras.
 
         Returns:
-            dict:
-                A dict of camera parameters: name, dist, size, matrix, etc.
+            Same defined PerspectiveCameras of batch_size 1.
         """
         height = self.parameters_dict['H']
         width = self.parameters_dict['W']
@@ -440,7 +391,7 @@ class CameraParameter:
         new_T = torch.from_numpy(translation)
         cam = build_cameras(
             dict(
-                type='perspective',
+                type='PerspectiveCameras',
                 K=new_K.float(),
                 R=new_R.float(),
                 T=new_T.float(),
