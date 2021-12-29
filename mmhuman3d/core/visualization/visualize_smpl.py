@@ -181,6 +181,7 @@ def _prepare_body_model(model_type, body_model, body_model_config):
                 model_path = osp.join(model_path, model_type)
                 body_model_config.update(model_path=model_path)
                 body_model = build_body_model(body_model_config)
+                assert os.path.isdir(model_path)
             else:
                 raise FileNotFoundError('Wrong model_path.'
                                         ' File or directory does not exist.')
@@ -203,6 +204,9 @@ def _prepare_input_pose(verts, poses, betas, transl):
         poses = None
         transl = None
         betas = None
+    elif isinstance(poses, dict):
+        transl = poses.get('transl', transl)
+        betas = poses.get('betas', betas)
 
     if isinstance(verts, np.ndarray):
         verts = torch.Tensor(verts)
