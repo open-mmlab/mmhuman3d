@@ -33,7 +33,7 @@ class SMCReader:
                 self.smc['iPhone'].attrs['depth_resolution']
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
-        """Get extrinsics of a kinect RGB camera by kinect id.
+        """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.
 
         Args:
             kinect_id (int):
@@ -44,7 +44,7 @@ class SMCReader:
 
         Returns:
             homogeneous is True
-                ndarray: A 4x4 matrix of rotation and translation.
+                ndarray: A 4x4 matrix of rotation and translation(cam2world).
             homogeneous is False
                 dict: A dict of rotation and translation,
                         keys are R and T,
@@ -76,7 +76,7 @@ class SMCReader:
             return json.loads(self.smc['Extrinsics'][()])
 
     def get_kinect_depth_extrinsics(self, kinect_id, homogeneous=True):
-        """Get extrinsics of a kinect depth camera by kinect id.
+        """Get extrinsics(cam2world) of a kinect depth camera by kinect id.
 
         Args:
             kinect_id (int):
@@ -87,7 +87,7 @@ class SMCReader:
 
         Returns:
             homogeneous is True
-                ndarray: A 4x4 matrix of rotation and translation.
+                ndarray: A 4x4 matrix of rotation and translation(cam2world).
             homogeneous is False
                 dict: A dict of rotation and translation,
                         keys are R and T,
@@ -191,7 +191,7 @@ class SMCReader:
         return intrinsics
 
     def get_iphone_extrinsics(self, iphone_id=0, frame_id=0):
-        """Get extrinsics of an iPhone RGB camera by iPhone id.
+        """Get extrinsics(cam2world) of an iPhone RGB camera by iPhone id.
 
         Args:
             iphone_id (int, optional):
@@ -199,7 +199,7 @@ class SMCReader:
                 Defaults to 0.
 
         Returns:
-            ndarray: A 4x4 matrix.
+            ndarray: A 4x4 transformation matrix(cam2world).
         """
         R = np.asarray(self.calibration_dict['iPhone']['R']).reshape(3, 3)
         T = np.asarray(self.calibration_dict['iPhone']['T']).reshape(3)
