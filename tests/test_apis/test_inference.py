@@ -1,5 +1,6 @@
 import mmcv
 import numpy as np
+import pytest
 
 from mmhuman3d.apis import (
     feature_extract,
@@ -9,8 +10,11 @@ from mmhuman3d.apis import (
 )
 from mmhuman3d.utils.demo_utils import (
     conver_verts_to_cam_coord,
+    convert_crop_cam_to_orig_img,
     extract_feature_sequence,
+    prepare_frames,
     process_mmdet_results,
+    process_mmtracking_results,
     smooth_process,
 )
 
@@ -45,8 +49,15 @@ def test_inference_video_based_model():
     person_results_list = [person_results]
     feature_results_seq = extract_feature_sequence(
         person_results_list, frame_idx=0, causal=True, seq_len=16, step=1)
+
     inference_video_based_model(
         mesh_model, extracted_results=feature_results_seq, with_track_id=True)
+
+    inference_video_based_model(
+        mesh_model,
+        extracted_results=feature_results_seq,
+        with_track_id=True,
+        causal=False)
 
     inference_video_based_model(
         mesh_model, extracted_results=feature_results_seq, with_track_id=False)
@@ -60,3 +71,48 @@ def test_process_mmdet_results():
         mmdet_results=(det_results, det_mask_results), cat_id=1)
 
     _ = process_mmdet_results(mmdet_results=det_results, cat_id=1)
+
+
+def test_convert_crop_cam_to_orig_img():
+    pred_cam = np.ones([10, 10, 10, 3])
+    bbox = np.ones([10, 10, 5])
+    img_width, img_height = 224, 224
+    convert_crop_cam_to_orig_img(
+        pred_cam, bbox, img_width, img_height, bbox_format='xyxy')
+    convert_crop_cam_to_orig_img(
+        pred_cam, bbox, img_width, img_height, bbox_format='xywh')
+    convert_crop_cam_to_orig_img(
+        pred_cam, bbox, img_width, img_height, bbox_format='cs')
+    with pytest.raises(ValueError):
+        convert_crop_cam_to_orig_img(
+            pred_cam, bbox, img_width, img_height, bbox_format='xy')
+
+
+def test_prepare_frames():
+    image_path = 'demo/resources/S1_Directions_1.54138969_000001.jpg'
+    prepare_frames(image_path)
+
+    video_path = 'demo/resources/single_person_demo.mp4'
+    prepare_frames(video_path)
+
+    image_folder = 'demo/resources/'
+    prepare_frames(image_folder)
+
+    with pytest.raises(ValueError):
+        prepare_frames(None)
+
+
+def test_process_mmtracking_results():
+    track_bboxes = {
+        'track_bboxes': [[np.array([1, 0, 0, 100, 100])]],
+    }
+    process_mmtracking_results(track_bboxes, 0)
+
+    person_results = {
+        'track_results': [[np.array([1, 0, 0, 100, 100])]],
+    }
+    process_mmtracking_results(person_results, 0)
+
+
+if __name__ == '__main__':
+    test_prepare_frames()
