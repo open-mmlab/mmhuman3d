@@ -58,7 +58,7 @@ def single_person_with_mmdet(args, frames_iter):
         mmdet_results = inference_detector(person_det_model, frame)
 
         # keep the person class bounding boxes.
-        person_det_results = \
+        person_results = \
             process_mmdet_results(
                 mmdet_results,
                 args.det_cat_id)
@@ -67,11 +67,7 @@ def single_person_with_mmdet(args, frames_iter):
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator' \
                 and extractor is not None:
             person_results = feature_extract(
-                extractor,
-                frame,
-                person_det_results,
-                args.bbox_thr,
-                format='xyxy')
+                extractor, frame, person_results, args.bbox_thr, format='xyxy')
 
         # drop the frame with no detected results
         if person_results == []:
