@@ -204,6 +204,22 @@ class MeshBaseRenderer(nn.Module):
                 dict(type=self.shader_type, blend_params=self.blend_params)))
         return renderer
 
+    @staticmethod
+    def rgb2bgr(rgbs):
+        if isinstance(rgbs, torch.Tensor):
+            bgrs = torch.cat(
+                [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
+                -1)
+        elif isinstance(rgbs, np.ndarray):
+            bgrs = np.concatenate(
+                [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
+                -1)
+        return bgrs
+
+    @staticmethod
+    def image_tensor2numpy(image):
+        return (image.detach().cpu().numpy() * 255).astype(np.uint8)
+
     def write_images(self, rgbs, valid_masks, images, indexes):
         """Write output/temp images."""
         rgbs = rgbs.clone()[..., :3] / rgbs[..., :3].max()
