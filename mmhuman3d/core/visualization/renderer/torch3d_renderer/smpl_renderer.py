@@ -250,7 +250,7 @@ class SMPLRenderer(MeshBaseRenderer):
 
         rgbs = rendered_images[..., :3]
         valid_masks = (rendered_images[..., 3:] > 0) * 1.0
-        images = images / 255.
+        images = images / 255. if images is not None else None
         bgrs = self.rgb2bgr(rgbs)
 
         # write temp images for the output video
