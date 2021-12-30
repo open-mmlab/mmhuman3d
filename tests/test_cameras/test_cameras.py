@@ -8,6 +8,7 @@ from mmhuman3d.core.cameras import (
     WeakPerspectiveCameras,
     build_cameras,
 )
+from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.core.conventions.cameras import convert_cameras
 
 
@@ -41,6 +42,21 @@ def check_camera_slice(cam1):
     cam2 = cam2.extend(len(cam1))
     check_camera_close(cam1, cam2)
     print(cam1.__repr__)
+
+
+def test_cameras_parameter():
+
+    cam = PerspectiveCameras(
+        T=torch.zeros(10, 3),
+        image_size=((1080, 1920)),
+        convention='opencv',
+        focal_length=(500, 500),
+        principal_point=(540, 960),
+        R=torch.eye(3, 3)[None],
+        in_ndc=False)
+    cam_param = CameraParameter.load_from_perspective_cameras(cam, name='1')
+    cam1 = cam_param.export_to_perspective_cameras()
+    check_camera_close(cam[0], cam1)
 
 
 def test_cameras():

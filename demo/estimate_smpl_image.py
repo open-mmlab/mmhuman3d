@@ -93,16 +93,15 @@ def single_person_with_mmdet(args, frames_iter):
         verts = smooth_process(verts, smooth_type=args.smooth_type)
 
     if args.show_path is not None:
-
+        body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         # Visualization
         visualize_smpl_calibration(
             verts=verts,
-            model_path=args.body_model_dir,
-            model_type='smpl',
             output_path=args.show_path,
             render_choice=args.render_choice,
             resolution=frames_iter[0].shape[:2],
             image_array=np.array(frames_iter)[img_index],
+            body_model_config=body_model_config,
             K=K0,
             R=None,
             T=None,
@@ -199,16 +198,15 @@ def multi_person_with_mmtracking(args, frames_iter):
         V[i, :instance_num] = verts[i, track_ids_list]
 
     if args.show_path is not None:
-
+        body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         # Visualization
         visualize_smpl_calibration(
             verts=V,
-            model_path=args.body_model_dir,
-            model_type='smpl',
             output_path=args.show_path,
             render_choice=args.render_choice,
             resolution=frames_iter[0].shape[:2],
             image_array=np.array(frames_iter)[img_index],
+            body_model_config=body_model_config,
             K=K0,
             R=None,
             T=None,

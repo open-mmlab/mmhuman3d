@@ -1,52 +1,70 @@
-## Keypoints convention
+# Keypoints convention
 
-### Overview
+## Overview
 
 Our convention tries to consolidate the different keypoints definition across various
 commonly used datasets. Due to differences in data-labelling procedures, keypoints across datasets with the same name might not map to semantically similar locations on the human body. Conversely, keypoints with different names might correspond to the same location on the human body. To unify the different keypoints correspondences across datasets, we adopted the `human_data` convention
 as the base convention for converting and storing our keypoints.
 
-### How to use
+## How to use
 
-#### Converting between conventions
+### Converting between conventions
 
 Keypoints can be converted between different conventions easily using the `convert_kps` function.
 
-To convert a `agora` keypoints to `coco` convention, specify the source and
+To convert a `human_data` keypoints to `coco` convention, specify the source and
 destination convention for conversion.
 
 ```python
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 
-keypoints_agora = np.zeros((100, 127, 3))
-keypoints_coco, mask = convert_kps(keypoints_agora, src='agora', dst='coco')
+keypoints_human_data = np.zeros((100, 190, 3))
+keypoints_coco, mask = convert_kps(keypoints_human_data, src='human_data', dst='coco')
+assert mask.all()==1
 ```
 
 The output `mask` should be all ones if the `dst` convention is the subset of the `src` convention.
-You can use the mask as the confidence of the keypoints since those keypoints with no correspondence are set to a default value with 0 confidence.
+You can use the `mask` as the confidence of the keypoints since those keypoints with no correspondence are set to a default value with 0 confidence.
 
 
-#### Converting with mask
+### Converting with confidence
 
-If you have occlusion information of your keypoints, you can use an original mask to mark it, then the information will be updated into the returned mask.
-E.g., you want to convert a `smpl` keypoints to `coco` keypoints, and you know its `left_hip` is occluded. You want to carry forward this information during the converting. So you can set an original_mask and convert it to `coco` by doing:
+If you have confidential information of your keypoints, you can use an original mask to mark it, then the information will be updated into the returned mask.
+E.g., you want to convert a `smpl` keypoints to `coco` keypoints, and you know its `left_shoulder` is occluded. You want to carry forward this information during the converting. So you can set an original_mask and convert it to `coco` by doing:
 
 ```python
-keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
-original_mask = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
-original_mask[KEYPOINTS_FACTORY['smpl'].index('left_hip')] = 0
+import numpy as np
+from mmhuman3d.core.conventions.keypoints_mapping import KEYPOINTS_FACTORY, convert_kps
 
-_, mask_coco = convert_kps(
-    keypoints=keypoints, mask=original_mask, src='smpl', dst='coco')
-_, mask_coco_full = convert_kps(
+keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
+confidence = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
+
+# assume that 'left_shoulder' point is invalid.
+confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] = 0
+
+_, conf_coco = convert_kps(
+    keypoints=keypoints, confidence=confidence, src='smpl', dst='coco')
+_, conf_coco_full = convert_kps(
     keypoints=keypoints, src='smpl', dst='coco')
 
-assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] == 0
-mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip')] = 1
-assert (mask_coco == mask_coco_full).all()
+assert conf_coco[KEYPOINTS_FACTORY['coco'].index('left_shoulder')] == 0
+conf_coco[KEYPOINTS_FACTORY['coco'].index('left_shoulder')] = 1
+assert (conf_coco == conf_coco_full).all()
 ```
 
-### Supported Conventions
+Our mask represents valid information, its dtype is uint8, while keypoint confidence usually ranges from 0 to 1.
+E.g., you want to convert a `smpl` keypoints to `coco` keypoints, and you know its `left_shoulder` is occluded. You want to carry forward this information during the converting. So you can set an original_mask and convert it to `coco` by doing:
+
+```python
+confidence = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
+confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] = 0.5
+kp_smpl = np.concatenate([kp_smpl, confidence], -1)
+kp_smpl_converted, mask = convert_kps(kp_smpl, src='smpl', dst='coco')
+new_confidence =  kp_smpl_converted[..., 2:]
+assert new_confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] == 0.5
+```
+
+## Supported Conventions
 
 
 These are the supported conventions:
@@ -69,7 +87,7 @@ These are the supported conventions:
   - [SMPL-X](#smplx)
 
 
-#### HUMANDATA
+### HUMANDATA
 
 The first 144 keypoints in HumanData correspond to that in `SMPL-X`.
 Keypoints with suffix `_extra` refer to those obtained from Jregressor_extra.
@@ -77,7 +95,7 @@ Keypoints with suffix `_openpose` refer to those obtained from `OpenPose` predic
 
 There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` that has the same name but were semantically different from keypoints in `SMPL-X`. As such, we added an extra suffix to differentiate those keypoints i.e. `head_h36m`.
 
-#### AGORA
+### AGORA
 
 <details>
 <summary align="right"><a href="https://arxiv.org/pdf/2104.14643.pdf">AGORA (CVPR'2021)</a></summary>
@@ -95,7 +113,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-#### COCO
+### COCO
 
 <details>
 <summary align="right"><a href="https://link.springer.com/chapter/10.1007/978-3-319-10602-1_48">COCO (ECCV'2014)</a></summary>
@@ -114,7 +132,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### COCO-WHOLEBODY
+### COCO-WHOLEBODY
 
 <details>
 <summary align="right"><a href="https://arxiv.org/abs/2007.11858.pdf">COCO-Wholebody (ECCV'2020)</a></summary>
@@ -131,7 +149,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### CrowdPose
+### CrowdPose
 
 <details>
 <summary align="right"><a href="https://arxiv.org/pdf/1812.00324.pdf">CrowdPose (CVPR'2019)</a></summary>
@@ -147,7 +165,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-#### Human3.6M
+### Human3.6M
 
 
 <details>
@@ -170,7 +188,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### GTA-Human
+### GTA-Human
 
 <details>
 <summary align="right"><a href="https://gta-human.com/">GTA-Human (arXiv'2021)</a></summary>
@@ -187,7 +205,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### HybrIK
+### HybrIK
 
 <details>
 <summary align="right"><a href="https://openaccess.thecvf.com/content/CVPR2021/html/Li_HybrIK_A_Hybrid_Analytical-Neural_Inverse_Kinematics_Solution_for_3D_Human_CVPR_2021_paper.html">HybrIK (CVPR'2021)</a></summary>
@@ -205,7 +223,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-#### LSP
+### LSP
 
 
 <details>
@@ -225,7 +243,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 ```
 </details>
 
-#### MPI-INF-3DHP
+### MPI-INF-3DHP
 
 <details>
 <summary align="right"><a href="https://arxiv.org/pdf/1611.09813.pdf">MPI_INF_3DHP (3DV'2017)</a></summary>
@@ -245,7 +263,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### MPII
+### MPII
 
 
 <details>
@@ -263,7 +281,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-#### PoseTrack18
+### PoseTrack18
 
 
 <details>
@@ -281,7 +299,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-#### OpenPose
+### OpenPose
 
 
 <details>
@@ -298,7 +316,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 
 </details>
 
-#### PennAction
+### PennAction
 
 
 <details>
@@ -317,7 +335,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### SMPL
+### SMPL
 
 
 <details>
@@ -340,7 +358,7 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### SMPL-X
+### SMPL-X
 
 
 <details>
@@ -360,6 +378,6 @@ There are several keypoints from `MPI-INF-3DHP`, `Human3.6M` and `Posetrack` tha
 </details>
 
 
-#### Customizing keypoint convention
+### Customizing keypoint convention
 
 Please refer to [customize_keypoints_convention](./customize_keypoints_convention.md).

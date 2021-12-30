@@ -2,7 +2,7 @@ import warnings
 from typing import List
 
 import torch
-from pytorch3d.io import IO
+from pytorch3d.io import IO, save_obj
 from pytorch3d.renderer import TexturesVertex
 from pytorch3d.structures import (
     Meshes,
@@ -11,6 +11,8 @@ from pytorch3d.structures import (
     join_meshes_as_scene,
     padded_to_list,
 )
+
+from mmhuman3d.utils.path_utils import prepare_output_path
 
 
 def join_batch_meshes_as_scene(
@@ -124,3 +126,31 @@ def save_meshes_as_plys(meshes: Meshes = None,
         assert paths[idx].endswith('.ply'), 'Please save as .ply files.'
         writer.save_mesh(
             meshes[idx], paths[idx], colors_as_uint8=True, binary=False)
+
+
+def save_meshes_as_objs(meshes: Meshes = None, paths: List[str] = []) -> None:
+    """Save meshes as .obj files. Mainly for uv texture meshes.
+
+    Args:
+        meshes (Meshes, optional):
+            Defaults to None.
+        paths (List[str], optional): Output .obj file list.
+            Defaults to [].
+    """
+
+    assert len(paths) >= len(meshes), 'Not enough output paths.'
+    assert not isinstance(meshes.textures, TexturesVertex), 'For vertex '
+    'color mesh please use save_meshes_as_plys.'
+    if not isinstance(paths, list):
+        paths = [paths]
+    for idx in range(len(meshes)):
+        prepare_output_path(
+            paths[idx], allowed_suffix=['.obj'],
+            path_type=['file']), 'Please save as .obj files.'
+        save_obj(
+            f=paths[idx],
+            verts=meshes.verts_padded()[idx],
+            faces=meshes.faces_padded()[idx],
+            verts_uvs=meshes.textures.verts_uvs_padded()[idx],
+            faces_uvs=meshes.textures.faces_uvs_padded()[idx],
+            texture_map=meshes.textures.maps_padded()[idx])

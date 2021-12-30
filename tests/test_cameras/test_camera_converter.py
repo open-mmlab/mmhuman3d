@@ -253,7 +253,7 @@ def test_camera_utils():
 def test_convert_projection():
     K = torch.eye(4, 4)[None]
     K1 = convert_weakperspective_to_perspective(
-        K=K, zmean=10, resolution=(1024, 1024))
+        K=K, zmean=10, resolution=(1024, 1024), in_ndc=True)
     K2 = convert_perspective_to_weakperspective(
-        K=K1, zmean=10, resolution=(1024, 1024))
+        K=K1, zmean=10, resolution=(1024, 1024), in_ndc=True)
     assert (K == K2).all()

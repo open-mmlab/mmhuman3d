@@ -1,14 +1,11 @@
-import os.path as osp
-import warnings
-from typing import Iterable, Optional, Union
+from typing import Iterable, List, Optional, Union
 
-import cv2
-import numpy as np
 import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.structures import Meshes
 
 from .base_renderer import MeshBaseRenderer
+from .builder import RENDERER
 
 try:
     from typing import Literal
@@ -16,6 +13,8 @@ except ImportError:
     from typing_extensions import Literal
 
 
+@RENDERER.register_module(
+    name=['Normal', 'normal', 'normal_renderer', 'NormalRenderer'])
 class NormalRenderer(MeshBaseRenderer):
     """Render depth map with the help of camera system."""
 
@@ -24,8 +23,8 @@ class NormalRenderer(MeshBaseRenderer):
         resolution: Iterable[int] = [1024, 1024],
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
-        return_tensor: bool = True,
-        img_format: str = '%06d.png',
+        return_type: Optional[List] = None,
+        out_img_format: str = '%06d.png',
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
@@ -43,26 +42,39 @@ class NormalRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_tensor (bool, optional):
-                Boolean of whether return the rendered tensor.
-                Defaults to False.
-            img_format (str, optional): name format for temp images.
+            return_type (List, optional): the type of tensor to be
+                returned. 'tensor' denotes return the determined tensor. E.g.,
+                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
+                'rgba' denotes the colorful RGBA tensor to be written.
+                Will be same for MeshBaseRenderer.
+                Will return a normal_map for 'tensor' and a normalize normal
+                map for 'rgba'.
+                Defaults to None.
+            out_img_format (str, optional): The image format string for
+                saving the images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): projection type of camera.
+            projection (Literal[, optional): Projection type of the cameras.
                 Defaults to 'weakperspective'.
-            in_ndc (bool, optional): cameras whether defined in NDC.
+            in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
+
+        Returns:
+            None
         """
         super().__init__(
             resolution=resolution,
             device=device,
             output_path=output_path,
             obj_path=None,
-            return_tensor=return_tensor,
-            img_format=img_format,
+            return_type=return_type,
+            out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
+
+    def set_render_params(self, **kwargs):
+        super().set_render_params(**kwargs)
+        self.shader_type = 'nolight'
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
@@ -71,50 +83,53 @@ class NormalRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                indexes: Optional[Iterable[int]] = None):
-        """Render normal map.
+                images: Optional[torch.Tensor] = None,
+                indexes: Optional[Iterable[int]] = None,
+                **kwargs):
+        """Render Meshes.
 
-        The params are the same as MeshBaseRenderer.
+        Args:
+            meshes (Optional[Meshes], optional): meshes to be rendered.
+                Defaults to None.
+            vertices (Optional[torch.Tensor], optional): vertices to be
+                rendered. Should be passed together with faces.
+                Defaults to None.
+            faces (Optional[torch.Tensor], optional): faces of the meshes,
+                should be passed together with the vertices.
+                Defaults to None.
+            K (Optional[torch.Tensor], optional): Camera intrinsic matrixs.
+                Defaults to None.
+            R (Optional[torch.Tensor], optional): Camera rotation matrixs.
+                Defaults to None.
+            T (Optional[torch.Tensor], optional): Camera tranlastion matrixs.
+                Defaults to None.
+            images (Optional[torch.Tensor], optional): background images.
+                Defaults to None.
+            indexes (Optional[Iterable[int]], optional): indexes for the
+                images.
+                Defaults to None.
+
+        Returns:
+            Union[torch.Tensor, None]: return tensor or None.
         """
-        cameras = self.init_cameras(K=K, R=R, T=T)
-        if meshes is None:
-            assert (vertices is not None) and (faces is not None),\
-                'No mesh data input.'
+        meshes = self.prepare_meshes(meshes, vertices, faces)
 
-            meshes = Meshes(
-                verts=vertices.to(self.device),
-                faces=faces.to(self.device),
-            )
-        else:
-            if (vertices is not None) or (faces is not None):
-                warnings.warn('Redundant input, will only use meshes.')
-            meshes = meshes.to(self.device)
+        cameras = self.init_cameras(K=K, R=R, T=T)
         verts_normals = cameras.compute_normal_of_meshes(meshes)
-        verts_depth_rgb = verts_normals.clone()
-        meshes.textures = TexturesVertex(verts_features=verts_depth_rgb)
+        verts_normal_rgb = (verts_normals + 1) / 2
+        meshes.textures = TexturesVertex(verts_features=verts_normal_rgb)
         renderer = self.init_renderer(cameras, self.lights)
         rendered_images = renderer(meshes)
-        rgbs, valid_mask = rendered_images[
+        rgbs, valid_masks = rendered_images[
             ..., :3], (rendered_images[..., 3:] > 0) * 1.0
+        normal = rgbs * 2 - 1
+        normal_map = torch.cat([normal * valid_masks, valid_masks], -1)
         if self.output_path is not None:
-            scene = rgbs * valid_mask
-            R, G, B = torch.unbind(scene, -1)
-            scene = torch.cat(
-                [R.unsqueeze(-1),
-                 G.unsqueeze(-1),
-                 B.unsqueeze(-1)], -1)
-            scene = (scene + 1) / 2
-            output_images = (scene - scene.min()) / (scene.max() - scene.min())
-            output_images = (output_images.detach().cpu().numpy() *
-                             255).astype(np.uint8)
+            self.write_images(rgbs, valid_masks, images, indexes)
 
-            for idx, real_idx in enumerate(indexes):
-                folder = self.temp_path if self.temp_path is not None else\
-                    self.output_path
-                cv2.imwrite(
-                    osp.join(folder, self.img_format % real_idx),
-                    output_images[idx])
-        if self.return_tensor:
-            return rendered_images
-        else:
-            return None
+        results = {}
+        if 'tensor' in self.return_type:
+            results.update(tensor=normal_map)
+        if 'rgba' in self.return_type:
+            results.update(rgba=torch.cat([rgbs, valid_masks], -1))
+        return results
