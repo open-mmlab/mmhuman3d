@@ -1,4 +1,3 @@
-import colorsys
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -58,20 +57,3 @@ def search_limbs(
             else:
                 limbs_palette[k] = np.array(limbs_palette[k])
     return limbs_target, limbs_palette
-
-
-def get_different_colors(number_of_colors, flag=0):
-    """Get a numpy of colors of shape (N, 3)."""
-    nst0 = np.random.get_state()
-    np.random.seed(flag)
-    colors = []
-    for i in np.arange(0., 360., 360. / number_of_colors):
-        hue = i / 360.
-        lightness = (50 + np.random.rand() * 10) / 100.
-        saturation = (90 + np.random.rand() * 10) / 100.
-        colors.append(colorsys.hls_to_rgb(hue, lightness, saturation))
-    colors_np = np.asarray(colors)
-    colors_np = (255 * colors_np).astype(np.int32)
-    # recover the random state
-    np.random.set_state(nst0)
-    return colors_np
