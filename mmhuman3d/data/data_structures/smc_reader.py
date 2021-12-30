@@ -354,7 +354,7 @@ class SMCReader:
         """
         if frame_id is None or type(frame_id) == list:
             frames = []
-            frame_list = range(self.get_kinect_num_frames())
+            frame_list = range(self.get_iphone_num_frames())
             if frame_id:
                 frame_list = frame_id
             for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
