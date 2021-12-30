@@ -408,10 +408,28 @@ class SMCReader:
                             axis=0)
 
     def get_kinect_transformation_depth_to_color(self, device_id):
+        """Get transformation matrix from depth to color from a single kinect.
+
+        Args:
+            kinect_id (int, optional):
+                ID of a Kinect, starts from 0.
+
+        Returns:
+            ndarray: A 4x4 transformation matrix.
+        """
         return np.linalg.inv(self.get_kinect_color_extrinsics(
             device_id)) @ self.get_kinect_depth_extrinsics(device_id)
 
     def get_kinect_transformation_color_to_depth(self, device_id):
+        """Get transformation matrix from color to depth from a single kinect.
+
+        Args:
+            kinect_id (int, optional):
+                ID of a Kinect, starts from 0.
+
+        Returns:
+            ndarray: A 4x4 transformation matrix.
+        """
         return np.linalg.inv(self.get_kinect_depth_extrinsics(
             device_id)) @ self.get_kinect_color_extrinsics(device_id)
 
@@ -466,22 +484,26 @@ class SMCReader:
             return valid_uvs
         return mapped_color
 
-    def get_skeleton_3d(self, device_id, frame_id):
-        kinect_dict = self.smc['Kinect'][str(device_id)]
-        skeleton = kinect_dict['Skeleton_k4abt'][str(frame_id)][()]
-        skeleton = json.load(skeleton)
-        return skeleton
+    def get_kinect_skeleton_3d(self, device_id, frame_id):
+        """Get the 3D skeleton key points from a certain kinect.
 
-    def get_skeleton_2d(self, device_id, frame_id):
+        Args:
+            device_id (int):
+                ID of a kinect, starts from 0.
+
+        Returns:
+            list:
+                A list with 3D keypoints
+        """
         kinect_dict = self.smc['Kinect'][str(device_id)]
-        return kinect_dict['Skeleton_k4abt'][str(frame_id)][()]
+        return json.loads(kinect_dict['Skeleton_k4abt'][str(frame_id)][()])
 
     def get_depth_floor(self, device_id: int) -> dict:
         """Get the floor plane defined by a normal vector and a center point
         from a certain kinect.
 
         Args:
-            kinect_id (int):
+            device_id (int):
                 ID of a kinect, starts from 0.
 
         Raises:
