@@ -1,3 +1,4 @@
+import colorsys
 import os
 from pathlib import Path
 
@@ -486,3 +487,39 @@ def extract_feature_sequence(extracted_results,
     extracted_results_seq = [extracted_results[0]] * pad_left + \
         extracted_results[start:end:step] + [extracted_results[-1]] * pad_right
     return extracted_results_seq
+
+
+def get_different_colors(number_of_colors,
+                         flag=0,
+                         alpha: float = 1.0,
+                         mode: str = 'bgr',
+                         int_dtype: bool = True):
+    """Get a numpy of colors of shape (N, 3)."""
+    mode = mode.lower()
+    assert set(mode).issubset({'r', 'g', 'b', 'a'})
+    nst0 = np.random.get_state()
+    np.random.seed(flag)
+    colors = []
+    for i in np.arange(0., 360., 360. / number_of_colors):
+        hue = i / 360.
+        lightness = (50 + np.random.rand() * 10) / 100.
+        saturation = (90 + np.random.rand() * 10) / 100.
+        colors.append(colorsys.hls_to_rgb(hue, lightness, saturation))
+    colors_np = np.asarray(colors)
+    if int_dtype:
+        colors_bgr = (255 * colors_np).astype(np.uint8)
+    else:
+        colors_bgr = colors_np.astype(np.float32)
+    # recover the random state
+    np.random.set_state(nst0)
+    color_dict = {}
+    if 'a' in mode:
+        color_dict['a'] = np.ones((colors_bgr.shape[0], 3)) * alpha
+    color_dict['b'] = colors_bgr[:, 0:1]
+    color_dict['g'] = colors_bgr[:, 1:2]
+    color_dict['r'] = colors_bgr[:, 2:3]
+    colors_final = []
+    for channel in mode:
+        colors_final.append(color_dict[channel])
+    colors_final = np.concatenate(colors_final, -1)
+    return colors_final
