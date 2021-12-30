@@ -98,9 +98,6 @@ def test_prepare_frames():
     image_folder = 'demo/resources/'
     prepare_frames(image_folder)
 
-    with pytest.raises(ValueError):
-        prepare_frames(None)
-
 
 def test_process_mmtracking_results():
     track_bboxes = {
@@ -112,7 +109,3 @@ def test_process_mmtracking_results():
         'track_results': [[np.array([1, 0, 0, 100, 100])]],
     }
     process_mmtracking_results(person_results, 0)
-
-
-if __name__ == '__main__':
-    test_prepare_frames()
