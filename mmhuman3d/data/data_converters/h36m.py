@@ -133,7 +133,7 @@ class H36mCamera():
 
         camera_name = f'S{subject}_{self.camera_ids[camera]}'
         camera_params = CameraParameter(camera_name, h, w)
-        camera_params.set_K_R_T(K, R, T)
+        camera_params.set_KRT(K, R, T)
         camera_params.set_value('k1', float(k[0]))
         camera_params.set_value('k2', float(k[1]))
         camera_params.set_value('k3', float(k[2]))

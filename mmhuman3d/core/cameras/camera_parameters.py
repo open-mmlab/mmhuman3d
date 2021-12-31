@@ -117,11 +117,11 @@ class CameraParameter:
         dist_coeffs = np.array(dist_coeffs)
         return dist_coeffs
 
-    def set_K_R_T(self,
-                  K_mat: np.ndarray,
-                  R_mat: np.ndarray,
-                  T_vec: np.ndarray,
-                  inverse_extrinsic: bool = False) -> None:
+    def set_KRT(self,
+                K_mat: np.ndarray,
+                R_mat: np.ndarray,
+                T_vec: np.ndarray,
+                inverse_extrinsic: bool = False) -> None:
         """Set intrinsic and extrinsic of a camera.
 
         Args:
@@ -149,7 +149,7 @@ class CameraParameter:
         self.set_mat_np('rotation_mat', R_mat)
         self.set_value('translation', T_vec.tolist())
 
-    def get_K_R_T(self, k_dim=3) -> List[np.ndarray]:
+    def get_KRT(self, k_dim=3) -> List[np.ndarray]:
         """Get intrinsic and extrinsic of a camera.
 
         Args:
@@ -414,7 +414,7 @@ class CameraParameter:
         """
         height = self.parameters_dict['H']
         width = self.parameters_dict['W']
-        k_4x4, rotation, translation = self.get_K_R_T(k_dim=4)
+        k_4x4, rotation, translation = self.get_KRT(k_dim=4)
         k_4x4 = np.expand_dims(k_4x4, 0)  # shape (1, 3, 3)
         rotation = np.expand_dims(rotation, 0)  # shape (1, 3, 3)
         translation = np.expand_dims(translation, 0)  # shape (1, 3)

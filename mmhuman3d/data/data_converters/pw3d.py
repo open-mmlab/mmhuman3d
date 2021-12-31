@@ -118,7 +118,7 @@ class Pw3dConverter(BaseModeConverter):
                         T = extrinsic_param[:3, 3]
 
                         camera = CameraParameter(H=h, W=w)
-                        camera.set_K_R_T(K, R, T)
+                        camera.set_KRT(K, R, T)
                         parameter_dict = camera.to_dict()
 
                         pose[:3] = cv2.Rodrigues(
