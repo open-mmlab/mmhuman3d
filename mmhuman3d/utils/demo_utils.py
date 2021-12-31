@@ -1,5 +1,5 @@
+import colorsys
 import os
-import warnings
 from pathlib import Path
 
 import mmcv
@@ -25,9 +25,12 @@ def xyxy2xywh(bbox_xyxy):
         np.ndarray: Bounding boxes (with scores),
           shaped (n, 4) or (n, 5). (left, top, width, height, [score])
     """
+    if not isinstance(bbox_xyxy, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bbox_xyxy)}, which should be numpy.ndarray.')
     bbox_xywh = bbox_xyxy.copy()
-    bbox_xywh[..., 2] = bbox_xywh[..., 2] - bbox_xywh[..., 0] + 1
-    bbox_xywh[..., 3] = bbox_xywh[..., 3] - bbox_xywh[..., 1] + 1
+    bbox_xywh[..., 2] = bbox_xywh[..., 2] - bbox_xywh[..., 0]
+    bbox_xywh[..., 3] = bbox_xywh[..., 3] - bbox_xywh[..., 1]
 
     return bbox_xywh
 
@@ -36,13 +39,16 @@ def xywh2xyxy(bbox_xywh):
     """Transform the bbox format from xywh to x1y1x2y2.
 
     Args:
-        bbox_xywh (np.ndarray): Bounding boxes (with scores), shaped (n, 4) or
-            (n, 5). (left, top, width, height, [score])
+        bbox_xywh (np.ndarray): Bounding boxes (with scores), shaped
+        (n, 4) or (n, 5). (left, top, width, height, [score])
 
     Returns:
         np.ndarray: Bounding boxes (with scores),
           shaped (n, 4) or (n, 5). (left, top, right, bottom, [score])
     """
+    if not isinstance(bbox_xywh, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bbox_xywh)}, which should be numpy.ndarray.')
     bbox_xyxy = bbox_xywh.copy()
     bbox_xyxy[..., 2] = bbox_xyxy[..., 2] + bbox_xyxy[..., 0] - 1
     bbox_xyxy[..., 3] = bbox_xyxy[..., 3] + bbox_xyxy[..., 1] - 1
@@ -50,61 +56,97 @@ def xywh2xyxy(bbox_xywh):
     return bbox_xyxy
 
 
-def box2cs(x, y, w, h, aspect_ratio=1.0, scale_mult=1.25):
-    """Convert box coordinates to center and scale.
-
-    adapted from https://github.com/Microsoft/human-pose-estimation.pytorch
+def box2cs(bbox_xywh, aspect_ratio=1.0, bbox_scale_factor=1.25):
+    """Convert xywh coordinates to center and scale.
 
     Args:
-    xyxy (list, tuple or numpy.ndarray): bbox in format (xmin, ymin,
-     xmax, ymax). If numpy.ndarray is provided, we expect multiple bounding
-     boxes with shape `(N, 4)`.
-    width (int or float): Boundary width.
-    height (int or float): Boundary height.
-
+    bbox_xywh (numpy.ndarray): the height of the bbox_xywh
+    aspect_ratio (int, optional): Defaults to 1.0
+    bbox_scale_factor (float, optional): Defaults to 1.25
     Returns:
-    xyxy (list, tuple or numpy.ndarray): clipped bbox in format (xmin, ymin,
-     xmax, ymax) and input type
+        numpy.ndarray: center of the bbox
+        numpy.ndarray: the scale of the bbox w & h
     """
-    pixel_std = 1
-    center = np.zeros((2), dtype=np.float32)
-    center[0] = x + w * 0.5
-    center[1] = y + h * 0.5
+    if not isinstance(bbox_xywh, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bbox_xywh)}, which should be numpy.ndarray.')
 
-    if w > aspect_ratio * h:
-        h = w / aspect_ratio
-    elif w < aspect_ratio * h:
-        w = h * aspect_ratio
-    scale = np.array([w * 1.0 / pixel_std, h * 1.0 / pixel_std],
-                     dtype=np.float32)
-    if center[0] != -1:
-        scale = scale * scale_mult
+    bbox_xywh = bbox_xywh.copy()
+    pixel_std = 1
+    center = np.stack([
+        bbox_xywh[..., 0] + bbox_xywh[..., 2] * 0.5,
+        bbox_xywh[..., 1] + bbox_xywh[..., 3] * 0.5
+    ], -1)
+
+    mask_h = bbox_xywh[..., 2] > aspect_ratio * bbox_xywh[..., 3]
+    mask_w = ~mask_h
+
+    bbox_xywh[mask_h, 3] = bbox_xywh[mask_h, 2] / aspect_ratio
+    bbox_xywh[mask_w, 2] = bbox_xywh[mask_w, 3] * aspect_ratio
+    scale = np.stack([
+        bbox_xywh[..., 2] * 1.0 / pixel_std,
+        bbox_xywh[..., 3] * 1.0 / pixel_std
+    ], -1)
+    scale = scale * bbox_scale_factor
+
     return center, scale
 
 
-def convert_crop_cam_to_orig_img(cam: np.ndarray, bbox: np.ndarray,
-                                 img_width: int, img_height: int):
+def convert_crop_cam_to_orig_img(cam: np.ndarray,
+                                 bbox: np.ndarray,
+                                 img_width: int,
+                                 img_height: int,
+                                 aspect_ratio: float = 1.0,
+                                 bbox_scale_factor: float = 1.25,
+                                 bbox_format: Literal['xyxy', 'xywh',
+                                                      'cs'] = 'xyxy'):
     """This function is modified from [VIBE](https://github.com/
     mkocabas/VIBE/blob/master/lib/utils/demo_utils.py#L242-L259). Original
     license please see docs/additional_licenses.md.
 
     Args:
-        cam (np.ndarray): cam (ndarray, shape=(frame, 3)):
+        cam (np.ndarray): cam (ndarray, shape=(frame, 3) or
+        (frame,num_person, 3)):
         weak perspective camera in cropped img coordinates
-        bbox (np.ndarray): bbox coordinates (c_x, c_y, h)
+        bbox (np.ndarray): bbox coordinates
         img_width (int): original image width
         img_height (int): original image height
-
+        aspect_ratio (float, optional):  Defaults to 1.0.
+        bbox_scale_factor (float, optional):  Defaults to 1.25.
+        bbox_format (Literal['xyxy', 'xywh', 'cs']): Defaults to 'xyxy'.
+            'xyxy' means the left-up point and right-bottomn point of the
+            bbox.
+            'xywh' means the left-up point and the width and height of the
+            bbox.
+            'cs' means the center of the bbox (x,y) and the scale of the
+            bbox w & h.
     Returns:
-        orig_cam: shape = (frame, 4)
+        orig_cam: shape = (frame, 4) or (frame, num_person, 4)
     """
-    cx, cy, h = bbox[..., 0], bbox[..., 1], bbox[..., 2]
+    if not isinstance(bbox, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bbox)}, which should be numpy.ndarray.')
+    bbox = bbox.copy()
+    if bbox_format == 'xyxy':
+        bbox_xywh = xyxy2xywh(bbox)
+        center, scale = box2cs(bbox_xywh, aspect_ratio, bbox_scale_factor)
+        bbox_cs = np.concatenate([center, scale], axis=-1)
+    elif bbox_format == 'xywh':
+        center, scale = box2cs(bbox, aspect_ratio, bbox_scale_factor)
+        bbox_cs = np.concatenate([center, scale], axis=-1)
+    elif bbox_format == 'cs':
+        bbox_cs = bbox
+    else:
+        raise ValueError('Only supports the format of `xyxy`, `cs` and `xywh`')
+
+    cx, cy, h = bbox_cs[..., 0], bbox_cs[..., 1], bbox_cs[..., 2] + 1e-6
     hw, hh = img_width / 2., img_height / 2.
     sx = cam[..., 0] * (1. / (img_width / h))
     sy = cam[..., 0] * (1. / (img_height / h))
-    tx = ((cx - hw) / hw / sx) + cam[..., 1]
-    ty = ((cy - hh) / hh / sy) + cam[..., 2]
-    orig_cam = np.stack([sx, sy, tx, ty]).T
+    tx = ((cx - hw) / hw / (sx + 1e-6)) + cam[..., 1]
+    ty = ((cy - hh) / hh / (sy + 1e-6)) + cam[..., 2]
+
+    orig_cam = np.stack([sx, sy, tx, ty], axis=-1)
     return orig_cam
 
 
@@ -127,6 +169,9 @@ def convert_bbox_to_intrinsic(bboxes: np.ndarray,
     Returns:
         np.ndarray: (frame, num_person, 3, 3) or  (frame, 3, 3)
     """
+    if not isinstance(bboxes, np.ndarray):
+        raise TypeError(
+            f'Input type is {type(bboxes)}, which should be numpy.ndarray.')
     assert bbox_format in ['xyxy', 'xywh']
 
     if bbox_format == 'xyxy':
@@ -143,6 +188,10 @@ def convert_bbox_to_intrinsic(bboxes: np.ndarray,
         Ks = np.zeros((num_frame, num_person, 3, 3))
     elif bboxes.ndim == 2:
         Ks = np.zeros((num_frame, 3, 3))
+    elif bboxes.ndim == 1:
+        Ks = np.zeros((3, 3))
+    else:
+        raise ValueError('Wrong input bboxes shape {bboxes.shape}')
 
     Ks[..., 0, 0] = W / img_width
     Ks[..., 1, 1] = W / img_height
@@ -209,7 +258,12 @@ def convert_kp2d_to_bbox(
     return bbox
 
 
-def conver_verts_to_cam_coord(verts, pred_cams, bboxes_xy, focal_length=5000.):
+def conver_verts_to_cam_coord(verts,
+                              pred_cams,
+                              bboxes_xy,
+                              focal_length=5000.,
+                              bbox_scale_factor=1.25,
+                              bbox_format='xyxy'):
     """Convert vertices from the world coordinate to camera coordinate.
 
     Args:
@@ -219,7 +273,11 @@ def conver_verts_to_cam_coord(verts, pred_cams, bboxes_xy, focal_length=5000.):
             The shape is (frame,num_person,3) or (frame,6890,3).
         bboxes_xy ([np.ndarray]): (frame, num_person, 4|5) or (frame, 4|5)
         focal_length ([float],optional): Defined same as your training.
-
+        bbox_scale_factor (float): scale factor for expanding the bbox.
+        bbox_format (Literal['xyxy', 'xywh'] ): 'xyxy' means the left-up point
+            and right-bottomn point of the bbox.
+            'xywh' means the left-up point and the width and height of the
+            bbox.
     Returns:
         np.ndarray: The vertices in the camera coordinate.
             The shape is (frame,num_person,6890,3) or (frame,6890,3).
@@ -228,7 +286,10 @@ def conver_verts_to_cam_coord(verts, pred_cams, bboxes_xy, focal_length=5000.):
     """
     K0 = get_default_hmr_intrinsic(
         focal_length=focal_length, det_height=224, det_width=224)
-    K1 = convert_bbox_to_intrinsic(bboxes_xy, bbox_format='xyxy')
+    K1 = convert_bbox_to_intrinsic(
+        bboxes_xy,
+        bbox_scale_factor=bbox_scale_factor,
+        bbox_format=bbox_format)
     # K1K0(RX+T)-> K0(K0_inv K1K0)
     Ks = np.linalg.inv(K0) @ K1 @ K0
     # convert vertices from world to camera
@@ -275,7 +336,7 @@ def smooth_process(x, smooth_type='savgol'):
     return x
 
 
-def process_mmtracking_results(mmtracking_results):
+def process_mmtracking_results(mmtracking_results, max_track_id):
     """Process mmtracking results.
 
     Args:
@@ -295,10 +356,13 @@ def process_mmtracking_results(mmtracking_results):
     for track in tracking_results:
         person = {}
         person['track_id'] = int(track[0])
+        if max_track_id < int(track[0]):
+            max_track_id = int(track[0])
         person['bbox'] = track[1:]
         person_results.append(person)
     person_results = sorted(person_results, key=lambda x: x.get('track_id', 0))
-    return person_results
+    instance_num = len(tracking_results)
+    return person_results, max_track_id, instance_num
 
 
 def process_mmdet_results(mmdet_results, cat_id=1):
@@ -327,51 +391,135 @@ def process_mmdet_results(mmdet_results, cat_id=1):
     return person_results
 
 
-def prepare_frames(image_path=None, video_path=None):
-    """Prepare frames from input image path or video path.
+def prepare_frames(input_path=None):
+    """Prepare frames from input_path.
 
     Args:
-        image_path (str, optional): Defaults to None.
-        video_path (str, optional): Defaults to None.
+        input_path (str, optional): Defaults to None.
 
     Raises:
         ValueError: check the input path.
 
     Returns:
-        (Union[np.ndarray, object]): prepared frames
+        List[np.ndarray]: prepared frames
     """
-    if (image_path is not None) and (video_path is not None):
-        warnings.warn('Redundant input, will ignore video')
-    # prepare input
-    if image_path is not None:
-        file_list = []
-        if Path(image_path).is_file():
-            check_input_path(
-                input_path=image_path,
-                path_type='file',
-                allowed_suffix=['.png', '.jpg'])
-            file_list = [image_path]
-        elif Path(image_path).is_dir():
-            file_list = [
-                os.path.join(image_path, fn) for fn in os.listdir(image_path)
-                if fn.lower().endswith(('.png', '.jpg'))
-            ]
+    if Path(input_path).is_file():
+        if input_path.lower().endswith(('.mp4')):
+            input_type = 'video'
+        elif input_path.lower().endswith(('.png', '.jpg')):
+            input_type = 'image'
         else:
-            raise ValueError('Image path should be an image or image folder.'
-                             f' Got invalid image path: {image_path}')
+            raise ValueError('The input file should be an image or a video.'
+                             f' Got invalid file: {input_path}')
+    elif Path(input_path).is_dir():
+        input_type = 'folder'
+    else:
+        raise ValueError('Input path should be an file or folder.'
+                         f' Got invalid input path: {input_path}')
+    # prepare input
+    if input_type == 'image':
+        file_list = [input_path]
+        img_list = [mmcv.imread(img_path) for img_path in file_list]
+        assert len(img_list), f'Failed to load image from {input_path}'
+    elif input_type == 'folder':
+        file_list = [
+            os.path.join(input_path, fn) for fn in os.listdir(input_path)
+            if fn.lower().endswith(('.png', '.jpg'))
+        ]
         file_list.sort()
         img_list = [mmcv.imread(img_path) for img_path in file_list]
-        assert len(img_list), f'Failed to load image from {image_path}'
-    elif video_path is not None:
-        check_input_path(
-            input_path=video_path,
-            path_type='file',
-            allowed_suffix=['.mp4', '.flv'])
-        video = mmcv.VideoReader(video_path)
-        assert video.opened, f'Failed to load video file {video_path}'
+        assert len(img_list), f'Failed to load image from {input_path}'
     else:
-        raise ValueError('No image path or video path provided.')
+        check_input_path(
+            input_path=input_path, path_type='file', allowed_suffix=['.mp4'])
+        video = mmcv.VideoReader(input_path)
+        assert video.opened, f'Failed to load video file {input_path}'
+        img_list = list(video)
 
-    frames_iter = img_list if image_path is not None else video
+    return img_list
 
-    return frames_iter
+
+def extract_feature_sequence(extracted_results,
+                             frame_idx,
+                             causal,
+                             seq_len,
+                             step=1):
+    """Extract the target frame from person results, and pad the sequence to a
+    fixed length.
+
+    Args:
+        extracted_results (List[List[Dict]]): Multi-frame feature extraction
+            results stored in a nested list. Each element of the outer list
+            is the feature extraction results of a single frame, and each
+            element of the inner list is the feature information of one person,
+            which contains:
+                features (ndarray): extracted features
+                track_id (int): unique id of each person, required when
+                    ``with_track_id==True```
+                bbox ((4, ) or (5, )): left, right, top, bottom, [score]
+        frame_idx (int): The index of the frame in the original video.
+        causal (bool): If True, the target frame is the first frame in
+            a sequence. Otherwise, the target frame is in the middle of a
+            sequence.
+        seq_len (int): The number of frames in the input sequence.
+        step (int): Step size to extract frames from the video.
+
+    Returns:
+        List[List[Dict]]: Multi-frame feature extraction results stored in a
+            nested list with a length of seq_len.
+        int: The target frame index in the padded sequence.
+    """
+
+    if causal:
+        frames_left = 0
+        frames_right = seq_len - 1
+    else:
+        frames_left = (seq_len - 1) // 2
+        frames_right = frames_left
+    num_frames = len(extracted_results)
+
+    # get the padded sequence
+    pad_left = max(0, frames_left - frame_idx // step)
+    pad_right = max(0, frames_right - (num_frames - 1 - frame_idx) // step)
+    start = max(frame_idx % step, frame_idx - frames_left * step)
+    end = min(num_frames - (num_frames - 1 - frame_idx) % step,
+              frame_idx + frames_right * step + 1)
+    extracted_results_seq = [extracted_results[0]] * pad_left + \
+        extracted_results[start:end:step] + [extracted_results[-1]] * pad_right
+    return extracted_results_seq
+
+
+def get_different_colors(number_of_colors,
+                         flag=0,
+                         alpha: float = 1.0,
+                         mode: str = 'bgr',
+                         int_dtype: bool = True):
+    """Get a numpy of colors of shape (N, 3)."""
+    mode = mode.lower()
+    assert set(mode).issubset({'r', 'g', 'b', 'a'})
+    nst0 = np.random.get_state()
+    np.random.seed(flag)
+    colors = []
+    for i in np.arange(0., 360., 360. / number_of_colors):
+        hue = i / 360.
+        lightness = (50 + np.random.rand() * 10) / 100.
+        saturation = (90 + np.random.rand() * 10) / 100.
+        colors.append(colorsys.hls_to_rgb(hue, lightness, saturation))
+    colors_np = np.asarray(colors)
+    if int_dtype:
+        colors_bgr = (255 * colors_np).astype(np.uint8)
+    else:
+        colors_bgr = colors_np.astype(np.float32)
+    # recover the random state
+    np.random.set_state(nst0)
+    color_dict = {}
+    if 'a' in mode:
+        color_dict['a'] = np.ones((colors_bgr.shape[0], 3)) * alpha
+    color_dict['b'] = colors_bgr[:, 0:1]
+    color_dict['g'] = colors_bgr[:, 1:2]
+    color_dict['r'] = colors_bgr[:, 2:3]
+    colors_final = []
+    for channel in mode:
+        colors_final.append(color_dict[channel])
+    colors_final = np.concatenate(colors_final, -1)
+    return colors_final

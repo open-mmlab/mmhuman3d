@@ -9,7 +9,7 @@ import numpy as np
 from mmhuman3d.core.conventions.keypoints_mapping import get_mapping
 from mmhuman3d.core.evaluation.mpjpe import keypoint_mpjpe
 from mmhuman3d.data.data_structures.human_data import HumanData
-from mmhuman3d.utils.demo_utils import box2cs
+from mmhuman3d.utils.demo_utils import box2cs, xyxy2xywh
 from .base_dataset import BaseDataset
 from .builder import DATASETS
 
@@ -81,7 +81,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         self.image_path = data['image_path']
         self.num_data = len(self.image_path)
 
-        self.bbox_xywh = data['bbox_xywh']
+        self.bbox_xyxy = data['bbox_xywh']
         self.width = data['image_width']
         self.height = data['image_height']
         self.depth_factor = data['depth_factor']
@@ -147,16 +147,11 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             info['image_path'] = os.path.join(self.data_prefix, 'datasets',
                                               self.dataset_name,
                                               self.image_path[idx])
-            bbox_xywh = self.bbox_xywh[idx]
-            info['bbox'] = bbox_xywh[:4]
-            xmin, ymin, xmax, ymax, _ = bbox_xywh
+            bbox_xyxy = self.bbox_xyxy[idx]
+            info['bbox'] = bbox_xyxy[:4]
+            bbox_xywh = xyxy2xywh(bbox_xyxy)
             center, scale = box2cs(
-                xmin,
-                ymin,
-                xmax - xmin,
-                ymax - ymin,
-                aspect_ratio=1.0,
-                scale_mult=1.25)
+                bbox_xywh, aspect_ratio=1.0, bbox_scale_factor=1.25)
 
             info['center'] = center
             info['scale'] = scale
