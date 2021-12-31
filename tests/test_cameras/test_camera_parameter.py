@@ -103,3 +103,11 @@ def test_misc():
         empty_param.get_value('distortion_k1')
     dumped_str = empty_param.to_string()
     assert isinstance(dumped_str, str)
+    # get K R T
+    KRT_list = empty_param.get_K_R_T()
+    assert len(KRT_list) == 3
+    assert KRT_list[0].shape == (3, 3)
+    KRT_list = empty_param.get_K_R_T(k_dim=4)
+    assert KRT_list[0].shape == (4, 4)
+    with pytest.raises(ValueError):
+        KRT_list = empty_param.get_K_R_T(k_dim=5)
