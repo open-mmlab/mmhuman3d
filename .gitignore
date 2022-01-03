@@ -132,9 +132,6 @@ logs/
 # Resources as exception
 !resources/*
 
-# Body models
-body_models
-
 # Loaded/Saved data files
 *.npz
 *.npy

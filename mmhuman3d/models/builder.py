@@ -1,3 +1,5 @@
+# Copyright (c) OpenMMLab. All rights reserved.
+
 from mmcv.cnn import MODELS as MMCV_MODELS
 from mmcv.utils import Registry
 
@@ -17,6 +19,7 @@ LOSSES = MODELS
 ARCHITECTURES = MODELS
 BODY_MODELS = MODELS
 DISCRIMINATORS = MODELS
+REGISTRANTS = MODELS
 
 
 def build_backbone(cfg):
@@ -52,3 +55,8 @@ def build_body_model(cfg):
 def build_discriminator(cfg):
     """Build discriminator."""
     return DISCRIMINATORS.build(cfg)
+
+
+def build_registrant(cfg):
+    """Build registrant."""
+    return REGISTRANTS.build(cfg)
