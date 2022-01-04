@@ -161,7 +161,7 @@ class SurrealConverter(BaseModeConverter):
                 _, R, T = self.get_extrinsic(annotations['camLoc'])
                 camera = CameraParameter(
                     H=self.image_height, W=self.image_width)
-                camera.set_K_R_T(K, R, T)
+                camera.set_KRT(K, R, T)
                 parameter_dict = camera.to_dict()
 
                 # image folder

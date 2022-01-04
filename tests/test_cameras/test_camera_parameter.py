@@ -18,13 +18,13 @@ def test_set_from_mat():
     mat_3x3 = np.eye(3)
     mat_4x4 = np.eye(4)
     vec_3 = np.zeros(shape=[3])
-    empty_param.set_K_R_T(K_mat=mat_3x3, R_mat=mat_3x3, T_vec=vec_3)
-    empty_param.set_K_R_T(
+    empty_param.set_KRT(K_mat=mat_3x3, R_mat=mat_3x3, T_vec=vec_3)
+    empty_param.set_KRT(
         K_mat=mat_3x3, R_mat=mat_3x3, T_vec=vec_3, inverse_extrinsic=True)
     with pytest.raises(AssertionError):
-        empty_param.set_K_R_T(K_mat=mat_4x4, R_mat=mat_3x3, T_vec=vec_3)
+        empty_param.set_KRT(K_mat=mat_4x4, R_mat=mat_3x3, T_vec=vec_3)
     with pytest.raises(AssertionError):
-        empty_param.set_K_R_T(K_mat=mat_3x3, R_mat=mat_4x4, T_vec=vec_3)
+        empty_param.set_KRT(K_mat=mat_3x3, R_mat=mat_4x4, T_vec=vec_3)
     assert len(empty_param.get_value('translation')) == 3
 
 
@@ -81,7 +81,7 @@ def test_misc():
     empty_param = CameraParameter(name='test_misc')
     mat_3x3 = np.eye(3)
     vec_3 = np.zeros(shape=[3])
-    empty_param.set_K_R_T(K_mat=mat_3x3, R_mat=mat_3x3, T_vec=vec_3)
+    empty_param.set_KRT(K_mat=mat_3x3, R_mat=mat_3x3, T_vec=vec_3)
     empty_param.set_value('k1', 1.0)
     empty_param.reset_distort()
     distort_vec = empty_param.get_opencv_distort_mat()
@@ -103,3 +103,11 @@ def test_misc():
         empty_param.get_value('distortion_k1')
     dumped_str = empty_param.to_string()
     assert isinstance(dumped_str, str)
+    # get K R T
+    KRT_list = empty_param.get_KRT()
+    assert len(KRT_list) == 3
+    assert KRT_list[0].shape == (3, 3)
+    KRT_list = empty_param.get_KRT(k_dim=4)
+    assert KRT_list[0].shape == (4, 4)
+    with pytest.raises(ValueError):
+        KRT_list = empty_param.get_KRT(k_dim=5)
