@@ -5,6 +5,9 @@ import h5py
 import numpy as np
 import tqdm
 
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.data.data_structures.human_data import HumanData
+
 
 class SMCReader:
 
@@ -546,7 +549,7 @@ class SMCReader:
                 Defaults to None.
 
         Returns:
-            ndarray:
+            Tuple[np.ndarray, np.ndarray]: keypoints2d and its mask
         """
         assert device in {'Kinect', 'iPhone'}
         kps2d_dict = self.smc['Keypoints2D'][device][str(device_id)]
@@ -554,6 +557,8 @@ class SMCReader:
         keypoints2d_mask = kps2d_dict['keypoints2d_mask'][...]
 
         if frame_id is not None:
+            if isinstance(frame_id, int):
+                frame_id = [frame_id]
             keypoints2d = keypoints2d[frame_id, ...]
         return keypoints2d, keypoints2d_mask
 
@@ -584,13 +589,15 @@ class SMCReader:
                 Defaults to None.
 
         Returns:
-            ndarray:
+            Tuple[np.ndarray, np.ndarray]: keypoints3d and its mask
         """
         kps3d_dict = self.smc['Keypoints3D']
         keypoints3d = kps3d_dict['keypoints3d'][...]
         keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
 
         if frame_id is not None:
+            if isinstance(frame_id, int):
+                frame_id = [frame_id]
             keypoints3d = keypoints3d[frame_id, ...]
         return keypoints3d, keypoints3d_mask
 
@@ -612,6 +619,7 @@ class SMCReader:
 
         Returns:
             dict:
+                A dict with 'global_orient', 'body_pose', 'transl' and 'betas'
         """
         smpl_dict = self.smc['SMPL']
         global_orient = smpl_dict['global_orient'][...]
@@ -619,6 +627,8 @@ class SMCReader:
         transl = smpl_dict['transl'][...]
         betas = smpl_dict['betas'][...]
         if frame_id is not None:
+            if isinstance(frame_id, int):
+                frame_id = [frame_id]
             body_pose = body_pose[frame_id, ...]
             global_orient = global_orient[frame_id, ...]
             transl = transl[frame_id, ...]
@@ -628,3 +638,48 @@ class SMCReader:
             transl=transl,
             betas=betas)
         return smpl_dict
+
+    def get_human_data(self, device=None, device_id=None, frame_id=None):
+        """Get keypoints2d projected from keypoints3d.
+
+        Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+            device_id (int):
+                ID of a device, starts from 0.
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+
+        Returns:
+            HumanData: all annotated information packed in one human_data
+        """
+        human_data = HumanData()
+        # get keypoints3d
+        convention = self.get_keypoints_convention()
+        keypoints3d, keypoints3d_mask = self.get_keypoints3d(frame_id)
+        keypoints3d, keypoints3d_mask = convert_kps(
+            keypoints3d,
+            mask=keypoints3d_mask,
+            src=convention,
+            dst='human_data')
+        human_data['keypoints3d'] = keypoints3d
+        human_data['keypoints3d_mask'] = keypoints3d_mask
+        # get smpl
+        smpl_dict = self.get_smpl(frame_id)
+        human_data['smpl'] = smpl_dict
+        # get keypoints2d
+        if device is not None and device_id is not None:
+            assert device in {'Kinect', 'iPhone'}
+            keypoints2d, keypoints2d_mask = self._get_keypoints2d(
+                device, device_id, frame_id)
+            keypoints2d, keypoints2d_mask = convert_kps(
+                keypoints2d,
+                mask=keypoints2d_mask,
+                src=convention,
+                dst='human_data')
+            human_data['keypoints2d'] = keypoints2d
+            human_data['keypoints2d_mask'] = keypoints2d_mask
+        return human_data
