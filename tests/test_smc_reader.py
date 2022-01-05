@@ -1,3 +1,6 @@
+import numpy as np
+import pytest
+
 from mmhuman3d.data.data_structures.smc_reader import SMCReader
 
 TEST_SMC_PATH = 'tests/data/mocap/p000103_a000011_tiny.smc'
@@ -159,3 +162,167 @@ def test_get_depth_floor():
     depth_floor = smc.get_depth_floor(0)
     assert 'center' in depth_floor.keys(
     ), 'center should be present in depth floor parameters'
+
+
+def test_get_kinect_keypoints2d():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    keypoints2d, keypoints2d_mask = smc.get_kinect_keypoints2d(device_id=1)
+    keypoints_num = smc.get_keypoints_num()
+    keypoints_convention = smc.get_keypoints_convention()
+    assert keypoints2d.shape[1] == keypoints2d_mask.shape[0]
+    assert keypoints2d.shape[0] == keypoints_num
+    assert keypoints_convention == 'coco_wholebody'
+    assert keypoints2d.shape == (1, 133, 3)
+    assert keypoints2d_mask.shape == (133, )
+    assert isinstance(keypoints2d, np.ndarray)
+    assert isinstance(keypoints2d_mask, np.ndarray)
+
+
+def test_get_kinect_keypoints2d_by_frame():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    keypoints2d, keypoints2d_mask = smc.get_kinect_keypoints2d(
+        device_id=1, frame_id=0)
+    assert keypoints2d.ndim == 2
+    assert keypoints2d_mask.ndim == 1
+    assert keypoints2d.shape == (133, 3)
+    assert keypoints2d_mask.shape == (133, )
+    assert isinstance(keypoints2d, np.ndarray)
+    assert isinstance(keypoints2d_mask, np.ndarray)
+
+
+def test_get_kinect_keypoints2d_by_frames():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    keypoints2d, keypoints2d_mask = smc.get_kinect_keypoints2d(
+        device_id=1, frame_id=[0])
+    assert keypoints2d.ndim == 3
+    assert keypoints2d_mask.ndim == 1
+    assert keypoints2d.shape == (1, 133, 3)
+    assert keypoints2d_mask.shape == (133, )
+    assert isinstance(keypoints2d, np.ndarray)
+    assert isinstance(keypoints2d_mask, np.ndarray)
+
+    with pytest.raises(AssertionError):
+        keypoints2d, keypoints2d_mask = smc.get_kinect_keypoints2d(
+            device_id=100)
+
+
+def test_get_iphone_keypoints2d():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    keypoints2d, keypoints2d_mask = smc.get_iphone_keypoints2d(device_id=1)
+    keypoints_num = smc.get_keypoints_num()
+    keypoints_convention = smc.get_keypoints_convention()
+    assert keypoints2d.shape[1] == keypoints2d_mask.shape[0]
+    assert keypoints2d.shape[0] == keypoints_num
+    assert keypoints_convention == 'coco_wholebody'
+    assert keypoints2d.shape == (1, 133, 3)
+    assert keypoints2d_mask.shape == (133, )
+    assert isinstance(keypoints2d, np.ndarray)
+    assert isinstance(keypoints2d_mask, np.ndarray)
+
+
+def test_get_iphone_keypoints2d_by_frame():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    keypoints2d, keypoints2d_mask = smc.get_iphone_keypoints2d(
+        device_id=1, frame_id=0)
+    assert keypoints2d.ndim == 2
+    assert keypoints2d_mask.ndim == 1
+    assert keypoints2d.shape == (133, 3)
+    assert keypoints2d_mask.shape == (133, )
+    assert isinstance(keypoints2d, np.ndarray)
+    assert isinstance(keypoints2d_mask, np.ndarray)
+
+
+def test_get_iphone_keypoints2d_by_frames():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    keypoints2d, keypoints2d_mask = smc.get_iphone_keypoints2d(
+        device_id=1, frame_id=[0])
+    assert keypoints2d.ndim == 3
+    assert keypoints2d_mask.ndim == 1
+    assert keypoints2d.shape == (1, 133, 3)
+    assert keypoints2d_mask.shape == (133, )
+    assert isinstance(keypoints2d, np.ndarray)
+    assert isinstance(keypoints2d_mask, np.ndarray)
+
+
+def test_get_all_keypoints3d():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    # test get all keypoints3d
+    keypoints3d, keypoints3d_mask = smc.get_keypoints3d()
+    keypoints_num = smc.get_keypoints_num()
+    keypoints_convention = smc.get_keypoints_convention()
+    keypoints_created_time = smc.get_keypoints_created_time()
+    assert keypoints3d.shape[1] == keypoints3d_mask.shape[0]
+    assert keypoints3d.shape[0] == keypoints_num
+    assert keypoints_convention == 'coco_wholebody'
+    assert keypoints3d.shape == (1, 133, 4)
+    assert keypoints3d_mask.shape == (133, )
+    assert isinstance(keypoints_created_time, str)
+    assert isinstance(keypoints3d, np.ndarray)
+    assert isinstance(keypoints3d_mask, np.ndarray)
+
+
+def test_get_keypoints3d_by_frame():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    keypoints3d, keypoints3d_mask = smc.get_keypoints3d(frame_id=0)
+    assert keypoints3d.shape == (133, 4)
+    assert keypoints3d_mask.shape == (133, )
+    assert isinstance(keypoints3d, np.ndarray)
+    assert isinstance(keypoints3d_mask, np.ndarray)
+
+
+def test_get_keypoints3d_by_frames():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    keypoints3d, keypoints3d_mask = smc.get_keypoints3d(frame_id=[0])
+    assert keypoints3d.shape == (1, 133, 4)
+    assert keypoints3d_mask.shape == (133, )
+    assert isinstance(keypoints3d, np.ndarray)
+    assert isinstance(keypoints3d_mask, np.ndarray)
+
+
+def test_get_all_smpl():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    smpl = smc.get_smpl()
+    smpl_num = smc.get_smpl_num()
+    smpl_created_time = smc.get_smpl_created_time()
+    global_orient = smpl['global_orient']
+    body_pose = smpl['body_pose']
+    transl = smpl['transl']
+    betas = smpl['betas']
+    assert body_pose.shape[0] == smpl_num
+    assert global_orient.shape == (1, 3)
+    assert body_pose.shape == (1, 69)
+    assert transl.shape == (1, 3)
+    assert betas.shape == (1, 10)
+    assert isinstance(smpl_created_time, str)
+    assert isinstance(global_orient, np.ndarray)
+    assert isinstance(body_pose, np.ndarray)
+    assert isinstance(transl, np.ndarray)
+    assert isinstance(betas, np.ndarray)
+
+
+def test_get_smpl_by_frame():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    smpl = smc.get_smpl(frame_id=0)
+    global_orient = smpl['global_orient']
+    body_pose = smpl['body_pose']
+    transl = smpl['transl']
+    betas = smpl['betas']
+    assert global_orient.shape == (3, )
+    assert body_pose.shape == (69, )
+    assert transl.shape == (3, )
+    assert betas.shape == (1, 10)
+    assert isinstance(global_orient, np.ndarray)
+    assert isinstance(body_pose, np.ndarray)
+    assert isinstance(transl, np.ndarray)
+    assert isinstance(betas, np.ndarray)
