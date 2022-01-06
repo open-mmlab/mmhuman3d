@@ -5,6 +5,9 @@ import h5py
 import numpy as np
 import tqdm
 
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.data.data_structures.human_data import HumanData
+
 
 class SMCReader:
 
@@ -31,6 +34,17 @@ class SMCReader:
                 self.smc['iPhone'].attrs['color_resolution']
             self.iphone_depth_resolution = \
                 self.smc['iPhone'].attrs['depth_resolution']
+        self.keypoint_exists = 'Keypoints3D' in self.smc.keys()
+        if self.keypoint_exists:
+            self.keypoints_num = self.smc['Keypoints3D'].attrs['num_frame']
+            self.keypoints_convention = self.smc['Keypoints3D'].attrs[
+                'convention']
+            self.keypoints_created_time = self.smc['Keypoints3D'].attrs[
+                'created_time']
+        self.smpl_exists = 'SMPL' in self.smc.keys()
+        if self.smpl_exists:
+            self.smpl_num = self.smc['SMPL'].attrs['num_frame']
+            self.smpl_created_time = self.smc['SMPL'].attrs['created_time']
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.
@@ -519,3 +533,162 @@ class SMCReader:
             return device_dict['floor']
         else:
             raise KeyError(f'Kinect {device_id} has no floor data.')
+
+    def _get_keypoints2d(self, device, device_id, frame_id):
+        """Get keypoints2d projected from keypoints3d.
+
+        Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+            device_id (int):
+                ID of a device, starts from 0.
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                keypoints2d (N, J, 3) and its mask (J, )
+        """
+        assert device in {
+            'Kinect', 'iPhone'
+        }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+        kps2d_dict = self.smc['Keypoints2D'][device][str(device_id)]
+        keypoints2d = kps2d_dict['keypoints2d'][...]
+        keypoints2d_mask = kps2d_dict['keypoints2d_mask'][...]
+
+        if frame_id is not None:
+            if isinstance(frame_id, int):
+                frame_id = [frame_id]
+            keypoints2d = keypoints2d[frame_id, ...]
+        return keypoints2d, keypoints2d_mask
+
+    def get_kinect_keypoints2d(self, device_id, frame_id=None):
+        assert self.num_kinects > device_id >= 0
+        return self._get_keypoints2d('Kinect', device_id, frame_id)
+
+    def get_iphone_keypoints2d(self, device_id, frame_id=None):
+        assert device_id >= 0
+        return self._get_keypoints2d('iPhone', device_id, frame_id)
+
+    def get_keypoints_num(self):
+        return self.keypoints_num
+
+    def get_keypoints_convention(self):
+        return self.keypoints_convention
+
+    def get_keypoints_created_time(self):
+        return self.keypoints_created_time
+
+    def get_keypoints3d(self, frame_id=None):
+        """Get keypoints3d (world coordinate) computed by mocap processing
+        pipeline.
+
+        Args:
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                keypoints3d (N, J, 4) and its mask (J, )
+        """
+        kps3d_dict = self.smc['Keypoints3D']
+        keypoints3d = kps3d_dict['keypoints3d'][...]
+        keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
+
+        if frame_id is not None:
+            if isinstance(frame_id, int):
+                frame_id = [frame_id]
+            keypoints3d = keypoints3d[frame_id, ...]
+        return keypoints3d, keypoints3d_mask
+
+    def get_smpl_num(self):
+        return self.smpl_num
+
+    def get_smpl_created_time(self):
+        return self.smpl_created_time
+
+    def get_smpl(self, frame_id=None):
+        """Get SMPL (world coordinate) computed by mocap processing pipeline.
+
+        Args:
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+
+        Returns:
+            dict:
+                A dict with 'global_orient', 'body_pose', 'transl' and 'betas'
+        """
+        smpl_dict = self.smc['SMPL']
+        global_orient = smpl_dict['global_orient'][...]
+        body_pose = smpl_dict['body_pose'][...]
+        transl = smpl_dict['transl'][...]
+        betas = smpl_dict['betas'][...]
+        if frame_id is not None:
+            if isinstance(frame_id, int):
+                frame_id = [frame_id]
+            body_pose = body_pose[frame_id, ...]
+            global_orient = global_orient[frame_id, ...]
+            transl = transl[frame_id, ...]
+        smpl_dict = dict(
+            global_orient=global_orient,
+            body_pose=body_pose,
+            transl=transl,
+            betas=betas)
+        return smpl_dict
+
+    def get_human_data(self, device=None, device_id=None, frame_id=None):
+        """Get keypoints2d projected from keypoints3d.
+
+        Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+            device_id (int):
+                ID of a device, starts from 0.
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+
+        Returns:
+            HumanData: all annotated information packed in one human_data
+        """
+        human_data = HumanData()
+        # get keypoints3d
+        convention = self.get_keypoints_convention()
+        keypoints3d, keypoints3d_mask = self.get_keypoints3d(frame_id)
+        keypoints3d, keypoints3d_mask = convert_kps(
+            keypoints3d,
+            mask=keypoints3d_mask,
+            src=convention,
+            dst='human_data')
+        human_data['keypoints3d'] = keypoints3d
+        human_data['keypoints3d_mask'] = keypoints3d_mask
+        # get smpl
+        smpl_dict = self.get_smpl(frame_id)
+        human_data['smpl'] = smpl_dict
+        # get keypoints2d
+        if device is not None and device_id is not None:
+            assert device in {
+                'Kinect', 'iPhone'
+            }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+            assert device_id >= 0
+            keypoints2d, keypoints2d_mask = self._get_keypoints2d(
+                device, device_id, frame_id)
+            keypoints2d, keypoints2d_mask = convert_kps(
+                keypoints2d,
+                mask=keypoints2d_mask,
+                src=convention,
+                dst='human_data')
+            human_data['keypoints2d'] = keypoints2d
+            human_data['keypoints2d_mask'] = keypoints2d_mask
+        return human_data
