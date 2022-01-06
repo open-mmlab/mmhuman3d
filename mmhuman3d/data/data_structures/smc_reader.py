@@ -549,9 +549,12 @@ class SMCReader:
                 Defaults to None.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: keypoints2d and its mask
+            Tuple[np.ndarray, np.ndarray]:
+                keypoints2d (N, J, 3) and its mask (J, )
         """
-        assert device in {'Kinect', 'iPhone'}
+        assert device in {
+            'Kinect', 'iPhone'
+        }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
         kps2d_dict = self.smc['Keypoints2D'][device][str(device_id)]
         keypoints2d = kps2d_dict['keypoints2d'][...]
         keypoints2d_mask = kps2d_dict['keypoints2d_mask'][...]
@@ -563,10 +566,11 @@ class SMCReader:
         return keypoints2d, keypoints2d_mask
 
     def get_kinect_keypoints2d(self, device_id, frame_id=None):
-        assert device_id < self.num_kinects
+        assert self.num_kinects > device_id >= 0
         return self._get_keypoints2d('Kinect', device_id, frame_id)
 
     def get_iphone_keypoints2d(self, device_id, frame_id=None):
+        assert device_id >= 0
         return self._get_keypoints2d('iPhone', device_id, frame_id)
 
     def get_keypoints_num(self):
@@ -579,7 +583,8 @@ class SMCReader:
         return self.keypoints_created_time
 
     def get_keypoints3d(self, frame_id=None):
-        """Get keypoints3d computed by smc processing pipeline.
+        """Get keypoints3d (world coordinate) computed by mocap processing
+        pipeline.
 
         Args:
             frame_id (int, list or None, optional):
@@ -589,7 +594,8 @@ class SMCReader:
                 Defaults to None.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: keypoints3d and its mask
+            Tuple[np.ndarray, np.ndarray]:
+                keypoints3d (N, J, 4) and its mask (J, )
         """
         kps3d_dict = self.smc['Keypoints3D']
         keypoints3d = kps3d_dict['keypoints3d'][...]
@@ -608,7 +614,7 @@ class SMCReader:
         return self.smpl_created_time
 
     def get_smpl(self, frame_id=None):
-        """Get SMPL computed by smc processing pipeline.
+        """Get SMPL (world coordinate) computed by mocap processing pipeline.
 
         Args:
             frame_id (int, list or None, optional):
@@ -672,7 +678,10 @@ class SMCReader:
         human_data['smpl'] = smpl_dict
         # get keypoints2d
         if device is not None and device_id is not None:
-            assert device in {'Kinect', 'iPhone'}
+            assert device in {
+                'Kinect', 'iPhone'
+            }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+            assert device_id >= 0
             keypoints2d, keypoints2d_mask = self._get_keypoints2d(
                 device, device_id, frame_id)
             keypoints2d, keypoints2d_mask = convert_kps(

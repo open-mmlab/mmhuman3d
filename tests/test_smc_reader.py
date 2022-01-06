@@ -167,6 +167,9 @@ def test_get_depth_floor():
 def test_get_kinect_keypoints2d():
     smc = SMCReader(TEST_SMC_PATH)
 
+    with pytest.raises(AssertionError):
+        _ = smc.get_kinect_keypoints2d(device_id=-1)
+
     keypoints2d, keypoints2d_mask = smc.get_kinect_keypoints2d(device_id=1)
     keypoints_num = smc.get_keypoints_num()
     keypoints_convention = smc.get_keypoints_convention()
@@ -207,6 +210,9 @@ def test_get_kinect_keypoints2d_by_frames():
 
 def test_get_iphone_keypoints2d():
     smc = SMCReader(TEST_SMC_PATH)
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_iphone_keypoints2d(device_id=-1)
 
     keypoints2d, keypoints2d_mask = smc.get_iphone_keypoints2d(device_id=1)
     keypoints_num = smc.get_keypoints_num()
@@ -360,6 +366,10 @@ def test_get_human_data_by_device():
     smc = SMCReader(TEST_SMC_PATH)
 
     # get all
+    with pytest.raises(AssertionError):
+        _ = smc.get_human_data(device='kinect', device_id=10)
+    with pytest.raises(AssertionError):
+        _ = smc.get_human_data(device='Kinect', device_id=-1)
     with pytest.raises(KeyError):
         _ = smc.get_human_data(device='Kinect', device_id=10)
     human_data = smc.get_human_data(device='Kinect', device_id=1)
@@ -378,6 +388,8 @@ def test_get_human_data_by_device():
     assert smpl['betas'].shape == (1, 10)
 
     # get by frame_id
+    with pytest.raises(AssertionError):
+        human_data = smc.get_human_data(device='iPhone', device_id=-1)
     with pytest.raises(KeyError):
         human_data = smc.get_human_data(device='iPhone', device_id=10)
     human_data = smc.get_human_data(device='iPhone', device_id=1, frame_id=0)
