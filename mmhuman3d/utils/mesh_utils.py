@@ -1,5 +1,5 @@
 import warnings
-from typing import List
+from typing import List, Optional, Union
 
 import torch
 from pytorch3d.io import IO, save_obj
@@ -86,6 +86,20 @@ def mesh_to_pointcloud_vc(
         verts_rgba = None
     pointclouds = Pointclouds(points=vertices, features=verts_rgba)
     return pointclouds
+
+
+def load_plys_as_meshes(
+    paths: List[str],
+    device: Optional[Union[torch.device, str]] = None,
+    include_textures: bool = True,
+):
+    writer = IO()
+    if not isinstance(paths, list):
+        paths = [paths]
+    for idx in range(len(paths)):
+        assert paths[idx].endswith('.ply'), 'Please input .ply files.'
+        writer.load_mesh(
+            path=paths[idx], include_textures=include_textures, device=device)
 
 
 def save_meshes_as_plys(meshes: Meshes = None,
