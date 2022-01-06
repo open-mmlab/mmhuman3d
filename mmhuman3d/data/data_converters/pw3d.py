@@ -53,7 +53,6 @@ class Pw3dConverter(BaseModeConverter):
         smpl['body_pose'] = []
         smpl['global_orient'] = []
         smpl['betas'] = []
-        smpl['transl'] = []
         meta = {}
         meta['gender'] = []
 
@@ -79,7 +78,6 @@ class Pw3dConverter(BaseModeConverter):
                 num_people = len(smpl_pose)
                 num_frames = len(smpl_pose[0])
                 seq_name = str(data['sequence'])
-                trans = data['trans']
                 img_names = np.array([
                     'imageFiles/' + seq_name + f'/image_{str(i).zfill(5)}.jpg'
                     for i in range(num_frames)
@@ -94,7 +92,6 @@ class Pw3dConverter(BaseModeConverter):
                     valid_img_names = img_names[valid[i]]
                     valid_global_poses = global_poses[valid[i]]
                     gender = genders[i]
-                    t_s = trans[i]
 
                     # consider only valid frames
                     for valid_i in range(valid_pose.shape[0]):
@@ -133,7 +130,6 @@ class Pw3dConverter(BaseModeConverter):
                         smpl['body_pose'].append(pose[3:].reshape((23, 3)))
                         smpl['global_orient'].append(pose[:3])
                         smpl['betas'].append(valid_betas[valid_i])
-                        smpl['transl'].append(t_s[valid_i])
                         meta['gender'].append(gender)
                         cam_param_.append(parameter_dict)
 
