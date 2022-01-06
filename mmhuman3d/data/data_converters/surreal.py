@@ -184,10 +184,10 @@ class SurrealConverter(BaseModeConverter):
                         success, image = vidcap.read()
                         if not success:
                             break
-                        frame += 1
                         # image name
                         imgname = os.path.join(img_dir,
                                                'frame_%06d.jpg' % frame)
+                        frame += 1
                         # save image
                         cv2.imwrite(imgname, image)
 
