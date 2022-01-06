@@ -118,7 +118,7 @@ class AgoraConverter(BaseModeConverter):
 
                     # obtain keypoints
                     keypoints2d = df.iloc[idx]['gt_joints_2d'][pidx]
-                    if self.res == '1280x720':
+                    if self.res == (1280, 720):
                         keypoints2d *= (720 / 2160)
                     keypoints3d = df.iloc[idx]['gt_joints_3d'][pidx]
 
