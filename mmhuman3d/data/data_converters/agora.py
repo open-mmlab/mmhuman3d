@@ -105,7 +105,7 @@ class AgoraConverter(BaseModeConverter):
             for idx in tqdm(range(len(df))):
                 imgname = df.iloc[idx]['imgPath']
                 if self.res == (1280, 720):
-                    imgname.replace('.png', '_1280x720.png')
+                    imgname = imgname.replace('.png', '_1280x720.png')
                 img_path = os.path.join('images', mode, imgname)
                 valid_pers_idx = np.where(df.iloc[idx].at['isValid'])[0]
                 for pidx in valid_pers_idx:
