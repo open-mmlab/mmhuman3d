@@ -1,39 +1,32 @@
 import glob
 import os
-import pickle
 
 import numpy as np
-import torch
 from tqdm import tqdm
 
-from mmhuman3d.core.cameras import build_cameras
-from mmhuman3d.core.conventions.keypoints_mapping import (
-    convert_kps,
-    get_keypoint_idx,
-)
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.data.data_structures import SMCReader
 from mmhuman3d.data.data_structures.human_data import HumanData
-from mmhuman3d.models.builder import build_body_model
 from .base_converter import BaseConverter
 from .builder import DATA_CONVERTERS
-from mmhuman3d.data.data_structures import SMCReader
 
 
 @DATA_CONVERTERS.register_module()
 class HuMManConverter(BaseConverter):
-    """ A mysterious dataset that will be announced soon """
+    """A mysterious dataset that will be announced soon."""
 
     def _make_human_data(
-            self,
-            smpl,
-            keypoints_convention,
-            image_path,
-            image_id,
-            bbox_xywh,
-            keypoints_2d,
-            keypoints2d_mask,
-            keypoints_3d,
-            keypoints3d_mask,
-        ):
+        self,
+        smpl,
+        keypoints_convention,
+        image_path,
+        image_id,
+        bbox_xywh,
+        keypoints_2d,
+        keypoints2d_mask,
+        keypoints_3d,
+        keypoints3d_mask,
+    ):
         # use HumanData to store all data
         human_data = HumanData()
 
@@ -47,16 +40,22 @@ class HuMManConverter(BaseConverter):
         keypoints2d = np.array(keypoints_2d).reshape(-1, 49, 2)
         keypoints2d = np.concatenate(
             [keypoints2d, np.ones([keypoints2d.shape[0], 49, 1])], axis=-1)
-        keypoints2d, keypoints2d_mask = \
-            convert_kps(keypoints2d, mask=keypoints2d_mask, src=keypoints_convention, dst='human_data')
+        keypoints2d, keypoints2d_mask = convert_kps(
+            keypoints2d,
+            mask=keypoints2d_mask,
+            src=keypoints_convention,
+            dst='human_data')
         human_data['keypoints2d'] = keypoints2d
         human_data['keypoints2d_mask'] = keypoints2d_mask
 
         keypoints3d = np.array(keypoints_3d).reshape(-1, 49, 3)
         keypoints3d = np.concatenate(
             [keypoints3d, np.ones([keypoints3d.shape[0], 49, 1])], axis=-1)
-        keypoints3d, keypoints3d_mask = \
-            convert_kps(keypoints3d, mask=keypoints3d_mask, src=keypoints_convention, dst='human_data')
+        keypoints3d, keypoints3d_mask = convert_kps(
+            keypoints3d,
+            mask=keypoints3d_mask,
+            src=keypoints_convention,
+            dst='human_data')
         human_data['keypoints3d'] = keypoints3d
         human_data['keypoints3d_mask'] = keypoints3d_mask
 
@@ -72,7 +71,6 @@ class HuMManConverter(BaseConverter):
         human_data.compress_keypoints_by_mask()
 
         return human_data
-
 
     def convert(self, dataset_path: str, out_path: str) -> dict:
         """
@@ -100,14 +98,14 @@ class HuMManConverter(BaseConverter):
         iphone_smpl['transl'] = []
 
         # structs we use
-        kinect_image_path_, kinect_image_id_, kinect_bbox_xywh_, kinect_keypoints_2d_, kinect_keypoints_3d_ = \
-            [], [], [], [], []
-        iphone_image_path_, iphone_image_id_, iphone_bbox_xywh_, iphone_keypoints_2d_, iphone_keypoints_3d_ = \
-            [], [], [], [], []
-        keypoints_convention_, keypoints2d_mask_, keypoints3d_mask_ = None, None, None
+        kinect_image_path_, kinect_image_id_, kinect_bbox_xywh_, \
+            kinect_keypoints_2d_, kinect_keypoints_3d_ = [], [], [], [], []
+        iphone_image_path_, iphone_image_id_, iphone_bbox_xywh_, \
+            iphone_keypoints_2d_, iphone_keypoints_3d_ = [], [], [], [], []
+        keypoints_convention_, keypoints2d_mask_, keypoints3d_mask_ = \
+            None, None, None
 
-        ann_paths = sorted(
-            glob.glob(os.path.join(dataset_path, '*.smc')))
+        ann_paths = sorted(glob.glob(os.path.join(dataset_path, '*.smc')))
 
         for ann_path in tqdm(ann_paths):
 
@@ -123,7 +121,8 @@ class HuMManConverter(BaseConverter):
             for device, device_id in device_list:
                 assert device in {
                     'Kinect', 'iPhone'
-                }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+                }, f'Undefined device: {device}, ' \
+                   f'should be "Kinect" or "iPhone"'
                 assert device_id >= 0, f'Negative device id: {device_id}'
 
                 keypoints_convention = smc_reader.get_keypoints_convention()
@@ -146,8 +145,7 @@ class HuMManConverter(BaseConverter):
                 bbox_xywhs = []
                 for xmin, xmax, ymin, ymax in zip(xmins, xmaxs, ymins, ymaxs):
                     bbox_xyxy = [xmin, ymin, xmax, ymax]
-                    bbox_xywh = self._bbox_expand(
-                        bbox_xyxy, scale_factor=1.2)
+                    bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
                     bbox_xywhs.append(bbox_xywh)
 
                 # get keypoints3d (all frames)
@@ -164,7 +162,10 @@ class HuMManConverter(BaseConverter):
                 image_path = os.path.basename(ann_path)
 
                 num_frames = smc_reader.get_kinect_num_frames()
-                for ann in [keypoints2d, keypoints2d_mask, keypoints3d, keypoints3d_mask]:
+                for ann in [
+                        keypoints2d, keypoints2d_mask, keypoints3d,
+                        keypoints3d_mask
+                ]:
                     assert len(ann) == num_frames
 
                 # build image idx
@@ -181,7 +182,8 @@ class HuMManConverter(BaseConverter):
                     kinect_keypoints_2d_.append(keypoints2d)
                     kinect_keypoints_3d_.append(keypoints3d)
                     kinect_smpl['body_pose'].append(smpl_dict['body_pose'])
-                    kinect_smpl['global_orient'].append(smpl_dict['global_orient'])
+                    kinect_smpl['global_orient'].append(
+                        smpl_dict['global_orient'])
                     kinect_smpl['betas'].append(smpl_dict['betas'])
                     kinect_smpl['transl'].append(smpl_dict['transl'])
 
@@ -192,7 +194,8 @@ class HuMManConverter(BaseConverter):
                     iphone_keypoints_2d_.append(keypoints2d)
                     iphone_keypoints_3d_.append(keypoints3d)
                     iphone_smpl['body_pose'].append(smpl_dict['body_pose'])
-                    iphone_smpl['global_orient'].append(smpl_dict['global_orient'])
+                    iphone_smpl['global_orient'].append(
+                        smpl_dict['global_orient'])
                     iphone_smpl['betas'].append(smpl_dict['betas'])
                     iphone_smpl['transl'].append(smpl_dict['transl'])
 
@@ -201,16 +204,9 @@ class HuMManConverter(BaseConverter):
 
             # make kinect human data
             kinect_human_data = self._make_human_data(
-                kinect_smpl,
-                keypoints_convention_,
-                kinect_image_path_,
-                kinect_image_id_,
-                kinect_bbox_xywh_,
-                kinect_keypoints_2d_,
-                keypoints2d_mask_,
-                kinect_keypoints_3d_,
-                keypoints3d_mask_
-            )
+                kinect_smpl, keypoints_convention_, kinect_image_path_,
+                kinect_image_id_, kinect_bbox_xywh_, kinect_keypoints_2d_,
+                keypoints2d_mask_, kinect_keypoints_3d_, keypoints3d_mask_)
 
             # store kinect human data
             file_name = 'humman_kinect.npz'
@@ -219,16 +215,9 @@ class HuMManConverter(BaseConverter):
 
             # make iphone human data
             iphone_human_data = self._make_human_data(
-                iphone_smpl,
-                keypoints_convention_,
-                iphone_image_path_,
-                iphone_image_id_,
-                iphone_bbox_xywh_,
-                iphone_keypoints_2d_,
-                keypoints2d_mask_,
-                iphone_keypoints_3d_,
-                keypoints3d_mask_
-            )
+                iphone_smpl, keypoints_convention_, iphone_image_path_,
+                iphone_image_id_, iphone_bbox_xywh_, iphone_keypoints_2d_,
+                keypoints2d_mask_, iphone_keypoints_3d_, keypoints3d_mask_)
 
             # store iphone human data
             file_name = 'humman_iphone.npz'

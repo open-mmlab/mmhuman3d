@@ -583,7 +583,7 @@ class SMCReader:
         return self.get_keypoints2d('iPhone', device_id, frame_id)
 
     def get_color(self, device, device_id, frame_id=None, disable_tqdm=False):
-        """ Get RGB image(s) from Kinect RGB or iPhone RGB camera
+        """Get RGB image(s) from Kinect RGB or iPhone RGB camera.
 
         Args:
             device (str):
@@ -648,9 +648,8 @@ class SMCReader:
                 keypoints3d (N, J, 4) and its mask (J, )
         """
         assert (device is None and device_id is None) or \
-               (device is not None and device_id is not None), \
-                f'device and device_id should be both None or ' \
-                f'both not None.'
+            (device is not None and device_id is not None), \
+            'device and device_id should be both None or both not None.'
         if device is not None:
             assert device in {
                 'Kinect', 'iPhone'
@@ -674,7 +673,7 @@ class SMCReader:
 
         # return keypoints3d in device coordinate system
         else:
-            if device is 'Kinect':
+            if device == 'Kinect':
                 world2cam = self.get_kinect_color_extrinsics(
                     kinect_id=device_id, homogeneous=True)
             else:
