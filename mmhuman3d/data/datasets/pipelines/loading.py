@@ -5,6 +5,8 @@ import numpy as np
 
 from ..builder import PIPELINES
 
+from mmhuman3d.data.data_structures import SMCReader
+
 
 @PIPELINES.register_module()
 class LoadImageFromFile(object):
@@ -43,8 +45,15 @@ class LoadImageFromFile(object):
         else:
             filename = results['image_path']
 
-        img_bytes = self.file_client.get(filename)
-        img = mmcv.imfrombytes(img_bytes, flag=self.color_type)
+        if filename.endswith('smc'):
+            assert 'image_id' in results, 'Load image from .smc, ' \
+                                          'but image_id is not provided.'
+            device, device_id, frame_id = results['image_id']
+            img = SMCReader(filename).get_color(device, device_id, frame_id)
+        else:
+            img_bytes = self.file_client.get(filename)
+            img = mmcv.imfrombytes(img_bytes, flag=self.color_type)
+
         if self.to_float32:
             img = img.astype(np.float32)
 

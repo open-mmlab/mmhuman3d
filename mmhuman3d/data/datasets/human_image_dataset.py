@@ -109,6 +109,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         image_path = self.human_data['image_path'][idx]
         info['image_path'] = os.path.join(self.data_prefix, 'datasets',
                                           self.dataset_name, image_path)
+        if 'image_path'.endswith('smc'):
+            info['image_id'] = self.human_data['image_id'][idx]
         info['dataset_name'] = self.dataset_name
         info['sample_idx'] = idx
         if 'bbox_xywh' in self.human_data:
