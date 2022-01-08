@@ -106,6 +106,13 @@ class NewAttributeCameras(cameras.CamerasBase):
                 resolution_src=image_size)
             kwargs.update(K=K)
 
+    # elev: float = 0,
+    # azim: float = 0,
+    # dist: float = 2.7,
+    # at: Union[torch.Tensor, List, Tuple] = (0, 0, 0),
+    # batch_size: int = 1,
+    # orbit_speed: Union[float, Tuple[float, float]] = 0,
+    # dist_speed:
         K, R, T = convert_cameras(
             K=kwargs.get('K'),
             R=kwargs.get('R', None),

@@ -12,6 +12,7 @@ from pytorch3d.renderer import (
 )
 from pytorch3d.structures import Meshes, Pointclouds
 
+from mmhuman3d.core.cameras import NewAttributeCameras
 from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .base_renderer import MeshBaseRenderer
@@ -128,6 +129,7 @@ class PointCloudRenderer(MeshBaseRenderer):
         K: Optional[torch.Tensor] = None,
         R: Optional[torch.Tensor] = None,
         T: Optional[torch.Tensor] = None,
+        cameras: Optional[NewAttributeCameras] = None,
         images: Optional[torch.Tensor] = None,
         indexes: Optional[Iterable[int]] = None,
         **kwargs,
@@ -175,7 +177,8 @@ class PointCloudRenderer(MeshBaseRenderer):
                 warnings.warn(
                     'Redundant input, will ignore `vertices` and `verts_rgb`.')
         pointclouds = pointclouds.to(self.device)
-        cameras = self.init_cameras(K=K, R=R, T=T)
+        cameras = self.init_cameras(
+            K=K, R=R, T=T) if cameras is None else cameras
         renderer = self.init_renderer(cameras)
 
         rendered_images = renderer(pointclouds)

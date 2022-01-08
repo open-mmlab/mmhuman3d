@@ -8,12 +8,13 @@ from .torch3d_renderer.segmentation_renderer import SegmentationRenderer
 from .torch3d_renderer.shader import NoLightShader
 from .torch3d_renderer.silhouette_renderer import SilhouetteRenderer
 from .torch3d_renderer.smpl_renderer import SMPLRenderer
-from .torch3d_renderer.textures import TexturesClosest
+from .torch3d_renderer.textures import TexturesNearest
+from .torch3d_renderer.uv_renderer import UVRenderer
 from .vedo_render import VedoRenderer
 
 __all__ = [
-    'NoLightShader', 'RenderDataset', 'MeshBaseRenderer', 'TexturesClosest',
+    'NoLightShader', 'RenderDataset', 'MeshBaseRenderer', 'TexturesNearest',
     'SMPLRenderer', 'SilhouetteRenderer', 'Axes3dJointsRenderer',
     'VedoRenderer', 'DepthRenderer', 'NormalRenderer', 'SegmentationRenderer',
-    'PointCloudRenderer'
+    'PointCloudRenderer', 'UVRenderer'
 ]

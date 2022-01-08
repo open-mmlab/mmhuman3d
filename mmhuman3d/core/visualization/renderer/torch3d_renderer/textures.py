@@ -3,11 +3,11 @@ from pytorch3d.ops import interpolate_face_attributes
 from pytorch3d.renderer import TexturesVertex
 
 
-class TexturesClosest(TexturesVertex):
-    """Textures for closest interpolation."""
+class TexturesNearest(TexturesVertex):
+    """Textures for nearest interpolation."""
 
     def sample_textures(self, fragments, faces_packed=None) -> torch.Tensor:
-        """Rewrite sample_textures to use the closet interpolation.
+        """Rewrite sample_textures to use the nearest interpolation.
 
         This function will only be called in render forwarding.
         """

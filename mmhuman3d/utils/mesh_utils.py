@@ -98,8 +98,9 @@ def load_plys_as_meshes(
         paths = [paths]
     for idx in range(len(paths)):
         assert paths[idx].endswith('.ply'), 'Please input .ply files.'
-        writer.load_mesh(
+        mesh = writer.load_mesh(
             path=paths[idx], include_textures=include_textures, device=device)
+    return mesh
 
 
 def save_meshes_as_plys(meshes: Meshes = None,
@@ -131,11 +132,10 @@ def save_meshes_as_plys(meshes: Meshes = None,
     else:
         if verts is not None or faces is not None or verts_rgb is not None:
             warnings.warn('Redundant input, will use meshes only.')
-
-    assert len(paths) >= len(meshes), 'Not enough output paths.'
-    writer = IO()
     if not isinstance(paths, list):
         paths = [paths]
+    assert len(paths) >= len(meshes), 'Not enough output paths.'
+    writer = IO()
     for idx in range(len(meshes)):
         assert paths[idx].endswith('.ply'), 'Please save as .ply files.'
         writer.save_mesh(
@@ -160,7 +160,7 @@ def save_meshes_as_objs(meshes: Meshes = None, paths: List[str] = []) -> None:
     for idx in range(len(meshes)):
         prepare_output_path(
             paths[idx], allowed_suffix=['.obj'],
-            path_type=['file']), 'Please save as .obj files.'
+            path_type='file'), 'Please save as .obj files.'
         save_obj(
             f=paths[idx],
             verts=meshes.verts_padded()[idx],

@@ -4,6 +4,7 @@ import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.structures import Meshes
 
+from mmhuman3d.core.cameras import NewAttributeCameras
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER
 
@@ -83,6 +84,7 @@ class DepthRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
+                cameras: Optional[NewAttributeCameras] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
                 **kwargs):
@@ -112,7 +114,8 @@ class DepthRenderer(MeshBaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        cameras = self.init_cameras(K=K, R=R, T=T)
+        cameras = self.init_cameras(
+            K=K, R=R, T=T) if cameras is None else cameras
         meshes = self.prepare_meshes(meshes, vertices, faces)
         vertices = meshes.verts_padded()
         verts_depth = cameras.compute_depth_of_points(vertices)

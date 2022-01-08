@@ -17,7 +17,7 @@ from pytorch3d.renderer import (
 )
 from pytorch3d.structures import Meshes
 
-from mmhuman3d.core.cameras import build_cameras
+from mmhuman3d.core.cameras import NewAttributeCameras, build_cameras
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER, build_lights, build_raster, build_shader
@@ -112,6 +112,11 @@ class MeshBaseRenderer(nn.Module):
         self.temp_path = None
         self.in_ndc = in_ndc
         self.out_img_format = out_img_format
+        self.set_output_path(output_path)
+
+        self.set_render_params(**kwargs)
+
+    def set_output_path(self, output_path):
         if output_path is not None:
             if check_path_suffix(output_path, ['.mp4', '.gif']):
                 self.temp_path = osp.join(
@@ -121,7 +126,6 @@ class MeshBaseRenderer(nn.Module):
                 print('make dir', self.temp_path)
             else:
                 self.temp_path = output_path
-        self.set_render_params(**kwargs)
 
     def set_render_params(self, **kwargs):
         """Set render params."""
@@ -185,6 +189,8 @@ class MeshBaseRenderer(nn.Module):
 
     def init_renderer(self, cameras, lights):
         """Initial renderer."""
+        lights = lights if lights is not None else getattr(
+            self, 'lights', None)
         raster = build_raster(
             dict(
                 type=self.raster_type,
@@ -259,6 +265,7 @@ class MeshBaseRenderer(nn.Module):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
+                cameras: Optional[NewAttributeCameras] = None,
                 images: Optional[torch.Tensor] = None,
                 lights: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
@@ -289,7 +296,9 @@ class MeshBaseRenderer(nn.Module):
             Union[torch.Tensor, None]: return tensor or None.
         """
         meshes = self.prepare_meshes(meshes, vertices, faces)
-        cameras = self.init_cameras(K=K, R=R, T=T)
+        cameras = self.init_cameras(
+            K=K, R=R, T=T) if cameras is None else cameras
+
         renderer = self.init_renderer(cameras, lights)
 
         rendered_images = renderer(meshes)
