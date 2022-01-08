@@ -4,7 +4,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps, get_keypoint_num
 from mmhuman3d.data.data_structures import SMCReader
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseConverter
@@ -37,9 +37,9 @@ class HuMManConverter(BaseConverter):
 
         human_data['smpl'] = smpl
 
-        keypoints2d = np.array(keypoints_2d).reshape(-1, 49, 2)
-        keypoints2d = np.concatenate(
-            [keypoints2d, np.ones([keypoints2d.shape[0], 49, 1])], axis=-1)
+        num_keypoints = get_keypoint_num(keypoints_convention)
+
+        keypoints2d = np.array(keypoints_2d).reshape(-1, num_keypoints, 3)
         keypoints2d, keypoints2d_mask = convert_kps(
             keypoints2d,
             mask=keypoints2d_mask,
@@ -48,9 +48,7 @@ class HuMManConverter(BaseConverter):
         human_data['keypoints2d'] = keypoints2d
         human_data['keypoints2d_mask'] = keypoints2d_mask
 
-        keypoints3d = np.array(keypoints_3d).reshape(-1, 49, 3)
-        keypoints3d = np.concatenate(
-            [keypoints3d, np.ones([keypoints3d.shape[0], 49, 1])], axis=-1)
+        keypoints3d = np.array(keypoints_3d).reshape(-1, num_keypoints, 4)
         keypoints3d, keypoints3d_mask = convert_kps(
             keypoints3d,
             mask=keypoints3d_mask,
@@ -127,15 +125,15 @@ class HuMManConverter(BaseConverter):
 
                 keypoints_convention = smc_reader.get_keypoints_convention()
                 if keypoints_convention_ is None:
-                    keypoint_convention_ = keypoints_convention
-                assert keypoint_convention_ == keypoints_convention
+                    keypoints_convention_ = keypoints_convention
+                assert keypoints_convention_ == keypoints_convention
 
                 # get keypoints2d (all frames)
-                keypoints2d, keypoints2d_mask = self._get_keypoints2d(
+                keypoints2d, keypoints2d_mask = smc_reader.get_keypoints2d(
                     device, device_id)
                 if keypoints2d_mask_ is None:
                     keypoints2d_mask_ = keypoints2d_mask
-                assert keypoints2d_mask_ == keypoints2d_mask
+                assert (keypoints2d_mask_ == keypoints2d_mask).all()
 
                 # compute bbox from keypoints2d
                 xs, ys = keypoints2d[:, :, 0], keypoints2d[:, :, 1]
@@ -153,7 +151,7 @@ class HuMManConverter(BaseConverter):
                     device, device_id)
                 if keypoints3d_mask_ is None:
                     keypoints3d_mask_ = keypoints3d_mask
-                assert keypoints3d_mask_ == keypoints3d_mask
+                assert (keypoints3d_mask_ == keypoints3d_mask).all()
 
                 # get smpl (all frames)
                 smpl_dict = smc_reader.get_smpl()
@@ -162,11 +160,8 @@ class HuMManConverter(BaseConverter):
                 image_path = os.path.basename(ann_path)
 
                 num_frames = smc_reader.get_kinect_num_frames()
-                for ann in [
-                        keypoints2d, keypoints2d_mask, keypoints3d,
-                        keypoints3d_mask
-                ]:
-                    assert len(ann) == num_frames
+                assert len(keypoints2d) == num_frames
+                assert len(keypoints3d) == num_frames
 
                 # build image idx
                 image_ids = []

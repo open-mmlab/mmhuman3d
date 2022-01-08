@@ -541,7 +541,7 @@ class SMCReader:
         else:
             raise KeyError(f'Kinect {device_id} has no floor data.')
 
-    def get_keypoints2d(self, device, device_id, frame_id):
+    def get_keypoints2d(self, device, device_id, frame_id=None):
         """Get keypoints2d projected from keypoints3d.
 
         Args:
@@ -679,7 +679,13 @@ class SMCReader:
             else:
                 world2cam = self.get_iphone_extrinsics(
                     iphone_id=device_id, frame_id=frame_id)
-            keypoints3d = world2cam @ keypoints3d_world
+
+            xyz, conf = keypoints3d_world[..., :3], keypoints3d_world[..., [3]]
+            xyz_homogeneous = np.ones([*xyz.shape[:-1], 4])
+            xyz_homogeneous[..., :3] = xyz
+            keypoints3d = np.einsum('ij,kmj->kmi', world2cam, xyz_homogeneous)
+            keypoints3d = np.concatenate([keypoints3d[..., :3], conf], axis=-1)
+
             return keypoints3d, keypoints3d_mask
 
     def get_smpl_num(self):
