@@ -4,7 +4,10 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps, get_keypoint_num
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_keypoint_num,
+)
 from mmhuman3d.data.data_structures import SMCReader
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseConverter
