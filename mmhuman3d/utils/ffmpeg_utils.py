@@ -470,6 +470,7 @@ def images_to_array(
         buffer = process.stdout.read(int(width * height * 3))
         # Break the loop if buffer length is not W*H*3\
         # (when FFmpeg streaming ends).
+
         if len(buffer) != width * height * 3:
             break
         img = np.frombuffer(buffer, np.uint8).reshape(height, width, 3)
@@ -483,6 +484,7 @@ def images_to_array(
     if remove_raw_files:
         if Path(input_folder).is_dir():
             shutil.rmtree(input_folder)
+
     return np.concatenate(array)
 
 

@@ -117,11 +117,11 @@ class CameraParameter:
         dist_coeffs = np.array(dist_coeffs)
         return dist_coeffs
 
-    def set_K_R_T(self,
-                  K_mat: np.ndarray,
-                  R_mat: np.ndarray,
-                  T_vec: np.ndarray,
-                  inverse_extrinsic: bool = False) -> None:
+    def set_KRT(self,
+                K_mat: np.ndarray,
+                R_mat: np.ndarray,
+                T_vec: np.ndarray,
+                inverse_extrinsic: bool = False) -> None:
         """Set intrinsic and extrinsic of a camera.
 
         Args:
@@ -148,6 +148,42 @@ class CameraParameter:
             T_vec = -np.dot(R_mat, T_vec).reshape((3))
         self.set_mat_np('rotation_mat', R_mat)
         self.set_value('translation', T_vec.tolist())
+
+    def get_KRT(self, k_dim=3) -> List[np.ndarray]:
+        """Get intrinsic and extrinsic of a camera.
+
+        Args:
+            k_dim (int, optional):
+                Dimension of the returned mat K.
+                Defaults to 3.
+
+        Raises:
+            ValueError: k_dim is neither 3 nor 4.
+
+        Returns:
+            List[np.ndarray]:
+                K_mat (np.ndarray):
+                    In shape [3, 3].
+                R_mat (np.ndarray):
+                    Rotation from world to view in default.
+                    In shape [3, 3].
+                T_vec (np.ndarray):
+                    Translation from world to view in default.
+                    In shape [3,].
+        """
+        K_3x3 = self.get_mat_np('in_mat')
+        R_mat = self.get_mat_np('rotation_mat')
+        T_vec = np.asarray(self.get_value('translation'))
+        if k_dim == 3:
+            return [K_3x3, R_mat, T_vec]
+        elif k_dim == 4:
+            K_3x3 = np.expand_dims(K_3x3, 0)  # shape (1, 3, 3)
+            K_4x4 = convert_K_3x3_to_4x4(
+                K=K_3x3, is_perspective=True)  # shape (1, 4, 4)
+            K_4x4 = K_4x4[0, :, :]
+            return [K_4x4, R_mat, T_vec]
+        else:
+            raise ValueError(f'K mat cannot be converted to {k_dim}x{k_dim}')
 
     def set_mat_np(self, mat_key: str, mat_numpy: np.ndarray) -> None:
         """Set a matrix-type parameter to mat_numpy.
@@ -378,14 +414,9 @@ class CameraParameter:
         """
         height = self.parameters_dict['H']
         width = self.parameters_dict['W']
-        k_3x3 = self.get_mat_np('in_mat')  # shape (3, 3)
-        k_3x3 = np.expand_dims(k_3x3, 0)  # shape (1, 3, 3)
-        k_4x4 = convert_K_3x3_to_4x4(
-            K=k_3x3, is_perspective=True)  # shape (1, 4, 4)
-        rotation = self.get_mat_np('rotation_mat')  # shape (3, 3)
+        k_4x4, rotation, translation = self.get_KRT(k_dim=4)
+        k_4x4 = np.expand_dims(k_4x4, 0)  # shape (1, 3, 3)
         rotation = np.expand_dims(rotation, 0)  # shape (1, 3, 3)
-        translation = self.get_value('translation')  # list, len==3
-        translation = np.asarray(translation)
         translation = np.expand_dims(translation, 0)  # shape (1, 3)
         new_K = torch.from_numpy(k_4x4)
         new_R = torch.from_numpy(rotation)

@@ -6,6 +6,7 @@ from mmhuman3d.utils.demo_utils import (
     convert_crop_cam_to_orig_img,
     convert_kp2d_to_bbox,
     get_default_hmr_intrinsic,
+    get_different_colors,
     prepare_frames,
     process_mmdet_results,
     process_mmtracking_results,
@@ -44,11 +45,12 @@ from mmhuman3d.utils.geometry import (
     rotation_matrix_to_angle_axis,
     rotation_matrix_to_quaternion,
 )
-from mmhuman3d.utils.keypoint_utils import get_different_colors, search_limbs
+from mmhuman3d.utils.keypoint_utils import search_limbs
 from mmhuman3d.utils.logger import get_root_logger
 from mmhuman3d.utils.mesh_utils import (
     join_batch_meshes_as_scene,
     mesh_to_pointcloud_vc,
+    save_meshes_as_objs,
     save_meshes_as_plys,
 )
 from mmhuman3d.utils.misc import multi_apply, torch_to_numpy
@@ -108,5 +110,5 @@ __all__ = [
     'sja_to_aa', 'slice_video', 'smooth_process', 'spatial_concat_video',
     'temporal_concat_video', 'torch_to_numpy', 'vid_info_reader',
     'video_to_array', 'video_to_gif', 'video_to_images', 'video_writer',
-    'xywh2xyxy', 'xyxy2xywh'
+    'xywh2xyxy', 'xyxy2xywh', 'save_meshes_as_objs'
 ]

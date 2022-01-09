@@ -46,6 +46,15 @@ model = dict(
     loss_vertex=dict(type='L1Loss', loss_weight=2),
     loss_smpl_pose=dict(type='MSELoss', loss_weight=3),
     loss_smpl_betas=dict(type='MSELoss', loss_weight=0.02))
+
+extractor = dict(
+    backbone=dict(
+        type='ResNet',
+        depth=50,
+        out_indices=[3],
+        norm_eval=False,
+        norm_cfg=dict(type='SyncBN', requires_grad=True)),
+    checkpoint='data/vibe_backbone.pth')
 # dataset settings
 dataset_type = 'HumanVideoDataset'
 data_keys = [
@@ -70,6 +79,17 @@ test_meta_keys = ['image_path', 'frame_idx']
 test_pipeline = [
     dict(type='ToTensor', keys=['features', 'sample_idx']),
     dict(type='Collect', keys=['features', 'sample_idx'], meta_keys=[])
+]
+img_norm_cfg = dict(
+    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+extractor_pipeline = [
+    dict(type='MeshAffine', img_res=224),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='ImageToTensor', keys=['img']),
+    dict(
+        type='Collect',
+        keys=['img', 'sample_idx'],
+        meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 inference_pipeline = test_pipeline
 data = dict(

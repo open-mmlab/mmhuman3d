@@ -4,8 +4,7 @@ from typing import Optional, Tuple, Union
 import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx
-from mmhuman3d.core.parametric_model.builder import build_registrant
-from mmhuman3d.models.utils.fits_dict import FitsDict
+from mmhuman3d.models.utils import FitsDict
 from mmhuman3d.utils.geometry import (
     batch_rodrigues,
     estimate_translation,
@@ -20,6 +19,7 @@ from ..builder import (
     build_head,
     build_loss,
     build_neck,
+    build_registrant,
 )
 from .base_architecture import BaseArchitecture
 

@@ -3,7 +3,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 import torch
 from pytorch3d.structures import Meshes
 
-from mmhuman3d.utils.keypoint_utils import get_different_colors
+from mmhuman3d.utils import get_different_colors
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER
 

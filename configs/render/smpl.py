@@ -87,6 +87,7 @@ RENDER_CONFIGS = {
             'faces_per_pixel': 1,
             'cull_to_frustum': False,
             'cull_backfaces': False,
+            'bin_size': 0,
         },
         'blend': white_blend_params,
     },

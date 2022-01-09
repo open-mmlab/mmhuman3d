@@ -24,24 +24,20 @@ from mmhuman3d.core.cameras import (
 from mmhuman3d.core.conventions.cameras import convert_cameras
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.models.builder import build_body_model
-from mmhuman3d.utils.demo_utils import (
+from mmhuman3d.utils import (
+    check_input_path,
+    check_path_suffix,
     convert_bbox_to_intrinsic,
     convert_crop_cam_to_orig_img,
     convert_kp2d_to_bbox,
     get_default_hmr_intrinsic,
-)
-from mmhuman3d.utils.ffmpeg_utils import (
+    get_different_colors,
     images_to_array,
+    prepare_output_path,
+    save_meshes_as_plys,
     vid_info_reader,
     video_to_array,
     video_to_images,
-)
-from mmhuman3d.utils.keypoint_utils import get_different_colors
-from mmhuman3d.utils.mesh_utils import save_meshes_as_plys
-from mmhuman3d.utils.path_utils import (
-    check_input_path,
-    check_path_suffix,
-    prepare_output_path,
 )
 from .renderer import RenderDataset, SMPLRenderer
 
@@ -151,6 +147,7 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
                                          '%06d.png' % frame_idx))
                         img_format = '%06d.png'
                 if not read_frames_batch:
+
                     image_array = images_to_array(
                         frames_folder,
                         img_format=img_format,
@@ -380,6 +377,9 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
             colors[:, body_segger[k]] = i + 1
     else:
         if isinstance(palette, torch.Tensor):
+            if palette.max() > 1:
+                palette = palette / 255.0
+            palette = torch.clip(palette, min=0, max=1)
             colors = palette.view(num_person,
                                   3).unsqueeze(1).repeat(1, num_verts, 1)
 
@@ -388,8 +388,9 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
             for person_idx in range(num_person):
 
                 if palette[person_idx] == 'random':
-                    color_person = get_different_colors(num_person)[person_idx]
-                    color_person = torch.FloatTensor(color_person) / 255.0
+                    color_person = get_different_colors(
+                        num_person, int_dtype=False)[person_idx]
+                    color_person = torch.FloatTensor(color_person)
                     color_person = torch.clip(
                         color_person * 1.5, min=0.6, max=1)
                     color_person = color_person.view(1, 1, 3).repeat(
@@ -397,12 +398,13 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
                 elif palette[person_idx] == 'segmentation':
                     verts_labels = torch.zeros(num_verts)
                     color_person = torch.ones(1, num_verts, 3)
-                    color_part = get_different_colors(len(body_segger))
+                    color_part = get_different_colors(
+                        len(body_segger), int_dtype=False)
                     for part_idx, k in enumerate(body_segger.keys()):
                         index = body_segger[k]
                         verts_labels[index] = part_idx
                         color_person[:, index] = torch.FloatTensor(
-                            color_part[part_idx]) / 255
+                            color_part[part_idx])
                 elif palette[person_idx] in Color.color_names:
                     color_person = torch.FloatTensor(
                         Color(palette[person_idx]).rgb).view(1, 1, 3).repeat(
@@ -864,6 +866,8 @@ def render_smpl(
         vertices = vertices.view(num_frames, num_person, -1, 3)
 
     if orig_cam is not None:
+        if isinstance(orig_cam, np.ndarray):
+            orig_cam = torch.Tensor(orig_cam)
         projection = 'weakperspective'
         r = render_resolution[1] / render_resolution[0]
         orig_cam = orig_cam[start:end]
@@ -1088,6 +1092,9 @@ def visualize_smpl_vibe(orig_cam=None,
                         bbox=None,
                         output_path='sample.mp4',
                         resolution=None,
+                        aspect_ratio=1.0,
+                        bbox_scale_factor=1.25,
+                        bbox_format='xyxy',
                         **kwargs) -> None:
     """Simplest way to visualize pred smpl with origin frames and predicted
     cameras."""
@@ -1095,7 +1102,8 @@ def visualize_smpl_vibe(orig_cam=None,
     if pred_cam is not None and bbox is not None:
         orig_cam = torch.Tensor(
             convert_crop_cam_to_orig_img(pred_cam, bbox, resolution[1],
-                                         resolution[0]))
+                                         resolution[0], aspect_ratio,
+                                         bbox_scale_factor, bbox_format))
     assert orig_cam is not None, '`orig_cam` is required.'
 
     func = partial(

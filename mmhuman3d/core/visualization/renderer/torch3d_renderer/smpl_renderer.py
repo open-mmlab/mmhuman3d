@@ -250,17 +250,19 @@ class SMPLRenderer(MeshBaseRenderer):
 
         rgbs = rendered_images[..., :3]
         valid_masks = (rendered_images[..., 3:] > 0) * 1.0
+        images = images / 255. if images is not None else None
+        bgrs = self.rgb2bgr(rgbs)
 
         # write temp images for the output video
         if self.output_path is not None:
 
             if images is not None:
-                output_images = rgbs * valid_masks * self.alpha + \
+                output_images = bgrs * valid_masks * self.alpha + \
                     images * valid_masks * (
                         1 - self.alpha) + (1 - valid_masks) * images
 
             else:
-                output_images = rgbs
+                output_images = bgrs
 
             if self.plot_kps:
                 joints = joints.to(self.device)
@@ -293,16 +295,12 @@ class SMPLRenderer(MeshBaseRenderer):
                     T=T)['rgba']
 
                 pointcloud_rgb = pointcloud_images[..., :3]
+                pointcloud_bgr = self.rgb2bgr(pointcloud_rgb)
                 pointcloud_mask = (pointcloud_images[..., 3:] > 0) * 1.0
                 output_images = output_images * (
-                    1 - pointcloud_mask) + pointcloud_mask * pointcloud_rgb
+                    1 - pointcloud_mask) + pointcloud_mask * pointcloud_bgr
 
-            output_images = torch.cat([
-                output_images[..., 0, None], output_images[..., 1, None],
-                output_images[..., 2, None]
-            ], -1)
-            output_images = (output_images.detach().cpu().numpy() *
-                             255).astype(np.uint8)
+            output_images = self.image_tensor2numpy(output_images)
 
             for frame_idx, real_idx in enumerate(indexes):
                 folder = self.temp_path if self.temp_path is not None else\

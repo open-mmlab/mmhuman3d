@@ -3,8 +3,8 @@ from argparse import ArgumentParser
 import mmcv
 import numpy as np
 
-import mmhuman3d.core.visualization.visualize_smpl as visualize_smpl
-from mmhuman3d.apis import inference_model, init_model
+from mmhuman3d.apis import inference_image_based_model, init_model
+from mmhuman3d.core.visualization import visualize_smpl_calibration
 from mmhuman3d.utils.demo_utils import (
     conver_verts_to_cam_coord,
     prepare_frames,
@@ -35,63 +35,78 @@ def single_person_with_mmdet(args, frames_iter):
         args (object):  object of argparse.Namespace.
         frames_iter (np.ndarray,): prepared frames
 
-    Returns:
-        (np.ndarray): estimated vertices.
-        (np.ndarray): intrinsic parameters.
-        (list): index of the prepared frames.
     """
     person_det_model = init_detector(
         args.det_config, args.det_checkpoint, device=args.device.lower())
 
-    mesh_model = init_model(
+    mesh_model, _ = init_model(
         args.mesh_reg_config,
         args.mesh_reg_checkpoint,
         device=args.device.lower())
 
     # Used to save the img index
     img_index = []
-    pred_cams, verts, bboxes_xy = [], [], []
+    pred_cams, verts, bboxes_xyxy = [], [], []
     for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
         # test a single image, the resulting box is (x1, y1, x2, y2)
         mmdet_results = inference_detector(person_det_model, frame)
 
         # keep the person class bounding boxes.
-        person_det_results = \
+        person_results = \
             process_mmdet_results(
                 mmdet_results,
                 args.det_cat_id)
 
         # test a single image, with a list of bboxes.
-        mesh_results = inference_model(
+        mesh_results = inference_image_based_model(
             mesh_model,
             frame,
-            person_det_results,
+            person_results,
             bbox_thr=args.bbox_thr,
             format='xyxy')
 
         # drop the frame with no detected results
         if mesh_results == []:
             continue
-
+        # vis bboxes
+        if args.draw_bbox:
+            bboxes = [res['bbox'] for res in person_results]
+            bboxes = np.vstack(bboxes)
+            mmcv.imshow_bboxes(
+                frame, bboxes, top_k=-1, thickness=2, show=False)
         img_index.append(i)
 
         pred_cams.append(mesh_results[0]['camera'])
         verts.append(mesh_results[0]['vertices'])
-        bboxes_xy.append(mesh_results[0]['bbox'])
+        bboxes_xyxy.append(mesh_results[0]['bbox'])
 
     pred_cams = np.array(pred_cams)
     verts = np.array(verts)
-    bboxes_xy = np.array(bboxes_xy)
+    bboxes_xyxy = np.array(bboxes_xyxy)
 
     # convert vertices from world to camera
     verts, K0 = conver_verts_to_cam_coord(
-        verts, pred_cams, bboxes_xy, focal_length=args.focal_length)
+        verts, pred_cams, bboxes_xyxy, focal_length=args.focal_length)
 
     # smooth
     if args.smooth_type is not None:
         verts = smooth_process(verts, smooth_type=args.smooth_type)
 
-    return verts, K0, img_index
+    if args.show_path is not None:
+        body_model_config = dict(model_path=args.body_model_dir, type='smpl')
+        # Visualization
+        visualize_smpl_calibration(
+            verts=verts,
+            output_path=args.show_path,
+            render_choice=args.render_choice,
+            resolution=frames_iter[0].shape[:2],
+            image_array=np.array(frames_iter)[img_index],
+            body_model_config=body_model_config,
+            K=K0,
+            R=None,
+            T=None,
+            overwrite=True,
+            palette=args.palette)
 
 
 def multi_person_with_mmtracking(args, frames_iter):
@@ -100,38 +115,32 @@ def multi_person_with_mmtracking(args, frames_iter):
     Args:
         args (object):  object of argparse.Namespace.
         frames_iter (np.ndarray,): prepared frames
-    Returns:
-        (np.ndarray): estimated vertices.
-        (np.ndarray): intrinsic parameters.
-        (list): index of the prepared frames.
+
     """
     tracking_model = init_tracking_model(
         args.tracking_config, None, device=args.device.lower())
 
-    mesh_model = init_model(
+    mesh_model, _ = init_model(
         args.mesh_reg_config,
         args.mesh_reg_checkpoint,
         device=args.device.lower())
 
-    # The total number of people detected in a video or image sequence
-    det_instances = 0
-    # Maximum number of people appearing in the same frame
-    max_instances = 0
-    # Used to save inference results
+    max_track_id = 0
+    max_instance = 0
     mesh_results_list = []
-    # Used to save the value of the total number of frames
     frame_num = 0
-    # Used to save the img index
     img_index = []
+
     for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
 
         mmtracking_results = inference_mot(tracking_model, frame, frame_id=i)
 
         # keep the person class bounding boxes.
-        person_results = process_mmtracking_results(mmtracking_results)
+        person_results, max_track_id, instance_num = \
+            process_mmtracking_results(mmtracking_results, max_track_id)
 
         # test a single image, with a list of bboxes.
-        mesh_results = inference_model(
+        mesh_results = inference_image_based_model(
             mesh_model,
             frame,
             person_results,
@@ -142,17 +151,24 @@ def multi_person_with_mmtracking(args, frames_iter):
         if mesh_results == []:
             continue
 
-        for mesh_result in mesh_results:
-            track_id = mesh_result['track_id']
-            if track_id > det_instances:
-                det_instances = track_id
+        # update max_instance
+        if instance_num > max_instance:
+            max_instance = instance_num
+
+        # vis bboxes
+        if args.draw_bbox:
+            bboxes = [res['bbox'] for res in person_results]
+            bboxes = np.vstack(bboxes)
+            mmcv.imshow_bboxes(
+                frame, bboxes, top_k=-1, thickness=2, show=False)
+
         mesh_results_list.append(mesh_results)
         img_index.append(i)
         frame_num += 1
 
-    verts = np.zeros([frame_num, det_instances + 1, 6890, 3])
-    pred_cams = np.zeros([frame_num, det_instances + 1, 3])
-    bboxes_xy = np.zeros([frame_num, det_instances + 1, 5])
+    verts = np.zeros([frame_num, max_track_id + 1, 6890, 3])
+    pred_cams = np.zeros([frame_num, max_track_id + 1, 3])
+    bboxes_xyxy = np.zeros([frame_num, max_track_id + 1, 5])
 
     track_ids_lists = []
     for i, mesh_results in enumerate(
@@ -160,57 +176,55 @@ def multi_person_with_mmtracking(args, frames_iter):
         track_ids = []
         for mesh_result in mesh_results:
             instance_id = mesh_result['track_id']
+            bboxes_xyxy[i, instance_id] = mesh_result['bbox']
             pred_cams[i, instance_id] = mesh_result['camera']
             verts[i, instance_id] = mesh_result['vertices']
-            bboxes_xy[i, instance_id] = mesh_result['bbox']
             track_ids.append(instance_id)
-        # max instances
-        max_instances = max(max_instances, len(track_ids))
+
         track_ids_lists.append(track_ids)
 
     verts, K0 = conver_verts_to_cam_coord(
-        verts, pred_cams, bboxes_xy, focal_length=args.focal_length)
+        verts, pred_cams, bboxes_xyxy, focal_length=args.focal_length)
 
     # smooth
     if args.smooth_type is not None:
         verts = smooth_process(verts, smooth_type=args.smooth_type)
 
     # To compress vertices array
-    V = np.zeros([frame_num, max_instances, 6890, 3])
-    for i, track_ids_list in enumerate(track_ids_lists):
+    V = np.zeros([frame_num, max_instance, 6890, 3])
+    for i, track_ids_list in enumerate(
+            mmcv.track_iter_progress(track_ids_lists)):
         instance_num = len(track_ids_list)
         V[i, :instance_num] = verts[i, track_ids_list]
 
-    return V, K0, img_index
+    if args.show_path is not None:
+        body_model_config = dict(model_path=args.body_model_dir, type='smpl')
+        # Visualization
+        visualize_smpl_calibration(
+            verts=V,
+            output_path=args.show_path,
+            render_choice=args.render_choice,
+            resolution=frames_iter[0].shape[:2],
+            image_array=np.array(frames_iter)[img_index],
+            body_model_config=body_model_config,
+            K=K0,
+            R=None,
+            T=None,
+            overwrite=True,
+            palette=args.palette)
 
 
 def main(args):
-
     # prepare input
-    frames_iter = prepare_frames(args.image_path, args.video_path)
+    frames_iter = prepare_frames(args.input_path)
 
     if args.single_person_demo:
-        verts, K0, img_index = single_person_with_mmdet(args, frames_iter)
+        single_person_with_mmdet(args, frames_iter)
     elif args.multi_person_demo:
-        verts, K0, img_index = multi_person_with_mmtracking(args, frames_iter)
+        multi_person_with_mmtracking(args, frames_iter)
     else:
         raise ValueError(
             'Only supports single_person_demo or multi_person_demo')
-
-    # Visualization
-    visualize_smpl.visualize_smpl_calibration(
-        verts=verts,
-        model_path=args.body_model_dir,
-        model_type='smpl',
-        output_path=args.output_path,
-        render_choice=args.render_choice,
-        resolution=frames_iter[0].shape[:2],
-        image_array=np.array(frames_iter)[img_index],
-        K=K0,
-        R=None,
-        T=None,
-        overwrite=True,
-        palette=args.palette)
 
 
 if __name__ == '__main__':
@@ -250,11 +264,17 @@ if __name__ == '__main__':
         default='data/body_models/',
         help='Body models file path')
     parser.add_argument(
-        '--video_path', type=str, default=None, help='Video path')
+        '--input_path', type=str, default=None, help='Input path')
     parser.add_argument(
-        '--image_path', type=str, default=None, help='Image path')
+        '--output',
+        type=str,
+        default=None,
+        help='directory to save output result file')
     parser.add_argument(
-        '--output_path', type=str, default=None, help='Output path')
+        '--show_path',
+        type=str,
+        default=None,
+        help='directory to save rendered images or video')
     parser.add_argument(
         '--render_choice',
         type=str,
@@ -267,6 +287,10 @@ if __name__ == '__main__':
         type=float,
         default=0.99,
         help='Bounding box score threshold')
+    parser.add_argument(
+        '--draw_bbox',
+        action='store_true',
+        help='Draw a bbox for each detected instance')
     parser.add_argument(
         '--smooth_type',
         type=str,
@@ -290,5 +314,4 @@ if __name__ == '__main__':
     if args.multi_person_demo:
         assert has_mmtrack, 'Please install mmtrack to run the demo.'
         assert args.tracking_config is not None
-
     main(args)

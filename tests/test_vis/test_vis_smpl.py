@@ -311,7 +311,7 @@ def test_visualize_smpl_pose():
     # use vibe camera outputs to render single smplx mesh using
     # function visualize_smpl_vibe.
     pred_cam = torch.ones(10, 4)
-    bbox = torch.tensor([0, 0, 100, 100]).view(1, 4).repeat(10, 1)
+    bbox = np.array([0, 0, 100, 100]).reshape(1, 4).repeat(10, 1)
     visualize_smpl_vibe(
         poses=pose_dict,
         model_type='smplx',
