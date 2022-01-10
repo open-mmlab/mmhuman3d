@@ -1,75 +1,69 @@
-import math
-import os.path as osp
-from typing import Iterable, List, Literal, Optional, Tuple, Union
+from typing import Optional, Union
 
-import cv2
-import numpy as np
 import torch
-from mmcv.visualization import flow2rgb
-from pytorch3d.renderer.mesh.textures import TexturesVertex
+import torch.nn as nn
+from pytorch3d.ops import interpolate_face_attributes
+from pytorch3d.renderer.mesh.rasterizer import Fragments
 from pytorch3d.structures import Meshes
-from tqdm import trange
+from pytorch3d.structures.utils import padded_to_packed
 
-from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER
 
 
+class OpticalFlowShader(nn.Module):
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__()
+
+    @staticmethod
+    def gen_mesh_grid(H, W, N: int = 1):
+        h_grid = torch.linspace(-1, 1, H).view(-1, 1).repeat(1, W)
+        v_grid = torch.linspace(-1, 1, W).repeat(H, 1)
+        mesh_grid = torch.cat((v_grid.unsqueeze(2), h_grid.unsqueeze(2)),
+                              dim=2)
+        mesh_grid = mesh_grid.unsqueeze(0).repeat(N, 1, 1, 1)
+        mesh_grid = torch.cat([mesh_grid, torch.zeros(N, H, W, 1)], -1)
+        return mesh_grid  # (N, H, W, 2)
+
+    def to(self, device):
+        return self
+
+    def forward(self, fragments: Fragments, meshes: Meshes,
+                verts_scene_flow: torch.Tensor, **kwargs) -> torch.Tensor:
+
+        faces = meshes.faces_packed()  # (F, 3)
+        verts_scene_flow = padded_to_packed(verts_scene_flow)
+        faces_flow = verts_scene_flow[faces]
+        pixel_flow = interpolate_face_attributes(
+            pix_to_face=fragments.pix_to_face,
+            barycentric_coords=fragments.bary_coords,
+            face_attributes=faces_flow)
+        N, H, W, _, _ = pixel_flow.shape
+        mesh_grid = self.gen_mesh_grid(N=N, H=H, W=W)
+        pixel_flow = pixel_flow.squeeze(-2) + mesh_grid.to(pixel_flow.device)
+        return pixel_flow
+
+
 @RENDERER.register_module(name=['opticalflow', 'optical_flow', 'OpticalFlow'])
-class OpticalFlowRenderer(MeshBaseRenderer):
+class OpticalFlowRenderer(nn.Module):
 
-    def __init__(self,
-                 resolution: Tuple[int, int] = [1024, 1024],
-                 device: Union[torch.device, str] = 'cpu',
-                 obj_path: Optional[str] = None,
-                 output_path: Optional[str] = None,
-                 return_type: Optional[List] = None,
-                 out_img_format: str = '%06d.png',
-                 projection: Literal['weakperspective', 'fovperspective',
-                                     'orthographics', 'perspective',
-                                     'fovorthographics'] = 'weakperspective',
-                 in_ndc: bool = True,
-                 **kwargs) -> None:
-        """OpticalFlowRenderer for neural rendering, visualization and warping.
+    def __init__(self, rasterizer, **kwargs):
+        super().__init__()
+        self.rasterizer = rasterizer
+        self.shader = OpticalFlowShader()
 
-        Args:
-            resolution (Iterable[int]):
-                (width, height) of the rendered images resolution.
-            device (Union[torch.device, str], optional):
-                You can pass a str or torch.device for cpu or gpu render.
-                Defaults to 'cpu'.
-            output_path (Optional[str], optional):
-                Output path of the video or images to be saved.
-                Defaults to None.
-            return_tensor (bool, optional):
-                Boolean of whether return the rendered tensor.
-                Defaults to False.
-            out_img_format (str, optional): The image format string for
-                saving the images.
-                Defaults to '%06d.png'.
-            projection (str, optional):
-                Projection type of camera.
-                Defaults to 'weakperspetive'.
-            in_ndc (bool, optional): Whether defined in NDC.
-                Defaults to True.
-        Returns:
-            None
-        """
-        super().__init__(
-            resolution=resolution,
-            device=device,
-            obj_path=obj_path,
-            output_path=output_path,
-            return_type=return_type,
-            out_img_format=out_img_format,
-            projection=projection,
-            in_ndc=in_ndc,
-            **kwargs)
+    def to(self, device):
+        # Rasterizer and shader have submodules which are not of type nn.Module
+        self.rasterizer.to(device)
+        self.shader.to(device)
 
     def forward(
         self,
-        meshes: Optional[Meshes] = None,
+        meshes_source: Optional[Meshes] = None,
+        meshes_target: Optional[Meshes] = None,
         cameras=None,
-        indexes: Optional[Iterable[int]] = None,
+        cameras_source=None,
+        cameras_target=None,
         **kwargs,
     ) -> Union[torch.Tensor, None]:
         """Render Meshes.
@@ -89,61 +83,55 @@ class OpticalFlowRenderer(MeshBaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        meshes = meshes.to(self.device)
+        assert len(meshes_source) == len(meshes_target)
 
-        renderer = self.init_renderer(cameras, self.lights)
+        if cameras_source is None:
+            cameras_source = cameras
+        if cameras_target is None:
+            cameras_target = cameras
 
-        rendered_images = renderer(meshes)
-        rgbs = rendered_images.clone()[..., :3]
-        rgbs = rgbs / rgbs.max()
+        fragments_source = self.rasterizer(meshes_source,
+                                           **{'cameras': cameras_source})
+        fragments_target = self.rasterizer(meshes_target,
+                                           **{'cameras': cameras_target})
 
-        if self.output_path is not None:
-            optical_flow = rgbs[..., :3].detach().cpu().numpy()
-            for idx in range(len(optical_flow)):
-                flow_image = (flow2rgb(optical_flow[idx, ..., :2]) *
-                              255).astype(np.uint8)
-                # flow_image = (optical_flow[idx] * 255).astype(np.uint8)
-                real_idx = indexes[idx]
-                folder = self.temp_path if self.temp_path is not None else\
-                    self.output_path
-                cv2.imwrite(
-                    osp.join(folder, self.out_img_format % real_idx),
-                    flow_image)
-        if self.return_tensor:
-            return rendered_images
-        else:
-            return None
+        if cameras_source is None or cameras_target is None:
+            msg = 'Cameras must be specified either at initialization \
+                or in the forward pass of OpticalFLowShader'
 
-    def forward_by_batch(self, meshes, K, R, T, batch_size):
-        meshes = meshes.to(self.device)
-        num_frames = len(meshes)
-        verts = meshes.verts_padded()
-        cameras = self.init_cameras(K=K, R=R, T=T)
-        num_verts = verts.shape[1]
-        verts_motion = cameras[1:].transform_points_ndc(
-            verts[1:]) - cameras[:-1].transform_points_ndc(verts[:-1])
-        verts_motion = torch.cat(
-            [verts_motion,
-             torch.zeros(1, num_verts, 3).to(self.device)], 0)
-        min_, max_ = verts_motion.min(), verts_motion.max()
+            raise ValueError(msg)
 
-        verts_motion_norm = (verts_motion - min_) / (max_ - min_)
+        verts_source_ndc = cameras_source.transform_points_ndc(
+            meshes_source.verts_padded())
+        verts_target_ndc = cameras_target.transform_points_ndc(
+            meshes_target.verts_padded())
 
-        textures = TexturesVertex(verts_features=verts_motion_norm)
-        meshes.textures = textures
-        results = []
-        for i in trange(math.ceil(num_frames // batch_size)):
-            indexes = list(
-                range(i * batch_size, min((i + 1) * batch_size, num_frames)))
-            rendered_images_batch = self.forward(
-                meshes[indexes], cameras=cameras[indexes], indexes=indexes)
-            if self.return_tensor:
-                results.append(rendered_images_batch)
-        self.export()
+        verts_scene_flow = verts_target_ndc - verts_source_ndc
+        pixel_scene_flow = self.shader(
+            fragments=fragments_target,
+            meshes=meshes_target,
+            verts_scene_flow=verts_scene_flow,
+            **kwargs)
 
-        if self.return_tensor:
-            results = torch.cat(results)
-            mask = results[..., 3:] > 0
-            results = results * (max_ - min_) + min_
-            results = results[..., :2] * mask
-            return results
+        mask_target = (fragments_target.pix_to_face >= 0).long()
+
+        visible_face_idx_source = fragments_source.pix_to_face.unique()[1:]
+        visible_face_idx_target = fragments_target.pix_to_face.unique()[1:]
+        face_visibility_packed_source = torch.zeros(
+            meshes_source.faces_packed().shape[0]).long().to(
+                meshes_source.device)
+        face_visibility_packed_source[visible_face_idx_source] = 1
+
+        face_visibility_packed_target = torch.zeros(
+            meshes_target.faces_packed().shape[0]).long().to(
+                meshes_target.device)
+        face_visibility_packed_target[visible_face_idx_target] = 1
+
+        face_visibility_packed = face_visibility_packed_source * \
+            face_visibility_packed_target
+        shape = fragments_target.pix_to_face.shape
+        visiblity_mask = face_visibility_packed[
+            fragments_target.pix_to_face.view(-1)].view(shape) * mask_target
+
+        pixel_scene_flow = torch.cat([pixel_scene_flow, visiblity_mask], -1)
+        return pixel_scene_flow
