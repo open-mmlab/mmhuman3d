@@ -654,7 +654,8 @@ class SMCReader:
             assert device in {
                 'Kinect', 'iPhone'
             }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
-        assert device_id >= 0
+        if device_id is not None:
+            assert device_id >= 0
 
         kps3d_dict = self.smc['Keypoints3D']
 
