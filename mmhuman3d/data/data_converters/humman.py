@@ -18,6 +18,9 @@ from .builder import DATA_CONVERTERS
 class HuMManConverter(BaseConverter):
     """A mysterious dataset that will be announced soon."""
 
+    skip_no_iphone = True
+    skip_no_keypoints3d = True
+
     def _make_human_data(
         self,
         smpl,
@@ -111,6 +114,11 @@ class HuMManConverter(BaseConverter):
         for ann_path in tqdm(ann_paths):
 
             smc_reader = SMCReader(ann_path)
+
+            if self.skip_no_keypoints3d and smc_reader.keypoint_exists:
+                continue
+            if self.skip_no_iphone and smc_reader.iphone_exists:
+                continue
 
             num_kinect = smc_reader.get_num_kinect()
             num_iphone = smc_reader.get_num_iphone()
