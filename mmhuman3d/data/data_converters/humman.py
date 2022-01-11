@@ -70,7 +70,7 @@ class HuMManConverter(BaseConverter):
         human_data['image_path'] = image_path
         human_data['image_id'] = image_id
 
-        bbox_xywh = np.concatenate(bbox_xywh, axis=0).reshape((-1, 4))
+        bbox_xywh = np.array(bbox_xywh).reshape((-1, 4))
         bbox_xywh = np.concatenate(
             [bbox_xywh, np.ones([bbox_xywh.shape[0], 1])], axis=-1)
         human_data['bbox_xywh'] = bbox_xywh
@@ -131,6 +131,7 @@ class HuMManConverter(BaseConverter):
 
             num_kinect = smc_reader.get_num_kinect()
             num_iphone = smc_reader.get_num_iphone()
+            num_frames = smc_reader.get_kinect_num_frames()
 
             device_list = [('Kinect', i) for i in range(num_kinect)] + \
                 [('iPhone', i) for i in range(num_iphone)]
@@ -141,6 +142,22 @@ class HuMManConverter(BaseConverter):
                     'Kinect', 'iPhone'
                 }, f'Undefined device: {device}, ' \
                    f'should be "Kinect" or "iPhone"'
+
+                if device == 'Kinect':
+                    image_id_ = kinect_image_id_
+                    image_path_ = kinect_image_path_
+                    bbox_xywh_ = kinect_bbox_xywh_
+                    keypoints_2d_ = kinect_keypoints_2d_
+                    keypoints_3d_ = kinect_keypoints_3d_
+                    smpl_ = kinect_smpl
+                else:
+                    image_id_ = iphone_image_id_
+                    image_path_ = iphone_image_path_
+                    bbox_xywh_ = iphone_bbox_xywh_
+                    keypoints_2d_ = iphone_keypoints_2d_
+                    keypoints_3d_ = iphone_keypoints_3d_
+                    smpl_ = iphone_smpl
+
                 assert device_id >= 0, f'Negative device id: {device_id}'
 
                 keypoints_convention = smc_reader.get_keypoints_convention()
@@ -154,17 +171,17 @@ class HuMManConverter(BaseConverter):
                 if keypoints2d_mask_ is None:
                     keypoints2d_mask_ = keypoints2d_mask
                 assert (keypoints2d_mask_ == keypoints2d_mask).all()
+                keypoints_2d_.append(keypoints2d)
 
                 # compute bbox from keypoints2d
                 xs, ys = keypoints2d[:, :, 0], keypoints2d[:, :, 1]
                 xmins, xmaxs = np.min(xs, axis=1), np.max(xs, axis=1)
                 ymins, ymaxs = np.min(ys, axis=1), np.max(ys, axis=1)
 
-                bbox_xywhs = []
                 for xmin, xmax, ymin, ymax in zip(xmins, xmaxs, ymins, ymaxs):
                     bbox_xyxy = [xmin, ymin, xmax, ymax]
                     bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
-                    bbox_xywhs.append(bbox_xywh)
+                    bbox_xywh_.append(bbox_xywh)
 
                 # get keypoints3d (all frames)
                 keypoints3d, keypoints3d_mask = smc_reader.get_keypoints3d(
@@ -172,45 +189,29 @@ class HuMManConverter(BaseConverter):
                 if keypoints3d_mask_ is None:
                     keypoints3d_mask_ = keypoints3d_mask
                 assert (keypoints3d_mask_ == keypoints3d_mask).all()
+                keypoints_3d_.append(keypoints3d)
 
                 # get smpl (all frames)
                 smpl_dict = smc_reader.get_smpl()
+                smpl_['body_pose'].append(smpl_dict['body_pose'])
+                smpl_['global_orient'].append(
+                    smpl_dict['global_orient'])
+                smpl_['transl'].append(smpl_dict['transl'])
+
+                # expand betas
+                betas_expanded = np.tile(
+                    smpl_dict['betas'], num_frames).reshape(-1, 10)
+                smpl_['betas'].append(betas_expanded)
 
                 # get image paths (smc paths)
                 image_path = os.path.basename(ann_path)
+                for frame_id in range(num_frames):
+                    image_id = (device, device_id, frame_id)
+                    image_id_.append(image_id)
+                    image_path_.append(image_path)
 
-                num_frames = smc_reader.get_kinect_num_frames()
                 assert len(keypoints2d) == num_frames
                 assert len(keypoints3d) == num_frames
-
-                # save data in structs
-                if device == 'Kinect':
-                    for frame_id in range(num_frames):
-                        image_id = (device, device_id, frame_id)
-                        kinect_image_id_.append(image_id)
-                        kinect_image_path_.append(image_path)
-                    kinect_bbox_xywh_.extend(bbox_xywhs)
-                    kinect_keypoints_2d_.append(keypoints2d)
-                    kinect_keypoints_3d_.append(keypoints3d)
-                    kinect_smpl['body_pose'].append(smpl_dict['body_pose'])
-                    kinect_smpl['global_orient'].append(
-                        smpl_dict['global_orient'])
-                    kinect_smpl['betas'].append(smpl_dict['betas'])
-                    kinect_smpl['transl'].append(smpl_dict['transl'])
-
-                else:
-                    for frame_id in range(num_frames):
-                        image_id = (device, device_id, frame_id)
-                        iphone_image_id_.append(image_id)
-                        iphone_image_path_.append(image_path)
-                    iphone_bbox_xywh_.extend(bbox_xywhs)
-                    iphone_keypoints_2d_.append(keypoints2d)
-                    iphone_keypoints_3d_.append(keypoints3d)
-                    iphone_smpl['body_pose'].append(smpl_dict['body_pose'])
-                    iphone_smpl['global_orient'].append(
-                        smpl_dict['global_orient'])
-                    iphone_smpl['betas'].append(smpl_dict['betas'])
-                    iphone_smpl['transl'].append(smpl_dict['transl'])
 
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
