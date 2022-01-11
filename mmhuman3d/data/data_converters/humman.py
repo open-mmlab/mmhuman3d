@@ -183,16 +183,12 @@ class HuMManConverter(BaseConverter):
                 assert len(keypoints2d) == num_frames
                 assert len(keypoints3d) == num_frames
 
-                # build image idx
-                image_ids = []
-                for frame_id in range(num_frames):
-                    image_id = (device, device_id, frame_id)
-                    image_ids.append(image_id)
-
                 # save data in structs
                 if device == 'Kinect':
-                    kinect_image_path_.append(image_path)
-                    kinect_image_id_.append(image_id)
+                    for frame_id in range(num_frames):
+                        image_id = (device, device_id, frame_id)
+                        kinect_image_id_.append(image_id)
+                        kinect_image_path_.append(image_path)
                     kinect_bbox_xywh_.extend(bbox_xywhs)
                     kinect_keypoints_2d_.append(keypoints2d)
                     kinect_keypoints_3d_.append(keypoints3d)
@@ -203,8 +199,10 @@ class HuMManConverter(BaseConverter):
                     kinect_smpl['transl'].append(smpl_dict['transl'])
 
                 else:
-                    iphone_image_path_.append(image_path)
-                    iphone_image_id_.append(image_id)
+                    for frame_id in range(num_frames):
+                        image_id = (device, device_id, frame_id)
+                        iphone_image_id_.append(image_id)
+                        iphone_image_path_.append(image_path)
                     iphone_bbox_xywh_.extend(bbox_xywhs)
                     iphone_keypoints_2d_.append(keypoints2d)
                     iphone_keypoints_3d_.append(keypoints3d)
