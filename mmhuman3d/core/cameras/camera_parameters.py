@@ -82,9 +82,9 @@ class CameraParameter:
         self.parameters_dict['in_mat'] = in_mat
         for distort_name in __distort_coefficient_names__:
             self.parameters_dict[distort_name] = 0.0
-        self.check_item('H', H)
+        _, H = self.check_item('H', H)
         self.parameters_dict['H'] = H
-        self.check_item('W', W)
+        _, W = self.check_item('W', W)
         self.parameters_dict['W'] = W
         r_mat = __zero_mat_list__(3)
         self.parameters_dict['rotation_mat'] = r_mat
@@ -211,7 +211,7 @@ class CameraParameter:
             mat_list (List[list]):
                 Matrix in list format.
         """
-        self.check_item(mat_key, mat_list)
+        _, mat_list = self.check_item(mat_key, mat_list)
         self.parameters_dict[mat_key] = mat_list
 
     def set_value(self, key: str, value: Any) -> None:
@@ -223,7 +223,7 @@ class CameraParameter:
             value (object):
                 New value of the parameter.
         """
-        self.check_item(key, value)
+        _, value = self.check_item(key, value)
         self.parameters_dict[key] = value
 
     def get_value(self, key: str) -> Any:
@@ -448,9 +448,13 @@ class CameraParameter:
                 CameraParameter.SUPPORTED_KEYS.
             TypeError:
                 Value's type doesn't match definition.
+        Returns:
+            key (Any): The input key.
+            val (Any): The value casted into correct format.
         """
         self.__check_key__(key)
-        self.__check_value_type__(key, val)
+        formatted_val = self.__check_value_type__(key, val)
+        return key, formatted_val
 
     def __check_key__(self, key: Any) -> None:
         """Check whether the key matches definition in
@@ -483,12 +487,45 @@ class CameraParameter:
         Raises:
             TypeError:
                 Value is supported but doesn't match definition.
+
+        Returns:
+            val (Any): The value casted into correct format.
         """
-        if type(val) != self.__class__.SUPPORTED_KEYS[key]['type']:
+        np_type_mapping = {int: np.integer, float: np.floating}
+        supported_keys = self.__class__.SUPPORTED_KEYS
+        check_passed = False
+        ret_val = None
+        if supported_keys[key]['type'] == int or\
+                supported_keys[key]['type'] == float:
+            type_str = str(type(val))
+            if type(val) == self.__class__.SUPPORTED_KEYS[key]['type']:
+                check_passed = True
+                ret_val = val
+            if 'numpy' in type_str:
+                # a value is required, not array
+                if np.issubdtype(
+                        type(val),
+                        np_type_mapping[supported_keys[key]['type']]):
+                    check_passed = True
+                    ret_val = val.astype(supported_keys[key]['type'])
+            elif 'torch' in type_str:
+                # only one element tensors
+                # can be converted to Python scalars
+                if len(val.size()) == 0:
+                    val_item = val.item()
+                    if type(val_item) == supported_keys[key]['type']:
+                        check_passed = True
+                        ret_val = val_item
+        else:
+            if type(val) == self.__class__.SUPPORTED_KEYS[key]['type']:
+                check_passed = True
+                ret_val = val
+        if not check_passed:
             err_msg = 'Type check failed in CameraParameter:\n'
             err_msg += f'key={str(key)}\n'
             err_msg += f'type(val)={type(val)}\n'
             raise TypeError(err_msg)
+        return ret_val
 
 
 def __parse_chessboard_param__(chessboard_camera_param, name, inverse=True):
