@@ -3,6 +3,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 import torch
 from pytorch3d.structures import Meshes
 
+from mmhuman3d.core.cameras import NewAttributeCameras
 from mmhuman3d.utils import get_different_colors
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER
@@ -92,6 +93,7 @@ class SegmentationRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
+                cameras: Optional[NewAttributeCameras] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
                 **kwargs):
@@ -119,7 +121,8 @@ class SegmentationRenderer(MeshBaseRenderer):
         # It is recommended that you use `TexturesClosest` to exclude
         # inappropriate interpolation among the faces, to make sure the
         # segmentation map is sharp.
-        cameras = self.init_cameras(K=K, R=R, T=T)
+        cameras = self.init_cameras(
+            K=K, R=R, T=T) if cameras is None else cameras
         renderer = self.init_renderer(cameras, None)
 
         rendered_images = renderer(meshes)

@@ -107,7 +107,7 @@ RENDER_CONFIGS = {
     'part_silhouette': {
         'renderer_type': 'segmentation',
         'shader_type': 'nolight',
-        'texture_type': 'closest',
+        'texture_type': 'nearest',
         'raster_type': 'mesh',
         'light': base_directional_light,
         'material': base_material,

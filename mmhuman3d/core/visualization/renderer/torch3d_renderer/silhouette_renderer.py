@@ -3,6 +3,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 import torch
 from pytorch3d.structures import Meshes
 
+from mmhuman3d.core.cameras import NewAttributeCameras
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER
 
@@ -83,12 +84,14 @@ class SilhouetteRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
+                cameras: Optional[NewAttributeCameras] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Iterable[str] = None,
                 **kwargs):
         """The params are the same as MeshBaseRenderer."""
         meshes = self.prepare_meshes(meshes, vertices, faces)
-        cameras = self.init_cameras(K=K, R=R, T=T)
+        cameras = self.init_cameras(
+            K=K, R=R, T=T) if cameras is None else cameras
         renderer = self.init_renderer(cameras, None)
 
         rendered_images = renderer(meshes)

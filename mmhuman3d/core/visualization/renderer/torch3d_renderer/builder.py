@@ -15,7 +15,7 @@ from pytorch3d.renderer import (
 )
 
 from .shader import NoLightShader
-from .textures import TexturesClosest
+from .textures import TexturesNearest
 
 RENDERER = Registry('renderer')
 RASETER = Registry('raster')
@@ -61,8 +61,8 @@ TEXTURES.register_module(
     name=['TexturesAtlas', 'textures_atlas', 'atlas', 'Atlas'],
     module=TexturesAtlas)
 TEXTURES.register_module(
-    name=['TexturesClosest', 'textures_closest', 'closest', 'Closest'],
-    module=TexturesClosest)
+    name=['TexturesNearest', 'textures_nearest', 'nearest', 'Nearest'],
+    module=TexturesNearest)
 TEXTURES.register_module(
     name=['TexturesUV', 'textures_uv', 'uv'], module=TexturesUV)
 TEXTURES.register_module(
