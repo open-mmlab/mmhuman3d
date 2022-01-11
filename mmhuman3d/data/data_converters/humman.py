@@ -36,16 +36,16 @@ class HuMManConverter(BaseConverter):
         # use HumanData to store all data
         human_data = HumanData()
 
-        smpl['global_orient'] = np.array(smpl['global_orient']).reshape(-1, 3)
-        smpl['body_pose'] = np.array(smpl['body_pose']).reshape(-1, 23, 3)
-        smpl['betas'] = np.array(smpl['betas']).reshape(-1, 10)
-        smpl['transl'] = np.array(smpl['transl']).reshape(-1, 3)
+        smpl['global_orient'] = np.concatenate(smpl['global_orient'], axis=0).reshape(-1, 3)
+        smpl['body_pose'] = np.concatenate(smpl['body_pose'], axis=0).reshape(-1, 23, 3)
+        smpl['betas'] = np.concatenate(smpl['betas'], axis=0).reshape(-1, 10)
+        smpl['transl'] = np.concatenate(smpl['transl'], axis=0).reshape(-1, 3)
 
         human_data['smpl'] = smpl
 
         num_keypoints = get_keypoint_num(keypoints_convention)
 
-        keypoints2d = np.array(keypoints_2d).reshape(-1, num_keypoints, 3)
+        keypoints2d = np.concatenate(keypoints_2d, axis=0).reshape(-1, num_keypoints, 3)
         keypoints2d, keypoints2d_mask = convert_kps(
             keypoints2d,
             mask=keypoints2d_mask,
@@ -54,7 +54,7 @@ class HuMManConverter(BaseConverter):
         human_data['keypoints2d'] = keypoints2d
         human_data['keypoints2d_mask'] = keypoints2d_mask
 
-        keypoints3d = np.array(keypoints_3d).reshape(-1, num_keypoints, 4)
+        keypoints3d = np.concatenate(keypoints_3d, axis=0).reshape(-1, num_keypoints, 4)
         keypoints3d, keypoints3d_mask = convert_kps(
             keypoints3d,
             mask=keypoints3d_mask,
@@ -66,8 +66,8 @@ class HuMManConverter(BaseConverter):
         human_data['image_path'] = image_path
         human_data['image_id'] = image_id
 
-        bbox_xywh = np.array(bbox_xywh).reshape((-1, 4))
-        bbox_xywh = np.hstack([bbox_xywh, np.ones([bbox_xywh.shape[0], 1])])
+        bbox_xywh = np.concatenate(bbox_xywh, axis=0).reshape((-1, 4))
+        bbox_xywh = np.concatenate([bbox_xywh, np.ones([bbox_xywh.shape[0], 1])], axis=-1)
         human_data['bbox_xywh'] = bbox_xywh
 
         human_data['config'] = 'humman'
@@ -113,11 +113,15 @@ class HuMManConverter(BaseConverter):
 
         for ann_path in tqdm(ann_paths):
 
-            smc_reader = SMCReader(ann_path)
-
-            if self.skip_no_keypoints3d and smc_reader.keypoint_exists:
+            try:
+                smc_reader = SMCReader(ann_path)
+            except OSError:
+                print(f'Unable to load {ann_path}.')
                 continue
-            if self.skip_no_iphone and smc_reader.iphone_exists:
+
+            if self.skip_no_keypoints3d and not smc_reader.keypoint_exists:
+                continue
+            if self.skip_no_iphone and not smc_reader.iphone_exists:
                 continue
 
             num_kinect = smc_reader.get_num_kinect()
@@ -205,27 +209,27 @@ class HuMManConverter(BaseConverter):
                     iphone_smpl['betas'].append(smpl_dict['betas'])
                     iphone_smpl['transl'].append(smpl_dict['transl'])
 
-            if not os.path.isdir(out_path):
-                os.makedirs(out_path)
+        if not os.path.isdir(out_path):
+            os.makedirs(out_path)
 
-            # make kinect human data
-            kinect_human_data = self._make_human_data(
-                kinect_smpl, keypoints_convention_, kinect_image_path_,
-                kinect_image_id_, kinect_bbox_xywh_, kinect_keypoints_2d_,
-                keypoints2d_mask_, kinect_keypoints_3d_, keypoints3d_mask_)
+        # make kinect human data
+        kinect_human_data = self._make_human_data(
+            kinect_smpl, keypoints_convention_, kinect_image_path_,
+            kinect_image_id_, kinect_bbox_xywh_, kinect_keypoints_2d_,
+            keypoints2d_mask_, kinect_keypoints_3d_, keypoints3d_mask_)
 
-            # store kinect human data
-            file_name = 'humman_kinect.npz'
-            out_file = os.path.join(out_path, file_name)
-            kinect_human_data.dump(out_file)
+        # store kinect human data
+        file_name = 'humman_kinect.npz'
+        out_file = os.path.join(out_path, file_name)
+        kinect_human_data.dump(out_file)
 
-            # make iphone human data
-            iphone_human_data = self._make_human_data(
-                iphone_smpl, keypoints_convention_, iphone_image_path_,
-                iphone_image_id_, iphone_bbox_xywh_, iphone_keypoints_2d_,
-                keypoints2d_mask_, iphone_keypoints_3d_, keypoints3d_mask_)
+        # make iphone human data
+        iphone_human_data = self._make_human_data(
+            iphone_smpl, keypoints_convention_, iphone_image_path_,
+            iphone_image_id_, iphone_bbox_xywh_, iphone_keypoints_2d_,
+            keypoints2d_mask_, iphone_keypoints_3d_, keypoints3d_mask_)
 
-            # store iphone human data
-            file_name = 'humman_iphone.npz'
-            out_file = os.path.join(out_path, file_name)
-            iphone_human_data.dump(out_file)
+        # store iphone human data
+        file_name = 'humman_iphone.npz'
+        out_file = os.path.join(out_path, file_name)
+        iphone_human_data.dump(out_file)
