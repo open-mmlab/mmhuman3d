@@ -54,7 +54,7 @@ def test_load_json():
 
 def test_type():
     cam_param = CameraParameter(name='src_cam', H=720, W=1280)
-    # wrong distortion value type(expect float)
+    # wrong distortion value type (expect float)
     with pytest.raises(TypeError):
         cam_param.set_value('k1', '1.0')
     with pytest.raises(TypeError):
@@ -64,7 +64,7 @@ def test_type():
     cam_param.set_value('k1', torch.ones(size=(3, ), dtype=torch.float16)[0])
     cam_param.reset_distort()
 
-    # wrong height value type(expect float)
+    # wrong height value type (expect float)
     with pytest.raises(TypeError):
         cam_param.set_value('H', '1080')
     with pytest.raises(TypeError):

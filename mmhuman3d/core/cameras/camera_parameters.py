@@ -453,7 +453,7 @@ class CameraParameter:
             val (Any): The value casted into correct format.
         """
         self.__check_key__(key)
-        formatted_val = self.__check_value_type__(key, val)
+        formatted_val = self.__validate_value_type__(key, val)
         return key, formatted_val
 
     def __check_key__(self, key: Any) -> None:
@@ -474,7 +474,7 @@ class CameraParameter:
             err_msg += f'key={str(key)}\n'
             raise KeyError(err_msg)
 
-    def __check_value_type__(self, key: Any, val: Any) -> None:
+    def __validate_value_type__(self, key: Any, val: Any) -> None:
         """Check whether the type of value matches definition in
         CameraParameter.SUPPORTED_KEYS.
 
@@ -501,7 +501,7 @@ class CameraParameter:
             if type(val) == self.__class__.SUPPORTED_KEYS[key]['type']:
                 check_passed = True
                 ret_val = val
-            if 'numpy' in type_str:
+            elif 'numpy' in type_str:
                 # a value is required, not array
                 if np.issubdtype(
                         type(val),
