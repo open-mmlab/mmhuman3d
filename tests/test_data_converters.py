@@ -210,7 +210,7 @@ def test_preprocess():
     data_converter.convert(GTA_HUMAN_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/gta_human.npz')
 
-    HUMMAN_ROOT = 'tests/data/mocap/'
+    HUMMAN_ROOT = os.path.join(root_path, 'humman')
     cfg = dict(type='HuMManConverter')
     data_converter = build_data_converter(cfg)
     data_converter.convert(HUMMAN_ROOT, output_path)
