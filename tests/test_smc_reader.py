@@ -3,7 +3,7 @@ import pytest
 
 from mmhuman3d.data.data_structures.smc_reader import SMCReader
 
-TEST_SMC_PATH = 'tests/data/mocap/p000103_a000011_tiny.smc'
+TEST_SMC_PATH = 'tests/data/dataset_sample/humman/p000003_a000014_tiny.smc'
 
 
 def test_get_calibration_dict():
