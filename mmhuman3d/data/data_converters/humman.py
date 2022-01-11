@@ -36,8 +36,10 @@ class HuMManConverter(BaseConverter):
         # use HumanData to store all data
         human_data = HumanData()
 
-        smpl['global_orient'] = np.concatenate(smpl['global_orient'], axis=0).reshape(-1, 3)
-        smpl['body_pose'] = np.concatenate(smpl['body_pose'], axis=0).reshape(-1, 23, 3)
+        smpl['global_orient'] = np.concatenate(
+            smpl['global_orient'], axis=0).reshape(-1, 3)
+        smpl['body_pose'] = np.concatenate(
+            smpl['body_pose'], axis=0).reshape(-1, 23, 3)
         smpl['betas'] = np.concatenate(smpl['betas'], axis=0).reshape(-1, 10)
         smpl['transl'] = np.concatenate(smpl['transl'], axis=0).reshape(-1, 3)
 
@@ -45,7 +47,8 @@ class HuMManConverter(BaseConverter):
 
         num_keypoints = get_keypoint_num(keypoints_convention)
 
-        keypoints2d = np.concatenate(keypoints_2d, axis=0).reshape(-1, num_keypoints, 3)
+        keypoints2d = np.concatenate(
+            keypoints_2d, axis=0).reshape(-1, num_keypoints, 3)
         keypoints2d, keypoints2d_mask = convert_kps(
             keypoints2d,
             mask=keypoints2d_mask,
@@ -54,7 +57,8 @@ class HuMManConverter(BaseConverter):
         human_data['keypoints2d'] = keypoints2d
         human_data['keypoints2d_mask'] = keypoints2d_mask
 
-        keypoints3d = np.concatenate(keypoints_3d, axis=0).reshape(-1, num_keypoints, 4)
+        keypoints3d = np.concatenate(
+            keypoints_3d, axis=0).reshape(-1, num_keypoints, 4)
         keypoints3d, keypoints3d_mask = convert_kps(
             keypoints3d,
             mask=keypoints3d_mask,
@@ -67,7 +71,8 @@ class HuMManConverter(BaseConverter):
         human_data['image_id'] = image_id
 
         bbox_xywh = np.concatenate(bbox_xywh, axis=0).reshape((-1, 4))
-        bbox_xywh = np.concatenate([bbox_xywh, np.ones([bbox_xywh.shape[0], 1])], axis=-1)
+        bbox_xywh = np.concatenate(
+            [bbox_xywh, np.ones([bbox_xywh.shape[0], 1])], axis=-1)
         human_data['bbox_xywh'] = bbox_xywh
 
         human_data['config'] = 'humman'
