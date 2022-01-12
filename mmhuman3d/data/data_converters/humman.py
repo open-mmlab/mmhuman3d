@@ -7,6 +7,7 @@ from tqdm import tqdm
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_num,
+    get_keypoint_idx
 )
 from mmhuman3d.data.data_structures import SMCReader
 from mmhuman3d.data.data_structures.human_data import HumanData
@@ -20,6 +21,11 @@ class HuMManConverter(BaseConverter):
 
     skip_no_iphone = True
     skip_no_keypoints3d = True
+    downsample_ratio = 10  # uniformly select 1 from every 10 examples
+
+    keypoint_convention = 'coco_wholebody'
+    left_hip_idx = get_keypoint_idx('left_hip', keypoint_convention)
+    right_hip_idx = get_keypoint_idx('right_hip', keypoint_convention)
 
     def _make_human_data(
         self,
@@ -79,6 +85,10 @@ class HuMManConverter(BaseConverter):
 
         human_data.compress_keypoints_by_mask()
 
+        # uniform downsampling
+        if self.downsample_ratio > 1:
+            human_data = human_data.get_temporal_slice(0, len(human_data), step=self.downsample_ratio)
+
         return human_data
 
     def convert(self, dataset_path: str, out_path: str) -> dict:
@@ -111,8 +121,8 @@ class HuMManConverter(BaseConverter):
             kinect_keypoints_2d_, kinect_keypoints_3d_ = [], [], [], [], []
         iphone_image_path_, iphone_image_id_, iphone_bbox_xywh_, \
             iphone_keypoints_2d_, iphone_keypoints_3d_ = [], [], [], [], []
-        keypoints_convention_, keypoints2d_mask_, keypoints3d_mask_ = \
-            None, None, None
+        keypoints2d_mask_, keypoints3d_mask_ = None, None
+        keypoints_convention_ = self.keypoint_convention
 
         ann_paths = sorted(glob.glob(os.path.join(dataset_path, '*.smc')))
 
@@ -161,8 +171,6 @@ class HuMManConverter(BaseConverter):
                 assert device_id >= 0, f'Negative device id: {device_id}'
 
                 keypoints_convention = smc_reader.get_keypoints_convention()
-                if keypoints_convention_ is None:
-                    keypoints_convention_ = keypoints_convention
                 assert keypoints_convention_ == keypoints_convention
 
                 # get keypoints2d (all frames)
@@ -189,6 +197,12 @@ class HuMManConverter(BaseConverter):
                 if keypoints3d_mask_ is None:
                     keypoints3d_mask_ = keypoints3d_mask
                 assert (keypoints3d_mask_ == keypoints3d_mask).all()
+
+                # root-align keypoints3d
+                left_hip_keypoints = keypoints3d[:, [self.left_hip_idx], :]
+                right_hip_keypoints = keypoints3d[:, [self.right_hip_idx], :]
+                root_keypoints = (left_hip_keypoints + right_hip_keypoints) / 2.0
+                keypoints3d = keypoints3d - root_keypoints
                 keypoints_3d_.append(keypoints3d)
 
                 # get smpl (all frames)
@@ -223,7 +237,7 @@ class HuMManConverter(BaseConverter):
             keypoints2d_mask_, kinect_keypoints_3d_, keypoints3d_mask_)
 
         # store kinect human data
-        file_name = 'humman_kinect.npz'
+        file_name = 'humman_kinect_ds10.npz'
         out_file = os.path.join(out_path, file_name)
         kinect_human_data.dump(out_file)
 
@@ -234,6 +248,6 @@ class HuMManConverter(BaseConverter):
             keypoints2d_mask_, iphone_keypoints_3d_, keypoints3d_mask_)
 
         # store iphone human data
-        file_name = 'humman_iphone.npz'
+        file_name = 'humman_iphone_ds10.npz'
         out_file = os.path.join(out_path, file_name)
         iphone_human_data.dump(out_file)
