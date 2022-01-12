@@ -34,7 +34,8 @@ class SMCReader:
                 self.smc['iPhone'].attrs['depth_resolution']
         self.keypoint_exists = 'Keypoints3D' in self.smc.keys()
         if self.keypoint_exists:
-            self.keypoints_num_frames = self.smc['Keypoints3D'].attrs['num_frame']
+            self.keypoints_num_frames = self.smc['Keypoints3D'].attrs[
+                'num_frame']
             self.keypoints_convention = self.smc['Keypoints3D'].attrs[
                 'convention']
             self.keypoints_created_time = self.smc['Keypoints3D'].attrs[
@@ -220,7 +221,6 @@ class SMCReader:
                 dict: A dict of rotation and translation,
                     keys are R and T,
                     each value is an ndarray.
-
         """
         assert iphone_id == 0, 'Currently only one iPhone.'
         R = np.asarray(self.calibration_dict['iPhone']['R']).reshape(3, 3)
@@ -692,8 +692,7 @@ class SMCReader:
                 world2cam = self.get_kinect_color_extrinsics(
                     kinect_id=device_id, homogeneous=True)
             else:
-                world2cam = self.get_iphone_extrinsics(
-                    iphone_id=device_id)
+                world2cam = self.get_iphone_extrinsics(iphone_id=device_id)
 
             xyz, conf = keypoints3d_world[..., :3], keypoints3d_world[..., [3]]
             xyz_homogeneous = np.ones([*xyz.shape[:-1], 4])
