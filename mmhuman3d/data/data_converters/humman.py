@@ -217,11 +217,11 @@ class HuMManConverter(BaseModeConverter):
                 assert (keypoints3d_mask_ == keypoints3d_mask).all()
 
                 # root-align keypoints3d
-                left_hip_keypoints = keypoints3d[:, [self.left_hip_idx], :]
-                right_hip_keypoints = keypoints3d[:, [self.right_hip_idx], :]
+                left_hip_keypoints = keypoints3d[:, [self.left_hip_idx], :3]
+                right_hip_keypoints = keypoints3d[:, [self.right_hip_idx], :3]
                 root_keypoints = \
                     (left_hip_keypoints + right_hip_keypoints) / 2.0
-                keypoints3d = keypoints3d - root_keypoints
+                keypoints3d[..., :3] = keypoints3d[..., :3] - root_keypoints
                 keypoints_3d_.append(keypoints3d)
 
                 # get smpl (all frames)
