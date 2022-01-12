@@ -61,9 +61,7 @@ DATASET_CONFIGS = dict(
         prefix='vibe_data'),
     gta_human=dict(type='GTAHumanConverter', prefix='gta_human'),
     humman=dict(
-        type='HuMManConverter',
-        modes=['train', 'test'],
-        prefix='humman'),
+        type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
 )
 
 
