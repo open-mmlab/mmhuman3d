@@ -42,12 +42,18 @@ class HuMManConverter(BaseConverter):
         # use HumanData to store all data
         human_data = HumanData()
 
+        # downsample idx
+        select = [i for i in range(len(image_path))
+                  if i % self.downsample_ratio == 0]
+
         smpl['global_orient'] = np.concatenate(
-            smpl['global_orient'], axis=0).reshape(-1, 3)
+            smpl['global_orient'], axis=0).reshape(-1, 3)[select]
         smpl['body_pose'] = np.concatenate(
-            smpl['body_pose'], axis=0).reshape(-1, 23, 3)
-        smpl['betas'] = np.concatenate(smpl['betas'], axis=0).reshape(-1, 10)
-        smpl['transl'] = np.concatenate(smpl['transl'], axis=0).reshape(-1, 3)
+            smpl['body_pose'], axis=0).reshape(-1, 23, 3)[select]
+        smpl['betas'] = np.concatenate(
+            smpl['betas'], axis=0).reshape(-1, 10)[select]
+        smpl['transl'] = np.concatenate(
+            smpl['transl'], axis=0).reshape(-1, 3)[select]
 
         human_data['smpl'] = smpl
 
@@ -60,7 +66,7 @@ class HuMManConverter(BaseConverter):
             mask=keypoints2d_mask,
             src=keypoints_convention,
             dst='human_data')
-        human_data['keypoints2d'] = keypoints2d
+        human_data['keypoints2d'] = keypoints2d[select]
         human_data['keypoints2d_mask'] = keypoints2d_mask
 
         keypoints3d = np.concatenate(
@@ -70,24 +76,20 @@ class HuMManConverter(BaseConverter):
             mask=keypoints3d_mask,
             src=keypoints_convention,
             dst='human_data')
-        human_data['keypoints3d'] = keypoints3d
+        human_data['keypoints3d'] = keypoints3d[select]
         human_data['keypoints3d_mask'] = keypoints3d_mask
 
-        human_data['image_path'] = image_path
-        human_data['image_id'] = image_id
+        human_data['image_path'] = [image_path[i] for i in select]
+        human_data['image_id'] = [image_id[i] for i in select]
 
         bbox_xywh = np.array(bbox_xywh).reshape((-1, 4))
         bbox_xywh = np.concatenate(
             [bbox_xywh, np.ones([bbox_xywh.shape[0], 1])], axis=-1)
-        human_data['bbox_xywh'] = bbox_xywh
+        human_data['bbox_xywh'] = bbox_xywh[select]
 
         human_data['config'] = 'humman'
 
         human_data.compress_keypoints_by_mask()
-
-        # uniform downsampling
-        if self.downsample_ratio > 1:
-            human_data = human_data.get_temporal_slice(0, len(human_data), step=self.downsample_ratio)
 
         return human_data
 
@@ -201,7 +203,8 @@ class HuMManConverter(BaseConverter):
                 # root-align keypoints3d
                 left_hip_keypoints = keypoints3d[:, [self.left_hip_idx], :]
                 right_hip_keypoints = keypoints3d[:, [self.right_hip_idx], :]
-                root_keypoints = (left_hip_keypoints + right_hip_keypoints) / 2.0
+                root_keypoints = \
+                    (left_hip_keypoints + right_hip_keypoints) / 2.0
                 keypoints3d = keypoints3d - root_keypoints
                 keypoints_3d_.append(keypoints3d)
 
