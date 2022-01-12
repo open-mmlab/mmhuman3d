@@ -211,11 +211,15 @@ def test_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/gta_human.npz')
 
     HUMMAN_ROOT = os.path.join(root_path, 'humman')
-    cfg = dict(type='HuMManConverter')
+    cfg = dict(type='HuMManConverter', modes=['train', 'test'])
     data_converter = build_data_converter(cfg)
     data_converter.convert(HUMMAN_ROOT, output_path)
-    assert os.path.exists('/tmp/preprocessed_npzs/humman_kinect.npz')
-    assert os.path.exists('/tmp/preprocessed_npzs/humman_iphone.npz')
+    assert os.path.exists(
+        '/tmp/preprocessed_npzs/humman_train_kinect_ds10.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/humman_test_kinect.npz')
+    assert os.path.exists(
+        '/tmp/preprocessed_npzs/humman_train_iphone_ds10.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/humman_test_iphone.npz')
 
 
 def test_preprocessed_npz():
@@ -254,7 +258,7 @@ def test_preprocessed_npz():
 
             elif k == 'image_id':
                 # only used in .smc, (device, device_id, frame_id)
-                assert npfile[k][0].shape == (N, 3)
+                assert npfile[k].shape == (N, 3)
 
             elif k == 'video_path':
                 assert isinstance(npfile[k][0], np.str_)

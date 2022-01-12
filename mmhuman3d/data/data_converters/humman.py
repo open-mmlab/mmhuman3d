@@ -6,8 +6,8 @@ from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
+    get_keypoint_idx,
     get_keypoint_num,
-    get_keypoint_idx
 )
 from mmhuman3d.data.data_structures import SMCReader
 from mmhuman3d.data.data_structures.human_data import HumanData
@@ -47,8 +47,10 @@ class HuMManConverter(BaseModeConverter):
 
         # downsample idx
         if mode == 'train':
-            select = [i for i in range(len(image_path))
-                      if i % self.downsample_ratio == 0]
+            select = [
+                i for i in range(len(image_path))
+                if i % self.downsample_ratio == 0
+            ]
         else:
             select = [i for i in range(len(image_path))]
 
@@ -215,23 +217,22 @@ class HuMManConverter(BaseModeConverter):
                 assert (keypoints3d_mask_ == keypoints3d_mask).all()
 
                 # root-align keypoints3d
-                left_hip_keypoints = keypoints3d[:, [self.left_hip_idx], :]
-                right_hip_keypoints = keypoints3d[:, [self.right_hip_idx], :]
+                left_hip_keypoints = keypoints3d[:, [self.left_hip_idx], :3]
+                right_hip_keypoints = keypoints3d[:, [self.right_hip_idx], :3]
                 root_keypoints = \
                     (left_hip_keypoints + right_hip_keypoints) / 2.0
-                keypoints3d = keypoints3d - root_keypoints
+                keypoints3d[..., :3] = keypoints3d[..., :3] - root_keypoints
                 keypoints_3d_.append(keypoints3d)
 
                 # get smpl (all frames)
                 smpl_dict = smc_reader.get_smpl()
                 smpl_['body_pose'].append(smpl_dict['body_pose'])
-                smpl_['global_orient'].append(
-                    smpl_dict['global_orient'])
+                smpl_['global_orient'].append(smpl_dict['global_orient'])
                 smpl_['transl'].append(smpl_dict['transl'])
 
                 # expand betas
-                betas_expanded = np.tile(
-                    smpl_dict['betas'], num_frames).reshape(-1, 10)
+                betas_expanded = np.tile(smpl_dict['betas'],
+                                         num_frames).reshape(-1, 10)
                 smpl_['betas'].append(betas_expanded)
 
                 # get image paths (smc paths)
@@ -249,8 +250,7 @@ class HuMManConverter(BaseModeConverter):
 
         # make kinect human data
         kinect_human_data = self._make_human_data(
-            mode,
-            kinect_smpl, keypoints_convention_, kinect_image_path_,
+            mode, kinect_smpl, keypoints_convention_, kinect_image_path_,
             kinect_image_id_, kinect_bbox_xywh_, kinect_keypoints_2d_,
             keypoints2d_mask_, kinect_keypoints_3d_, keypoints3d_mask_)
 
@@ -264,8 +264,7 @@ class HuMManConverter(BaseModeConverter):
 
         # make iphone human data
         iphone_human_data = self._make_human_data(
-            mode,
-            iphone_smpl, keypoints_convention_, iphone_image_path_,
+            mode, iphone_smpl, keypoints_convention_, iphone_image_path_,
             iphone_image_id_, iphone_bbox_xywh_, iphone_keypoints_2d_,
             keypoints2d_mask_, iphone_keypoints_3d_, keypoints3d_mask_)
 
