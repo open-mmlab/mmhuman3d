@@ -60,7 +60,10 @@ DATASET_CONFIGS = dict(
         pretrained_ckpt='data/checkpoints/spin.pth',
         prefix='vibe_data'),
     gta_human=dict(type='GTAHumanConverter', prefix='gta_human'),
-    humman=dict(type='HuMManConverter', prefix='humman'),
+    humman=dict(
+        type='HuMManConverter',
+        modes=['train', 'test'],
+        prefix='humman'),
 )
 
 

@@ -11,12 +11,12 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 )
 from mmhuman3d.data.data_structures import SMCReader
 from mmhuman3d.data.data_structures.human_data import HumanData
-from .base_converter import BaseConverter
+from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
 
 @DATA_CONVERTERS.register_module()
-class HuMManConverter(BaseConverter):
+class HuMManConverter(BaseModeConverter):
     """A mysterious dataset that will be announced soon."""
 
     skip_no_iphone = True
@@ -27,8 +27,11 @@ class HuMManConverter(BaseConverter):
     left_hip_idx = get_keypoint_idx('left_hip', keypoint_convention)
     right_hip_idx = get_keypoint_idx('right_hip', keypoint_convention)
 
+    ACCEPTED_MODES = ['test', 'train']
+
     def _make_human_data(
         self,
+        mode,
         smpl,
         keypoints_convention,
         image_path,
@@ -43,8 +46,11 @@ class HuMManConverter(BaseConverter):
         human_data = HumanData()
 
         # downsample idx
-        select = [i for i in range(len(image_path))
-                  if i % self.downsample_ratio == 0]
+        if mode == 'train':
+            select = [i for i in range(len(image_path))
+                      if i % self.downsample_ratio == 0]
+        else:
+            select = [i for i in range(len(image_path))]
 
         smpl['global_orient'] = np.concatenate(
             smpl['global_orient'], axis=0).reshape(-1, 3)[select]
@@ -93,17 +99,19 @@ class HuMManConverter(BaseConverter):
 
         return human_data
 
-    def convert(self, dataset_path: str, out_path: str) -> dict:
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                        mode: str) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
+            mode (str): Mode in accepted modes
 
         Returns:
             dict:
-                A dict containing keys video_path, smplh, meta, frame_idx
-                stored in HumanData() format
+                A dict containing keys image_path, bbox_xywh, keypoints2d,
+                keypoints2d_mask stored in HumanData() format
         """
 
         kinect_smpl = {}
@@ -128,7 +136,13 @@ class HuMManConverter(BaseConverter):
 
         ann_paths = sorted(glob.glob(os.path.join(dataset_path, '*.smc')))
 
+        with open(os.path.join(dataset_path, f'{mode}.txt'), 'r') as f:
+            split = set(f.read().splitlines())
+
         for ann_path in tqdm(ann_paths):
+
+            if os.path.basename(ann_path) not in split:
+                continue
 
             try:
                 smc_reader = SMCReader(ann_path)
@@ -235,22 +249,30 @@ class HuMManConverter(BaseConverter):
 
         # make kinect human data
         kinect_human_data = self._make_human_data(
+            mode,
             kinect_smpl, keypoints_convention_, kinect_image_path_,
             kinect_image_id_, kinect_bbox_xywh_, kinect_keypoints_2d_,
             keypoints2d_mask_, kinect_keypoints_3d_, keypoints3d_mask_)
 
         # store kinect human data
-        file_name = 'humman_kinect_ds10.npz'
+        if mode == 'train' and self.downsample_ratio > 1:
+            file_name = f'humman_{mode}_kinect_ds{self.downsample_ratio}.npz'
+        else:
+            file_name = f'humman_{mode}_kinect.npz'
         out_file = os.path.join(out_path, file_name)
         kinect_human_data.dump(out_file)
 
         # make iphone human data
         iphone_human_data = self._make_human_data(
+            mode,
             iphone_smpl, keypoints_convention_, iphone_image_path_,
             iphone_image_id_, iphone_bbox_xywh_, iphone_keypoints_2d_,
             keypoints2d_mask_, iphone_keypoints_3d_, keypoints3d_mask_)
 
         # store iphone human data
-        file_name = 'humman_iphone_ds10.npz'
+        if mode == 'train' and self.downsample_ratio > 1:
+            file_name = f'humman_{mode}_iphone_ds{self.downsample_ratio}.npz'
+        else:
+            file_name = f'humman_{mode}_iphone.npz'
         out_file = os.path.join(out_path, file_name)
         iphone_human_data.dump(out_file)
