@@ -49,7 +49,9 @@ class LoadImageFromFile(object):
             assert 'image_id' in results, 'Load image from .smc, ' \
                                           'but image_id is not provided.'
             device, device_id, frame_id = results['image_id']
-            img = SMCReader(filename).get_color(device, device_id, frame_id)
+            img = SMCReader(filename).get_color(
+                device, device_id, frame_id, disable_tqdm=True)
+            img = img.squeeze()  # (1, H, W, 3) -> (H, W, 3)
         else:
             img_bytes = self.file_client.get(filename)
             img = mmcv.imfrombytes(img_bytes, flag=self.color_type)
