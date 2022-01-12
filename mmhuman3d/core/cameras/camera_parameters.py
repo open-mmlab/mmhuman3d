@@ -82,9 +82,9 @@ class CameraParameter:
         self.parameters_dict['in_mat'] = in_mat
         for distort_name in __distort_coefficient_names__:
             self.parameters_dict[distort_name] = 0.0
-        _, H = self.check_item('H', H)
+        _, H = self.validate_item('H', H)
         self.parameters_dict['H'] = H
-        _, W = self.check_item('W', W)
+        _, W = self.validate_item('W', W)
         self.parameters_dict['W'] = W
         r_mat = __zero_mat_list__(3)
         self.parameters_dict['rotation_mat'] = r_mat
@@ -211,7 +211,7 @@ class CameraParameter:
             mat_list (List[list]):
                 Matrix in list format.
         """
-        _, mat_list = self.check_item(mat_key, mat_list)
+        _, mat_list = self.validate_item(mat_key, mat_list)
         self.parameters_dict[mat_key] = mat_list
 
     def set_value(self, key: str, value: Any) -> None:
@@ -223,7 +223,7 @@ class CameraParameter:
             value (object):
                 New value of the parameter.
         """
-        _, value = self.check_item(key, value)
+        _, value = self.validate_item(key, value)
         self.parameters_dict[key] = value
 
     def get_value(self, key: str) -> Any:
@@ -432,7 +432,7 @@ class CameraParameter:
                 resolution=(height, width)))
         return cam
 
-    def check_item(self, key: Any, val: Any) -> None:
+    def validate_item(self, key: Any, val: Any) -> List:
         """Check whether the key and its value matches definition in
         CameraParameter.SUPPORTED_KEYS.
 
@@ -474,7 +474,7 @@ class CameraParameter:
             err_msg += f'key={str(key)}\n'
             raise KeyError(err_msg)
 
-    def __validate_value_type__(self, key: Any, val: Any) -> None:
+    def __validate_value_type__(self, key: Any, val: Any) -> Any:
         """Check whether the type of value matches definition in
         CameraParameter.SUPPORTED_KEYS.
 
