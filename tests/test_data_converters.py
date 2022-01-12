@@ -258,7 +258,7 @@ def test_preprocessed_npz():
 
             elif k == 'image_id':
                 # only used in .smc, (device, device_id, frame_id)
-                assert npfile[k][0].shape == (N, 3)
+                assert npfile[k].shape == (N, 3)
 
             elif k == 'video_path':
                 assert isinstance(npfile[k][0], np.str_)
