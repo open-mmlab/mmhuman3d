@@ -71,6 +71,14 @@ def test_type():
         cam_param.set_value('H', 1080.0)
     with pytest.raises(TypeError):
         cam_param.set_value('H', np.ones(shape=(3, ), dtype=np.float32)[0])
+    with pytest.raises(TypeError):
+        cam_param.set_value('H', np.ones(shape=(3, ), dtype=np.int64)[0:1])
+    with pytest.raises(TypeError):
+        cam_param.set_value('H',
+                            torch.ones(size=(3, ), dtype=torch.float32)[0])
+    with pytest.raises(TypeError):
+        cam_param.set_value('H',
+                            torch.ones(size=(3, ), dtype=torch.int32)[0:1])
     cam_param.set_value('H', np.ones(shape=(3, ), dtype=np.uint8)[0])
     cam_param.set_value('H', torch.ones(size=(3, ), dtype=torch.int64)[0])
     cam_param.set_value('H', 720)

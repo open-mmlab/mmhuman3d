@@ -1,5 +1,6 @@
 import json
 import warnings
+from enum import Enum
 from typing import Any, List, Tuple, Union
 
 import numpy as np
@@ -57,6 +58,12 @@ _CAMERA_PARAMETER_SUPPORTED_KEYS_ = {
         'type': float,
     },
 }
+
+
+class _TypeValidation(Enum):
+    MATCH = 0
+    ARRAY = 1
+    FAIL = 2
 
 
 class CameraParameter:
@@ -493,37 +500,46 @@ class CameraParameter:
         """
         np_type_mapping = {int: np.integer, float: np.floating}
         supported_keys = self.__class__.SUPPORTED_KEYS
-        check_passed = False
+        validation_result = _TypeValidation.FAIL
         ret_val = None
         if supported_keys[key]['type'] == int or\
                 supported_keys[key]['type'] == float:
             type_str = str(type(val))
+            class_name = type_str.split('\'')[1]
             if type(val) == self.__class__.SUPPORTED_KEYS[key]['type']:
-                check_passed = True
+                validation_result = _TypeValidation.MATCH
                 ret_val = val
-            elif 'numpy' in type_str:
+            elif class_name.startswith('numpy'):
                 # a value is required, not array
                 if np.issubdtype(
                         type(val),
                         np_type_mapping[supported_keys[key]['type']]):
-                    check_passed = True
+                    validation_result = _TypeValidation.MATCH
                     ret_val = val.astype(supported_keys[key]['type'])
-            elif 'torch' in type_str:
+                elif np.issubdtype(type(val), np.ndarray):
+                    validation_result = _TypeValidation.ARRAY
+            elif class_name.startswith('torch'):
                 # only one element tensors
                 # can be converted to Python scalars
                 if len(val.size()) == 0:
                     val_item = val.item()
                     if type(val_item) == supported_keys[key]['type']:
-                        check_passed = True
+                        validation_result = _TypeValidation.MATCH
                         ret_val = val_item
+                else:
+                    validation_result = _TypeValidation.ARRAY
         else:
             if type(val) == self.__class__.SUPPORTED_KEYS[key]['type']:
-                check_passed = True
+                validation_result = _TypeValidation.MATCH
                 ret_val = val
-        if not check_passed:
+        if validation_result != _TypeValidation.MATCH:
             err_msg = 'Type check failed in CameraParameter:\n'
             err_msg += f'key={str(key)}\n'
             err_msg += f'type(val)={type(val)}\n'
+            if validation_result == _TypeValidation.ARRAY:
+                err_msg += 'A single value is expected, ' +\
+                    'neither an array nor a slice.\n'
+            print(err_msg)
             raise TypeError(err_msg)
         return ret_val
 
