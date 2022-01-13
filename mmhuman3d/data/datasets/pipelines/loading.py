@@ -3,9 +3,8 @@ import os.path as osp
 import mmcv
 import numpy as np
 
-from ..builder import PIPELINES
-
 from mmhuman3d.data.data_structures import SMCReader
+from ..builder import PIPELINES
 
 
 @PIPELINES.register_module()
