@@ -539,7 +539,6 @@ class CameraParameter:
             if validation_result == _TypeValidation.ARRAY:
                 err_msg += 'A single value is expected, ' +\
                     'neither an array nor a slice.\n'
-            print(err_msg)
             raise TypeError(err_msg)
         return ret_val
 
