@@ -125,6 +125,31 @@ def test_get_iphone_data():
         1, 192, 256), 'iPhone depth image should have shape 1x192x256'
 
 
+def test_get_color():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    kinect_color = smc.get_color(device='Kinect', device_id=0, frame_id=0)
+    assert kinect_color.shape == (
+        1, 1080, 1920,
+        3), 'Kinect Color should have resolution of 1x1080x1920x3'
+
+    iphone_color = smc.get_color(device='iPhone', device_id=0, frame_id=0)
+    assert iphone_color.shape == (
+        1, 1440, 1920, 3), 'iPhone color image should have shape 1x1440x1920x3'
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_color(device='kinect', device_id=0, frame_id=0)
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_color(device='iphone', device_id=0, frame_id=0)
+
+    with pytest.raises(KeyError):
+        _ = smc.get_color(device='Kinect', device_id=10, frame_id=0)
+
+    with pytest.raises(KeyError):
+        _ = smc.get_color(device='iPhone', device_id=1, frame_id=0)
+
+
 def test_get_mask():
     smc = SMCReader(TEST_SMC_PATH)
 

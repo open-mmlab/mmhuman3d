@@ -19,15 +19,20 @@ from .builder import DATA_CONVERTERS
 class HuMManConverter(BaseModeConverter):
     """A mysterious dataset that will be announced soon."""
 
-    skip_no_iphone = True
-    skip_no_keypoints3d = True
-    downsample_ratio = 10  # uniformly select 1 from every 10 examples
-
-    keypoint_convention = 'coco_wholebody'
-    left_hip_idx = get_keypoint_idx('left_hip', keypoint_convention)
-    right_hip_idx = get_keypoint_idx('right_hip', keypoint_convention)
-
     ACCEPTED_MODES = ['test', 'train']
+
+    def __init__(self, *args, **kwargs):
+        super(HuMManConverter, self).__init__(*args, **kwargs)
+
+        self.skip_no_iphone = True
+        self.skip_no_keypoints3d = True
+        self.downsample_ratio = 10  # uniformly sampling
+
+        self.keypoint_convention = 'coco_wholebody'
+        self.left_hip_idx = get_keypoint_idx('left_hip',
+                                             self.keypoint_convention)
+        self.right_hip_idx = get_keypoint_idx('right_hip',
+                                              self.keypoint_convention)
 
     def _make_human_data(
         self,
@@ -46,22 +51,17 @@ class HuMManConverter(BaseModeConverter):
         human_data = HumanData()
 
         # downsample idx
-        if mode == 'train':
-            select = [
-                i for i in range(len(image_path))
-                if i % self.downsample_ratio == 0
-            ]
-        else:
-            select = [i for i in range(len(image_path))]
+        selected_inds = np.arange(len(image_path))
+        selected_inds = selected_inds[::self.downsample_ratio]
 
         smpl['global_orient'] = np.concatenate(
-            smpl['global_orient'], axis=0).reshape(-1, 3)[select]
+            smpl['global_orient'], axis=0).reshape(-1, 3)[selected_inds]
         smpl['body_pose'] = np.concatenate(
-            smpl['body_pose'], axis=0).reshape(-1, 23, 3)[select]
+            smpl['body_pose'], axis=0).reshape(-1, 23, 3)[selected_inds]
         smpl['betas'] = np.concatenate(
-            smpl['betas'], axis=0).reshape(-1, 10)[select]
+            smpl['betas'], axis=0).reshape(-1, 10)[selected_inds]
         smpl['transl'] = np.concatenate(
-            smpl['transl'], axis=0).reshape(-1, 3)[select]
+            smpl['transl'], axis=0).reshape(-1, 3)[selected_inds]
 
         human_data['smpl'] = smpl
 
@@ -74,7 +74,7 @@ class HuMManConverter(BaseModeConverter):
             mask=keypoints2d_mask,
             src=keypoints_convention,
             dst='human_data')
-        human_data['keypoints2d'] = keypoints2d[select]
+        human_data['keypoints2d'] = keypoints2d[selected_inds]
         human_data['keypoints2d_mask'] = keypoints2d_mask
 
         keypoints3d = np.concatenate(
@@ -84,16 +84,16 @@ class HuMManConverter(BaseModeConverter):
             mask=keypoints3d_mask,
             src=keypoints_convention,
             dst='human_data')
-        human_data['keypoints3d'] = keypoints3d[select]
+        human_data['keypoints3d'] = keypoints3d[selected_inds]
         human_data['keypoints3d_mask'] = keypoints3d_mask
 
-        human_data['image_path'] = [image_path[i] for i in select]
-        human_data['image_id'] = [image_id[i] for i in select]
+        human_data['image_path'] = [image_path[i] for i in selected_inds]
+        human_data['image_id'] = [image_id[i] for i in selected_inds]
 
         bbox_xywh = np.array(bbox_xywh).reshape((-1, 4))
         bbox_xywh = np.concatenate(
             [bbox_xywh, np.ones([bbox_xywh.shape[0], 1])], axis=-1)
-        human_data['bbox_xywh'] = bbox_xywh[select]
+        human_data['bbox_xywh'] = bbox_xywh[selected_inds]
 
         human_data['config'] = 'humman'
 
@@ -245,8 +245,7 @@ class HuMManConverter(BaseModeConverter):
                 assert len(keypoints2d) == num_frames
                 assert len(keypoints3d) == num_frames
 
-        if not os.path.isdir(out_path):
-            os.makedirs(out_path)
+        os.makedirs(out_path, exist_ok=True)
 
         # make kinect human data
         kinect_human_data = self._make_human_data(
