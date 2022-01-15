@@ -2,6 +2,7 @@ import os.path as osp
 
 import mmcv
 import numpy as np
+import cv2
 
 from mmhuman3d.data.data_structures import SMCReader
 from ..builder import PIPELINES
@@ -52,6 +53,7 @@ class LoadImageFromFile(object):
             img = smc_reader.get_color(
                 device, device_id, frame_id, disable_tqdm=True)
             img = img.squeeze()  # (1, H, W, 3) -> (H, W, 3)
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # BGR is used
             del smc_reader
         else:
             img_bytes = self.file_client.get(filename)
