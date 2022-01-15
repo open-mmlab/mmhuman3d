@@ -1,12 +1,9 @@
 cdflib
-chumpy
 colormap
-easydev
 h5py
 matplotlib
 numpy
 opencv-python
-pandas
 pickle5
 scikit-image
 scipy
