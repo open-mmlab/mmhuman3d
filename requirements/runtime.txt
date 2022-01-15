@@ -1,5 +1,6 @@
 cdflib
 colormap
+easydev
 h5py
 matplotlib
 numpy
