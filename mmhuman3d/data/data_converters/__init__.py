@@ -10,6 +10,7 @@ from .gta_human import GTAHumanConverter
 from .h36m import H36mConverter
 from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_spin import H36mSpinConverter
+from .humman import HuMManConverter
 from .insta_vibe import InstaVibeConverter
 from .lsp import LspConverter
 from .lsp_extended import LspExtendedConverter
@@ -33,5 +34,6 @@ __all__ = [
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
     'GTAHumanConverter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
     'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter', 'SurrealConverter',
-    'InstaVibeConverter', 'SpinConverter', 'H36mSpinConverter', 'VibeConverter'
+    'InstaVibeConverter', 'SpinConverter', 'H36mSpinConverter',
+    'VibeConverter', 'HuMManConverter'
 ]

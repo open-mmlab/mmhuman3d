@@ -24,6 +24,9 @@ _HumanData_SUPPORTED_KEYS = {
     'image_path': {
         'type': list,
     },
+    'image_id': {
+        'type': list,
+    },
     'bbox_xywh': {
         'type': np.ndarray,
         'shape': (-1, 5),

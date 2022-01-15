@@ -3,7 +3,7 @@ import pytest
 
 from mmhuman3d.data.data_structures.smc_reader import SMCReader
 
-TEST_SMC_PATH = 'tests/data/mocap/p000103_a000011_tiny.smc'
+TEST_SMC_PATH = 'tests/data/dataset_sample/humman/p000003_a000014_tiny.smc'
 
 
 def test_get_calibration_dict():
@@ -92,7 +92,7 @@ def test_get_kinect_data():
 def test_get_iphone_extrinsics():
     smc = SMCReader(TEST_SMC_PATH)
 
-    iphone_extrinsics = smc.get_iphone_extrinsics(iphone_id=0, frame_id=0)
+    iphone_extrinsics = smc.get_iphone_extrinsics(iphone_id=0)
     assert iphone_extrinsics.shape == (
         4, 4), 'Iphone Color Extrinsic should be a matrix with shape 4x4'
 
@@ -123,6 +123,31 @@ def test_get_iphone_data():
     iphone_depth = smc.get_iphone_depth(iphone_id=0, frame_id=0)
     assert iphone_depth.shape == (
         1, 192, 256), 'iPhone depth image should have shape 1x192x256'
+
+
+def test_get_color():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    kinect_color = smc.get_color(device='Kinect', device_id=0, frame_id=0)
+    assert kinect_color.shape == (
+        1, 1080, 1920,
+        3), 'Kinect Color should have resolution of 1x1080x1920x3'
+
+    iphone_color = smc.get_color(device='iPhone', device_id=0, frame_id=0)
+    assert iphone_color.shape == (
+        1, 1440, 1920, 3), 'iPhone color image should have shape 1x1440x1920x3'
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_color(device='kinect', device_id=0, frame_id=0)
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_color(device='iphone', device_id=0, frame_id=0)
+
+    with pytest.raises(KeyError):
+        _ = smc.get_color(device='Kinect', device_id=10, frame_id=0)
+
+    with pytest.raises(KeyError):
+        _ = smc.get_color(device='iPhone', device_id=1, frame_id=0)
 
 
 def test_get_mask():
@@ -171,10 +196,10 @@ def test_get_kinect_keypoints2d():
         _ = smc.get_kinect_keypoints2d(device_id=-1)
 
     keypoints2d, keypoints2d_mask = smc.get_kinect_keypoints2d(device_id=1)
-    keypoints_num = smc.get_keypoints_num()
+    keypoints_num_frames = smc.get_keypoints_num_frames()
     keypoints_convention = smc.get_keypoints_convention()
     assert keypoints2d.shape[1] == keypoints2d_mask.shape[0]
-    assert keypoints2d.shape[0] == keypoints_num
+    assert keypoints2d.shape[0] == keypoints_num_frames
     assert keypoints_convention == 'coco_wholebody'
     assert keypoints2d.shape == (1, 133, 3)
     assert keypoints2d_mask.shape == (133, )
@@ -214,11 +239,11 @@ def test_get_iphone_keypoints2d():
     with pytest.raises(AssertionError):
         _ = smc.get_iphone_keypoints2d(device_id=-1)
 
-    keypoints2d, keypoints2d_mask = smc.get_iphone_keypoints2d(device_id=1)
-    keypoints_num = smc.get_keypoints_num()
+    keypoints2d, keypoints2d_mask = smc.get_iphone_keypoints2d(device_id=0)
+    keypoints_num_frames = smc.get_keypoints_num_frames()
     keypoints_convention = smc.get_keypoints_convention()
     assert keypoints2d.shape[1] == keypoints2d_mask.shape[0]
-    assert keypoints2d.shape[0] == keypoints_num
+    assert keypoints2d.shape[0] == keypoints_num_frames
     assert keypoints_convention == 'coco_wholebody'
     assert keypoints2d.shape == (1, 133, 3)
     assert keypoints2d_mask.shape == (133, )
@@ -230,7 +255,7 @@ def test_get_iphone_keypoints2d_by_frame():
     smc = SMCReader(TEST_SMC_PATH)
 
     keypoints2d, keypoints2d_mask = smc.get_iphone_keypoints2d(
-        device_id=1, frame_id=0)
+        device_id=0, frame_id=0)
     assert keypoints2d.shape == (1, 133, 3)
     assert keypoints2d_mask.shape == (133, )
     assert isinstance(keypoints2d, np.ndarray)
@@ -241,7 +266,7 @@ def test_get_iphone_keypoints2d_by_frames():
     smc = SMCReader(TEST_SMC_PATH)
 
     keypoints2d, keypoints2d_mask = smc.get_iphone_keypoints2d(
-        device_id=1, frame_id=[0])
+        device_id=0, frame_id=[0])
     assert keypoints2d.ndim == 3
     assert keypoints2d_mask.ndim == 1
     assert keypoints2d.shape == (1, 133, 3)
@@ -255,11 +280,11 @@ def test_get_all_keypoints3d():
 
     # test get all keypoints3d
     keypoints3d, keypoints3d_mask = smc.get_keypoints3d()
-    keypoints_num = smc.get_keypoints_num()
+    keypoints_num_frames = smc.get_keypoints_num_frames()
     keypoints_convention = smc.get_keypoints_convention()
     keypoints_created_time = smc.get_keypoints_created_time()
     assert keypoints3d.shape[1] == keypoints3d_mask.shape[0]
-    assert keypoints3d.shape[0] == keypoints_num
+    assert keypoints3d.shape[0] == keypoints_num_frames
     assert keypoints_convention == 'coco_wholebody'
     assert keypoints3d.shape == (1, 133, 4)
     assert keypoints3d_mask.shape == (133, )
@@ -272,6 +297,30 @@ def test_get_keypoints3d_by_frame():
     smc = SMCReader(TEST_SMC_PATH)
 
     keypoints3d, keypoints3d_mask = smc.get_keypoints3d(frame_id=0)
+    assert keypoints3d.shape == (1, 133, 4)
+    assert keypoints3d_mask.shape == (133, )
+    assert isinstance(keypoints3d, np.ndarray)
+    assert isinstance(keypoints3d_mask, np.ndarray)
+
+
+def test_get_keypoints3d_by_device():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    # get all
+    with pytest.raises(AssertionError):
+        _ = smc.get_keypoints3d(device='kinect', device_id=10)
+    with pytest.raises(AssertionError):
+        _ = smc.get_keypoints3d(device='Kinect', device_id=-1)
+    with pytest.raises(KeyError):
+        _ = smc.get_keypoints3d(device='Kinect', device_id=10)
+
+    # get by frame_id
+    with pytest.raises(AssertionError):
+        _ = smc.get_keypoints3d(device='iPhone', device_id=-1)
+    with pytest.raises(AssertionError):
+        _ = smc.get_keypoints3d(device='iPhone', device_id=10)
+    keypoints3d, keypoints3d_mask = \
+        smc.get_keypoints3d(device='iPhone', device_id=0, frame_id=0)
     assert keypoints3d.shape == (1, 133, 4)
     assert keypoints3d_mask.shape == (133, )
     assert isinstance(keypoints3d, np.ndarray)
@@ -292,13 +341,13 @@ def test_get_all_smpl():
     smc = SMCReader(TEST_SMC_PATH)
 
     smpl = smc.get_smpl()
-    smpl_num = smc.get_smpl_num()
+    smpl_num_frames = smc.get_smpl_num_frames()
     smpl_created_time = smc.get_smpl_created_time()
     global_orient = smpl['global_orient']
     body_pose = smpl['body_pose']
     transl = smpl['transl']
     betas = smpl['betas']
-    assert body_pose.shape[0] == smpl_num
+    assert body_pose.shape[0] == smpl_num_frames
     assert global_orient.shape == (1, 3)
     assert body_pose.shape == (1, 69)
     assert transl.shape == (1, 3)
@@ -326,83 +375,3 @@ def test_get_smpl_by_frame():
     assert isinstance(body_pose, np.ndarray)
     assert isinstance(transl, np.ndarray)
     assert isinstance(betas, np.ndarray)
-
-
-def test_get_human_data():
-    smc = SMCReader(TEST_SMC_PATH)
-
-    # get all
-    human_data = smc.get_human_data()
-    keypoints3d = human_data['keypoints3d']
-    keypoints3d_mask = human_data['keypoints3d_mask']
-    smpl = human_data['smpl']
-    assert keypoints3d.shape == (1, 190, 4)
-    assert keypoints3d_mask.shape == (190, )
-    assert smpl['global_orient'].shape == (1, 3)
-    assert smpl['body_pose'].shape == (1, 69)
-    assert smpl['transl'].shape == (1, 3)
-    assert smpl['betas'].shape == (1, 10)
-
-    with pytest.raises(KeyError):
-        _ = human_data['keypoints2d']
-
-    # get by frame_id
-    human_data = smc.get_human_data(frame_id=0)
-    keypoints3d = human_data['keypoints3d']
-    keypoints3d_mask = human_data['keypoints3d_mask']
-    smpl = human_data['smpl']
-    assert keypoints3d.shape == (1, 190, 4)
-    assert keypoints3d_mask.shape == (190, )
-    assert smpl['global_orient'].shape == (1, 3)
-    assert smpl['body_pose'].shape == (1, 69)
-    assert smpl['transl'].shape == (1, 3)
-    assert smpl['betas'].shape == (1, 10)
-
-    with pytest.raises(KeyError):
-        _ = human_data['keypoints2d']
-
-
-def test_get_human_data_by_device():
-    smc = SMCReader(TEST_SMC_PATH)
-
-    # get all
-    with pytest.raises(AssertionError):
-        _ = smc.get_human_data(device='kinect', device_id=10)
-    with pytest.raises(AssertionError):
-        _ = smc.get_human_data(device='Kinect', device_id=-1)
-    with pytest.raises(KeyError):
-        _ = smc.get_human_data(device='Kinect', device_id=10)
-    human_data = smc.get_human_data(device='Kinect', device_id=1)
-    keypoints2d = human_data['keypoints2d']
-    keypoints2d_mask = human_data['keypoints2d_mask']
-    keypoints3d = human_data['keypoints3d']
-    keypoints3d_mask = human_data['keypoints3d_mask']
-    smpl = human_data['smpl']
-    assert keypoints2d.shape == (1, 190, 3)
-    assert keypoints2d_mask.shape == (190, )
-    assert keypoints3d.shape == (1, 190, 4)
-    assert keypoints3d_mask.shape == (190, )
-    assert smpl['global_orient'].shape == (1, 3)
-    assert smpl['body_pose'].shape == (1, 69)
-    assert smpl['transl'].shape == (1, 3)
-    assert smpl['betas'].shape == (1, 10)
-
-    # get by frame_id
-    with pytest.raises(AssertionError):
-        human_data = smc.get_human_data(device='iPhone', device_id=-1)
-    with pytest.raises(KeyError):
-        human_data = smc.get_human_data(device='iPhone', device_id=10)
-    human_data = smc.get_human_data(device='iPhone', device_id=1, frame_id=0)
-    keypoints2d = human_data['keypoints2d']
-    keypoints2d_mask = human_data['keypoints2d_mask']
-    keypoints3d = human_data['keypoints3d']
-    keypoints3d_mask = human_data['keypoints3d_mask']
-    smpl = human_data['smpl']
-    assert keypoints2d.shape == (1, 190, 3)
-    assert keypoints2d_mask.shape == (190, )
-    assert keypoints3d.shape == (1, 190, 4)
-    assert keypoints3d_mask.shape == (190, )
-    assert smpl['global_orient'].shape == (1, 3)
-    assert smpl['body_pose'].shape == (1, 69)
-    assert smpl['transl'].shape == (1, 3)
-    assert smpl['betas'].shape == (1, 10)

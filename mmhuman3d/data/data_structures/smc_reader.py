@@ -5,9 +5,6 @@ import h5py
 import numpy as np
 import tqdm
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.data.data_structures.human_data import HumanData
-
 
 class SMCReader:
 
@@ -28,6 +25,7 @@ class SMCReader:
         self.kinect_color_resolution = self.get_kinect_color_resolution(0)
         self.kinect_depth_resolution = self.get_kinect_depth_resolution(0)
         self.iphone_exists = 'iPhone' in self.smc.keys()
+        self.num_iphones = 1
         if self.iphone_exists:
             self.iphone_num_frames = self.smc['iPhone'].attrs['num_frame']
             self.iphone_color_resolution = \
@@ -36,14 +34,15 @@ class SMCReader:
                 self.smc['iPhone'].attrs['depth_resolution']
         self.keypoint_exists = 'Keypoints3D' in self.smc.keys()
         if self.keypoint_exists:
-            self.keypoints_num = self.smc['Keypoints3D'].attrs['num_frame']
+            self.keypoints_num_frames = self.smc['Keypoints3D'].attrs[
+                'num_frame']
             self.keypoints_convention = self.smc['Keypoints3D'].attrs[
                 'convention']
             self.keypoints_created_time = self.smc['Keypoints3D'].attrs[
                 'created_time']
         self.smpl_exists = 'SMPL' in self.smc.keys()
         if self.smpl_exists:
-            self.smpl_num = self.smc['SMPL'].attrs['num_frame']
+            self.smpl_num_frames = self.smc['SMPL'].attrs['num_frame']
             self.smpl_created_time = self.smc['SMPL'].attrs['created_time']
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
@@ -204,23 +203,36 @@ class SMCReader:
         intrinsics = np.asarray(camera_info['cameraIntrinsics']).transpose()
         return intrinsics
 
-    def get_iphone_extrinsics(self, iphone_id=0, frame_id=0):
+    def get_iphone_extrinsics(self, iphone_id=0, homogeneous=True):
         """Get extrinsics(cam2world) of an iPhone RGB camera by iPhone id.
 
         Args:
             iphone_id (int, optional):
                 ID of an iPhone, starts from 0.
                 Defaults to 0.
+            homogeneous (bool, optional):
+                If true, returns rotation and translation in
+                one 4x4 matrix. Defaults to True.
 
         Returns:
-            ndarray: A 4x4 transformation matrix(cam2world).
+            homogeneous is True
+                ndarray: A 4x4 transformation matrix(cam2world).
+            homogeneous is False
+                dict: A dict of rotation and translation,
+                    keys are R and T,
+                    each value is an ndarray.
         """
+        assert iphone_id == 0, 'Currently only one iPhone.'
         R = np.asarray(self.calibration_dict['iPhone']['R']).reshape(3, 3)
         T = np.asarray(self.calibration_dict['iPhone']['T']).reshape(3)
-        extrinsics = np.identity(4, dtype=float)
-        extrinsics[:3, :3] = R
-        extrinsics[:3, 3] = T
-        return extrinsics
+
+        if homogeneous:
+            extrinsics = np.identity(4, dtype=float)
+            extrinsics[:3, :3] = R
+            extrinsics[:3, 3] = T
+            return extrinsics
+        else:
+            return {'R': R, 'T': T}
 
     def get_iphone_color_resolution(self, iphone_id=0, frame_id=0):
         return self.iphone_color_resolution
@@ -347,6 +359,15 @@ class SMCReader:
     def get_kinect_mask(self, device_id, frame_id):
         kinect_dict = self.smc['Kinect'][str(device_id)]
         return kinect_dict['Mask_k4abt'][str(frame_id)][()]
+
+    def get_num_iphone(self):
+        """Get the number of iPhone devices.
+
+        Returns:
+            int:
+                Number of iPhone devices.
+        """
+        return self.num_iphones
 
     def get_iphone_color(self, iphone_id=0, frame_id=None, disable_tqdm=False):
         """Get several frames captured by an iPhone RGB camera.
@@ -534,7 +555,7 @@ class SMCReader:
         else:
             raise KeyError(f'Kinect {device_id} has no floor data.')
 
-    def _get_keypoints2d(self, device, device_id, frame_id):
+    def get_keypoints2d(self, device, device_id, frame_id=None):
         """Get keypoints2d projected from keypoints3d.
 
         Args:
@@ -555,6 +576,8 @@ class SMCReader:
         assert device in {
             'Kinect', 'iPhone'
         }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+        assert device_id >= 0
+
         kps2d_dict = self.smc['Keypoints2D'][device][str(device_id)]
         keypoints2d = kps2d_dict['keypoints2d'][...]
         keypoints2d_mask = kps2d_dict['keypoints2d_mask'][...]
@@ -567,14 +590,47 @@ class SMCReader:
 
     def get_kinect_keypoints2d(self, device_id, frame_id=None):
         assert self.num_kinects > device_id >= 0
-        return self._get_keypoints2d('Kinect', device_id, frame_id)
+        return self.get_keypoints2d('Kinect', device_id, frame_id)
 
     def get_iphone_keypoints2d(self, device_id, frame_id=None):
         assert device_id >= 0
-        return self._get_keypoints2d('iPhone', device_id, frame_id)
+        return self.get_keypoints2d('iPhone', device_id, frame_id)
 
-    def get_keypoints_num(self):
-        return self.keypoints_num
+    def get_color(self, device, device_id, frame_id=None, disable_tqdm=False):
+        """Get RGB image(s) from Kinect RGB or iPhone RGB camera.
+
+        Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+            device_id (int):
+                Device ID, starts from 0.
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+            disable_tqdm (bool, optional):
+                Whether to disable the entire progressbar wrapper.
+                Defaults to False.
+
+        Returns:
+            img (ndarray):
+                An ndarray in shape [frame_number, height, width, channels].
+        """
+
+        assert device in {
+            'Kinect', 'iPhone'
+        }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+
+        if device == 'Kinect':
+            img = self.get_kinect_color(device_id, frame_id, disable_tqdm)
+        else:
+            img = self.get_iphone_color(device_id, frame_id, disable_tqdm)
+
+        return img
+
+    def get_keypoints_num_frames(self):
+        return self.keypoints_num_frames
 
     def get_keypoints_convention(self):
         return self.keypoints_convention
@@ -582,11 +638,19 @@ class SMCReader:
     def get_keypoints_created_time(self):
         return self.keypoints_created_time
 
-    def get_keypoints3d(self, frame_id=None):
+    def get_keypoints3d(self, device=None, device_id=None, frame_id=None):
         """Get keypoints3d (world coordinate) computed by mocap processing
         pipeline.
 
         Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+                None: world coordinate
+                Defaults to None.
+            device_id (int):
+                ID of a device, starts from 0.
+                None: world coordinate
+                Defaults to None
             frame_id (int, list or None, optional):
                 int: frame id of one selected frame
                 list: a list of frame id
@@ -597,18 +661,49 @@ class SMCReader:
             Tuple[np.ndarray, np.ndarray]:
                 keypoints3d (N, J, 4) and its mask (J, )
         """
+        assert (device is None and device_id is None) or \
+            (device is not None and device_id is not None), \
+            'device and device_id should be both None or both not None.'
+        if device is not None:
+            assert device in {
+                'Kinect', 'iPhone'
+            }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+        if device_id is not None:
+            assert device_id >= 0
+
         kps3d_dict = self.smc['Keypoints3D']
-        keypoints3d = kps3d_dict['keypoints3d'][...]
+
+        # keypoints3d are in world coordinate system
+        keypoints3d_world = kps3d_dict['keypoints3d'][...]
         keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
 
         if frame_id is not None:
             if isinstance(frame_id, int):
                 frame_id = [frame_id]
-            keypoints3d = keypoints3d[frame_id, ...]
-        return keypoints3d, keypoints3d_mask
+            keypoints3d_world = keypoints3d_world[frame_id, ...]
 
-    def get_smpl_num(self):
-        return self.smpl_num
+        # return keypoints3d in world coordinate system
+        if device is None:
+            return keypoints3d_world, keypoints3d_mask
+
+        # return keypoints3d in device coordinate system
+        else:
+            if device == 'Kinect':
+                world2cam = self.get_kinect_color_extrinsics(
+                    kinect_id=device_id, homogeneous=True)
+            else:
+                world2cam = self.get_iphone_extrinsics(iphone_id=device_id)
+
+            xyz, conf = keypoints3d_world[..., :3], keypoints3d_world[..., [3]]
+            xyz_homogeneous = np.ones([*xyz.shape[:-1], 4])
+            xyz_homogeneous[..., :3] = xyz
+            keypoints3d = np.einsum('ij,kmj->kmi', world2cam, xyz_homogeneous)
+            keypoints3d = np.concatenate([keypoints3d[..., :3], conf], axis=-1)
+
+            return keypoints3d, keypoints3d_mask
+
+    def get_smpl_num_frames(self):
+        return self.smpl_num_frames
 
     def get_smpl_created_time(self):
         return self.smpl_created_time
@@ -644,51 +739,3 @@ class SMCReader:
             transl=transl,
             betas=betas)
         return smpl_dict
-
-    def get_human_data(self, device=None, device_id=None, frame_id=None):
-        """Get keypoints2d projected from keypoints3d.
-
-        Args:
-            device (str):
-                Device name, should be Kinect or iPhone.
-            device_id (int):
-                ID of a device, starts from 0.
-            frame_id (int, list or None, optional):
-                int: frame id of one selected frame
-                list: a list of frame id
-                None: all frames will be returned
-                Defaults to None.
-
-        Returns:
-            HumanData: all annotated information packed in one human_data
-        """
-        human_data = HumanData()
-        # get keypoints3d
-        convention = self.get_keypoints_convention()
-        keypoints3d, keypoints3d_mask = self.get_keypoints3d(frame_id)
-        keypoints3d, keypoints3d_mask = convert_kps(
-            keypoints3d,
-            mask=keypoints3d_mask,
-            src=convention,
-            dst='human_data')
-        human_data['keypoints3d'] = keypoints3d
-        human_data['keypoints3d_mask'] = keypoints3d_mask
-        # get smpl
-        smpl_dict = self.get_smpl(frame_id)
-        human_data['smpl'] = smpl_dict
-        # get keypoints2d
-        if device is not None and device_id is not None:
-            assert device in {
-                'Kinect', 'iPhone'
-            }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
-            assert device_id >= 0
-            keypoints2d, keypoints2d_mask = self._get_keypoints2d(
-                device, device_id, frame_id)
-            keypoints2d, keypoints2d_mask = convert_kps(
-                keypoints2d,
-                mask=keypoints2d_mask,
-                src=convention,
-                dst='human_data')
-            human_data['keypoints2d'] = keypoints2d
-            human_data['keypoints2d_mask'] = keypoints2d_mask
-        return human_data
