@@ -258,11 +258,13 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 gender=gender)
             gt_keypoints3d = gt_output['joints'].detach().cpu().numpy()
             gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 24))
-        elif self.dataset_name == 'h36m':
+        elif self.dataset_name in ['h36m', 'humman']:
             gt_keypoints3d = self.human_data['keypoints3d'][:, :, :3]
             gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 17))
+
         else:
             raise NotImplementedError()
+
         # SMPL_49 only!
         if gt_keypoints3d.shape[1] == 49:
             assert pred_keypoints3d.shape[1] == 49
@@ -308,6 +310,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         else:
             pass
+
         pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
         gt_keypoints3d = gt_keypoints3d - gt_pelvis[:, None, :]
 
