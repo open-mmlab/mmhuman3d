@@ -375,3 +375,104 @@ def test_get_smpl_by_frame():
     assert isinstance(body_pose, np.ndarray)
     assert isinstance(transl, np.ndarray)
     assert isinstance(betas, np.ndarray)
+
+smc_reader = SMCReader('/home/caizhongang/github/zoehuman/mmhuman3d/tests/data/dataset_sample/humman/p000003_a000014_tiny.smc')
+K = smc_reader.get_iphone_intrinsics()
+
+fx, fy, cx, cy = K[0,0], K[1,1], K[0,2], K[1,2]
+# K = np.array([
+#     [fx, 0, 0, cx],
+#     [0, fy, 0, cy],
+#     [0, 0, 1, 0],
+#     [0, 0, 0, 1]
+# ])
+K = np.array([
+    [fx, 0, cx, 0],
+    [0, fy, cy, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+])
+K_3x3 = np.array([
+    [fx, 0, cx],
+    [0, fy, cy],
+    [0, 0, 1],
+])
+T = smc_reader.get_iphone_extrinsics(homogeneous=True)
+T = np.linalg.inv(T)  # world2cam
+# import pdb; pdb.set_trace()
+xmax, ymax = 1920, 1440
+r = np.eye(4)
+r[:2, :2] = np.array([[0,-1],[1,0]])
+
+K_ = np.array([
+    [fy, 0, ymax-cy, 0],
+    [0, fx, cx, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+])
+K__3x3 = np.array([
+    [fy, 0, ymax-cy],
+    [0, fx, cx],
+    [0, 0, 1]
+])
+P = K @ r @ T
+T_ = r @ T
+
+keypoints3d, keypoints3d_mask = smc_reader.get_keypoints3d(frame_id=0)
+keypoints3d = keypoints3d.squeeze()[:, :3]
+keypoints3d = np.concatenate([keypoints3d, np.ones([*keypoints3d.shape[:-1], 1])], axis=-1)
+
+import cv2
+img = smc_reader.get_color('iPhone', device_id=0, frame_id=0)
+img = img.squeeze()
+img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+cv2.namedWindow('test', cv2.WINDOW_NORMAL)
+
+# -------- original iphone
+
+keypoints3d_iphone = (T @ keypoints3d.T).T
+keypoints3d_iphone = keypoints3d_iphone[..., :3]
+
+keypoints2d_iphone = (K_3x3 @ keypoints3d_iphone.T).T
+keypoints2d_iphone = keypoints2d_iphone[..., :2] / keypoints2d_iphone[..., [-1]]
+
+img_iphone = img.copy()
+for keypoint in keypoints2d_iphone:
+    x, y = keypoint
+    cv2.circle(img_iphone, (int(x), int(y)), radius=5, color=(0,0,255), thickness=-1)
+
+cv2.imshow('test', img_iphone)
+cv2.waitKey(0)
+
+# -------- rotated with our derivation
+
+keypoints3d_new = (T_ @ keypoints3d.T).T
+keypoints3d_new = keypoints3d_new[..., :3]
+
+keypoints2d_new = (K__3x3 @ keypoints3d_new.T).T
+keypoints2d_new = keypoints2d_new[..., :2] / keypoints2d_new[..., [-1]]
+
+img_new = img.copy()
+img_new = cv2.rotate(img_new, cv2.cv2.ROTATE_90_CLOCKWISE)
+for keypoint in keypoints2d_new:
+    x, y = keypoint
+    cv2.circle(img_new, (int(x), int(y)), radius=5, color=(0,0,255), thickness=-1)
+
+cv2.imshow('test', img_new)
+cv2.waitKey(0)
+
+# -------- test if r is correct
+#
+# keypoints2d_new = (P @ keypoints3d.T).T
+# keypoints2d_new = keypoints2d_new[..., :2] / keypoints2d_new[..., [2]]
+#
+# img_new = img.copy()
+# img_new = cv2.rotate(img_new, cv2.cv2.ROTATE_90_CLOCKWISE)
+# for keypoint in keypoints2d_new:
+#     x, y = keypoint
+#     print(x, y)
+#     cv2.circle(img_new, (int(x), int(y)), radius=5, color=(0,0,255), thickness=-1)
+#
+# cv2.imshow('test', img_new)
+# cv2.waitKey(0)
+# cv2.destroyWindow('test')
