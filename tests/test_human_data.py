@@ -25,10 +25,12 @@ def test_set():
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
     sample_keypoints2d_mask = np.ones(shape=[144])
     human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = sample_keypoints2d
     # set item without mask
     human_data = HumanData()
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
+    human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = sample_keypoints2d
     # strict==True does not allow unsupported keys
     human_data.set_key_strict(True)
@@ -36,12 +38,14 @@ def test_set():
         human_data['keypoints4d_mask'] = np.ones(shape=[
             144,
         ])
+        human_data['keypoints4d_convention'] = 'smplx'
         human_data['keypoints4d'] = np.zeros(shape=[3, 144, 5])
     # strict==False allows unsupported keys
     human_data = HumanData.new(key_strict=False)
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
+    human_data['keypoints4d_convention'] = 'smplx'
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     # test wrong value type
     with pytest.raises(ValueError):
@@ -71,6 +75,7 @@ def test_set():
         human_data['keypoints2d_mask'] = np.ones(shape=[
             144,
         ])
+        human_data['keypoints2d_convention'] = 'smplx'
         human_data['keypoints2d'] = np.zeros(shape=[3, 144, 3])
     # test everything is right
     human_data = HumanData()
@@ -78,6 +83,7 @@ def test_set():
     human_data['keypoints2d_mask'] = np.ones(shape=[
         144,
     ])
+    human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = np.zeros(shape=[2, 144, 3])
 
 
@@ -88,6 +94,7 @@ def test_compression():
     sample_keypoints2d_mask = np.zeros(shape=[144], dtype=np.uint8)
     sample_keypoints2d_mask[:5] += 1
     human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = sample_keypoints2d
     assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
     assert shape_equal(
@@ -144,6 +151,7 @@ def test_pop_unsupported_items():
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
+    human_data['keypoints4d_convention'] = 'smplx'
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     human_data.pop_unsupported_items()
     assert 'keypoints4d' not in human_data
@@ -152,6 +160,7 @@ def test_pop_unsupported_items():
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
+    human_data['keypoints4d_convention'] = 'smplx'
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     human_data.set_key_strict(True)
     assert 'keypoints4d' not in human_data
