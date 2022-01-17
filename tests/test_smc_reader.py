@@ -399,33 +399,24 @@ K_3x3 = np.array([
 ])
 T = smc_reader.get_iphone_extrinsics(homogeneous=True)
 T = np.linalg.inv(T)  # world2cam
-
+# import pdb; pdb.set_trace()
 xmax, ymax = 1920, 1440
 r = np.eye(4)
 r[:2, :2] = np.array([[0,-1],[1,0]])
 
-t1 = np.eye(4)
-t1[:2,-1] = np.array([xmax/2, ymax/2])
-t2 = np.eye(4)
-t2[:2,-1] = np.array([-xmax/2, -ymax/2])
-
 K_ = np.array([
-    [fy, 0, cy, 0],
+    [fy, 0, ymax-cy, 0],
     [0, fx, cx, 0],
     [0, 0, 1, 0],
     [0, 0, 0, 1]
 ])
 K__3x3 = np.array([
-    [fy, 0, cy],
+    [fy, 0, ymax-cy],
     [0, fx, cx],
     [0, 0, 1]
 ])
-
-P_original = K @ T
-P = t2 @ r @ t1 @ P_original
-P =  r @ P_original
-
-T_ = np.linalg.inv(K_) @ P
+P = K @ r @ T
+T_ = r @ T
 
 keypoints3d, keypoints3d_mask = smc_reader.get_keypoints3d(frame_id=0)
 keypoints3d = keypoints3d.squeeze()[:, :3]
@@ -439,35 +430,19 @@ cv2.namedWindow('test', cv2.WINDOW_NORMAL)
 
 # -------- original iphone
 
-# keypoints3d_iphone = (T @ keypoints3d.T).T
-# keypoints3d_iphone = keypoints3d_iphone[..., :3]
-#
-# keypoints2d_iphone = (K_3x3 @ keypoints3d_iphone.T).T
-# keypoints2d_iphone = keypoints2d_iphone[..., :2] / keypoints2d_iphone[..., [-1]]
-#
-# img_iphone = img.copy()
-# for keypoint in keypoints2d_iphone:
-#     x, y = keypoint
-#     cv2.circle(img_iphone, (int(x), int(y)), radius=5, color=(0,0,255), thickness=-1)
-#
-#
-# cv2.imshow('test', img_iphone)
-# cv2.waitKey(0)
+keypoints3d_iphone = (T @ keypoints3d.T).T
+keypoints3d_iphone = keypoints3d_iphone[..., :3]
 
-# -------- original iphone using P_original
+keypoints2d_iphone = (K_3x3 @ keypoints3d_iphone.T).T
+keypoints2d_iphone = keypoints2d_iphone[..., :2] / keypoints2d_iphone[..., [-1]]
 
-# keypoints2d_iphone = (P_original @ keypoints3d.T).T
-# keypoints2d_iphone = keypoints2d_iphone[..., :2] / keypoints2d_iphone[..., [2]]
-#
-# img_iphone = img.copy()
-# for keypoint in keypoints2d_iphone:
-#     x, y = keypoint
-#     cv2.circle(img_iphone, (int(x), int(y)), radius=5, color=(0,0,255), thickness=-1)
-#
-#
-# cv2.imshow('test', img_iphone)
-# cv2.waitKey(0)
+img_iphone = img.copy()
+for keypoint in keypoints2d_iphone:
+    x, y = keypoint
+    cv2.circle(img_iphone, (int(x), int(y)), radius=5, color=(0,0,255), thickness=-1)
 
+cv2.imshow('test', img_iphone)
+cv2.waitKey(0)
 
 # -------- rotated with our derivation
 
@@ -486,62 +461,18 @@ for keypoint in keypoints2d_new:
 cv2.imshow('test', img_new)
 cv2.waitKey(0)
 
-# -------- rotated with RQ decomposition
-
-# import scipy
-# def factorize(P):
-#     M = P[:, 0:3]
+# -------- test if r is correct
 #
-#     K, R = scipy.linalg.rq(M)
-#
-#     T = np.diag(np.sign(np.diag(K)))
-#
-#     if scipy.linalg.det(T) < 0:
-#         T[1, 1] *= -1
-#
-#     K = np.dot(K, T)
-#     R = np.dot(T, R)
-#
-#     C = np.dot(scipy.linalg.inv(-M), P[:, 3])
-#     return (K, R, C)
-#
-# K_, Rc_, C_ = factorize(P[:3, :4])
-# t_ = - (Rc_).T @ C_
-# R_ = Rc_.T
-# T_ = np.eye(4)
-# T_[:3, :3] = R_
-# T_[:3, 3] = t_
-#
-# keypoints3d_new = (T_ @ keypoints3d.T).T
-# keypoints3d_new = keypoints3d_new[..., :3]
-#
-# keypoints2d_new = (K_ @ keypoints3d_new.T).T
-# keypoints2d_new = keypoints2d_new[..., :2] / keypoints2d_new[..., [-1]]
+# keypoints2d_new = (P @ keypoints3d.T).T
+# keypoints2d_new = keypoints2d_new[..., :2] / keypoints2d_new[..., [2]]
 #
 # img_new = img.copy()
 # img_new = cv2.rotate(img_new, cv2.cv2.ROTATE_90_CLOCKWISE)
 # for keypoint in keypoints2d_new:
 #     x, y = keypoint
-#     print(keypoint)
+#     print(x, y)
 #     cv2.circle(img_new, (int(x), int(y)), radius=5, color=(0,0,255), thickness=-1)
 #
 # cv2.imshow('test', img_new)
 # cv2.waitKey(0)
 # cv2.destroyWindow('test')
-
-
-# -------- test if r is correct
-
-keypoints2d_new = (P @ keypoints3d.T).T
-keypoints2d_new = keypoints2d_new[..., :2] / keypoints2d_new[..., [2]]
-
-img_new = img.copy()
-img_new = cv2.rotate(img_new, cv2.cv2.ROTATE_90_CLOCKWISE)
-for keypoint in keypoints2d_new:
-    x, y = keypoint
-    print(x, y)
-    cv2.circle(img_new, (int(x), int(y)), radius=5, color=(0,0,255), thickness=-1)
-
-cv2.imshow('test', img_new)
-cv2.waitKey(0)
-cv2.destroyWindow('test')
