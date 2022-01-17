@@ -136,7 +136,7 @@ class HuMManConverter(BaseModeConverter):
         keypoints2d_mask_, keypoints3d_mask_ = None, None
         keypoints_convention_ = self.keypoint_convention
 
-        ann_paths = sorted(glob.glob(os.path.join(dataset_path, '*.smc')))[:1]
+        ann_paths = sorted(glob.glob(os.path.join(dataset_path, '*.smc')))
 
         with open(os.path.join(dataset_path, f'{mode}.txt'), 'r') as f:
             split = set(f.read().splitlines())
