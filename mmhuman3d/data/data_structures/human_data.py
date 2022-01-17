@@ -251,6 +251,59 @@ class HumanData(dict):
         dict_to_dump.update(self)
         np.savez_compressed(npz_path, **dict_to_dump)
 
+    def get_sliced_cache(self, slice_size=10):
+        index_dict = {}
+        keypoints_info = {}
+        non_sliced_data = {}
+        sliced_data = {}
+        slice_num = int(self.__temporal_len__ / slice_size) + 1
+        for slice_index in range(slice_num):
+            sliced_data[str(slice_index)] = {}
+            slice_start = slice_index * slice_size
+            slice_end = min((slice_index + 1) * slice_size,
+                            self.__temporal_len__)
+            for global_index in range(slice_start, slice_end):
+                index_dict[global_index] = str(slice_index)
+        dim_dict = self.__get_slice_dim__()
+        for key, dim in dim_dict.items():
+            # no dim to slice
+            if dim is None:
+                if key.startswith('keypoints') and\
+                        (key.endswith('_mask') or
+                         key.endswith('_convention')):
+                    keypoints_info[key] = self[key]
+                else:
+                    non_sliced_data[key] = self[key]
+            else:
+                value = self.get_raw_value(key)
+                # slice as ndarray
+                if isinstance(value, np.ndarray):
+                    slice_list = [
+                        slice(None),
+                    ] * len(value.shape)
+                    for slice_index in range(slice_num):
+                        slice_start = slice_index * slice_size
+                        slice_end = min((slice_index + 1) * slice_size,
+                                        self.__temporal_len__)
+                        slice_list[dim] = slice(slice_start, slice_end)
+                        sliced_value = value[tuple(slice_list)]
+                        sliced_data[str(slice_index)][key] = sliced_value
+                # slice as list/tuple
+                else:
+                    for slice_index in range(slice_num):
+                        slice_start = slice_index * slice_size
+                        slice_end = min((slice_index + 1) * slice_size,
+                                        self.__temporal_len__)
+                        sliced_value = value[slice(slice_start, slice_end)]
+                        sliced_data[str(slice_index)][key] = sliced_value
+        writer_args_dict = {
+            'index_dict': index_dict,
+            'keypoints_info': keypoints_info,
+            'non_sliced_data': non_sliced_data,
+            'key_strict': self.get_key_strict()
+        }
+        return writer_args_dict, sliced_data
+
     def to(self,
            device: Optional[Union[torch.device, str]] = _CPU_DEVICE,
            dtype: Optional[torch.dtype] = None,
@@ -452,7 +505,6 @@ class HumanData(dict):
             stop = arg_1
         slice_index = slice(start, stop, step)
         dim_dict = self.__get_slice_dim__()
-        print('dim_dict', dim_dict)
         for key, dim in dim_dict.items():
             # keys not expected be sliced
             if dim is None:
@@ -939,7 +991,8 @@ class HumanData(dict):
                     break
         for key in list(self.keys()):
             convention_key = f'{key}_convention'
-            if 'keypoints' in key and \
+            if key.startswith('keypoints') and \
+                    not key.endswith('_mask') and \
                     convention_key not in self:
                 self[convention_key] = 'human_data'
 
