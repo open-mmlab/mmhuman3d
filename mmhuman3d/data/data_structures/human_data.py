@@ -30,20 +30,21 @@ _HumanData_SUPPORTED_KEYS = {
     'bbox_xywh': {
         'type': np.ndarray,
         'shape': (-1, 5),
-        'temporal_dim': 0
+        'slice_dim': 0
     },
     'config': {
         'type': str,
+        'slice_dim': -1
     },
     'keypoints2d': {
         'type': np.ndarray,
         'shape': (-1, -1, 3),
-        'temporal_dim': 0
+        'slice_dim': 0
     },
     'keypoints3d': {
         'type': np.ndarray,
         'shape': (-1, -1, 4),
-        'temporal_dim': 0
+        'slice_dim': 0
     },
     'smpl': {
         'type': dict,
@@ -57,12 +58,20 @@ _HumanData_SUPPORTED_KEYS = {
     'keypoints2d_mask': {
         'type': np.ndarray,
         'shape': (-1, ),
-        'temporal_dim': -1
+        'slice_dim': -1
+    },
+    'keypoints2d_convention': {
+        'type': str,
+        'slice_dim': -1
     },
     'keypoints3d_mask': {
         'type': np.ndarray,
         'shape': (-1, ),
-        'temporal_dim': -1
+        'slice_dim': -1
+    },
+    'keypoints3d_convention': {
+        'type': str,
+        'slice_dim': -1
     },
     'misc': {
         'type': dict,
@@ -211,6 +220,7 @@ class HumanData(dict):
                 else:
                     tmp_data_dict[key] = value
             self.update(tmp_data_dict)
+            self.__set_default_values__()
 
     def dump(self, npz_path: str, overwrite: bool = True):
         """Dump keys and items to an npz file.
@@ -432,7 +442,8 @@ class HumanData(dict):
             HumanData:
                 A new HumanData instance with sliced values.
         """
-        ret_human_data = HumanData.new(key_strict=self.get_key_strict())
+        ret_human_data = \
+            HumanData.new(key_strict=self.get_key_strict())
         if arg_1 is None:
             start = 0
             stop = arg_0
@@ -440,28 +451,68 @@ class HumanData(dict):
             start = arg_0
             stop = arg_1
         slice_index = slice(start, stop, step)
-        supported_keys = self.__class__.SUPPORTED_KEYS
-        for key in self.keys():
-            if key in supported_keys and \
-                    'temporal_dim' in supported_keys[key] and \
-                    supported_keys[key]['temporal_dim'] >= 0:
-                slice_list = []
-                for dim_index in range(len(supported_keys[key]['shape'])):
-                    if dim_index == supported_keys[key]['temporal_dim']:
-                        slice_list.append(slice_index)
-                    else:
-                        slice_list.append(slice(None))
-                raw_value = self.get_raw_value(key)
-                sliced_value = raw_value[tuple(slice_list)]
-                ret_human_data.set_raw_value(key, sliced_value)
-            elif key == 'image_path' and \
-                    len(self[key]) == self.__temporal_len__:
-                ret_human_data.set_raw_value(
-                    key,
-                    self.get_raw_value(key)[slice_index])
+        dim_dict = self.__get_slice_dim__()
+        print('dim_dict', dim_dict)
+        for key, dim in dim_dict.items():
+            # keys not expected be sliced
+            if dim is None:
+                ret_human_data[key] = self[key]
             else:
-                ret_human_data.set_raw_value(key, self.get_raw_value(key))
+                value = self[key]
+                if isinstance(value, np.ndarray):
+                    slice_list = [
+                        slice(None),
+                    ] * len(value.shape)
+                    slice_list[dim] = slice_index
+                    sliced_value = value[tuple(slice_list)]
+                    ret_human_data[key] = sliced_value
+                else:
+                    sliced_value = value[slice_index]
+                    ret_human_data[key] = sliced_value
         return ret_human_data
+
+    def __get_slice_dim__(self):
+        """For each key in this HumanData, get the dimension for slicing. 0 for
+        default, if no other value specified.
+
+        Returns:
+            dict:
+                Keys are self.keys().
+                Values indicate where to slice.
+                None for not expected to be sliced or
+                failed.
+        """
+        supported_keys = self.__class__.SUPPORTED_KEYS
+        ret_dict = {}
+        for key in self.keys():
+            # keys not expected be sliced
+            if key in supported_keys and \
+                    'slice_dim' in supported_keys[key] and \
+                    supported_keys[key]['slice_dim'] == -1:
+                ret_dict[key] = None
+            else:
+                value = self[key]
+                try:
+                    value_len = len(value)
+                # cannot be sliced without len method
+                except TypeError:
+                    ret_dict[key] = None
+                    continue
+                # slice on dim 0 by default
+                slice_dim = 0
+                if key in supported_keys and \
+                        'slice_dim' in supported_keys[key]:
+                    slice_dim = \
+                        supported_keys[key]['slice_dim']
+                temporal_len = value_len if slice_dim == 0 \
+                    else value.shape[slice_dim]
+                # dim not for slice
+                if temporal_len != self.__temporal_len__:
+                    ret_dict[key] = None
+                    continue
+                else:
+                    ret_dict[key] = slice_dim
+        return ret_dict
 
     def __setitem__(self, key: _KT, val: _VT):
         """Set self[key] to value. Only be called when using
@@ -724,10 +775,10 @@ class HumanData(dict):
         # check definition
         if key in supported_keys:
             # check temporal length
-            if 'temporal_dim' in supported_keys[key] and \
-                    supported_keys[key]['temporal_dim'] >= 0:
-                val_temporal_dim = supported_keys[key]['temporal_dim']
-                val_temporal_len = val.shape[val_temporal_dim]
+            if 'slice_dim' in supported_keys[key] and \
+                    supported_keys[key]['slice_dim'] >= 0:
+                val_slice_dim = supported_keys[key]['slice_dim']
+                val_temporal_len = val.shape[val_slice_dim]
                 if self.temporal_len < 0:
                     # no temporal_len yet, assign a new one
                     self.temporal_len = val_temporal_len
@@ -873,6 +924,24 @@ class HumanData(dict):
                 else:
                     tmp_data_dict[key] = value
             self.update(tmp_data_dict)
+            self.__set_default_values__()
+
+    def __set_default_values__(self):
+        """For older versions of HumanData, call this method to apply missing
+        values (also attributes)."""
+        supported_keys = self.__class__.SUPPORTED_KEYS
+        if self.__temporal_len__ == -1:
+            for key in supported_keys:
+                if key in self and \
+                        'slice_dim' in supported_keys[key]:
+                    slice_dim = supported_keys[key]['slice_dim']
+                    self.__temporal_len__ = self[key].shape[slice_dim]
+                    break
+        for key in list(self.keys()):
+            convention_key = f'{key}_convention'
+            if 'keypoints' in key and \
+                    convention_key not in self:
+                self[convention_key] = 'human_data'
 
     @classmethod
     def __add_zero_pad__(cls, compressed_array: np.ndarray,
