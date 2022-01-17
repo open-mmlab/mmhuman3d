@@ -15,6 +15,7 @@ class LoadImageFromFile(object):
     Required keys are "img_prefix" and "img_info" (a dict that must contain the
     key "filename"). Added or updated keys are "filename", "img", "img_shape",
     "ori_shape" (same as `img_shape`) and "img_norm_cfg" (means=0 and stds=1).
+    Both "img_shape" and "ori_shape" use (height, width) convention.
 
     Args:
         to_float32 (bool): Whether to convert the loaded image to a float32
