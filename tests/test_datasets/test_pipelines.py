@@ -35,3 +35,11 @@ def test_load_image_from_file_smc():
     assert isinstance(results['img'], np.ndarray)
     assert results['img_shape'] == results['ori_shape'] == (1080, 1920)
     assert isinstance(results['img_norm_cfg'], dict)
+
+    results['image_id'] = ('iPhone', 0, 0)
+    results = pipeline(results)
+
+    assert results['filename'] == results['ori_filename'] == test_smc_path
+    assert isinstance(results['img'], np.ndarray)
+    assert results['img_shape'] == results['ori_shape'] == (1440, 1920)
+    assert isinstance(results['img_norm_cfg'], dict)
