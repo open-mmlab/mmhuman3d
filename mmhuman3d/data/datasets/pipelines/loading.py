@@ -1,8 +1,8 @@
 import os.path as osp
 
+import cv2
 import mmcv
 import numpy as np
-import cv2
 
 from mmhuman3d.data.data_structures import SMCReader
 from ..builder import PIPELINES
