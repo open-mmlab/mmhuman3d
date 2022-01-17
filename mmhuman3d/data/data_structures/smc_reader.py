@@ -186,13 +186,20 @@ class SMCReader:
             np.asarray([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
         return intrinsics
 
-    def get_iphone_intrinsics(self, iphone_id=0, frame_id=0):
+    def get_iphone_intrinsics(self, iphone_id=0, frame_id=0, vertical=True):
         """Get intrinsics of an iPhone RGB camera by iPhone id.
 
         Args:
             iphone_id (int, optional):
                 ID of an iPhone, starts from 0.
                 Defaults to 0.
+            frame_id (int, optional):
+                int: frame id of one selected frame
+                Defaults to 0.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             ndarray: A 3x3 matrix.
@@ -201,9 +208,18 @@ class SMCReader:
             frame_id)]
         camera_info = json.loads(camera_info[()])
         intrinsics = np.asarray(camera_info['cameraIntrinsics']).transpose()
+
+        if vertical:
+            fx, fy = intrinsics[0, 0], intrinsics[1, 1]
+            cx, cy = intrinsics[0, 2], intrinsics[1, 2]
+            H, W = self.iphone_color_resolution
+            intrinsics = np.eye(3)
+            intrinsics[0, 0], intrinsics[1, 1] = fy, fx
+            intrinsics[0, 2], intrinsics[1, 2] = H - cy, cx
+
         return intrinsics
 
-    def get_iphone_extrinsics(self, iphone_id=0, homogeneous=True):
+    def get_iphone_extrinsics(self, iphone_id=0, homogeneous=True, vertical=True):
         """Get extrinsics(cam2world) of an iPhone RGB camera by iPhone id.
 
         Args:
@@ -213,6 +229,10 @@ class SMCReader:
             homogeneous (bool, optional):
                 If true, returns rotation and translation in
                 one 4x4 matrix. Defaults to True.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             homogeneous is True
@@ -226,16 +246,49 @@ class SMCReader:
         R = np.asarray(self.calibration_dict['iPhone']['R']).reshape(3, 3)
         T = np.asarray(self.calibration_dict['iPhone']['T']).reshape(3)
 
+        extrinsics = np.identity(4, dtype=float)
+        extrinsics[:3, :3] = R
+        extrinsics[:3, 3] = T
+
+        if vertical:
+            # 90-degree clockwise rotation around z-axis
+            r = np.eye(4)
+            r[:2, :2] = np.array([[0, -1], [1, 0]])
+            extrinsics = r @ extrinsics
+            R = extrinsics[:3, :3]
+            T = extrinsics[:3, 3]
+
         if homogeneous:
-            extrinsics = np.identity(4, dtype=float)
-            extrinsics[:3, :3] = R
-            extrinsics[:3, 3] = T
             return extrinsics
         else:
             return {'R': R, 'T': T}
 
-    def get_iphone_color_resolution(self, iphone_id=0, frame_id=0):
-        return self.iphone_color_resolution
+    def get_iphone_color_resolution(self, iphone_id=0, vertical=True):
+        """Get color image resolution of an iPhone RGB camera by iPhone id.
+
+        Args:
+            iphone_id (int, optional):
+                ID of an iPhone, starts from 0.
+                Defaults to 0.
+            homogeneous (bool, optional):
+                If true, returns rotation and translation in
+                one 4x4 matrix. Defaults to True.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
+
+        Returns:
+            ndarray:
+                An ndarray of (width, height), shape=[2, ].
+
+        """
+        assert iphone_id == 0, 'Currently only one iPhone.'
+        if vertical:
+            H, W = self.iphone_color_resolution
+            return np.array([W, H])
+        else:
+            return self.iphone_color_resolution
 
     def get_kinect_color(self, kinect_id, frame_id=None, disable_tqdm=False):
         """Get several frames captured by a kinect RGB camera.
@@ -256,16 +309,15 @@ class SMCReader:
             ndarray:
                 An ndarray in shape [frame_number, height, width, channels].
         """
-        frame_list = []
         frames = []
-        if frame_id is None or type(frame_id) == list:
+        if frame_id is None:
             frame_list = range(self.get_kinect_num_frames())
-            if frame_id:
-                frame_list = frame_id
-        elif type(frame_id) == int:
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
             assert frame_id < self.get_kinect_num_frames(),\
                 'Index out of range...'
-            frame_list.append(frame_id)
+            frame_list = [frame_id]
         for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
             frames.append(
                 self.__read_color_from_bytes__(
@@ -369,7 +421,12 @@ class SMCReader:
         """
         return self.num_iphones
 
-    def get_iphone_color(self, iphone_id=0, frame_id=None, disable_tqdm=False):
+    def get_iphone_color(
+            self,
+            iphone_id=0,
+            frame_id=None,
+            disable_tqdm=False,
+            vertical=True):
         """Get several frames captured by an iPhone RGB camera.
 
         Args:
@@ -383,31 +440,38 @@ class SMCReader:
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
                 Defaults to False.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
-            ndarray:
+            frames:
+                An ndarray in shape [frame_number, height, width, channels].
         """
-        if frame_id is None or type(frame_id) == list:
-            frames = []
+        frames = []
+        if frame_id is None:
             frame_list = range(self.get_iphone_num_frames())
-            if frame_id:
-                frame_list = frame_id
-            for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
-                frames.append(
-                    self.__read_color_from_bytes__(
-                        self.smc['iPhone'][str(iphone_id)]['Color'][str(i)][(
-                        )]))
-            return np.stack(frames, axis=0)
-        else:
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
             assert frame_id < self.get_iphone_num_frames(),\
                 'Index out of range...'
-            return np.stack([
-                self.__read_color_from_bytes__(self.smc['iPhone'][str(
-                    iphone_id)]['Color'][str(frame_id)][()])
-            ],
-                            axis=0)
+            frame_list = [frame_id]
+        for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
+            frame = self.__read_color_from_bytes__(
+                self.smc['iPhone'][str(iphone_id)]['Color'][str(i)][()])
+            if vertical:
+                frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
+            frames.append(frame)
+        return np.stack(frames, axis=0)
 
-    def get_iphone_depth(self, iphone_id=0, frame_id=None, disable_tqdm=False):
+    def get_iphone_depth(
+            self,
+            iphone_id=0,
+            frame_id=None,
+            disable_tqdm=False,
+            vertical=True):
         """Get several frames captured by an iPhone RGB camera.
 
         Args:
@@ -421,26 +485,31 @@ class SMCReader:
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
                 Defaults to False.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
-            ndarray:
+            frames:
+                An ndarray in shape [frame_number, height, width, channels].
         """
-        if frame_id is None or type(frame_id) == list:
-            frames = []
-            frame_list = range(self.iphone_num_frames)
-            if frame_id:
-                frame_list = frame_id
-            for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
-                frames.append(
-                    self.smc['iPhone'][str(iphone_id)]['Depth'][str(i)][()])
-            return np.stack(frames, axis=0)
-        else:
-            assert frame_id < self.iphone_num_frames,\
+        frames = []
+        if frame_id is None:
+            frame_list = range(self.get_iphone_num_frames())
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
+            assert frame_id < self.get_iphone_num_frames(),\
                 'Index out of range...'
-            return np.stack([
-                self.smc['iPhone'][str(iphone_id)]['Depth'][str(frame_id)][()]
-            ],
-                            axis=0)
+            frame_list = [frame_id]
+        for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
+            frame = self.__read_color_from_bytes__(
+                self.smc['iPhone'][str(iphone_id)]['Depth'][str(i)][()])
+            if vertical:
+                frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
+            frames.append(frame)
+        return np.stack(frames, axis=0)
 
     def get_kinect_transformation_depth_to_color(self, device_id):
         """Get transformation matrix from depth to color from a single kinect.
@@ -555,7 +624,7 @@ class SMCReader:
         else:
             raise KeyError(f'Kinect {device_id} has no floor data.')
 
-    def get_keypoints2d(self, device, device_id, frame_id=None):
+    def get_keypoints2d(self, device, device_id, frame_id=None, vertical=True):
         """Get keypoints2d projected from keypoints3d.
 
         Args:
@@ -568,6 +637,11 @@ class SMCReader:
                 list: a list of frame id
                 None: all frames will be returned
                 Defaults to None.
+            vertical (bool, optional):
+                Only applicable to iPhone as device
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             Tuple[np.ndarray, np.ndarray]:
@@ -586,17 +660,65 @@ class SMCReader:
             if isinstance(frame_id, int):
                 frame_id = [frame_id]
             keypoints2d = keypoints2d[frame_id, ...]
+
+        if device == 'iPhone' and vertical:
+            # rotate keypoints 2D clockwise by 90 degress
+            xs, ys = keypoints2d[..., 0], keypoints2d[..., 1]
+            xs, ys = ys, -xs
+            keypoints2d[..., 0], keypoints2d[..., 1] = xs, ys
+
         return keypoints2d, keypoints2d_mask
 
     def get_kinect_keypoints2d(self, device_id, frame_id=None):
+        """ Get Kinect 2D keypoints
+
+        Args:
+            device_id (int):
+                ID of Kinect, starts from 0.
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                keypoints2d (N, J, 3) and its mask (J, )
+        """
         assert self.num_kinects > device_id >= 0
         return self.get_keypoints2d('Kinect', device_id, frame_id)
 
-    def get_iphone_keypoints2d(self, device_id, frame_id=None):
-        assert device_id >= 0
-        return self.get_keypoints2d('iPhone', device_id, frame_id)
+    def get_iphone_keypoints2d(self, device_id, frame_id=None, vertical=True):
+        """ Get iPhone 2D keypoints
 
-    def get_color(self, device, device_id, frame_id=None, disable_tqdm=False):
+        Args:
+            device_id (int):
+                ID of iPhone, starts from 0.
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                keypoints2d (N, J, 3) and its mask (J, )
+        """
+        assert device_id >= 0
+        return self.get_keypoints2d(
+            'iPhone', device_id, frame_id, vertical=vertical)
+
+    def get_color(
+            self,
+            device,
+            device_id,
+            frame_id=None,
+            disable_tqdm=False,
+            vertical=True):
         """Get RGB image(s) from Kinect RGB or iPhone RGB camera.
 
         Args:
@@ -612,6 +734,11 @@ class SMCReader:
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
                 Defaults to False.
+            vertical (bool, optional):
+                Only applicable to iPhone as device
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             img (ndarray):
@@ -625,7 +752,11 @@ class SMCReader:
         if device == 'Kinect':
             img = self.get_kinect_color(device_id, frame_id, disable_tqdm)
         else:
-            img = self.get_iphone_color(device_id, frame_id, disable_tqdm)
+            img = self.get_iphone_color(
+                device_id,
+                frame_id,
+                disable_tqdm,
+                vertical=vertical)
 
         return img
 
@@ -638,7 +769,12 @@ class SMCReader:
     def get_keypoints_created_time(self):
         return self.keypoints_created_time
 
-    def get_keypoints3d(self, device=None, device_id=None, frame_id=None):
+    def get_keypoints3d(
+            self,
+            device=None,
+            device_id=None,
+            frame_id=None,
+            vertical=True):
         """Get keypoints3d (world coordinate) computed by mocap processing
         pipeline.
 
@@ -656,6 +792,11 @@ class SMCReader:
                 list: a list of frame id
                 None: all frames will be returned
                 Defaults to None.
+            vertical (bool, optional):
+                Only applicable to iPhone as device
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             Tuple[np.ndarray, np.ndarray]:
@@ -692,7 +833,8 @@ class SMCReader:
                 world2cam = self.get_kinect_color_extrinsics(
                     kinect_id=device_id, homogeneous=True)
             else:
-                world2cam = self.get_iphone_extrinsics(iphone_id=device_id)
+                world2cam = self.get_iphone_extrinsics(
+                    iphone_id=device_id, vertical=vertical)
 
             xyz, conf = keypoints3d_world[..., :3], keypoints3d_world[..., [3]]
             xyz_homogeneous = np.ones([*xyz.shape[:-1], 4])
