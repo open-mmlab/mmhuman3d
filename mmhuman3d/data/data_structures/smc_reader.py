@@ -29,9 +29,9 @@ class SMCReader:
         if self.iphone_exists:
             self.iphone_num_frames = self.smc['iPhone'].attrs['num_frame']
             self.iphone_color_resolution = \
-                self.smc['iPhone'].attrs['color_resolution']
+                self.smc['iPhone'].attrs['color_resolution']  # vertical
             self.iphone_depth_resolution = \
-                self.smc['iPhone'].attrs['depth_resolution']
+                self.smc['iPhone'].attrs['depth_resolution']  # vertical
         self.keypoint_exists = 'Keypoints3D' in self.smc.keys()
         if self.keypoint_exists:
             self.keypoints_num_frames = self.smc['Keypoints3D'].attrs[
@@ -212,14 +212,17 @@ class SMCReader:
         if vertical:
             fx, fy = intrinsics[0, 0], intrinsics[1, 1]
             cx, cy = intrinsics[0, 2], intrinsics[1, 2]
-            H, W = self.iphone_color_resolution
+            H, W = self.get_iphone_color_resolution(vertical=False)
             intrinsics = np.eye(3)
             intrinsics[0, 0], intrinsics[1, 1] = fy, fx
             intrinsics[0, 2], intrinsics[1, 2] = H - cy, cx
 
         return intrinsics
 
-    def get_iphone_extrinsics(self, iphone_id=0, homogeneous=True, vertical=True):
+    def get_iphone_extrinsics(self,
+                              iphone_id=0,
+                              homogeneous=True,
+                              vertical=True):
         """Get extrinsics(cam2world) of an iPhone RGB camera by iPhone id.
 
         Args:
@@ -246,15 +249,17 @@ class SMCReader:
         R = np.asarray(self.calibration_dict['iPhone']['R']).reshape(3, 3)
         T = np.asarray(self.calibration_dict['iPhone']['T']).reshape(3)
 
+        # cam2world
         extrinsics = np.identity(4, dtype=float)
         extrinsics[:3, :3] = R
         extrinsics[:3, 3] = T
 
         if vertical:
             # 90-degree clockwise rotation around z-axis
-            r = np.eye(4)
-            r[:2, :2] = np.array([[0, -1], [1, 0]])
-            extrinsics = r @ extrinsics
+            R = np.eye(4)
+            R[:2, :2] = np.array([[0, -1], [1, 0]])
+            # Note the extrinsics is cam2world
+            extrinsics = extrinsics @ np.linalg.inv(R)
             R = extrinsics[:3, :3]
             T = extrinsics[:3, 3]
 
@@ -279,16 +284,15 @@ class SMCReader:
                 Defaults to True.
 
         Returns:
-            ndarray:
+            ndarray:get_iphone_keypoints2d
                 An ndarray of (width, height), shape=[2, ].
-
         """
         assert iphone_id == 0, 'Currently only one iPhone.'
         if vertical:
+            return self.iphone_color_resolution
+        else:
             H, W = self.iphone_color_resolution
             return np.array([W, H])
-        else:
-            return self.iphone_color_resolution
 
     def get_kinect_color(self, kinect_id, frame_id=None, disable_tqdm=False):
         """Get several frames captured by a kinect RGB camera.
@@ -421,12 +425,11 @@ class SMCReader:
         """
         return self.num_iphones
 
-    def get_iphone_color(
-            self,
-            iphone_id=0,
-            frame_id=None,
-            disable_tqdm=False,
-            vertical=True):
+    def get_iphone_color(self,
+                         iphone_id=0,
+                         frame_id=None,
+                         disable_tqdm=False,
+                         vertical=True):
         """Get several frames captured by an iPhone RGB camera.
 
         Args:
@@ -441,7 +444,7 @@ class SMCReader:
                 Whether to disable the entire progressbar wrapper.
                 Defaults to False.
             vertical (bool, optional):
-                iPhone assumes landscape orientation
+                iPhone assumes horizontal orientation
                 if True, convert data to vertical orientation
                 Defaults to True.
 
@@ -466,12 +469,11 @@ class SMCReader:
             frames.append(frame)
         return np.stack(frames, axis=0)
 
-    def get_iphone_depth(
-            self,
-            iphone_id=0,
-            frame_id=None,
-            disable_tqdm=False,
-            vertical=True):
+    def get_iphone_depth(self,
+                         iphone_id=0,
+                         frame_id=None,
+                         disable_tqdm=False,
+                         vertical=True):
         """Get several frames captured by an iPhone RGB camera.
 
         Args:
@@ -486,7 +488,7 @@ class SMCReader:
                 Whether to disable the entire progressbar wrapper.
                 Defaults to False.
             vertical (bool, optional):
-                iPhone assumes landscape orientation
+                iPhone assumes horizontal orientation
                 if True, convert data to vertical orientation
                 Defaults to True.
 
@@ -639,7 +641,7 @@ class SMCReader:
                 Defaults to None.
             vertical (bool, optional):
                 Only applicable to iPhone as device
-                iPhone assumes landscape orientation
+                iPhone assumes horizontal orientation
                 if True, convert data to vertical orientation
                 Defaults to True.
 
@@ -662,15 +664,18 @@ class SMCReader:
             keypoints2d = keypoints2d[frame_id, ...]
 
         if device == 'iPhone' and vertical:
-            # rotate keypoints 2D clockwise by 90 degress
-            xs, ys = keypoints2d[..., 0], keypoints2d[..., 1]
-            xs, ys = ys, -xs
-            keypoints2d[..., 0], keypoints2d[..., 1] = xs, ys
+            # rotate keypoints 2D clockwise by 90 degrees
+            H, W = self.get_iphone_color_resolution(vertical=False)
+            xs, ys, conf = \
+                keypoints2d[..., 0], keypoints2d[..., 1], keypoints2d[..., 2]
+            xs, ys = H - ys, xs  # horizontal -> vertical
+            keypoints2d[..., 0], keypoints2d[..., 1] = xs.copy(), ys.copy()
+            keypoints2d[conf == 0.0] = 0.0
 
         return keypoints2d, keypoints2d_mask
 
     def get_kinect_keypoints2d(self, device_id, frame_id=None):
-        """ Get Kinect 2D keypoints
+        """Get Kinect 2D keypoints.
 
         Args:
             device_id (int):
@@ -688,8 +693,11 @@ class SMCReader:
         assert self.num_kinects > device_id >= 0
         return self.get_keypoints2d('Kinect', device_id, frame_id)
 
-    def get_iphone_keypoints2d(self, device_id, frame_id=None, vertical=True):
-        """ Get iPhone 2D keypoints
+    def get_iphone_keypoints2d(self,
+                               device_id=0,
+                               frame_id=None,
+                               vertical=True):
+        """Get iPhone 2D keypoints.
 
         Args:
             device_id (int):
@@ -700,7 +708,7 @@ class SMCReader:
                 None: all frames will be returned
                 Defaults to None.
             vertical (bool, optional):
-                iPhone assumes landscape orientation
+                iPhone assumes horizontal orientation
                 if True, convert data to vertical orientation
                 Defaults to True.
 
@@ -712,13 +720,12 @@ class SMCReader:
         return self.get_keypoints2d(
             'iPhone', device_id, frame_id, vertical=vertical)
 
-    def get_color(
-            self,
-            device,
-            device_id,
-            frame_id=None,
-            disable_tqdm=False,
-            vertical=True):
+    def get_color(self,
+                  device,
+                  device_id,
+                  frame_id=None,
+                  disable_tqdm=False,
+                  vertical=True):
         """Get RGB image(s) from Kinect RGB or iPhone RGB camera.
 
         Args:
@@ -736,7 +743,7 @@ class SMCReader:
                 Defaults to False.
             vertical (bool, optional):
                 Only applicable to iPhone as device
-                iPhone assumes landscape orientation
+                iPhone assumes horizontal orientation
                 if True, convert data to vertical orientation
                 Defaults to True.
 
@@ -753,10 +760,7 @@ class SMCReader:
             img = self.get_kinect_color(device_id, frame_id, disable_tqdm)
         else:
             img = self.get_iphone_color(
-                device_id,
-                frame_id,
-                disable_tqdm,
-                vertical=vertical)
+                device_id, frame_id, disable_tqdm, vertical=vertical)
 
         return img
 
@@ -769,12 +773,11 @@ class SMCReader:
     def get_keypoints_created_time(self):
         return self.keypoints_created_time
 
-    def get_keypoints3d(
-            self,
-            device=None,
-            device_id=None,
-            frame_id=None,
-            vertical=True):
+    def get_keypoints3d(self,
+                        device=None,
+                        device_id=None,
+                        frame_id=None,
+                        vertical=True):
         """Get keypoints3d (world coordinate) computed by mocap processing
         pipeline.
 
@@ -794,7 +797,7 @@ class SMCReader:
                 Defaults to None.
             vertical (bool, optional):
                 Only applicable to iPhone as device
-                iPhone assumes landscape orientation
+                iPhone assumes horizontal orientation
                 if True, convert data to vertical orientation
                 Defaults to True.
 
