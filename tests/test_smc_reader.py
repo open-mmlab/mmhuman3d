@@ -158,17 +158,21 @@ def test_get_kinect_color():
     assert kinect_color.shape == (1, 1080, 1920, 3), \
         'Kinect Color should have resolution of 1x1080x1920x3'
 
-
-def test_get_kinect_depth():
-    smc = SMCReader(TEST_SMC_PATH)
-
     kinect_color = smc.get_kinect_color(0, frame_id=0)
     assert kinect_color.shape == (1, 1080, 1920, 3), \
         'Kinect Color should have resolution of 1x1080x1920x3'
 
+
+def test_get_kinect_depth():
+    smc = SMCReader(TEST_SMC_PATH)
+
     kinect_depth = smc.get_kinect_depth(0, frame_id=0)
     assert kinect_depth.shape == (1, 576, 640), \
         'Kinect depth should have resolution of 1x576x640'
+
+
+def test_get_kinect_rgbd():
+    smc = SMCReader(TEST_SMC_PATH)
 
     mapped_color, depth = smc.get_kinect_rgbd(0, 0)
     assert mapped_color.shape == (576, 640, 3), \
