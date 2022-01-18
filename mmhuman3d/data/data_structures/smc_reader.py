@@ -672,10 +672,18 @@ class SMCReader:
         keypoints2d = kps2d_dict['keypoints2d'][...]
         keypoints2d_mask = kps2d_dict['keypoints2d_mask'][...]
 
-        if frame_id is not None:
-            if isinstance(frame_id, int):
-                frame_id = [frame_id]
-            keypoints2d = keypoints2d[frame_id, ...]
+        if frame_id is None:
+            frame_list = range(self.get_keypoints_num_frames())
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
+            assert frame_id < self.get_keypoints_num_frames(),\
+                'Index out of range...'
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
+
+        keypoints2d = keypoints2d[frame_list, ...]
 
         if device == 'iPhone' and vertical:
             # rotate keypoints 2D clockwise by 90 degrees
@@ -835,10 +843,18 @@ class SMCReader:
         keypoints3d_world = kps3d_dict['keypoints3d'][...]
         keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
 
-        if frame_id is not None:
-            if isinstance(frame_id, int):
-                frame_id = [frame_id]
-            keypoints3d_world = keypoints3d_world[frame_id, ...]
+        if frame_id is None:
+            frame_list = range(self.get_keypoints_num_frames())
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
+            assert frame_id < self.get_keypoints_num_frames(),\
+                'Index out of range...'
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
+
+        keypoints3d_world = keypoints3d_world[frame_list, ...]
 
         # return keypoints3d in world coordinate system
         if device is None:

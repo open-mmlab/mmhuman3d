@@ -111,6 +111,9 @@ def test_get_iphone_color():
     with pytest.raises(KeyError):
         _ = smc.get_color(device='iPhone', device_id=1, frame_id=0)
 
+    with pytest.raises(TypeError):
+        _ = smc.get_color(device='iPhone', device_id=0, frame_id=0.0)
+
     iphone_color = smc.get_iphone_color(iphone_id=0, frame_id=0, vertical=True)
     assert iphone_color.shape == (1, 1920, 1440, 3), \
         'iPhone color image in vertical mode ' \
@@ -147,6 +150,9 @@ def test_get_kinect_color():
 
     with pytest.raises(KeyError):
         _ = smc.get_color(device='Kinect', device_id=10, frame_id=0)
+
+    with pytest.raises(TypeError):
+        _ = smc.get_color(device='Kinect', device_id=0, frame_id=0.0)
 
     kinect_color = smc.get_color(device='Kinect', device_id=0, frame_id=0)
     assert kinect_color.shape == (1, 1080, 1920, 3), \
@@ -327,17 +333,24 @@ def test_get_keypoints3d_by_device():
 
     # get all
     with pytest.raises(AssertionError):
-        _ = smc.get_keypoints3d(device='kinect', device_id=10)
+        _ = smc.get_keypoints3d(device='kinect', device_id=0)
     with pytest.raises(AssertionError):
         _ = smc.get_keypoints3d(device='Kinect', device_id=-1)
     with pytest.raises(KeyError):
         _ = smc.get_keypoints3d(device='Kinect', device_id=10)
+    with pytest.raises(TypeError):
+        _ = smc.get_color(device='Kinect', device_id=0, frame_id=0.0)
 
     # get by frame_id
+    with pytest.raises(AssertionError):
+        _ = smc.get_keypoints3d(device='iphone', device_id=0)
     with pytest.raises(AssertionError):
         _ = smc.get_keypoints3d(device='iPhone', device_id=-1)
     with pytest.raises(KeyError):
         _ = smc.get_keypoints3d(device='iPhone', device_id=10)
+    with pytest.raises(TypeError):
+        _ = smc.get_keypoints3d(device='iPhone', device_id=0, frame_id=0.0)
+
     keypoints3d, keypoints3d_mask = \
         smc.get_keypoints3d(device='iPhone', device_id=0, frame_id=0)
     assert keypoints3d.shape == (1, 133, 4)
