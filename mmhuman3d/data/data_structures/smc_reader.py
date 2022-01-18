@@ -428,7 +428,7 @@ class SMCReader:
     def get_iphone_color(self,
                          iphone_id=0,
                          frame_id=None,
-                         disable_tqdm=False,
+                         disable_tqdm=True,
                          vertical=True):
         """Get several frames captured by an iPhone RGB camera.
 
@@ -442,7 +442,7 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
             vertical (bool, optional):
                 iPhone assumes horizontal orientation
                 if True, convert data to vertical orientation
