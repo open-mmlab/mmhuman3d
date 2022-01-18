@@ -126,20 +126,17 @@ def test_get_iphone_color():
 def test_get_iphone_depth():
     smc = SMCReader(TEST_SMC_PATH)
 
-    with pytest.raises(AssertionError):
-        _ = smc.get_iphone_depth(device_id=0, frame_id=0)
-
     with pytest.raises(KeyError):
-        _ = smc.get_iphone_depth(device_id=1, frame_id=0)
+        _ = smc.get_iphone_depth(iphone_id=1, frame_id=0)
 
     iphone_depth = smc.get_iphone_depth(iphone_id=0, frame_id=0, vertical=True)
-    assert iphone_depth.shape == (1, 192, 256), \
-        'iPhone depth image in vertical mode should have shape 1x192x256.'
+    assert iphone_depth.shape == (1, 256, 192), \
+        'iPhone depth image in vertical mode should have shape 1x256x192.'
 
     iphone_depth = smc.get_iphone_depth(
         iphone_id=0, frame_id=0, vertical=False)
-    assert iphone_depth.shape == (1, 256, 192), \
-        'iPhone depth image in horizontal mode should have shape 1x256x192.'
+    assert iphone_depth.shape == (1, 192, 256), \
+        'iPhone depth image in horizontal mode should have shape 1x192x256.'
 
 
 def test_get_kinect_color():
@@ -339,7 +336,7 @@ def test_get_keypoints3d_by_device():
     # get by frame_id
     with pytest.raises(AssertionError):
         _ = smc.get_keypoints3d(device='iPhone', device_id=-1)
-    with pytest.raises(AssertionError):
+    with pytest.raises(KeyError):
         _ = smc.get_keypoints3d(device='iPhone', device_id=10)
     keypoints3d, keypoints3d_mask = \
         smc.get_keypoints3d(device='iPhone', device_id=0, frame_id=0)
