@@ -14,7 +14,7 @@ class HumanDataCacheReader():
 
     def __init__(self, npz_path: str):
         self.npz_file = np.load(npz_path, allow_pickle=True)
-        self.index_dict = self.npz_file['index'].item()
+        self.slice_size = self.npz_file['slice_size'].item()
         self.keypoints_info = self.npz_file['keypoints_info'].item()
         self.non_sliced_data = None
 
@@ -22,32 +22,33 @@ class HumanDataCacheReader():
         self.npz_file.close()
 
     def get_item(self, index, required_keys: List[str] = []):
-        cache_key = self.index_dict[index]
+        cache_key = str(int(index / self.slice_size))
         base_data = self.npz_file[cache_key].item()
         base_data.update(self.keypoints_info)
         for key in required_keys:
-            if required_keys not in base_data:
+            if key not in base_data:
                 base_data.update(self.get_non_sliced_data(key))
         ret_human_data = HumanData.new(source_dict=base_data)
         # data in cache is compressed
         ret_human_data.__keypoints_compressed__ = True
         # set missing values and attributes by default method
         ret_human_data.__set_default_values__()
+        return ret_human_data
 
     def get_non_sliced_data(self, key: str):
         if self.non_sliced_data is None:
             self.non_sliced_data = self.npz_file['non_sliced_data'].item()
-        return self.non_sliced_data[key]
+        return {key: self.non_sliced_data[key]}
 
 
 class HumanDataCacheWriter():
 
     def __init__(self,
-                 index_dict: dict,
+                 slice_size: int,
                  keypoints_info: dict,
                  non_sliced_data: dict,
                  key_strict: bool = True):
-        self.index_dict = index_dict
+        self.slice_size = slice_size
         self.keypoints_info = keypoints_info
         self.non_sliced_data = non_sliced_data
         self.sliced_data = {}
@@ -78,7 +79,7 @@ class HumanDataCacheWriter():
             if check_path_existence(npz_path, 'file') == Existence.FileExist:
                 raise FileExistsError
         dict_to_dump = {
-            'index': self.index_dict,
+            'slice_size': self.slice_size,
             'keypoints_info': self.keypoints_info,
             'non_sliced_data': self.non_sliced_data,
             'key_strict': self.key_strict,
