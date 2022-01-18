@@ -1,4 +1,5 @@
 cdflib
+chumpy
 colormap
 easydev
 h5py
