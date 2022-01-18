@@ -209,6 +209,9 @@ class SMCReader:
         camera_info = json.loads(camera_info[()])
         intrinsics = np.asarray(camera_info['cameraIntrinsics']).transpose()
 
+        # Intrinsics have to be adjusted to achieve rotation
+        #   1. swapping fx, fy
+        #   2. cx -> image height - cy; cy -> cx
         if vertical:
             fx, fy = intrinsics[0, 0], intrinsics[1, 1]
             cx, cy = intrinsics[0, 2], intrinsics[1, 2]
@@ -255,11 +258,15 @@ class SMCReader:
         extrinsics[:3, :3] = R
         extrinsics[:3, 3] = T
 
+        # Extrinsics have to be adjusted to achieve rotation
+        # A rotation matrix is applied on the extrinsics
         if vertical:
             # 90-degree clockwise rotation around z-axis
             R = np.eye(4)
             R[:2, :2] = np.array([[0, -1], [1, 0]])
             # Note the extrinsics is cam2world
+            # world2cam_adjusted = R @ world2cam
+            # => cam2world_adjusted = cam2world @ inv(R)
             extrinsics = extrinsics @ np.linalg.inv(R)
             R = extrinsics[:3, :3]
             T = extrinsics[:3, 3]
