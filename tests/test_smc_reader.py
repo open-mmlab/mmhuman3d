@@ -111,8 +111,7 @@ def test_get_iphone_color():
     with pytest.raises(KeyError):
         _ = smc.get_color(device='iPhone', device_id=1, frame_id=0)
 
-    iphone_color = smc.get_iphone_color(
-        iphone_id=0, frame_id=0, vertical=True)
+    iphone_color = smc.get_iphone_color(iphone_id=0, frame_id=0, vertical=True)
     assert iphone_color.shape == (1, 1920, 1440, 3), \
         'iPhone color image in vertical mode ' \
         'should have shape 1x1920x1440x3.'
@@ -133,8 +132,7 @@ def test_get_iphone_depth():
     with pytest.raises(KeyError):
         _ = smc.get_iphone_depth(device='iPhone', device_id=1, frame_id=0)
 
-    iphone_depth = smc.get_iphone_depth(
-        iphone_id=0, frame_id=0, vertical=True)
+    iphone_depth = smc.get_iphone_depth(iphone_id=0, frame_id=0, vertical=True)
     assert iphone_depth.shape == (1, 192, 256), \
         'iPhone depth image in vertical mode should have shape 1x192x256.'
 
@@ -447,4 +445,3 @@ def test_iphone_rotation():
     keypoints2d_horizontal = keypoints2d_horizontal.squeeze()[..., :2]
     keypoints2d[conf == 0.0] = 0.0
     assert np.allclose(keypoints2d, keypoints2d_horizontal)
-
