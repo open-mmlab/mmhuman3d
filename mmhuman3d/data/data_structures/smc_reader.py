@@ -245,7 +245,8 @@ class SMCReader:
                     keys are R and T,
                     each value is an ndarray.
         """
-        assert iphone_id == 0, 'Currently only one iPhone.'
+        if iphone_id != 0:
+            raise KeyError('Currently only one iPhone.')
         R = np.asarray(self.calibration_dict['iPhone']['R']).reshape(3, 3)
         T = np.asarray(self.calibration_dict['iPhone']['T']).reshape(3)
 
@@ -287,14 +288,15 @@ class SMCReader:
             ndarray:get_iphone_keypoints2d
                 An ndarray of (width, height), shape=[2, ].
         """
-        assert iphone_id == 0, 'Currently only one iPhone.'
+        if iphone_id != 0:
+            raise KeyError('Currently only one iPhone.')
         if vertical:
             return self.iphone_color_resolution
         else:
             H, W = self.iphone_color_resolution
             return np.array([W, H])
 
-    def get_kinect_color(self, kinect_id, frame_id=None, disable_tqdm=False):
+    def get_kinect_color(self, kinect_id, frame_id=None, disable_tqdm=True):
         """Get several frames captured by a kinect RGB camera.
 
         Args:
@@ -307,7 +309,7 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
 
         Returns:
             ndarray:
@@ -343,7 +345,7 @@ class SMCReader:
         else:
             print('Model {} is not supported...'.format(mode))
 
-    def get_kinect_depth(self, kinect_id, frame_id=None, disable_tqdm=False):
+    def get_kinect_depth(self, kinect_id, frame_id=None, disable_tqdm=True):
         """Get several frames captured by a kinect depth camera.
 
         Args:
@@ -356,7 +358,7 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
 
         Returns:
             ndarray:
@@ -472,7 +474,7 @@ class SMCReader:
     def get_iphone_depth(self,
                          iphone_id=0,
                          frame_id=None,
-                         disable_tqdm=False,
+                         disable_tqdm=True,
                          vertical=True):
         """Get several frames captured by an iPhone RGB camera.
 
@@ -486,7 +488,7 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
             vertical (bool, optional):
                 iPhone assumes horizontal orientation
                 if True, convert data to vertical orientation
@@ -506,8 +508,7 @@ class SMCReader:
                 'Index out of range...'
             frame_list = [frame_id]
         for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
-            frame = self.__read_color_from_bytes__(
-                self.smc['iPhone'][str(iphone_id)]['Depth'][str(i)][()])
+            frame = self.smc['iPhone'][str(iphone_id)]['Depth'][str(i)][()]
             if vertical:
                 frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
             frames.append(frame)
@@ -724,7 +725,7 @@ class SMCReader:
                   device,
                   device_id,
                   frame_id=None,
-                  disable_tqdm=False,
+                  disable_tqdm=True,
                   vertical=True):
         """Get RGB image(s) from Kinect RGB or iPhone RGB camera.
 
@@ -740,7 +741,7 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
             vertical (bool, optional):
                 Only applicable to iPhone as device
                 iPhone assumes horizontal orientation
