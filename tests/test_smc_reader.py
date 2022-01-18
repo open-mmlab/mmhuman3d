@@ -72,23 +72,6 @@ def test_get_kinect_resolution():
         2, ), 'Kinect Depth Resolution should be a 2D matrix'
 
 
-def test_get_kinect_data():
-    smc = SMCReader(TEST_SMC_PATH)
-
-    kinect_color = smc.get_kinect_color(0, frame_id=0)
-    assert kinect_color.shape == (
-        1, 1080, 1920,
-        3), 'Kinect Color should have resolution of 1x1080x1920x3'
-
-    kinect_depth = smc.get_kinect_depth(0, frame_id=0)
-    assert kinect_depth.shape == (
-        1, 576, 640), 'Kinect depth should have resolution of 1x576x640'
-
-    mapped_color, depth = smc.get_kinect_rgbd(0, 0)
-    assert mapped_color.shape == (
-        576, 640, 3), 'Kinect RGBD should have color resolution of 576x640x3'
-
-
 def test_get_iphone_extrinsics():
     smc = SMCReader(TEST_SMC_PATH)
 
@@ -108,46 +91,87 @@ def test_get_iphone_intrinsics():
 def test_get_iphone_resolution():
     smc = SMCReader(TEST_SMC_PATH)
 
-    color_resolution = smc.get_iphone_color_resolution(0)
+    color_resolution = smc.get_iphone_color_resolution(0, vertical=True)
     assert color_resolution.shape == (
         2, ), 'iPhone Color Resolution should be a 2D matrix'
+    assert tuple(color_resolution) == (1920, 1440)
+
+    color_resolution = smc.get_iphone_color_resolution(0, vertical=False)
+    assert color_resolution.shape == (
+        2, ), 'iPhone Color Resolution should be a 2D matrix'
+    assert tuple(color_resolution) == (1440, 1920)
 
 
-def test_get_iphone_data():
+def test_get_iphone_color():
     smc = SMCReader(TEST_SMC_PATH)
-
-    iphone_color = smc.get_iphone_color(iphone_id=0, frame_id=0)
-    assert iphone_color.shape == (
-        1, 1440, 1920, 3), 'iPhone color image should have shape 1x1440x1920x3'
-
-    iphone_depth = smc.get_iphone_depth(iphone_id=0, frame_id=0)
-    assert iphone_depth.shape == (
-        1, 192, 256), 'iPhone depth image should have shape 1x192x256'
-
-
-def test_get_color():
-    smc = SMCReader(TEST_SMC_PATH)
-
-    kinect_color = smc.get_color(device='Kinect', device_id=0, frame_id=0)
-    assert kinect_color.shape == (
-        1, 1080, 1920,
-        3), 'Kinect Color should have resolution of 1x1080x1920x3'
-
-    iphone_color = smc.get_color(device='iPhone', device_id=0, frame_id=0)
-    assert iphone_color.shape == (
-        1, 1440, 1920, 3), 'iPhone color image should have shape 1x1440x1920x3'
-
-    with pytest.raises(AssertionError):
-        _ = smc.get_color(device='kinect', device_id=0, frame_id=0)
 
     with pytest.raises(AssertionError):
         _ = smc.get_color(device='iphone', device_id=0, frame_id=0)
 
     with pytest.raises(KeyError):
-        _ = smc.get_color(device='Kinect', device_id=10, frame_id=0)
+        _ = smc.get_color(device='iPhone', device_id=1, frame_id=0)
+
+    iphone_color = smc.get_iphone_color(
+        iphone_id=0, frame_id=0, vertical=True)
+    assert iphone_color.shape == (1, 1920, 1440, 3), \
+        'iPhone color image in vertical mode ' \
+        'should have shape 1x1920x1440x3.'
+
+    iphone_color = smc.get_iphone_color(
+        iphone_id=0, frame_id=0, vertical=False)
+    assert iphone_color.shape == (1, 1440, 1920, 3), \
+        'iPhone color image in horizontal mode ' \
+        'should have shape 1x1440x1920x3.'
+
+
+def test_get_iphone_depth():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_iphone_depth(device='iphone', device_id=0, frame_id=0)
 
     with pytest.raises(KeyError):
-        _ = smc.get_color(device='iPhone', device_id=1, frame_id=0)
+        _ = smc.get_iphone_depth(device='iPhone', device_id=1, frame_id=0)
+
+    iphone_depth = smc.get_iphone_depth(
+        iphone_id=0, frame_id=0, vertical=True)
+    assert iphone_depth.shape == (1, 192, 256), \
+        'iPhone depth image in vertical mode should have shape 1x192x256.'
+
+    iphone_depth = smc.get_iphone_depth(
+        iphone_id=0, frame_id=0, vertical=False)
+    assert iphone_depth.shape == (1, 256, 192), \
+        'iPhone depth image in horizontal mode should have shape 1x256x192.'
+
+
+def test_get_kinect_color():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_color(device='kinect', device_id=0, frame_id=0)
+
+    with pytest.raises(KeyError):
+        _ = smc.get_color(device='Kinect', device_id=10, frame_id=0)
+
+    kinect_color = smc.get_color(device='Kinect', device_id=0, frame_id=0)
+    assert kinect_color.shape == (1, 1080, 1920, 3), \
+        'Kinect Color should have resolution of 1x1080x1920x3'
+
+
+def test_get_kinect_depth():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    kinect_color = smc.get_kinect_color(0, frame_id=0)
+    assert kinect_color.shape == (1, 1080, 1920, 3), \
+        'Kinect Color should have resolution of 1x1080x1920x3'
+
+    kinect_depth = smc.get_kinect_depth(0, frame_id=0)
+    assert kinect_depth.shape == (1, 576, 640), \
+        'Kinect depth should have resolution of 1x576x640'
+
+    mapped_color, depth = smc.get_kinect_rgbd(0, 0)
+    assert mapped_color.shape == (576, 640, 3), \
+        'Kinect RGBD should have color resolution of 576x640x3'
 
 
 def test_get_mask():
@@ -377,7 +401,7 @@ def test_get_smpl_by_frame():
     assert isinstance(betas, np.ndarray)
 
 
-def test_get_iphone_keypoints_vertical():
+def test_iphone_rotation():
     smc = SMCReader(TEST_SMC_PATH)
 
     # get keypoints3d in world coordinate
@@ -424,14 +448,3 @@ def test_get_iphone_keypoints_vertical():
     keypoints2d[conf == 0.0] = 0.0
     assert np.allclose(keypoints2d, keypoints2d_horizontal)
 
-
-def test_get_iphone_color_vertical():
-    smc = SMCReader(TEST_SMC_PATH)
-
-    color_horizontal = smc.get_iphone_color(disable_tqdm=True, vertical=False)
-    horizontal_resolution = smc.get_iphone_color_resolution(vertical=False)
-    assert color_horizontal.squeeze().shape[:2] == tuple(horizontal_resolution)
-
-    color_vertical = smc.get_iphone_color(disable_tqdm=True, vertical=True)
-    vertical_resolution = smc.get_iphone_color_resolution(vertical=True)
-    assert color_vertical.squeeze().shape[:2] == tuple(vertical_resolution)
