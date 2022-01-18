@@ -331,6 +331,8 @@ class SMCReader:
             assert frame_id < self.get_kinect_num_frames(),\
                 'Index out of range...'
             frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
         for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
             frames.append(
                 self.__read_color_from_bytes__(
@@ -470,6 +472,8 @@ class SMCReader:
             assert frame_id < self.get_iphone_num_frames(),\
                 'Index out of range...'
             frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
         for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
             frame = self.__read_color_from_bytes__(
                 self.smc['iPhone'][str(iphone_id)]['Color'][str(i)][()])
@@ -514,6 +518,8 @@ class SMCReader:
             assert frame_id < self.get_iphone_num_frames(),\
                 'Index out of range...'
             frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
         for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
             frame = self.smc['iPhone'][str(iphone_id)]['Depth'][str(i)][()]
             if vertical:
