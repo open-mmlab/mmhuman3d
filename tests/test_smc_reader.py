@@ -127,10 +127,10 @@ def test_get_iphone_depth():
     smc = SMCReader(TEST_SMC_PATH)
 
     with pytest.raises(AssertionError):
-        _ = smc.get_iphone_depth(device='iphone', device_id=0, frame_id=0)
+        _ = smc.get_iphone_depth(device_id=0, frame_id=0)
 
     with pytest.raises(KeyError):
-        _ = smc.get_iphone_depth(device='iPhone', device_id=1, frame_id=0)
+        _ = smc.get_iphone_depth(device_id=1, frame_id=0)
 
     iphone_depth = smc.get_iphone_depth(iphone_id=0, frame_id=0, vertical=True)
     assert iphone_depth.shape == (1, 192, 256), \
