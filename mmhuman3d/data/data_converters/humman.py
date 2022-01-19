@@ -29,6 +29,7 @@ class HuMManConverter(BaseModeConverter):
         self.downsample_ratio = 10  # uniformly sampling
 
         self.keypoint_convention = 'coco_wholebody'
+        self.num_keypoints = get_keypoint_num(self.keypoint_convention)
         self.left_hip_idx = get_keypoint_idx('left_hip',
                                              self.keypoint_convention)
         self.right_hip_idx = get_keypoint_idx('right_hip',
@@ -65,10 +66,8 @@ class HuMManConverter(BaseModeConverter):
 
         human_data['smpl'] = smpl
 
-        num_keypoints = get_keypoint_num(keypoints_convention)
-
         keypoints2d = np.concatenate(
-            keypoints_2d, axis=0).reshape(-1, num_keypoints, 3)
+            keypoints_2d, axis=0).reshape(-1, self.num_keypoints, 3)
         keypoints2d, keypoints2d_mask = convert_kps(
             keypoints2d,
             mask=keypoints2d_mask,
@@ -78,7 +77,7 @@ class HuMManConverter(BaseModeConverter):
         human_data['keypoints2d_mask'] = keypoints2d_mask
 
         keypoints3d = np.concatenate(
-            keypoints_3d, axis=0).reshape(-1, num_keypoints, 4)
+            keypoints_3d, axis=0).reshape(-1, self.num_keypoints, 4)
         keypoints3d, keypoints3d_mask = convert_kps(
             keypoints3d,
             mask=keypoints3d_mask,
@@ -178,6 +177,8 @@ class HuMManConverter(BaseModeConverter):
                     keypoints_2d_ = kinect_keypoints_2d_
                     keypoints_3d_ = kinect_keypoints_3d_
                     smpl_ = kinect_smpl
+                    width, height = \
+                        smc_reader.get_kinect_color_resolution(device_id)
                 else:
                     image_id_ = iphone_image_id_
                     image_path_ = iphone_image_path_
@@ -185,6 +186,7 @@ class HuMManConverter(BaseModeConverter):
                     keypoints_2d_ = iphone_keypoints_2d_
                     keypoints_3d_ = iphone_keypoints_3d_
                     smpl_ = iphone_smpl
+                    width, height = smc_reader.get_iphone_color_resolution()
 
                 assert device_id >= 0, f'Negative device id: {device_id}'
 
@@ -200,11 +202,14 @@ class HuMManConverter(BaseModeConverter):
                 keypoints_2d_.append(keypoints2d)
 
                 # compute bbox from keypoints2d
-                xs, ys = keypoints2d[:, :, 0], keypoints2d[:, :, 1]
-                xmins, xmaxs = np.min(xs, axis=1), np.max(xs, axis=1)
-                ymins, ymaxs = np.min(ys, axis=1), np.max(ys, axis=1)
-
-                for xmin, xmax, ymin, ymax in zip(xmins, xmaxs, ymins, ymaxs):
+                for kp2d in keypoints2d:
+                    assert kp2d.shape == (self.num_keypoints, 3)
+                    xs, ys, conf = kp2d[:, 0], kp2d[:, 1], kp2d[:, 2]
+                    valid = conf > 0.0
+                    xmin = max(np.min(xs[valid]), 0)
+                    xmax = min(np.max(xs[valid]), width - 1)
+                    ymin = max(np.min(ys[valid]), 0)
+                    ymax = min(np.max(ys[valid]), height - 1)
                     bbox_xyxy = [xmin, ymin, xmax, ymax]
                     bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
                     bbox_xywh_.append(bbox_xywh)
