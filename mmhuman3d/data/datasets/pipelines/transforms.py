@@ -327,7 +327,7 @@ class RandomHorizontalFlip(object):
         if 'keypoints2d' in results:
             assert self.flip_pairs is not None
             width = results['img'][:, ::-1, :].shape[1]
-            keypoints2d = results['keypoints2d']
+            keypoints2d = results['keypoints2d'].copy()
             keypoints2d = _flip_keypoints(keypoints2d, self.flip_pairs, width)
             results['keypoints2d'] = keypoints2d
 
@@ -687,7 +687,7 @@ class MeshAffine:
             results['img'] = img
 
         if 'keypoints2d' in results:
-            keypoints2d = results['keypoints2d']
+            keypoints2d = results['keypoints2d'].copy()
             num_keypoints = len(keypoints2d)
             for i in range(num_keypoints):
                 if keypoints2d[i][2] > 0.0:
