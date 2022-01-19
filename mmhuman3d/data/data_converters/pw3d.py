@@ -104,8 +104,9 @@ class Pw3dConverter(BaseModeConverter):
                             max(keypoints2d[:, 1])
                         ]
 
-                        bbox_xywh = self._bbox_expand(
+                        bbox_xyxy = self._bbox_expand(
                             bbox_xyxy, scale_factor=1.2)
+                        bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
                         image_path = valid_img_names[valid_i]
                         image_abs_path = os.path.join(root_path, image_path)

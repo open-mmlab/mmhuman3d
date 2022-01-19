@@ -202,7 +202,8 @@ class SurrealConverter(BaseModeConverter):
                         max(keypoints2d[:, 0]),
                         max(keypoints2d[:, 1])
                     ]
-                    bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
                     # add confidence column
                     keypoints2d = np.hstack([keypoints2d, np.ones((24, 1))])

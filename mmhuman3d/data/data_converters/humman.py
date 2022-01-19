@@ -206,7 +206,8 @@ class HuMManConverter(BaseModeConverter):
 
                 for xmin, xmax, ymin, ymax in zip(xmins, xmaxs, ymins, ymaxs):
                     bbox_xyxy = [xmin, ymin, xmax, ymax]
-                    bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xywh = self._xyxy2xywh(bbox_xyxy)
                     bbox_xywh_.append(bbox_xywh)
 
                 # get keypoints3d (all frames)

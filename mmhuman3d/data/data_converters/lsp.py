@@ -81,7 +81,8 @@ class LspConverter(BaseModeConverter):
 
             if 0 <= bbox_xyxy[0] <= w and 0 <= bbox_xyxy[2] <= w and \
                     0 <= bbox_xyxy[1] <= h and 0 <= bbox_xyxy[3] <= h:
-                bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                bbox_xywh = self._xyxy2xywh(bbox_xyxy)
             else:
                 print('Bbox out of image bounds. Skipping image {}'.format(
                     imgname))
