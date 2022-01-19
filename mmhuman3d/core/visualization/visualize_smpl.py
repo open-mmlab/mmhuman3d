@@ -343,7 +343,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         elif verts.ndim == 4:
             joints = torch.einsum('fpik,ji->fpjk',
                                   [verts, body_model.J_regressor])
-        model_output = body_model(**pose_dict)
+
         num_verts = body_model.NUM_VERTS
         assert verts.shape[-2] == num_verts, 'Wrong input verts shape.'
         faces = body_model.faces_tensor
@@ -890,7 +890,7 @@ def render_smpl(
     if K is None:
         projection = 'fovperspective'
         K, R, T = compute_orbit_cameras(
-            at=(torch.mean(vertices.view(-1, 3), 0)),
+            at=(torch.mean(vertices.view(-1, 3), 0)).detach().cpu(),
             orbit_speed=orbit_speed,
             batch_size=num_frames,
             convention=convention)
