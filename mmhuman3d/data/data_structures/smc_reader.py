@@ -5,9 +5,6 @@ import h5py
 import numpy as np
 import tqdm
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.data.data_structures.human_data import HumanData
-
 
 class SMCReader:
 
@@ -28,22 +25,24 @@ class SMCReader:
         self.kinect_color_resolution = self.get_kinect_color_resolution(0)
         self.kinect_depth_resolution = self.get_kinect_depth_resolution(0)
         self.iphone_exists = 'iPhone' in self.smc.keys()
+        self.num_iphones = 1
         if self.iphone_exists:
             self.iphone_num_frames = self.smc['iPhone'].attrs['num_frame']
             self.iphone_color_resolution = \
-                self.smc['iPhone'].attrs['color_resolution']
+                self.smc['iPhone'].attrs['color_resolution']  # vertical
             self.iphone_depth_resolution = \
-                self.smc['iPhone'].attrs['depth_resolution']
+                self.smc['iPhone'].attrs['depth_resolution']  # vertical
         self.keypoint_exists = 'Keypoints3D' in self.smc.keys()
         if self.keypoint_exists:
-            self.keypoints_num = self.smc['Keypoints3D'].attrs['num_frame']
+            self.keypoints_num_frames = self.smc['Keypoints3D'].attrs[
+                'num_frame']
             self.keypoints_convention = self.smc['Keypoints3D'].attrs[
                 'convention']
             self.keypoints_created_time = self.smc['Keypoints3D'].attrs[
                 'created_time']
         self.smpl_exists = 'SMPL' in self.smc.keys()
         if self.smpl_exists:
-            self.smpl_num = self.smc['SMPL'].attrs['num_frame']
+            self.smpl_num_frames = self.smc['SMPL'].attrs['num_frame']
             self.smpl_created_time = self.smc['SMPL'].attrs['created_time']
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
@@ -187,13 +186,20 @@ class SMCReader:
             np.asarray([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
         return intrinsics
 
-    def get_iphone_intrinsics(self, iphone_id=0, frame_id=0):
+    def get_iphone_intrinsics(self, iphone_id=0, frame_id=0, vertical=True):
         """Get intrinsics of an iPhone RGB camera by iPhone id.
 
         Args:
             iphone_id (int, optional):
                 ID of an iPhone, starts from 0.
                 Defaults to 0.
+            frame_id (int, optional):
+                int: frame id of one selected frame
+                Defaults to 0.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             ndarray: A 3x3 matrix.
@@ -202,30 +208,102 @@ class SMCReader:
             frame_id)]
         camera_info = json.loads(camera_info[()])
         intrinsics = np.asarray(camera_info['cameraIntrinsics']).transpose()
+
+        # Intrinsics have to be adjusted to achieve rotation
+        #   1. swapping fx, fy
+        #   2. cx -> image height - cy; cy -> cx
+        if vertical:
+            fx, fy = intrinsics[0, 0], intrinsics[1, 1]
+            cx, cy = intrinsics[0, 2], intrinsics[1, 2]
+            H, W = self.get_iphone_color_resolution(vertical=False)
+            intrinsics = np.eye(3)
+            intrinsics[0, 0], intrinsics[1, 1] = fy, fx
+            intrinsics[0, 2], intrinsics[1, 2] = H - cy, cx
+
         return intrinsics
 
-    def get_iphone_extrinsics(self, iphone_id=0, frame_id=0):
+    def get_iphone_extrinsics(self,
+                              iphone_id=0,
+                              homogeneous=True,
+                              vertical=True):
         """Get extrinsics(cam2world) of an iPhone RGB camera by iPhone id.
 
         Args:
             iphone_id (int, optional):
                 ID of an iPhone, starts from 0.
                 Defaults to 0.
+            homogeneous (bool, optional):
+                If true, returns rotation and translation in
+                one 4x4 matrix. Defaults to True.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
-            ndarray: A 4x4 transformation matrix(cam2world).
+            homogeneous is True
+                ndarray: A 4x4 transformation matrix(cam2world).
+            homogeneous is False
+                dict: A dict of rotation and translation,
+                    keys are R and T,
+                    each value is an ndarray.
         """
+        if iphone_id != 0:
+            raise KeyError('Currently only one iPhone.')
         R = np.asarray(self.calibration_dict['iPhone']['R']).reshape(3, 3)
         T = np.asarray(self.calibration_dict['iPhone']['T']).reshape(3)
+
+        # cam2world
         extrinsics = np.identity(4, dtype=float)
         extrinsics[:3, :3] = R
         extrinsics[:3, 3] = T
-        return extrinsics
 
-    def get_iphone_color_resolution(self, iphone_id=0, frame_id=0):
-        return self.iphone_color_resolution
+        # Extrinsics have to be adjusted to achieve rotation
+        # A rotation matrix is applied on the extrinsics
+        if vertical:
+            # 90-degree clockwise rotation around z-axis
+            R = np.eye(4)
+            R[:2, :2] = np.array([[0, -1], [1, 0]])
+            # Note the extrinsics is cam2world
+            # world2cam_adjusted = R @ world2cam
+            # => cam2world_adjusted = cam2world @ inv(R)
+            extrinsics = extrinsics @ np.linalg.inv(R)
+            R = extrinsics[:3, :3]
+            T = extrinsics[:3, 3]
 
-    def get_kinect_color(self, kinect_id, frame_id=None, disable_tqdm=False):
+        if homogeneous:
+            return extrinsics
+        else:
+            return {'R': R, 'T': T}
+
+    def get_iphone_color_resolution(self, iphone_id=0, vertical=True):
+        """Get color image resolution of an iPhone RGB camera by iPhone id.
+
+        Args:
+            iphone_id (int, optional):
+                ID of an iPhone, starts from 0.
+                Defaults to 0.
+            homogeneous (bool, optional):
+                If true, returns rotation and translation in
+                one 4x4 matrix. Defaults to True.
+            vertical (bool, optional):
+                iPhone assumes landscape orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
+
+        Returns:
+            ndarray:get_iphone_keypoints2d
+                An ndarray of (width, height), shape=[2, ].
+        """
+        if iphone_id != 0:
+            raise KeyError('Currently only one iPhone.')
+        if vertical:
+            return self.iphone_color_resolution
+        else:
+            H, W = self.iphone_color_resolution
+            return np.array([W, H])
+
+    def get_kinect_color(self, kinect_id, frame_id=None, disable_tqdm=True):
         """Get several frames captured by a kinect RGB camera.
 
         Args:
@@ -238,22 +316,23 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
 
         Returns:
             ndarray:
                 An ndarray in shape [frame_number, height, width, channels].
         """
-        frame_list = []
         frames = []
-        if frame_id is None or type(frame_id) == list:
+        if frame_id is None:
             frame_list = range(self.get_kinect_num_frames())
-            if frame_id:
-                frame_list = frame_id
-        elif type(frame_id) == int:
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
             assert frame_id < self.get_kinect_num_frames(),\
                 'Index out of range...'
-            frame_list.append(frame_id)
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
         for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
             frames.append(
                 self.__read_color_from_bytes__(
@@ -275,7 +354,7 @@ class SMCReader:
         else:
             print('Model {} is not supported...'.format(mode))
 
-    def get_kinect_depth(self, kinect_id, frame_id=None, disable_tqdm=False):
+    def get_kinect_depth(self, kinect_id, frame_id=None, disable_tqdm=True):
         """Get several frames captured by a kinect depth camera.
 
         Args:
@@ -288,7 +367,7 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
 
         Returns:
             ndarray:
@@ -348,7 +427,20 @@ class SMCReader:
         kinect_dict = self.smc['Kinect'][str(device_id)]
         return kinect_dict['Mask_k4abt'][str(frame_id)][()]
 
-    def get_iphone_color(self, iphone_id=0, frame_id=None, disable_tqdm=False):
+    def get_num_iphone(self):
+        """Get the number of iPhone devices.
+
+        Returns:
+            int:
+                Number of iPhone devices.
+        """
+        return self.num_iphones
+
+    def get_iphone_color(self,
+                         iphone_id=0,
+                         frame_id=None,
+                         disable_tqdm=True,
+                         vertical=True):
         """Get several frames captured by an iPhone RGB camera.
 
         Args:
@@ -361,32 +453,40 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
+            vertical (bool, optional):
+                iPhone assumes horizontal orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
-            ndarray:
+            frames:
+                An ndarray in shape [frame_number, height, width, channels].
         """
-        if frame_id is None or type(frame_id) == list:
-            frames = []
+        frames = []
+        if frame_id is None:
             frame_list = range(self.get_iphone_num_frames())
-            if frame_id:
-                frame_list = frame_id
-            for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
-                frames.append(
-                    self.__read_color_from_bytes__(
-                        self.smc['iPhone'][str(iphone_id)]['Color'][str(i)][(
-                        )]))
-            return np.stack(frames, axis=0)
-        else:
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
             assert frame_id < self.get_iphone_num_frames(),\
                 'Index out of range...'
-            return np.stack([
-                self.__read_color_from_bytes__(self.smc['iPhone'][str(
-                    iphone_id)]['Color'][str(frame_id)][()])
-            ],
-                            axis=0)
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
+        for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
+            frame = self.__read_color_from_bytes__(
+                self.smc['iPhone'][str(iphone_id)]['Color'][str(i)][()])
+            if vertical:
+                frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
+            frames.append(frame)
+        return np.stack(frames, axis=0)
 
-    def get_iphone_depth(self, iphone_id=0, frame_id=None, disable_tqdm=False):
+    def get_iphone_depth(self,
+                         iphone_id=0,
+                         frame_id=None,
+                         disable_tqdm=True,
+                         vertical=True):
         """Get several frames captured by an iPhone RGB camera.
 
         Args:
@@ -399,27 +499,33 @@ class SMCReader:
                 Defaults to None.
             disable_tqdm (bool, optional):
                 Whether to disable the entire progressbar wrapper.
-                Defaults to False.
+                Defaults to True.
+            vertical (bool, optional):
+                iPhone assumes horizontal orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
-            ndarray:
+            frames:
+                An ndarray in shape [frame_number, height, width, channels].
         """
-        if frame_id is None or type(frame_id) == list:
-            frames = []
-            frame_list = range(self.iphone_num_frames)
-            if frame_id:
-                frame_list = frame_id
-            for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
-                frames.append(
-                    self.smc['iPhone'][str(iphone_id)]['Depth'][str(i)][()])
-            return np.stack(frames, axis=0)
-        else:
-            assert frame_id < self.iphone_num_frames,\
+        frames = []
+        if frame_id is None:
+            frame_list = range(self.get_iphone_num_frames())
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
+            assert frame_id < self.get_iphone_num_frames(),\
                 'Index out of range...'
-            return np.stack([
-                self.smc['iPhone'][str(iphone_id)]['Depth'][str(frame_id)][()]
-            ],
-                            axis=0)
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
+        for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
+            frame = self.smc['iPhone'][str(iphone_id)]['Depth'][str(i)][()]
+            if vertical:
+                frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
+            frames.append(frame)
+        return np.stack(frames, axis=0)
 
     def get_kinect_transformation_depth_to_color(self, device_id):
         """Get transformation matrix from depth to color from a single kinect.
@@ -534,7 +640,7 @@ class SMCReader:
         else:
             raise KeyError(f'Kinect {device_id} has no floor data.')
 
-    def _get_keypoints2d(self, device, device_id, frame_id):
+    def get_keypoints2d(self, device, device_id, frame_id=None, vertical=True):
         """Get keypoints2d projected from keypoints3d.
 
         Args:
@@ -547,6 +653,11 @@ class SMCReader:
                 list: a list of frame id
                 None: all frames will be returned
                 Defaults to None.
+            vertical (bool, optional):
+                Only applicable to iPhone as device
+                iPhone assumes horizontal orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             Tuple[np.ndarray, np.ndarray]:
@@ -555,38 +666,42 @@ class SMCReader:
         assert device in {
             'Kinect', 'iPhone'
         }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+        assert device_id >= 0
+
         kps2d_dict = self.smc['Keypoints2D'][device][str(device_id)]
         keypoints2d = kps2d_dict['keypoints2d'][...]
         keypoints2d_mask = kps2d_dict['keypoints2d_mask'][...]
 
-        if frame_id is not None:
-            if isinstance(frame_id, int):
-                frame_id = [frame_id]
-            keypoints2d = keypoints2d[frame_id, ...]
+        if frame_id is None:
+            frame_list = range(self.get_keypoints_num_frames())
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
+            assert frame_id < self.get_keypoints_num_frames(),\
+                'Index out of range...'
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
+
+        keypoints2d = keypoints2d[frame_list, ...]
+
+        if device == 'iPhone' and vertical:
+            # rotate keypoints 2D clockwise by 90 degrees
+            H, W = self.get_iphone_color_resolution(vertical=False)
+            xs, ys, conf = \
+                keypoints2d[..., 0], keypoints2d[..., 1], keypoints2d[..., 2]
+            xs, ys = H - ys, xs  # horizontal -> vertical
+            keypoints2d[..., 0], keypoints2d[..., 1] = xs.copy(), ys.copy()
+            keypoints2d[conf == 0.0] = 0.0
+
         return keypoints2d, keypoints2d_mask
 
     def get_kinect_keypoints2d(self, device_id, frame_id=None):
-        assert self.num_kinects > device_id >= 0
-        return self._get_keypoints2d('Kinect', device_id, frame_id)
-
-    def get_iphone_keypoints2d(self, device_id, frame_id=None):
-        assert device_id >= 0
-        return self._get_keypoints2d('iPhone', device_id, frame_id)
-
-    def get_keypoints_num(self):
-        return self.keypoints_num
-
-    def get_keypoints_convention(self):
-        return self.keypoints_convention
-
-    def get_keypoints_created_time(self):
-        return self.keypoints_created_time
-
-    def get_keypoints3d(self, frame_id=None):
-        """Get keypoints3d (world coordinate) computed by mocap processing
-        pipeline.
+        """Get Kinect 2D keypoints.
 
         Args:
+            device_id (int):
+                ID of Kinect, starts from 0.
             frame_id (int, list or None, optional):
                 int: frame id of one selected frame
                 list: a list of frame id
@@ -595,20 +710,175 @@ class SMCReader:
 
         Returns:
             Tuple[np.ndarray, np.ndarray]:
+                keypoints2d (N, J, 3) and its mask (J, )
+        """
+        assert self.num_kinects > device_id >= 0
+        return self.get_keypoints2d('Kinect', device_id, frame_id)
+
+    def get_iphone_keypoints2d(self,
+                               device_id=0,
+                               frame_id=None,
+                               vertical=True):
+        """Get iPhone 2D keypoints.
+
+        Args:
+            device_id (int):
+                ID of iPhone, starts from 0.
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+            vertical (bool, optional):
+                iPhone assumes horizontal orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
+                keypoints2d (N, J, 3) and its mask (J, )
+        """
+        assert device_id >= 0
+        return self.get_keypoints2d(
+            'iPhone', device_id, frame_id, vertical=vertical)
+
+    def get_color(self,
+                  device,
+                  device_id,
+                  frame_id=None,
+                  disable_tqdm=True,
+                  vertical=True):
+        """Get RGB image(s) from Kinect RGB or iPhone RGB camera.
+
+        Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+            device_id (int):
+                Device ID, starts from 0.
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+            disable_tqdm (bool, optional):
+                Whether to disable the entire progressbar wrapper.
+                Defaults to True.
+            vertical (bool, optional):
+                Only applicable to iPhone as device
+                iPhone assumes horizontal orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
+
+        Returns:
+            img (ndarray):
+                An ndarray in shape [frame_number, height, width, channels].
+        """
+
+        assert device in {
+            'Kinect', 'iPhone'
+        }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+
+        if device == 'Kinect':
+            img = self.get_kinect_color(device_id, frame_id, disable_tqdm)
+        else:
+            img = self.get_iphone_color(
+                device_id, frame_id, disable_tqdm, vertical=vertical)
+
+        return img
+
+    def get_keypoints_num_frames(self):
+        return self.keypoints_num_frames
+
+    def get_keypoints_convention(self):
+        return self.keypoints_convention
+
+    def get_keypoints_created_time(self):
+        return self.keypoints_created_time
+
+    def get_keypoints3d(self,
+                        device=None,
+                        device_id=None,
+                        frame_id=None,
+                        vertical=True):
+        """Get keypoints3d (world coordinate) computed by mocap processing
+        pipeline.
+
+        Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+                None: world coordinate
+                Defaults to None.
+            device_id (int):
+                ID of a device, starts from 0.
+                None: world coordinate
+                Defaults to None
+            frame_id (int, list or None, optional):
+                int: frame id of one selected frame
+                list: a list of frame id
+                None: all frames will be returned
+                Defaults to None.
+            vertical (bool, optional):
+                Only applicable to iPhone as device
+                iPhone assumes horizontal orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]:
                 keypoints3d (N, J, 4) and its mask (J, )
         """
+        assert (device is None and device_id is None) or \
+            (device is not None and device_id is not None), \
+            'device and device_id should be both None or both not None.'
+        if device is not None:
+            assert device in {
+                'Kinect', 'iPhone'
+            }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+        if device_id is not None:
+            assert device_id >= 0
+
         kps3d_dict = self.smc['Keypoints3D']
-        keypoints3d = kps3d_dict['keypoints3d'][...]
+
+        # keypoints3d are in world coordinate system
+        keypoints3d_world = kps3d_dict['keypoints3d'][...]
         keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
 
-        if frame_id is not None:
-            if isinstance(frame_id, int):
-                frame_id = [frame_id]
-            keypoints3d = keypoints3d[frame_id, ...]
-        return keypoints3d, keypoints3d_mask
+        if frame_id is None:
+            frame_list = range(self.get_keypoints_num_frames())
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
+            assert frame_id < self.get_keypoints_num_frames(),\
+                'Index out of range...'
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
 
-    def get_smpl_num(self):
-        return self.smpl_num
+        keypoints3d_world = keypoints3d_world[frame_list, ...]
+
+        # return keypoints3d in world coordinate system
+        if device is None:
+            return keypoints3d_world, keypoints3d_mask
+
+        # return keypoints3d in device coordinate system
+        else:
+            if device == 'Kinect':
+                world2cam = self.get_kinect_color_extrinsics(
+                    kinect_id=device_id, homogeneous=True)
+            else:
+                world2cam = self.get_iphone_extrinsics(
+                    iphone_id=device_id, vertical=vertical)
+
+            xyz, conf = keypoints3d_world[..., :3], keypoints3d_world[..., [3]]
+            xyz_homogeneous = np.ones([*xyz.shape[:-1], 4])
+            xyz_homogeneous[..., :3] = xyz
+            keypoints3d = np.einsum('ij,kmj->kmi', world2cam, xyz_homogeneous)
+            keypoints3d = np.concatenate([keypoints3d[..., :3], conf], axis=-1)
+
+            return keypoints3d, keypoints3d_mask
+
+    def get_smpl_num_frames(self):
+        return self.smpl_num_frames
 
     def get_smpl_created_time(self):
         return self.smpl_created_time
@@ -644,51 +914,3 @@ class SMCReader:
             transl=transl,
             betas=betas)
         return smpl_dict
-
-    def get_human_data(self, device=None, device_id=None, frame_id=None):
-        """Get keypoints2d projected from keypoints3d.
-
-        Args:
-            device (str):
-                Device name, should be Kinect or iPhone.
-            device_id (int):
-                ID of a device, starts from 0.
-            frame_id (int, list or None, optional):
-                int: frame id of one selected frame
-                list: a list of frame id
-                None: all frames will be returned
-                Defaults to None.
-
-        Returns:
-            HumanData: all annotated information packed in one human_data
-        """
-        human_data = HumanData()
-        # get keypoints3d
-        convention = self.get_keypoints_convention()
-        keypoints3d, keypoints3d_mask = self.get_keypoints3d(frame_id)
-        keypoints3d, keypoints3d_mask = convert_kps(
-            keypoints3d,
-            mask=keypoints3d_mask,
-            src=convention,
-            dst='human_data')
-        human_data['keypoints3d'] = keypoints3d
-        human_data['keypoints3d_mask'] = keypoints3d_mask
-        # get smpl
-        smpl_dict = self.get_smpl(frame_id)
-        human_data['smpl'] = smpl_dict
-        # get keypoints2d
-        if device is not None and device_id is not None:
-            assert device in {
-                'Kinect', 'iPhone'
-            }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
-            assert device_id >= 0
-            keypoints2d, keypoints2d_mask = self._get_keypoints2d(
-                device, device_id, frame_id)
-            keypoints2d, keypoints2d_mask = convert_kps(
-                keypoints2d,
-                mask=keypoints2d_mask,
-                src=convention,
-                dst='human_data')
-            human_data['keypoints2d'] = keypoints2d
-            human_data['keypoints2d_mask'] = keypoints2d_mask
-        return human_data
