@@ -215,7 +215,7 @@ class SMCReader:
         if vertical:
             fx, fy = intrinsics[0, 0], intrinsics[1, 1]
             cx, cy = intrinsics[0, 2], intrinsics[1, 2]
-            H, W = self.get_iphone_color_resolution(vertical=False)
+            W, H = self.get_iphone_color_resolution(vertical=False)
             intrinsics = np.eye(3)
             intrinsics[0, 0], intrinsics[1, 1] = fy, fx
             intrinsics[0, 2], intrinsics[1, 2] = H - cy, cx
@@ -298,10 +298,11 @@ class SMCReader:
         if iphone_id != 0:
             raise KeyError('Currently only one iPhone.')
         if vertical:
-            return self.iphone_color_resolution
+            W_horizontal, H_horizontal = self.iphone_color_resolution
+            W_vertical, H_vertical = H_horizontal, W_horizontal
+            return np.array([W_vertical, H_vertical])
         else:
-            H, W = self.iphone_color_resolution
-            return np.array([W, H])
+            return self.iphone_color_resolution
 
     def get_kinect_color(self, kinect_id, frame_id=None, disable_tqdm=True):
         """Get several frames captured by a kinect RGB camera.
@@ -687,7 +688,7 @@ class SMCReader:
 
         if device == 'iPhone' and vertical:
             # rotate keypoints 2D clockwise by 90 degrees
-            H, W = self.get_iphone_color_resolution(vertical=False)
+            W, H = self.get_iphone_color_resolution(vertical=False)
             xs, ys, conf = \
                 keypoints2d[..., 0], keypoints2d[..., 1], keypoints2d[..., 2]
             xs, ys = H - ys, xs  # horizontal -> vertical
