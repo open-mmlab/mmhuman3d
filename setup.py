@@ -99,7 +99,7 @@ setup(
     author='OpenMMLab',
     author_email='openmmlab@gmail.com',
     keywords='3D Humann',
-    url='https://gitlab.bj.sensetime.com/zeotrope/zoehuman/mmhuman3d',
+    url='https://github.com/open-mmlab/mmhuman3d',
     packages=find_packages(exclude=('configs', 'tools', 'demo')),
     include_package_data=True,
     classifiers=[
