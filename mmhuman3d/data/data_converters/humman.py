@@ -1,17 +1,17 @@
 import glob
 import os
 
-import torch
 import numpy as np
+import torch
 from tqdm import tqdm
 
+from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idx,
     get_keypoint_num,
 )
 from mmhuman3d.data.data_structures import SMCReader
-from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.models.builder import build_body_model
 from .base_converter import BaseModeConverter
@@ -58,34 +58,24 @@ class HuMManConverter(BaseModeConverter):
                 keypoint_src='smpl_54',
                 keypoint_dst=self.keypoint_convention_smpl,
                 model_path='data/body_models/smpl',
-                extra_joints_regressor='data/body_models/J_regressor_extra.npy')
-        ).to(self.device)
+                extra_joints_regressor='data/body_models/J_regressor_extra.npy'
+            )).to(self.device)
 
-    def _derive_keypoints(
-            self,
-            global_orient,
-            body_pose,
-            betas,
-            transl,
-            focal_length,
-            image_size,
-            camera_center):
-        """ Get SMPL-derived keypoints """
+    def _derive_keypoints(self, global_orient, body_pose, betas, transl,
+                          focal_length, image_size, camera_center):
+        """Get SMPL-derived keypoints."""
         camera = build_cameras(
             dict(
                 type='PerspectiveCameras',
                 convention='opencv',
                 in_ndc=False,
-                focal_length=torch.tensor(
-                    focal_length,
-                    dtype=torch.float).reshape(1, 2),
-                image_size=torch.tensor(
-                    image_size,
-                    dtype=torch.float).reshape(1, 2),
-                principal_point=torch.tensor(
-                    camera_center,
-                    dtype=torch.float).reshape(1, 2))
-        ).to(self.device)
+                focal_length=torch.tensor(focal_length,
+                                          dtype=torch.float).reshape(1, 2),
+                image_size=torch.tensor(image_size,
+                                        dtype=torch.float).reshape(1, 2),
+                principal_point=torch.tensor(camera_center,
+                                             dtype=torch.float).reshape(
+                                                 1, 2))).to(self.device)
 
         output = self.smpl(
             global_orient=torch.tensor(global_orient, device=self.device),
@@ -104,10 +94,7 @@ class HuMManConverter(BaseModeConverter):
         # root align
         keypoints3d = keypoints3d - keypoints3d[:, [self.root_idx_smpl], :]
 
-        return {
-            'keypoints2d': keypoints2d,
-            'keypoints3d': keypoints3d
-        }
+        return {'keypoints2d': keypoints2d, 'keypoints3d': keypoints3d}
 
     def _make_human_data(
         self,
@@ -144,56 +131,64 @@ class HuMManConverter(BaseModeConverter):
         # Save derived keypoints as ground truth
         # 2D SMPL keypoints
         keypoints2d_smpl = np.concatenate(
-            keypoints2d_smpl, axis=0).reshape(
-                num_frames, self.num_keypoints_smpl, 2)
+            keypoints2d_smpl, axis=0).reshape(num_frames,
+                                              self.num_keypoints_smpl, 2)
         keypoints2d_smpl, keypoints2d_smpl_mask = convert_kps(
             keypoints2d_smpl,
             src=self.keypoint_convention_smpl,
             dst='human_data')
-        keypoints2d_smpl = np.concatenate([keypoints2d_smpl,
-            np.ones([*keypoints2d_smpl.shape[:2], 1])], axis=-1)
+        keypoints2d_smpl = np.concatenate(
+            [keypoints2d_smpl,
+             np.ones([*keypoints2d_smpl.shape[:2], 1])],
+            axis=-1)
         human_data['keypoints2d'] = keypoints2d_smpl[selected_inds]
         human_data['keypoints2d_mask'] = keypoints2d_smpl_mask
 
         # 3D SMPL keypoints
         keypoints3d_smpl = np.concatenate(
-            keypoints3d_smpl, axis=0).reshape(
-                num_frames, self.num_keypoints_smpl, 3)
+            keypoints3d_smpl, axis=0).reshape(num_frames,
+                                              self.num_keypoints_smpl, 3)
         keypoints3d_smpl, keypoints3d_smpl_mask = convert_kps(
             keypoints3d_smpl,
             src=self.keypoint_convention_smpl,
             dst='human_data')
-        keypoints3d_smpl = np.concatenate([keypoints3d_smpl,
-            np.ones([*keypoints3d_smpl.shape[:2], 1])], axis=-1)
+        keypoints3d_smpl = np.concatenate(
+            [keypoints3d_smpl,
+             np.ones([*keypoints3d_smpl.shape[:2], 1])],
+            axis=-1)
         human_data['keypoints3d'] = keypoints3d_smpl[selected_inds]
         human_data['keypoints3d_mask'] = keypoints3d_smpl_mask
 
         # Save HuMMan keypoints
         # 2D HuMMan Keypoints
         keypoints2d_humman = np.concatenate(
-            keypoints2d_humman, axis=0).reshape(
-                num_frames, self.num_keypoints_humman, 3)
+            keypoints2d_humman, axis=0).reshape(num_frames,
+                                                self.num_keypoints_humman, 3)
         keypoints2d_humman, keypoints2d_humman_mask = convert_kps(
             keypoints2d_humman,
             mask=self.keypoints2d_humman_mask,
             src=self.keypoint_convention_humman,
             dst='human_data')
-        keypoints2d_humman = np.concatenate([keypoints2d_humman,
-            np.ones([*keypoints2d_humman.shape[:2], 1])], axis=-1)
+        keypoints2d_humman = np.concatenate(
+            [keypoints2d_humman,
+             np.ones([*keypoints2d_humman.shape[:2], 1])],
+            axis=-1)
         human_data['keypoints2d_humman'] = keypoints2d_humman[selected_inds]
         human_data['keypoints2d_humman_mask'] = keypoints2d_humman_mask
 
         # 3D HuMMan Keypoints
         keypoints3d_humman = np.concatenate(
-            keypoints3d_humman, axis=0).reshape(
-                num_frames, self.num_keypoints_humman, 4)
+            keypoints3d_humman, axis=0).reshape(num_frames,
+                                                self.num_keypoints_humman, 4)
         keypoints3d_humman, keypoints3d_humman_mask = convert_kps(
             keypoints3d_humman,
             mask=self.keypoints3d_humman_mask,
             src=self.keypoint_convention_humman,
             dst='human_data')
-        keypoints3d_humman = np.concatenate([keypoints3d_humman,
-            np.ones([*keypoints3d_humman.shape[:2], 1])], axis=-1)
+        keypoints3d_humman = np.concatenate(
+            [keypoints3d_humman,
+             np.ones([*keypoints3d_humman.shape[:2], 1])],
+            axis=-1)
         human_data['keypoints3d_humman'] = keypoints3d_humman[selected_inds]
         human_data['keypoints3d_humman_mask'] = keypoints3d_humman_mask
 
@@ -296,7 +291,8 @@ class HuMManConverter(BaseModeConverter):
                     smpl_ = kinect_smpl
                     width, height = \
                         smc_reader.get_kinect_color_resolution(device_id)
-                    intrinsics = smc_reader.get_kinect_color_intrinsics(device_id)
+                    intrinsics = smc_reader.get_kinect_color_intrinsics(
+                        device_id)
                     fx, fy = intrinsics[0, 0], intrinsics[1, 1]
                     cx, cy = intrinsics[0, 2], intrinsics[1, 2]
                     focal_length = (fx, fy)
@@ -322,8 +318,10 @@ class HuMManConverter(BaseModeConverter):
 
                 assert device_id >= 0, f'Negative device id: {device_id}'
 
-                keypoint_convention_humman = smc_reader.get_keypoints_convention()
-                assert self.keypoint_convention_humman == keypoint_convention_humman
+                keypoint_convention_humman = \
+                    smc_reader.get_keypoints_convention()
+                assert self.keypoint_convention_humman == \
+                       keypoint_convention_humman
 
                 # get keypoints2d (all frames)
                 keypoints2d_humman, keypoints2d_humman_mask = \
@@ -331,8 +329,8 @@ class HuMManConverter(BaseModeConverter):
 
                 if self.keypoints2d_humman_mask is None:
                     self.keypoints2d_humman_mask = keypoints2d_humman_mask
-                assert (self.keypoints2d_humman_mask ==
-                        keypoints2d_humman_mask).all()
+                assert np.allclose(self.keypoints2d_humman_mask,
+                                   keypoints2d_humman_mask)
 
                 keypoints2d_humman_.append(keypoints2d_humman)
 
@@ -342,8 +340,8 @@ class HuMManConverter(BaseModeConverter):
 
                 if self.keypoints3d_humman_mask is None:
                     self.keypoints3d_humman_mask = keypoints3d_humman_mask
-                assert (self.keypoints3d_humman_mask ==
-                        keypoints3d_humman_mask).all()
+                assert np.allclose(self.keypoints3d_humman_mask,
+                                   keypoints3d_humman_mask)
 
                 # root-align keypoints3d
                 left_hip_keypoints = \
@@ -363,8 +361,8 @@ class HuMManConverter(BaseModeConverter):
                 smpl_['transl'].append(smpl_dict['transl'])
 
                 # expand betas
-                betas_expanded = np.tile(
-                    smpl_dict['betas'], num_frames).reshape(-1, 10)
+                betas_expanded = np.tile(smpl_dict['betas'],
+                                         num_frames).reshape(-1, 10)
                 smpl_['betas'].append(betas_expanded)
 
                 # get keypoints derived from SMPL and use them as supervision
@@ -401,13 +399,9 @@ class HuMManConverter(BaseModeConverter):
 
         # make kinect human data
         kinect_human_data = self._make_human_data(
-            kinect_smpl,
-            kinect_image_path_,
-            kinect_image_id_,
-            kinect_bbox_xywh_,
-            kinect_keypoints2d_smpl_,
-            kinect_keypoints3d_smpl_,
-            kinect_keypoints2d_humman_,
+            kinect_smpl, kinect_image_path_, kinect_image_id_,
+            kinect_bbox_xywh_, kinect_keypoints2d_smpl_,
+            kinect_keypoints3d_smpl_, kinect_keypoints2d_humman_,
             kinect_keypoints3d_humman_)
 
         file_name = f'humman_{mode}_kinect_ds{self.downsample_ratio}_smpl.npz'
@@ -416,13 +410,9 @@ class HuMManConverter(BaseModeConverter):
 
         # make iphone human data
         iphone_human_data = self._make_human_data(
-            iphone_smpl,
-            iphone_image_path_,
-            iphone_image_id_,
-            iphone_bbox_xywh_,
-            iphone_keypoints2d_smpl_,
-            iphone_keypoints3d_smpl_,
-            iphone_keypoints2d_humman_,
+            iphone_smpl, iphone_image_path_, iphone_image_id_,
+            iphone_bbox_xywh_, iphone_keypoints2d_smpl_,
+            iphone_keypoints3d_smpl_, iphone_keypoints2d_humman_,
             iphone_keypoints3d_humman_)
 
         file_name = f'humman_{mode}_iphone_ds{self.downsample_ratio}_smpl.npz'

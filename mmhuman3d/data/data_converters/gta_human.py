@@ -46,8 +46,8 @@ class GTAHumanConverter(BaseConverter):
                 keypoint_src='smpl_54',
                 keypoint_dst='smpl_49',
                 model_path='data/body_models/smpl',
-                extra_joints_regressor='data/body_models/J_regressor_extra.npy')
-        ).to(device)
+                extra_joints_regressor='data/body_models/J_regressor_extra.npy'
+            )).to(self.device)
 
         self.camera = build_cameras(
             dict(
