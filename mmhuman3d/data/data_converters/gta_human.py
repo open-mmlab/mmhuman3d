@@ -56,7 +56,7 @@ class GTAHumanConverter(BaseConverter):
                 in_ndc=False,
                 focal_length=focal_length,
                 image_size=image_size,
-                principal_point=camera_center))
+                principal_point=camera_center)).to(self.device)
 
     def convert(self, dataset_path: str, out_path: str) -> dict:
         """
