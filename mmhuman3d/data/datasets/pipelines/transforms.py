@@ -327,7 +327,7 @@ class RandomHorizontalFlip(object):
         if 'keypoints2d' in results:
             assert self.flip_pairs is not None
             width = results['img'][:, ::-1, :].shape[1]
-            keypoints2d = results['keypoints2d']
+            keypoints2d = results['keypoints2d'].copy()
             keypoints2d = _flip_keypoints(keypoints2d, self.flip_pairs, width)
             results['keypoints2d'] = keypoints2d
 
@@ -339,14 +339,14 @@ class RandomHorizontalFlip(object):
         # flip keypoints3d
         if 'keypoints3d' in results:
             assert self.flip_pairs is not None
-            keypoints3d = results['keypoints3d']
+            keypoints3d = results['keypoints3d'].copy()
             keypoints3d = _flip_keypoints(keypoints3d, self.flip_pairs)
             results['keypoints3d'] = keypoints3d
 
         # flip smpl
         if 'smpl_body_pose' in results:
-            global_orient = results['smpl_global_orient']
-            body_pose = results['smpl_body_pose'].reshape((-1))
+            global_orient = results['smpl_global_orient'].copy()
+            body_pose = results['smpl_body_pose'].copy().reshape((-1))
             smpl_pose = np.concatenate((global_orient, body_pose), axis=-1)
             smpl_pose_flipped = _flip_smpl_pose(smpl_pose)
             global_orient = smpl_pose_flipped[:3]
@@ -687,7 +687,7 @@ class MeshAffine:
             results['img'] = img
 
         if 'keypoints2d' in results:
-            keypoints2d = results['keypoints2d']
+            keypoints2d = results['keypoints2d'].copy()
             num_keypoints = len(keypoints2d)
             for i in range(num_keypoints):
                 if keypoints2d[i][2] > 0.0:
@@ -696,13 +696,13 @@ class MeshAffine:
             results['keypoints2d'] = keypoints2d
 
         if 'keypoints3d' in results:
-            keypoints3d = results['keypoints3d']
+            keypoints3d = results['keypoints3d'].copy()
             keypoints3d[:, :3] = _rotate_joints_3d(keypoints3d[:, :3], r)
             results['keypoints3d'] = keypoints3d
 
         if 'smpl_body_pose' in results:
-            global_orient = results['smpl_global_orient']
-            body_pose = results['smpl_body_pose'].reshape((-1))
+            global_orient = results['smpl_global_orient'].copy()
+            body_pose = results['smpl_body_pose'].copy().reshape((-1))
             pose = np.concatenate((global_orient, body_pose), axis=-1)
             pose = _rotate_smpl_pose(pose, r)
             results['global_orient'] = pose[:3]

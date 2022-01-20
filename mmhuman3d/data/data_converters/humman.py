@@ -385,9 +385,10 @@ class HuMManConverter(BaseModeConverter):
                     ymin = max(np.min(ys), 0)
                     ymax = min(np.max(ys), height - 1)
                     bbox_xyxy = [xmin, ymin, xmax, ymax]
-                    bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
-                    bbox_xywh_.append(bbox_xywh)
-
+                    bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xywh = self._xyxy2xywh(bbox_xyxy)                 
+                    bbox_xywh_.append(bbox_xywh)                   
+                    
                 # get image paths (smc paths)
                 image_path = os.path.basename(ann_path)
                 for frame_id in range(num_frames):

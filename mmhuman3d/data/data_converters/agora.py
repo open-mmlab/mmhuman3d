@@ -105,7 +105,7 @@ class AgoraConverter(BaseModeConverter):
             for idx in tqdm(range(len(df))):
                 imgname = df.iloc[idx]['imgPath']
                 if self.res == (1280, 720):
-                    imgname.replace('.png', '_1280x720.png')
+                    imgname = imgname.replace('.png', '_1280x720.png')
                 img_path = os.path.join('images', mode, imgname)
                 valid_pers_idx = np.where(df.iloc[idx].at['isValid'])[0]
                 for pidx in valid_pers_idx:
@@ -118,7 +118,7 @@ class AgoraConverter(BaseModeConverter):
 
                     # obtain keypoints
                     keypoints2d = df.iloc[idx]['gt_joints_2d'][pidx]
-                    if self.res == '1280x720':
+                    if self.res == (1280, 720):
                         keypoints2d *= (720 / 2160)
                     keypoints3d = df.iloc[idx]['gt_joints_3d'][pidx]
 
@@ -170,7 +170,8 @@ class AgoraConverter(BaseModeConverter):
                         max(keypoints2d[:, 0]),
                         max(keypoints2d[:, 1])
                     ]
-                    bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
                     keypoints2d_.append(keypoints2d)
                     keypoints3d_.append(keypoints3d)
