@@ -327,8 +327,9 @@ class H36mConverter(BaseModeConverter):
                             np.max(xs) + 1,
                             np.max(ys) + 1
                         ])
-                        bbox_xywh = self._bbox_expand(
+                        bbox_xyxy = self._bbox_expand(
                             bbox_xyxy, scale_factor=0.9)
+                        bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
                         # read GT 2D pose
                         keypoints2dall = np.reshape(poses_2d[frame_i, :],
@@ -372,7 +373,8 @@ class H36mConverter(BaseModeConverter):
 
         metadata_path = os.path.join(dataset_path, 'metadata.xml')
         if isinstance(metadata_path, str):
-            cam_param = H36mCamera(metadata_path)
+            camera = H36mCamera(metadata_path)
+            cam_param = camera.generate_cameras_dict()
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
