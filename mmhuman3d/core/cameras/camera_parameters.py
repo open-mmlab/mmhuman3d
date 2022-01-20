@@ -353,6 +353,80 @@ class CameraParameter:
             __parse_chessboard_param__(chessboard_dict, name, inverse=inverse)
         self.load_from_dict(camera_param_dict)
 
+    def load_kinect_from_smc(self, smc_reader, kinect_id: int) -> None:
+        """Load name and parameters of a kinect from an SmcReader instance.
+
+        Args:
+            smc_reader (mmhuman3d.data.data_structures.smc_reader.SMCReader):
+                An SmcReader instance containing kinect camera parameters.
+            kinect_id (int):
+                Id of the target kinect.
+        """
+        name = kinect_id
+        extrinsics_dict = \
+            smc_reader.get_kinect_color_extrinsics(
+                kinect_id, homogeneous=False
+            )
+        rot_np = extrinsics_dict['R']
+        trans_np = extrinsics_dict['T']
+        intrinsics_np = \
+            smc_reader.get_kinect_color_intrinsics(
+                kinect_id
+            )
+        resolution = \
+            smc_reader.get_kinect_color_resolution(
+                kinect_id
+            )
+        rmatrix = np.linalg.inv(rot_np).reshape(3, 3)
+        tvec = -np.dot(rmatrix, trans_np)
+        self.name = name
+        self.set_mat_np('in_mat', intrinsics_np)
+        self.set_mat_np('rotation_mat', rmatrix)
+        self.set_value('translation', tvec.tolist())
+        self.set_value('H', resolution[1])
+        self.set_value('W', resolution[0])
+
+    def load_iphone_from_smc(self,
+                             smc_reader,
+                             iphone_id: int = 0,
+                             frame_id: int = 0) -> None:
+        """Load name and parameters of an iPhone from an SmcReader instance.
+
+        Args:
+            smc_reader (mmhuman3d.data.data_structures.smc_reader.SMCReader):
+                An SmcReader instance containing kinect camera parameters.
+            iphone_id (int):
+                Id of the target iphone.
+                Defaults to 0.
+            frame_id (int):
+                Frame ID of one selected frame.
+                It only influences the intrinsics.
+                Defaults to 0.
+        """
+        name = f'iPhone_{iphone_id}'
+        extrinsics_mat = \
+            smc_reader.get_iphone_extrinsics(
+                iphone_id, homogeneous=True
+            )
+        rot_np = extrinsics_mat[:3, :3]
+        trans_np = extrinsics_mat[:3, 3]
+        intrinsics_np = \
+            smc_reader.get_iphone_intrinsics(
+                iphone_id, frame_id
+            )
+        resolution = \
+            smc_reader.get_iphone_color_resolution(
+                iphone_id
+            )
+        rmatrix = np.linalg.inv(rot_np).reshape(3, 3)
+        tvec = -np.dot(rmatrix, trans_np)
+        self.name = name
+        self.set_mat_np('in_mat', intrinsics_np)
+        self.set_mat_np('rotation_mat', rmatrix)
+        self.set_value('translation', tvec.tolist())
+        self.set_value('H', resolution[1])
+        self.set_value('W', resolution[0])
+
     @classmethod
     def load_from_perspective_cameras(cls,
                                       cam,

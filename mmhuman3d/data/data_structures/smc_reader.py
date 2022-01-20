@@ -283,9 +283,6 @@ class SMCReader:
             iphone_id (int, optional):
                 ID of an iPhone, starts from 0.
                 Defaults to 0.
-            homogeneous (bool, optional):
-                If true, returns rotation and translation in
-                one 4x4 matrix. Defaults to True.
             vertical (bool, optional):
                 iPhone assumes landscape orientation
                 if True, convert data to vertical orientation
