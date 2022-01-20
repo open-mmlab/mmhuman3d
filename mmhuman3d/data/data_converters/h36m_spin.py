@@ -192,7 +192,7 @@ class H36mSpinConverter(BaseModeConverter):
                             np.max(ys) + 1
                         ])
                         bbox_xyxy = self._bbox_expand(
-                            bbox_xyxy, scale_factor=1.2)
+                            bbox_xyxy, scale_factor=0.9)
                         bbox = self._xyxy2xywh(bbox_xyxy)
 
                         # read GT 2D pose
