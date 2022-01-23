@@ -66,10 +66,14 @@ def batch_inverse_kinematics_transform(pose_skeleton,
     rel_pose_skeleton[:, 0] = rel_rest_pose[:, 0]
 
     # the predicted final pose
-    final_pose_skeleton = torch.unsqueeze(pose_skeleton.clone(), dim=-1)
-    final_pose_skeleton = final_pose_skeleton - \
-        final_pose_skeleton[:, 0:1] + rel_rest_pose[:, 0:1]
-
+    if train:
+        final_pose_skeleton = torch.unsqueeze(pose_skeleton.clone(), dim=-1)
+        final_pose_skeleton[:, 1:] -= final_pose_skeleton[:, parents[1:]].clone()
+        final_pose_skeleton[:,0] = rel_rest_pose[:,0]
+    else:
+        final_pose_skeleton = torch.unsqueeze(pose_skeleton.clone(), dim=-1)
+        final_pose_skeleton = final_pose_skeleton - \
+            final_pose_skeleton[:, 0:1] + rel_rest_pose[:, 0:1]        
     rel_rest_pose = rel_rest_pose
     rel_pose_skeleton = rel_pose_skeleton
     final_pose_skeleton = final_pose_skeleton
@@ -146,41 +150,46 @@ def batch_inverse_kinematics_transform(pose_skeleton,
                 torch.matmul(rot_mat_chain[parents[i]], rot_mat))
             rot_mat_local.append(rot_mat)
         else:
-            # (B, 3, 1)
-            rotate_rest_pose[:,
-                             i] = rotate_rest_pose[:,
-                                                   parents[i]] + torch.matmul(
-                                                       rot_mat_chain[
-                                                           parents[i]],
-                                                       rel_rest_pose[:, i])
-            # (B, 3, 1)
-            child_final_loc = final_pose_skeleton[:, children[
-                i]] - rotate_rest_pose[:, i]
+            # Naive Hybrik
+            if train:
+                # vec_t_k = t_k - t_pa(k)
+                # i: the index of k-th joint 
+                child_rest_loc = rel_rest_pose[:, i]
+                # p_k - p_pa(k)
+                child_final_loc = final_pose_skeleton[:,i]
 
+            # q_pa(k) = q_pa^2(k) + R_pa(k)(t_pa(k) - t_pa^2(k))
+            rotate_rest_pose[:, i] = rotate_rest_pose[:, parents[i]] + \
+                torch.matmul(rot_mat_chain[parents[i]], rel_rest_pose[:, i])
+            # Adaptive HybrIK
             if not train:
+                # vec_t_k = t_k - t_pa(k)
+                # children[i]: the index of k-th joint
+                child_rest_loc = rel_rest_pose[:, children[i]]
+
+                # p_k - q_pa(k)
+                child_final_loc = final_pose_skeleton[:, children[i]] - rotate_rest_pose[:, i]
+
                 orig_vec = rel_pose_skeleton[:, children[i]]
                 template_vec = rel_rest_pose[:, children[i]]
                 norm_t = torch.norm(template_vec, dim=1, keepdim=True)
                 orig_vec = orig_vec * norm_t / torch.norm(
                     orig_vec, dim=1, keepdim=True)
 
-                diff = torch.norm(
-                    child_final_loc - orig_vec, dim=1, keepdim=True)
+                diff = torch.norm(child_final_loc - orig_vec, dim=1, keepdim=True)
                 big_diff_idx = torch.where(diff > 15 / 1000)[0]
 
                 child_final_loc[big_diff_idx] = orig_vec[big_diff_idx]
 
-            child_final_loc = torch.matmul(
-                rot_mat_chain[parents[i]].transpose(1, 2), child_final_loc)
 
-            child_rest_loc = rel_rest_pose[:, children[i]]
+            # vec_p_k = R_pa(k).T * (p_k - p_pa(k))
+            child_final_loc = torch.matmul(rot_mat_chain[parents[i]].transpose(1, 2), child_final_loc)
+
             # (B, 1, 1)
             child_final_norm = torch.norm(child_final_loc, dim=1, keepdim=True)
             child_rest_norm = torch.norm(child_rest_loc, dim=1, keepdim=True)
 
-            child_final_norm = torch.norm(child_final_loc, dim=1, keepdim=True)
-
-            # (B, 3, 1)
+            # vec_n
             axis = torch.cross(child_rest_loc, child_final_loc, dim=1)
             axis_norm = torch.norm(axis, dim=1, keepdim=True)
 
@@ -227,7 +236,6 @@ def batch_inverse_kinematics_transform(pose_skeleton,
     rot_mats = torch.stack(rot_mat_local, dim=1)
 
     return rot_mats, rotate_rest_pose.squeeze(-1)
-
 
 def batch_get_pelvis_orient_svd(rel_pose_skeleton, rel_rest_pose, parents,
                                 children, dtype):
