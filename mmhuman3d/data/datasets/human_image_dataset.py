@@ -258,11 +258,27 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 gender=gender)
             gt_keypoints3d = gt_output['joints'].detach().cpu().numpy()
             gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 24))
+        elif self.dataset_name == 'humman':
+            betas = []
+            body_pose = []
+            global_orient = []
+            smpl_dict = self.human_data['smpl']
+            for idx in range(self.num_data):
+                betas.append(smpl_dict['betas'][idx])
+                body_pose.append(smpl_dict['body_pose'][idx])
+                global_orient.append(smpl_dict['global_orient'][idx])
+            betas = torch.FloatTensor(betas)
+            body_pose = torch.FloatTensor(body_pose).view(-1, 69)
+            global_orient = torch.FloatTensor(global_orient)
+            gt_output = self.body_model(
+                betas=betas,
+                body_pose=body_pose,
+                global_orient=global_orient)
+            gt_keypoints3d = gt_output['joints'].detach().cpu().numpy()
+            gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 24))
         elif self.dataset_name == 'h36m':
             gt_keypoints3d = self.human_data['keypoints3d'][:, :, :3]
             gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 17))
-        elif self.dataset_name == 'humman':
-            gt_keypoints3d = self.human_data['keypoints3d'][:, :, :3]
         else:
             raise NotImplementedError()
 
@@ -309,7 +325,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             pred_pelvis = (pred_keypoints3d[:, 2] + pred_keypoints3d[:, 3]) / 2
             gt_pelvis = (gt_keypoints3d[:, 2] + gt_keypoints3d[:, 3]) / 2
 
-        # humman
+        # humman keypoints (not SMPL keypoints)
         elif gt_keypoints3d.shape[1] == 133:
             assert pred_keypoints3d.shape[1] == 17
 
