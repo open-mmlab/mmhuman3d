@@ -132,8 +132,8 @@ def main():
     eval_cfg = cfg.get('evaluation', args.metric_options)
     # hard-code way to remove EvalHook args
     for key in [
-            'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best',
-            'rule', 'dynamic_intervals'
+            'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best', 'rule',
+            'dynamic_intervals'
     ]:
         eval_cfg.pop(key, None)
     eval_cfg.update(dict(metric=args.metrics))
