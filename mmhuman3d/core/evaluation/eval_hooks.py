@@ -1,33 +1,27 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import bisect
-import os.path as osp
-import warnings
 import tempfile
-import mmcv
-import torch.distributed as dist
+import warnings
+
 from mmcv.runner import DistEvalHook as BaseDistEvalHook
 from mmcv.runner import EvalHook as BaseEvalHook
-from torch.nn.modules.batchnorm import _BatchNorm
-
-
 
 
 class EvalHook(BaseEvalHook):
 
     def __init__(self,
-                dataloader,
-                start=None,
-                interval=1,
-                by_epoch=True,
-                save_best=None,
-                rule=None,
-                test_fn=None,
-                greater_keys=None,
-                less_keys=None,
-                **eval_kwargs):
+                 dataloader,
+                 start=None,
+                 interval=1,
+                 by_epoch=True,
+                 save_best=None,
+                 rule=None,
+                 test_fn=None,
+                 greater_keys=None,
+                 less_keys=None,
+                 **eval_kwargs):
         if test_fn is None:
             from mmhuman3d.apis import single_gpu_test
-            test_fn  = single_gpu_test
+            test_fn = single_gpu_test
         # to be compatible with the config before v0.16.0
 
         # remove "gpu_collect" from eval_kwargs
@@ -36,7 +30,7 @@ class EvalHook(BaseEvalHook):
                 '"gpu_collect" will be deprecated in EvalHook.'
                 'Please remove it from the config.', DeprecationWarning)
             _ = eval_kwargs.pop('gpu_collect')
-            
+
         # update "save_best" according to "key_indicator" and remove the
         # latter from eval_kwargs
         if 'key_indicator' in eval_kwargs or isinstance(save_best, bool):
@@ -54,16 +48,14 @@ class EvalHook(BaseEvalHook):
         super().__init__(dataloader, start, interval, by_epoch, save_best,
                          rule, test_fn, greater_keys, less_keys, **eval_kwargs)
 
-
     def evaluate(self, runner, results):
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             eval_res = self.dataloader.dataset.evaluate(
                 results,
-                res_folder = tmp_dir,
+                res_folder=tmp_dir,
                 logger=runner.logger,
-                **self.eval_kwargs
-            )
+                **self.eval_kwargs)
 
         for name, val in eval_res.items():
             runner.log_buffer.output[name] = val
@@ -79,7 +71,7 @@ class EvalHook(BaseEvalHook):
 
 
 class DistEvalHook(BaseDistEvalHook):
-    
+
     def __init__(self,
                  dataloader,
                  start=None,
@@ -122,6 +114,7 @@ class DistEvalHook(BaseDistEvalHook):
 
     def evaluate(self, runner, results):
         """Evaluate the results.
+
         Args:
             runner (:obj:`mmcv.Runner`): The underlined training runner.
             results (list): Output results.

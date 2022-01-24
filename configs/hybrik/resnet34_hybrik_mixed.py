@@ -11,10 +11,8 @@ runner = dict(type='EpochBasedRunner', max_epochs=400)
 
 log_config = dict(
     interval=50,
-    hooks=[
-        dict(type='TextLoggerHook'),
-        # dict(type='TensorboardLoggerHook')
-    ])
+    hooks=[dict(type='TextLoggerHook'),
+           dict(type='TensorboardLoggerHook')])
 
 img_res = 256
 
@@ -172,12 +170,10 @@ data = dict(
         data_prefix='data',
         pipeline=test_pipeline,
         ann_file='hybrik_pw3d_test.npz'),
-    
     val=dict(
         type=dataset_type,
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
         ann_file='hybrik_pw3d_test.npz'),
-        
-        )
+)
