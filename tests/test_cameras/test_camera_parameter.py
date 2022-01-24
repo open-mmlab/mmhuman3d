@@ -6,12 +6,15 @@ import pytest
 import torch
 
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
+from mmhuman3d.data.data_structures.smc_reader import SMCReader
 from mmhuman3d.utils.path_utils import Existence, check_path_existence
 
 chessboard_path = 'tests/data/camera/' +\
     'calibration_chessboard_05_28_18_05_19.json'
 dump_path = 'tests/data/camera/' +\
     'camera_parameter_dump.json'
+
+smc_path = 'tests/data/dataset_sample/humman/p000003_a000014_tiny.smc'
 
 
 def test_set_from_mat():
@@ -34,6 +37,16 @@ def test_load_chessboard():
     chessboard_dict = json.load(open(chessboard_path))
     empty_param.load_from_chessboard(chessboard_dict[str(0)], 'chessboard_0')
     assert len(empty_param.get_value('translation')) == 3
+
+
+def test_load_from_smc():
+    smc = SMCReader(smc_path)
+    kinect_param = CameraParameter(name='test_kinect')
+    kinect_param.load_kinect_from_smc(smc_reader=smc, kinect_id=0)
+    assert len(kinect_param.get_value('translation')) == 3
+    iphone_param = CameraParameter(name='test_iphone')
+    iphone_param.load_iphone_from_smc(smc_reader=smc, iphone_id=0)
+    assert len(kinect_param.get_value('translation')) == 3
 
 
 def test_dump_json():
