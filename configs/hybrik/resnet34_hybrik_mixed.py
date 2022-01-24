@@ -1,5 +1,7 @@
 _base_ = ['../_base_/default_runtime.py']
 
+# evaluate
+evaluation = dict(interval=1, metric='joint_error')
 # optimizer
 optimizer = dict(type='Adam', lr=1e-3, weight_decay=0)
 optimizer_config = dict(grad_clip=None)
@@ -169,4 +171,13 @@ data = dict(
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='hybrik_pw3d_test.npz'))
+        ann_file='hybrik_pw3d_test.npz'),
+    
+    val=dict(
+        type=dataset_type,
+        dataset_name='pw3d',
+        data_prefix='data',
+        pipeline=test_pipeline,
+        ann_file='hybrik_pw3d_test.npz'),
+        
+        )

@@ -10,8 +10,8 @@ from mmcv.runner import (
     OptimizerHook,
     build_runner,
 )
-from mmcv.runner.hooks import DistEvalHook, EvalHook
 
+from mmhuman3d.core.evaluation import DistEvalHook,EvalHook
 from mmhuman3d.core.distributed_wrapper import DistributedDataParallelWrapper
 from mmhuman3d.core.optimizer import build_optimizers
 from mmhuman3d.data.datasets import build_dataloader, build_dataset
@@ -156,7 +156,7 @@ def train_model(model,
             round_up=True)
         eval_cfg = cfg.get('evaluation', {})
         eval_cfg['by_epoch'] = cfg.runner['type'] != 'IterBasedRunner'
-        eval_cfg['work_dir'] = cfg.work_dir
+        # eval_cfg['work_dir'] = cfg.work_dir
         eval_hook = DistEvalHook if distributed else EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 

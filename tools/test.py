@@ -28,10 +28,9 @@ def parse_args():
         '--metrics',
         type=str,
         nargs='+',
+        default='joint_error',
         help='evaluation metrics, which depends on the dataset, e.g., '
-        '"accuracy", "precision", "recall", "f1_score", "support" for single '
-        'label dataset, and "mAP", "CP", "CR", "CF1", "OP", "OR", "OF1" for '
-        'multi-label dataset')
+        '"joint_error"')
     parser.add_argument('--show', action='store_true', help='show results')
     parser.add_argument(
         '--show-dir', help='directory where painted images will be saved')
@@ -130,7 +129,14 @@ def main():
                                  args.gpu_collect)
 
     rank, _ = get_dist_info()
-    eval_cfg = cfg.get('evaluation', {})
+    eval_cfg = cfg.get('evaluation', args.metric_options)
+    # hard-code way to remove EvalHook args
+    for key in [
+            'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best',
+            'rule', 'dynamic_intervals'
+    ]:
+        eval_cfg.pop(key, None)
+    eval_cfg.update(dict(metric=args.metrics))
     if rank == 0:
         results = dataset.evaluate(outputs, args.work_dir, **eval_cfg)
         for k, v in results.items():
