@@ -4,6 +4,10 @@ import cv2
 import h5py
 import numpy as np
 import tqdm
+from mmhuman3d.utils.transforms import (
+    aa_to_rotmat,
+    rotmat_to_aa
+)
 
 
 class SMCReader:
@@ -861,15 +865,16 @@ class SMCReader:
         # return keypoints3d in device coordinate system
         else:
             if device == 'Kinect':
-                world2cam = self.get_kinect_color_extrinsics(
+                cam2world = self.get_kinect_color_extrinsics(
                     kinect_id=device_id, homogeneous=True)
             else:
-                world2cam = self.get_iphone_extrinsics(
+                cam2world = self.get_iphone_extrinsics(
                     iphone_id=device_id, vertical=vertical)
 
             xyz, conf = keypoints3d_world[..., :3], keypoints3d_world[..., [3]]
             xyz_homogeneous = np.ones([*xyz.shape[:-1], 4])
             xyz_homogeneous[..., :3] = xyz
+            world2cam = np.linalg.inv(cam2world)
             keypoints3d = np.einsum('ij,kmj->kmi', world2cam, xyz_homogeneous)
             keypoints3d = np.concatenate([keypoints3d[..., :3], conf], axis=-1)
 
@@ -881,19 +886,39 @@ class SMCReader:
     def get_smpl_created_time(self):
         return self.smpl_created_time
 
-    def get_smpl(self, frame_id=None):
+    def get_smpl(self,
+                 device=None,
+                 device_id=None,
+                 frame_id=None,
+                 vertical=True):
         """Get SMPL (world coordinate) computed by mocap processing pipeline.
 
         Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+                None: world coordinate
+                Defaults to None.
+            device_id (int):
+                ID of a device, starts from 0.
+                None: world coordinate
+                Defaults to None
             frame_id (int, list or None, optional):
                 int: frame id of one selected frame
                 list: a list of frame id
                 None: all frames will be returned
                 Defaults to None.
+            vertical (bool, optional):
+                Only applicable to iPhone as device
+                iPhone assumes horizontal orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             dict:
-                A dict with 'global_orient', 'body_pose', 'transl' and 'betas'
+                'global_orient': np.ndarray of shape (N, 3)
+                'body_pose': np.ndarray of shape (N, 23, 3)
+                'transl': np.ndarray of shape (N, 3)
+                'betas': np.ndarray of shape (N, 10)
         """
         smpl_dict = self.smc['SMPL']
         global_orient = smpl_dict['global_orient'][...]
@@ -906,9 +931,46 @@ class SMCReader:
             body_pose = body_pose[frame_id, ...]
             global_orient = global_orient[frame_id, ...]
             transl = transl[frame_id, ...]
-        smpl_dict = dict(
-            global_orient=global_orient,
-            body_pose=body_pose,
-            transl=transl,
-            betas=betas)
-        return smpl_dict
+
+        # return SMPL parameters in world coordinate system
+        if device is None:
+            smpl_dict = dict(
+                global_orient=global_orient,
+                body_pose=body_pose,
+                transl=transl,
+                betas=betas)
+
+            return smpl_dict
+
+        # return SMPL parameters in device coordinate system
+        else:
+            if device == 'Kinect':
+                cam2world = self.get_kinect_color_extrinsics(
+                    kinect_id=device_id, homogeneous=True)
+            else:
+                cam2world = self.get_iphone_extrinsics(
+                    iphone_id=device_id, vertical=vertical)
+
+            num_frames = global_orient.shape[0]
+
+            T_world2cam = np.linalg.inv(cam2world)
+            T_world2cam = np.tile(T_world2cam, num_frames).\
+                reshape(num_frames, 4, 4)
+
+            T_smpl2world = np.tile(np.eye(4), num_frames).\
+                reshape(num_frames, 4, 4)
+            T_smpl2world[:, :3, :3] = aa_to_rotmat(global_orient)
+            T_smpl2world[:, :3, 3] = transl
+
+            T_smpl2cam = T_world2cam @ T_smpl2world
+
+            global_orient = rotmat_to_aa(T_smpl2cam[:, :3, :3])
+            transl = T_smpl2world[:, :3, 3]
+
+            smpl_dict = dict(
+                global_orient=global_orient,
+                body_pose=body_pose,
+                transl=transl,
+                betas=betas)
+
+            return smpl_dict
