@@ -916,7 +916,7 @@ class SMCReader:
         Returns:
             dict:
                 'global_orient': np.ndarray of shape (N, 3)
-                'body_pose': np.ndarray of shape (N, 23, 3)
+                'body_pose': np.ndarray of shape (N, 69)
                 'transl': np.ndarray of shape (N, 3)
                 'betas': np.ndarray of shape (N, 10)
         """
@@ -953,14 +953,17 @@ class SMCReader:
 
             num_frames = global_orient.shape[0]
 
-            T_world2cam = np.linalg.inv(cam2world)
-            T_world2cam = np.tile(T_world2cam, num_frames).\
-                reshape(num_frames, 4, 4)
+            T_smpl2world = np.repeat(
+                np.eye(4).reshape(1, 4, 4), num_frames, axis=0)
+            assert T_smpl2world.shape == (num_frames, 4, 4)
 
-            T_smpl2world = np.tile(np.eye(4), num_frames).\
-                reshape(num_frames, 4, 4)
             T_smpl2world[:, :3, :3] = aa_to_rotmat(global_orient)
             T_smpl2world[:, :3, 3] = transl
+
+            T_world2cam = np.linalg.inv(cam2world)
+            T_world2cam = np.repeat(
+                T_world2cam.reshape(1, 4, 4), num_frames, axis=0)
+            assert T_world2cam.shape == (num_frames, 4, 4)
 
             T_smpl2cam = T_world2cam @ T_smpl2world
 
