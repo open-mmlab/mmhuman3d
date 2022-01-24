@@ -355,7 +355,7 @@ class HuMManConverter(BaseModeConverter):
                 keypoints3d_humman_.append(keypoints3d_humman)
 
                 # get smpl (all frames)
-                smpl_dict = smc_reader.get_smpl()
+                smpl_dict = smc_reader.get_smpl(device, device_id)
                 smpl_['body_pose'].append(smpl_dict['body_pose'])
                 smpl_['global_orient'].append(smpl_dict['global_orient'])
                 smpl_['transl'].append(smpl_dict['transl'])
