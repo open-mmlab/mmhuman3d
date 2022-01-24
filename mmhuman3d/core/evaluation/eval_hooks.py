@@ -39,7 +39,7 @@ class EvalHook(BaseEvalHook):
                 'Please use "save_best" to specify the metric key,'
                 'e.g., save_best="AP".', DeprecationWarning)
 
-            key_indicator = eval_kwargs.pop('key_indicator', 'AP')
+            key_indicator = eval_kwargs.pop('key_indicator', None)
             if save_best is True and key_indicator is None:
                 raise ValueError('key_indicator should not be None, when '
                                  'save_best is set to True.')
@@ -65,7 +65,7 @@ class EvalHook(BaseEvalHook):
             if self.key_indicator == 'auto':
                 self._init_rule(self.rule, list(eval_res.keys())[0])
 
-            return eval_res(self.key_indicator)
+            return eval_res[self.key_indicator]
 
         return None
 
@@ -101,7 +101,7 @@ class DistEvalHook(BaseDistEvalHook):
                 'Please use "save_best" to specify the metric key,'
                 'e.g., save_best="AP".', DeprecationWarning)
 
-            key_indicator = eval_kwargs.pop('key_indicator', 'AP')
+            key_indicator = eval_kwargs.pop('key_indicator', None)
             if save_best is True and key_indicator is None:
                 raise ValueError('key_indicator should not be None, when '
                                  'save_best is set to True.')

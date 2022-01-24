@@ -77,10 +77,22 @@ def test_eval_hook(EvalHookCls):
                 test_dataset,
                 batch_size=1,
                 sampler=None,
-                num_worker=0,
+                num_workers=0,
                 shuffle=False)
         ]
         EvalHookCls(data_loader)
+
+    with pytest.raises(ValueError):
+        test_dataset = ExampleDataset()
+        data_loader = DataLoader(
+            test_dataset,
+            batch_size=1,
+            sampler=None,
+            num_workers=0,
+            shuffle=False)
+        # key_indicator should not be None,
+        # when save_best is set to True
+        EvalHookCls(data_loader, save_best=True, gpu_collect=False)
 
     with pytest.raises(KeyError):
         # rule must be in keys of rule_map
@@ -177,6 +189,26 @@ def test_eval_hook(EvalHookCls):
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
         assert runner.meta['hook_msgs']['best_score'] == 0.7
 
+    # update "save_best" according to "key_indicator"
+    data_loader = DataLoader(EvalDataset(), batch_size=1)
+    eval_hook = EvalHookCls(data_loader, key_indicator='score', save_best=True)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        logger = get_logger('test_eval')
+        runner = EpochBasedRunner(
+            model=model,
+            batch_processor=None,
+            optimizer=optimizer,
+            work_dir=tmpdir,
+            logger=logger)
+        runner.register_checkpoint_hook(dict(interval=1))
+        runner.register_hook(eval_hook)
+        runner.run([loader], [('train', 1)], 8)
+
+        real_path = osp.join(tmpdir, 'best_score_epoch_4.pth')
+
+        assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
+        assert runner.meta['hook_msgs']['best_score'] == 0.7
+
     data_loader = DataLoader(EvalDataset(), batch_size=1)
     eval_hook = EvalHookCls(
         data_loader, interval=1, save_best='score', rule='greater')
@@ -256,3 +288,7 @@ def test_eval_hook(EvalHookCls):
 
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
         assert runner.meta['hook_msgs']['best_score'] == 0.7
+
+
+if __name__ == '__main__':
+    test_eval_hook(EvalHook)
