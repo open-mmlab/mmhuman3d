@@ -83,7 +83,8 @@ class Up3dConverter(BaseModeConverter):
                  np.min(ys),
                  np.max(xs) + 1,
                  np.max(ys) + 1])
-            bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=0.9)
+            bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=0.9)
+            bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
             # pose and shape
             pkl_file = os.path.join(dataset_path, '%s_body.pkl' % img_base)

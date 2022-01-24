@@ -59,7 +59,10 @@ DATASET_CONFIGS = dict(
         modes=['pw3d', 'mpi_inf_3dhp'],
         pretrained_ckpt='data/checkpoints/spin.pth',
         prefix='vibe_data'),
-    gta_human=dict(type='GTAHumanConverter', prefix='gta_human'))
+    gta_human=dict(type='GTAHumanConverter', prefix='gta_human'),
+    humman=dict(
+        type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
+)
 
 
 def parse_args():
