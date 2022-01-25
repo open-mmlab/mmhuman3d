@@ -11,6 +11,7 @@ from mmhuman3d.core.conventions.cameras import convert_cameras
 from mmhuman3d.core.conventions.cameras.convert_convention import (
     convert_ndc_to_screen,
     convert_screen_to_ndc,
+    convert_world_view,
 )
 from mmhuman3d.utils.transforms import ee_to_rotmat
 from .builder import CAMERAS
@@ -95,6 +96,7 @@ class NewAttributeCameras(cameras.CamerasBase):
                 kwargs.update(principal_point=principal_point)
 
             K = self.get_default_projection_matrix(**kwargs)
+
             K, _, _ = convert_cameras(
                 K=K,
                 is_perspective=is_perspective,
@@ -106,13 +108,6 @@ class NewAttributeCameras(cameras.CamerasBase):
                 resolution_src=image_size)
             kwargs.update(K=K)
 
-    # elev: float = 0,
-    # azim: float = 0,
-    # dist: float = 2.7,
-    # at: Union[torch.Tensor, List, Tuple] = (0, 0, 0),
-    # batch_size: int = 1,
-    # orbit_speed: Union[float, Tuple[float, float]] = 0,
-    # dist_speed:
         K, R, T = convert_cameras(
             K=kwargs.get('K'),
             R=kwargs.get('R', None),
@@ -342,6 +337,8 @@ class NewAttributeCameras(cameras.CamerasBase):
     def concat(self, others):
         if isinstance(others, type(self)):
             others = [others]
+        else:
+            raise TypeError('Could only concat with same type cameras.')
         return concat_cameras([self] + others)
 
 
@@ -1167,10 +1164,12 @@ def concat_cameras(
     cam_cls = type(cameras_list[0])
     image_size = cameras_list[0].get_image_size()
     convention = cameras_list[0].convention
+    device = cameras_list[0].device
     for cam in cameras_list:
         assert type(cam) is cam_cls
         assert cam.in_ndc() is in_ndc
         assert cam.is_perspective() is is_perspective
+        assert cam.device is device
         K.append(cam.K)
         R.append(cam.R)
         T.append(cam.T)
@@ -1181,6 +1180,7 @@ def concat_cameras(
         K=K,
         R=R,
         T=T,
+        device=device,
         is_perspective=is_perspective,
         in_ndc=in_ndc,
         image_size=image_size,
@@ -1197,7 +1197,7 @@ def compute_orbit_cameras(
     orbit_speed: Union[float, Tuple[float, float]] = 0,
     dist_speed: Optional[float] = 0,
     convention: str = 'pytorch3d',
-):
+) -> Union[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Generate a sequence of moving cameras following an orbit.
 
     Args:
@@ -1258,4 +1258,91 @@ def compute_orbit_cameras(
         rotation_compensate = ee_to_rotmat(
             torch.Tensor([math.pi, 0, 0]).view(1, 3))
         R = rotation_compensate.permute(0, 2, 1) @ R
+    return K, R, T
+
+
+def compute_direction_cameras(
+    at: Union[torch.Tensor, List, Tuple] = (0, 0, 0),
+    eye: Union[torch.Tensor, List, Tuple] = (0, 0, 1),
+    plane: Optional[Iterable[torch.Tensor]] = None,
+    dist: float = 1.0,
+    batch_size: int = 1,
+    dist_speed: float = 1.0,
+    z_vec: Union[torch.Tensor, List, Tuple] = None,
+    y_vec: Union[torch.Tensor, List, Tuple] = (0, 1, 0),
+    convention: str = 'pytorch3d',
+) -> Union[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """[summary]
+
+    Args:
+        at (Union[torch.Tensor, List, Tuple], optional):
+            the position of the object(s) in world coordinates.
+            Defaults to (0, 0, 0).
+        eye (Union[torch.Tensor, List, Tuple], optional):
+            the position of the camera(s) in world coordinates.
+            If eye is not None, it will override the camera position derived
+            from plane, dist, dist_speed.
+            Defaults to (0, 0, 1).
+        plane (Optional[Iterable[torch.Tensor, List, Tuple]], optional):
+            The plane of your z direction normal.
+            Should be a tuple or list containing two vectors of shape (N, 3).
+            Defaults to None.
+        dist (float, optional): distance to at.
+            Defaults to 1.0.
+        dist_speed (float, optional): distance moving speed.
+            Defaults to 1.0.
+        batch_size (int, optional): batch_size to be repeated.
+            Defaults to 1.
+        z_vec (Union[torch.Tensor, List, Tuple], optional):
+            z direction of shape (-1, 3). If z_vec is not None, it will
+            override eye, plane, dist, dist_speed.
+            Defaults to None.
+        y_vec (Union[torch.Tensor, List, Tuple], optional): .
+            Defaults to (0, 1, 0).
+        convention (str, optional): Camera convention.
+            Defaults to 'pytorch3d'.
+
+    Returns:
+        Union[torch.Tensor, torch.Tensor, torch.Tensor]: computed K, R, T.
+    """
+    dist = torch.linspace(dist, dist + batch_size * dist_speed, batch_size)
+    at = torch.Tensor(at).view(-1, 3)
+
+    if z_vec is None:
+        if eye is None:
+            assert plane is not None
+            norm_vec1 = plane[0].view(-1, 3)
+            norm_vec2 = plane[1].view(-1, 3)
+            norm = torch.cross(norm_vec1, norm_vec2)
+            normed_norm = norm / torch.sqrt((norm * norm).sum())
+            eye = at + normed_norm * dist
+        else:
+            eye = eye.view(-1, 3)
+            norm = eye - at
+            normed_norm = norm / torch.sqrt((norm * norm).sum())
+
+        z_vec = -normed_norm
+    z_vec = z_vec.view(-1, 3)
+    y_vec = torch.Tensor(y_vec).view(-1, 3)
+    y_vec = y_vec - torch.matmul(
+        y_vec.view(-1, 1, 3), normed_norm.view(-1, 3, -1)).view(
+            -1, 1) * normed_norm
+    y_vec = y_vec / torch.sqrt((y_vec * y_vec).sum())
+    x_vec = torch.cross(y_vec, z_vec)
+    R = torch.cat(
+        [x_vec.view(-1, 3, 1),
+         y_vec.view(-1, 3, 1),
+         z_vec.view(-1, 3, 1)], 1).view(-1, 3, 3)
+    T = eye
+    _, T = convert_world_view(R=R, T=T)
+
+    K = FoVPerspectiveCameras.get_default_projection_matrix(
+        batch_size=batch_size)
+    K, R, T = convert_cameras(
+        K=K,
+        R=R,
+        T=T,
+        is_perspective=True,
+        convention_src='pytorch3d',
+        convention_dst=convention)
     return K, R, T
