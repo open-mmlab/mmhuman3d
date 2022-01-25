@@ -1,5 +1,6 @@
 import json
 import warnings
+from enum import Enum
 from typing import Any, List, Tuple, Union
 
 import numpy as np
@@ -59,6 +60,12 @@ _CAMERA_PARAMETER_SUPPORTED_KEYS_ = {
 }
 
 
+class _TypeValidation(Enum):
+    MATCH = 0
+    ARRAY = 1
+    FAIL = 2
+
+
 class CameraParameter:
     logger = None
     SUPPORTED_KEYS = _CAMERA_PARAMETER_SUPPORTED_KEYS_
@@ -82,9 +89,9 @@ class CameraParameter:
         self.parameters_dict['in_mat'] = in_mat
         for distort_name in __distort_coefficient_names__:
             self.parameters_dict[distort_name] = 0.0
-        self.check_item('H', H)
+        _, H = self.validate_item('H', H)
         self.parameters_dict['H'] = H
-        self.check_item('W', W)
+        _, W = self.validate_item('W', W)
         self.parameters_dict['W'] = W
         r_mat = __zero_mat_list__(3)
         self.parameters_dict['rotation_mat'] = r_mat
@@ -211,7 +218,7 @@ class CameraParameter:
             mat_list (List[list]):
                 Matrix in list format.
         """
-        self.check_item(mat_key, mat_list)
+        _, mat_list = self.validate_item(mat_key, mat_list)
         self.parameters_dict[mat_key] = mat_list
 
     def set_value(self, key: str, value: Any) -> None:
@@ -223,7 +230,7 @@ class CameraParameter:
             value (object):
                 New value of the parameter.
         """
-        self.check_item(key, value)
+        _, value = self.validate_item(key, value)
         self.parameters_dict[key] = value
 
     def get_value(self, key: str) -> Any:
@@ -346,6 +353,80 @@ class CameraParameter:
             __parse_chessboard_param__(chessboard_dict, name, inverse=inverse)
         self.load_from_dict(camera_param_dict)
 
+    def load_kinect_from_smc(self, smc_reader, kinect_id: int) -> None:
+        """Load name and parameters of a kinect from an SmcReader instance.
+
+        Args:
+            smc_reader (mmhuman3d.data.data_structures.smc_reader.SMCReader):
+                An SmcReader instance containing kinect camera parameters.
+            kinect_id (int):
+                Id of the target kinect.
+        """
+        name = kinect_id
+        extrinsics_dict = \
+            smc_reader.get_kinect_color_extrinsics(
+                kinect_id, homogeneous=False
+            )
+        rot_np = extrinsics_dict['R']
+        trans_np = extrinsics_dict['T']
+        intrinsics_np = \
+            smc_reader.get_kinect_color_intrinsics(
+                kinect_id
+            )
+        resolution = \
+            smc_reader.get_kinect_color_resolution(
+                kinect_id
+            )
+        rmatrix = np.linalg.inv(rot_np).reshape(3, 3)
+        tvec = -np.dot(rmatrix, trans_np)
+        self.name = name
+        self.set_mat_np('in_mat', intrinsics_np)
+        self.set_mat_np('rotation_mat', rmatrix)
+        self.set_value('translation', tvec.tolist())
+        self.set_value('H', resolution[1])
+        self.set_value('W', resolution[0])
+
+    def load_iphone_from_smc(self,
+                             smc_reader,
+                             iphone_id: int = 0,
+                             frame_id: int = 0) -> None:
+        """Load name and parameters of an iPhone from an SmcReader instance.
+
+        Args:
+            smc_reader (mmhuman3d.data.data_structures.smc_reader.SMCReader):
+                An SmcReader instance containing kinect camera parameters.
+            iphone_id (int):
+                Id of the target iphone.
+                Defaults to 0.
+            frame_id (int):
+                Frame ID of one selected frame.
+                It only influences the intrinsics.
+                Defaults to 0.
+        """
+        name = f'iPhone_{iphone_id}'
+        extrinsics_mat = \
+            smc_reader.get_iphone_extrinsics(
+                iphone_id, homogeneous=True
+            )
+        rot_np = extrinsics_mat[:3, :3]
+        trans_np = extrinsics_mat[:3, 3]
+        intrinsics_np = \
+            smc_reader.get_iphone_intrinsics(
+                iphone_id, frame_id
+            )
+        resolution = \
+            smc_reader.get_iphone_color_resolution(
+                iphone_id
+            )
+        rmatrix = np.linalg.inv(rot_np).reshape(3, 3)
+        tvec = -np.dot(rmatrix, trans_np)
+        self.name = name
+        self.set_mat_np('in_mat', intrinsics_np)
+        self.set_mat_np('rotation_mat', rmatrix)
+        self.set_value('translation', tvec.tolist())
+        self.set_value('H', resolution[1])
+        self.set_value('W', resolution[0])
+
     @classmethod
     def load_from_perspective_cameras(cls,
                                       cam,
@@ -432,7 +513,7 @@ class CameraParameter:
                 resolution=(height, width)))
         return cam
 
-    def check_item(self, key: Any, val: Any) -> None:
+    def validate_item(self, key: Any, val: Any) -> List:
         """Check whether the key and its value matches definition in
         CameraParameter.SUPPORTED_KEYS.
 
@@ -448,9 +529,13 @@ class CameraParameter:
                 CameraParameter.SUPPORTED_KEYS.
             TypeError:
                 Value's type doesn't match definition.
+        Returns:
+            key (Any): The input key.
+            val (Any): The value casted into correct format.
         """
         self.__check_key__(key)
-        self.__check_value_type__(key, val)
+        formatted_val = self.__validate_value_type__(key, val)
+        return key, formatted_val
 
     def __check_key__(self, key: Any) -> None:
         """Check whether the key matches definition in
@@ -470,7 +555,7 @@ class CameraParameter:
             err_msg += f'key={str(key)}\n'
             raise KeyError(err_msg)
 
-    def __check_value_type__(self, key: Any, val: Any) -> None:
+    def __validate_value_type__(self, key: Any, val: Any) -> Any:
         """Check whether the type of value matches definition in
         CameraParameter.SUPPORTED_KEYS.
 
@@ -483,12 +568,53 @@ class CameraParameter:
         Raises:
             TypeError:
                 Value is supported but doesn't match definition.
+
+        Returns:
+            val (Any): The value casted into correct format.
         """
-        if type(val) != self.__class__.SUPPORTED_KEYS[key]['type']:
+        np_type_mapping = {int: np.integer, float: np.floating}
+        supported_keys = self.__class__.SUPPORTED_KEYS
+        validation_result = _TypeValidation.FAIL
+        ret_val = None
+        if supported_keys[key]['type'] == int or\
+                supported_keys[key]['type'] == float:
+            type_str = str(type(val))
+            class_name = type_str.split('\'')[1]
+            if type(val) == self.__class__.SUPPORTED_KEYS[key]['type']:
+                validation_result = _TypeValidation.MATCH
+                ret_val = val
+            elif class_name.startswith('numpy'):
+                # a value is required, not array
+                if np.issubdtype(
+                        type(val),
+                        np_type_mapping[supported_keys[key]['type']]):
+                    validation_result = _TypeValidation.MATCH
+                    ret_val = val.astype(supported_keys[key]['type'])
+                elif np.issubdtype(type(val), np.ndarray):
+                    validation_result = _TypeValidation.ARRAY
+            elif class_name.startswith('torch'):
+                # only one element tensors
+                # can be converted to Python scalars
+                if len(val.size()) == 0:
+                    val_item = val.item()
+                    if type(val_item) == supported_keys[key]['type']:
+                        validation_result = _TypeValidation.MATCH
+                        ret_val = val_item
+                else:
+                    validation_result = _TypeValidation.ARRAY
+        else:
+            if type(val) == self.__class__.SUPPORTED_KEYS[key]['type']:
+                validation_result = _TypeValidation.MATCH
+                ret_val = val
+        if validation_result != _TypeValidation.MATCH:
             err_msg = 'Type check failed in CameraParameter:\n'
             err_msg += f'key={str(key)}\n'
             err_msg += f'type(val)={type(val)}\n'
+            if validation_result == _TypeValidation.ARRAY:
+                err_msg += 'A single value is expected, ' +\
+                    'neither an array nor a slice.\n'
             raise TypeError(err_msg)
+        return ret_val
 
 
 def __parse_chessboard_param__(chessboard_camera_param, name, inverse=True):

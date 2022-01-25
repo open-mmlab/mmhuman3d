@@ -2,7 +2,7 @@
 
 ## Introduction
 
-We provide the config files for SPIN: Learning to Reconstruct 3D Human Pose and Shape via Model-fitting in the Loop](https://arxiv.org/pdf/1909.12828.pdf).
+We provide the config files for SPIN: [Learning to Reconstruct 3D Human Pose and Shape via Model-fitting in the Loop](https://arxiv.org/pdf/1909.12828.pdf).
 
 ```BibTeX
 @inproceedings{SPIN,

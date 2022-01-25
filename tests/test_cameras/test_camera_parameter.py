@@ -3,14 +3,18 @@ import os
 
 import numpy as np
 import pytest
+import torch
 
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
+from mmhuman3d.data.data_structures.smc_reader import SMCReader
 from mmhuman3d.utils.path_utils import Existence, check_path_existence
 
 chessboard_path = 'tests/data/camera/' +\
     'calibration_chessboard_05_28_18_05_19.json'
 dump_path = 'tests/data/camera/' +\
     'camera_parameter_dump.json'
+
+smc_path = 'tests/data/dataset_sample/humman/p000003_a000014_tiny.smc'
 
 
 def test_set_from_mat():
@@ -35,6 +39,16 @@ def test_load_chessboard():
     assert len(empty_param.get_value('translation')) == 3
 
 
+def test_load_from_smc():
+    smc = SMCReader(smc_path)
+    kinect_param = CameraParameter(name='test_kinect')
+    kinect_param.load_kinect_from_smc(smc_reader=smc, kinect_id=0)
+    assert len(kinect_param.get_value('translation')) == 3
+    iphone_param = CameraParameter(name='test_iphone')
+    iphone_param.load_iphone_from_smc(smc_reader=smc, iphone_id=0)
+    assert len(kinect_param.get_value('translation')) == 3
+
+
 def test_dump_json():
     cam_param = CameraParameter(name='test_kinect')
     chessboard_dict = json.load(open(chessboard_path))
@@ -52,14 +66,35 @@ def test_load_json():
 
 
 def test_type():
-    cam_param = CameraParameter(name='src_cam')
-    # wrong distortion value type
+    cam_param = CameraParameter(name='src_cam', H=720, W=1280)
+    # wrong distortion value type (expect float)
     with pytest.raises(TypeError):
         cam_param.set_value('k1', '1.0')
     with pytest.raises(TypeError):
-        cam_param.set_value('k1', np.ones(shape=(3))[0])
+        cam_param.set_value('k1', np.ones(shape=(3, ), dtype=np.int8)[0])
     cam_param.set_value('k1', 1.0)
+    cam_param.set_value('k1', np.ones(shape=(3, ), dtype=np.float16)[0])
+    cam_param.set_value('k1', torch.ones(size=(3, ), dtype=torch.float16)[0])
     cam_param.reset_distort()
+
+    # wrong height value type (expect float)
+    with pytest.raises(TypeError):
+        cam_param.set_value('H', '1080')
+    with pytest.raises(TypeError):
+        cam_param.set_value('H', 1080.0)
+    with pytest.raises(TypeError):
+        cam_param.set_value('H', np.ones(shape=(3, ), dtype=np.float32)[0])
+    with pytest.raises(TypeError):
+        cam_param.set_value('H', np.ones(shape=(3, ), dtype=np.int64)[0:1])
+    with pytest.raises(TypeError):
+        cam_param.set_value('H',
+                            torch.ones(size=(3, ), dtype=torch.float32)[0])
+    with pytest.raises(TypeError):
+        cam_param.set_value('H',
+                            torch.ones(size=(3, ), dtype=torch.int32)[0:1])
+    cam_param.set_value('H', np.ones(shape=(3, ), dtype=np.uint8)[0])
+    cam_param.set_value('H', torch.ones(size=(3, ), dtype=torch.int64)[0])
+    cam_param.set_value('H', 720)
 
     mat_3x3 = np.eye(3)
     # wrong mat type

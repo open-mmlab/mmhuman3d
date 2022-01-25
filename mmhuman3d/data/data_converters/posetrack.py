@@ -49,23 +49,24 @@ class PosetrackConverter(BaseModeConverter):
         for ann_file in tqdm(ann_files):
             json_data = mmcv.load(ann_file)
 
-            counter = 0
-            for im, ann in zip(json_data['images'], json_data['annotations']):
-                # sample every 10 image and check image is labelled
-                if counter % 10 != 0 and not im['is_labeled']:
-                    continue
+            imgs = {}
+            for img in json_data['images']:
+                imgs[img['id']] = img
+
+            for ann in json_data['annotations']:
+                image_id = ann['image_id']
+                image_path = str(imgs[image_id]['file_name'])
+
                 keypoints2d = np.array(ann['keypoints']).reshape(17, 3)
                 keypoints2d[keypoints2d[:, 2] > 0, 2] = 1
                 # check if all major body joints are annotated
                 if sum(keypoints2d[5:, 2] > 0) < 12:
                     continue
 
-                image_path = im['file_name']
                 image_abs_path = os.path.join(dataset_path, image_path)
                 if not os.path.exists(image_abs_path):
                     print('{} does not exist!'.format(image_abs_path))
                     continue
-                counter += 1
                 bbox_xywh = np.array(ann['bbox'])
 
                 # store data

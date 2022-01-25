@@ -75,7 +75,8 @@ class PennActionConverter(BaseConverter):
                     max(kp[:, 0]),
                     max(kp[:, 1])
                 ]
-                bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                bbox_xywh = self._xyxy2xywh(bbox_xyxy)
                 # store relative instead of absolute image path
                 image_path_.append(img_path.replace(dataset_path + '/', ''))
                 bbox_xywh_.append(bbox_xywh)

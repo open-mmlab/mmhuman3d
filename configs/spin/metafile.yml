@@ -1,0 +1,32 @@
+Collections:
+  - Name: SPIN
+    Metadata:
+      Training Data:
+         - COCO
+         - Human3.6M
+         - LSP-Extended
+         - LSP
+         - MPI-INF-3DHP
+         - MPII
+         - 3DPW
+      Architecture:
+        - ResNet
+        - HMRHead
+    Paper:
+      URL: https://arxiv.org/pdf/1909.12828.pdf
+      Title: "Learning to Reconstruct 3D Human Pose and Shape via Model-fitting in the Loop"
+    README: configs/spin/README.md
+
+Models:
+  - Name: resnet50_spin_pw3d
+    In Collection: SPIN
+    Config: configs/spin/resnet50_spin_pw3d.py
+    Metadata:
+      Epochs: 10
+    Results:
+      - Task: Human Pose and Shape Estimation
+        Dataset: 3DPW
+        Metrics:
+          MPJPE: 96.06
+          PA-MPJPE: 59.06
+    Weights: https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/resnet50_spin_pw3d-e1857270_20211201.pth?versionId=CAEQHhiBgMDyvYnS6xciIDZhNTg4NmM4OGE4MTQ0ODRhY2JlY2JmZDI4ZWQ0ZmU3
