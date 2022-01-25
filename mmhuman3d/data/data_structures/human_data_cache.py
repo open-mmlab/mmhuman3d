@@ -26,8 +26,13 @@ class HumanDataCacheReader():
         base_data = self.npz_file[cache_key].item()
         base_data.update(self.keypoints_info)
         for key in required_keys:
-            if key not in base_data:
-                base_data.update(self.get_non_sliced_data(key))
+            non_sliced_value = self.get_non_sliced_data(key)
+            if isinstance(non_sliced_value, dict) and\
+                    key in base_data and\
+                    isinstance(base_data[key], dict):
+                base_data[key].update(non_sliced_value)
+            else:
+                base_data[key] = non_sliced_value
         ret_human_data = HumanData.new(source_dict=base_data)
         # data in cache is compressed
         ret_human_data.__keypoints_compressed__ = True
@@ -38,7 +43,7 @@ class HumanDataCacheReader():
     def get_non_sliced_data(self, key: str):
         if self.non_sliced_data is None:
             self.non_sliced_data = self.npz_file['non_sliced_data'].item()
-        return {key: self.non_sliced_data[key]}
+        return self.non_sliced_data[key]
 
 
 class HumanDataCacheWriter():

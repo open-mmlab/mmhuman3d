@@ -48,9 +48,13 @@ _HumanData_SUPPORTED_KEYS = {
     },
     'smpl': {
         'type': dict,
+        'slice_key': 'global_orient',
+        'slice_dim': 0
     },
     'smplx': {
         'type': dict,
+        'slice_key': 'global_orient',
+        'slice_dim': 0
     },
     'meta': {
         'type': dict,
@@ -268,6 +272,43 @@ class HumanData(dict):
                     keypoints_info[key] = self[key]
                 else:
                     non_sliced_data[key] = self[key]
+            elif isinstance(dim, dict):
+                value_dict = self.get_raw_value(key)
+                non_sliced_sub_dict = {}
+                for sub_key in value_dict.keys():
+                    sub_value = value_dict[sub_key]
+                    if dim[sub_key] is None:
+                        non_sliced_sub_dict[sub_key] = sub_value
+                    else:
+                        sub_dim = dim[sub_key]
+                        if isinstance(sub_value, np.ndarray):
+                            slice_list = [
+                                slice(None),
+                            ] * len(sub_value.shape)
+                            for slice_index in range(slice_num):
+                                slice_start = slice_index * slice_size
+                                slice_end = min((slice_index + 1) * slice_size,
+                                                self.__temporal_len__)
+                                slice_list[sub_dim] = \
+                                    slice(slice_start, slice_end)
+                                sliced_sub_value = sub_value[tuple(slice_list)]
+                                if key not in sliced_data[str(slice_index)]:
+                                    sliced_data[str(slice_index)][key] = {}
+                                sliced_data[str(slice_index)][key][sub_key] = \
+                                    sliced_sub_value
+                        else:
+                            for slice_index in range(slice_num):
+                                slice_start = slice_index * slice_size
+                                slice_end = min((slice_index + 1) * slice_size,
+                                                self.__temporal_len__)
+                                sliced_sub_value = \
+                                    sub_value[slice(slice_start, slice_end)]
+                                if key not in sliced_data[str(slice_index)]:
+                                    sliced_data[str(slice_index)][key] = {}
+                                sliced_data[str(slice_index)][key][sub_key] = \
+                                    sliced_sub_value
+                if len(non_sliced_sub_dict) > 0:
+                    non_sliced_data[key] = non_sliced_sub_dict
             else:
                 value = self.get_raw_value(key)
                 # slice as ndarray
@@ -538,9 +579,21 @@ class HumanData(dict):
                 ret_dict[key] = None
             else:
                 value = self[key]
+                if isinstance(value, dict) and len(value) > 0:
+                    ret_dict[key] = {}
+                    for sub_key in value.keys():
+                        try:
+                            sub_value_len = len(value[sub_key])
+                            if sub_value_len != self.__temporal_len__:
+                                ret_dict[key][sub_key] = None
+                            else:
+                                ret_dict[key][sub_key] = 0
+                        except TypeError:
+                            ret_dict[key][sub_key] = None
+                    continue
+                # instance cannot be sliced without len method
                 try:
                     value_len = len(value)
-                # cannot be sliced without len method
                 except TypeError:
                     ret_dict[key] = None
                     continue
@@ -824,7 +877,11 @@ class HumanData(dict):
             if 'slice_dim' in supported_keys[key] and \
                     supported_keys[key]['slice_dim'] >= 0:
                 val_slice_dim = supported_keys[key]['slice_dim']
-                val_temporal_len = val.shape[val_slice_dim]
+                if supported_keys[key]['type'] == dict:
+                    slice_key = supported_keys[key]['slice_key']
+                    val_temporal_len = val[slice_key].shape[val_slice_dim]
+                else:
+                    val_temporal_len = val.shape[val_slice_dim]
                 if self.temporal_len < 0:
                     # no temporal_len yet, assign a new one
                     self.temporal_len = val_temporal_len
@@ -981,8 +1038,15 @@ class HumanData(dict):
                 if key in self and \
                         'slice_dim' in supported_keys[key] and\
                         supported_keys[key]['slice_dim'] != -1:
-                    slice_dim = supported_keys[key]['slice_dim']
-                    self.__temporal_len__ = self[key].shape[slice_dim]
+                    if 'slice_key' in supported_keys[key] and\
+                            supported_keys[key]['type'] == dict:
+                        sub_key = supported_keys[key]['slice_key']
+                        slice_dim = supported_keys[key]['slice_dim']
+                        self.__temporal_len__ = \
+                            self[key][sub_key].shape[slice_dim]
+                    else:
+                        slice_dim = supported_keys[key]['slice_dim']
+                        self.__temporal_len__ = self[key].shape[slice_dim]
                     break
         for key in list(self.keys()):
             convention_key = f'{key}_convention'
