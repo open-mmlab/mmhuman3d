@@ -60,16 +60,17 @@ class LspExtendedConverter(BaseConverter):
             keypoints2d14 = np.hstack([keypoints2d14, np.ones([14, 1])])
 
             # bbox
-            bbox_xywh = [
+            bbox_xyxy = [
                 min(keypoints2d14[:, 0]),
                 min(keypoints2d14[:, 1]),
                 max(keypoints2d14[:, 0]),
                 max(keypoints2d14[:, 1])
             ]
 
-            if 0 <= bbox_xywh[0] <= w and 0 <= bbox_xywh[2] <= w and \
-                    0 <= bbox_xywh[1] <= h and 0 <= bbox_xywh[3] <= h:
-                bbox_xywh = self._bbox_expand(bbox_xywh, scale_factor=1.2)
+            if 0 <= bbox_xyxy[0] <= w and 0 <= bbox_xyxy[2] <= w and \
+                    0 <= bbox_xyxy[1] <= h and 0 <= bbox_xyxy[3] <= h:
+                bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                bbox_xywh = self._xyxy2xywh(bbox_xyxy)
             else:
                 print('Bbox out of image bounds. Skipping image {}'.format(
                     imgname))

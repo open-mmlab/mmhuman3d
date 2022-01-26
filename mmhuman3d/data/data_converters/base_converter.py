@@ -26,13 +26,13 @@ class BaseConverter(metaclass=ABCMeta):
     @staticmethod
     def _bbox_expand(bbox_xyxy: List[float],
                      scale_factor: float) -> List[float]:
-        """Obtain bbox in xywh format given bbox in xyxy format
+        """Expand bbox in xyxy format by scale factor
         Args:
             bbox_xyxy (List[float]): Bounding box in xyxy format
             scale_factor (float): Scale factor to expand bbox
 
         Returns:
-            bbox_xywh (List[float]): Bounding box in xywh format
+            bbox_xyxy (List[float]): Expanded bounding box in xyxy format
         """
         center = [(bbox_xyxy[0] + bbox_xyxy[2]) / 2,
                   (bbox_xyxy[1] + bbox_xyxy[3]) / 2]
@@ -40,6 +40,18 @@ class BaseConverter(metaclass=ABCMeta):
         y1 = scale_factor * (bbox_xyxy[1] - center[1]) + center[1]
         x2 = scale_factor * (bbox_xyxy[2] - center[0]) + center[0]
         y2 = scale_factor * (bbox_xyxy[3] - center[1]) + center[1]
+        return [x1, y1, x2, y2]
+
+    @staticmethod
+    def _xyxy2xywh(bbox_xyxy: List[float]) -> List[float]:
+        """Obtain bbox in xywh format given bbox in xyxy format
+        Args:
+            bbox_xyxy (List[float]): Bounding box in xyxy format
+
+        Returns:
+            bbox_xywh (List[float]): Bounding box in xywh format
+        """
+        x1, y1, x2, y2 = bbox_xyxy
         return [x1, y1, x2 - x1, y2 - y1]
 
 

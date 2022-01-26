@@ -81,3 +81,22 @@ def test_human_image_dataset():
     assert 'MPJPE-PA' in res
     assert res['MPJPE'] > 0
     assert res['MPJPE-PA'] > 0
+
+
+def test_human_image_dataset_smc():
+    # test loading smc
+    train_dataset = HumanImageDataset(
+        data_prefix='tests/data',
+        pipeline=[],
+        dataset_name='humman',
+        ann_file='sample_humman_test_iphone_ds10.npz')
+
+    data_keys = [
+        'img_prefix', 'image_path', 'image_id', 'dataset_name', 'sample_idx',
+        'bbox_xywh', 'center', 'scale', 'keypoints2d', 'keypoints3d',
+        'has_smpl', 'smpl_body_pose', 'smpl_global_orient', 'smpl_betas',
+        'smpl_transl'
+    ]
+    for i, data in enumerate(train_dataset):
+        for key in data_keys:
+            assert key in data

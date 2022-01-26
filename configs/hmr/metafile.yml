@@ -1,0 +1,32 @@
+Collections:
+  - Name: HMR
+    Metadata:
+      Training Data:
+         - COCO
+         - Human3.6M
+         - LSP-Extended
+         - LSP
+         - MPI-INF-3DHP
+         - MPII
+         - 3DPW
+      Architecture:
+        - ResNet
+        - HMRHead
+    Paper:
+      URL: https://arxiv.org/pdf/1712.06584.pdf
+      Title: "End-to-End Recovery of Human Shape and Pose"
+    README: configs/hmr/README.md
+
+Models:
+  - Name: resnet50_hmr_pw3d
+    In Collection: HMR
+    Config: configs/hmr/resnet50_hmr_pw3d.py
+    Metadata:
+      Epochs: 100
+    Results:
+      - Task: Human Pose and Shape Estimation
+        Dataset: 3DPW
+        Metrics:
+          MPJPE: 112.34
+          PA-MPJPE: 67.53
+    Weights: https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hmr/resnet50_hmr_pw3d-04f40f58_20211201.pth?versionId=CAEQHhiBgMD6zJfR6xciIDE0ODQ3OGM2OWJjMTRlNmQ5Y2ZjMWZhMzRkOTFiZDFm

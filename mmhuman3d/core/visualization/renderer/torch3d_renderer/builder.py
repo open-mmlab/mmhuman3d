@@ -14,7 +14,12 @@ from pytorch3d.renderer import (
     TexturesVertex,
 )
 
-from .shader import NoLightShader
+from .shader import (
+    DepthShader,
+    NoLightShader,
+    NormalShader,
+    SegmentationShader,
+)
 from .textures import TexturesNearest
 
 RENDERER = Registry('renderer')
@@ -55,6 +60,17 @@ SHADER.register_module(
 SHADER.register_module(
     name=['nolight', 'nolight_shader', 'NoLight', 'NoLightShader'],
     module=NoLightShader)
+SHADER.register_module(
+    name=['normal', 'normal_shader', 'Normal', 'NormalShader'],
+    module=NormalShader)
+SHADER.register_module(
+    name=['depth', 'depth_shader', 'Depth', 'DepthShader'], module=DepthShader)
+SHADER.register_module(
+    name=[
+        'segmentation', 'segmentation_shader', 'Segmentation',
+        'SegmentationShader'
+    ],
+    module=SegmentationShader)
 
 TEXTURES = Registry('textures')
 TEXTURES.register_module(

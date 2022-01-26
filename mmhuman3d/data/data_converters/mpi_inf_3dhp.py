@@ -45,7 +45,8 @@ class MpiInf3dhpConverter(BaseModeConverter):
             max(keypoints2d[:, 0]),
             max(keypoints2d[:, 1])
         ]
-        bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+        bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+        bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
         # check that all joints are visible
         h, w = 2048, 2048

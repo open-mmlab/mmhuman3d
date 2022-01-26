@@ -362,6 +362,31 @@ mmhuman3d
                    └── ...
 ```
 
+### AMASS
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://files.is.tue.mpg.de/black/papers/amass.pdf">AMASS (ICCV'2019)</a></summary>
+
+```bibtex
+@inproceedings{AMASS:2019,
+  title={AMASS: Archive of Motion Capture as Surface Shapes},
+  author={Mahmood, Naureen and Ghorbani, Nima and F. Troje, Nikolaus and Pons-Moll, Gerard and Black, Michael J.},
+  booktitle = {The IEEE International Conference on Computer Vision (ICCV)},
+  year={2019},
+  month = {Oct},
+  url = {https://amass.is.tue.mpg.de},
+  month_numeric = {10}
+}
+```
+
+Details for direct preprocessing will be added in the future.
+
+**Alternatively**, you may download the preprocessed files directly:
+- [amass_smplh.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/amass_smplh.npz?versionId=CAEQIhiBgICS4Mrt7xciIGU5MDBmZmE4Y2I0NjRiYTc4ZWY2NzY2MzU1ZmIwZTQ2)
+- [amass_smplx.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/amass_smplx.npz?versionId=CAEQIhiBgIDh387t7xciIGRlN2JlZjA0ZGM0YzRkNmM5OWJhNmVjMmZlN2RiN2E1)
+
 ### COCO
 
 <!-- [DATASET] -->

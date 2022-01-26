@@ -31,6 +31,7 @@ class SegmentationRenderer(MeshBaseRenderer):
                                      'orthographics', 'perspective',
                                      'fovorthographics'] = 'weakperspective',
                  in_ndc: bool = True,
+                 num_class: int = 1,
                  **kwargs) -> None:
         """Render vertex-color mesh into a segmentation map of a (B, H, W)
         tensor. For visualization, the output rgba image will be (B, H, W, 4),
@@ -82,11 +83,7 @@ class SegmentationRenderer(MeshBaseRenderer):
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
-
-    def set_render_params(self, **kwargs):
-        super().set_render_params(**kwargs)
-        self.shader_type = 'nolight'
-        self.num_class = kwargs.get('num_class', 1)
+        self.num_class = num_class
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
@@ -123,17 +120,18 @@ class SegmentationRenderer(MeshBaseRenderer):
         # segmentation map is sharp.
         cameras = self.init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-        renderer = self.init_renderer(cameras, None)
 
-        rendered_images = renderer(meshes)
-
-        segmentation_map = rendered_images[..., 0].long()
+        fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
+        segmentation_map = self.shader(
+            fragments=fragments, meshes=meshes, cameras=cameras)
 
         if self.output_path is not None or 'rgba' in self.return_type:
-            valid_masks = (rendered_images[..., 3:] > 0) * 1.0
+            valid_masks = (segmentation_map[..., :] > 0) * 1.0
             color = torch.Tensor(get_different_colors(self.num_class))
             color = torch.cat([torch.zeros(1, 3), color]).to(self.device)
-            rgbs = color[segmentation_map] * valid_masks
+            B, H, W, _ = segmentation_map.shape
+            rgbs = color[segmentation_map.view(-1)].view(B, H, W,
+                                                         3) * valid_masks
             if self.output_path is not None:
                 self.write_images(rgbs, valid_masks, images, indexes)
 
