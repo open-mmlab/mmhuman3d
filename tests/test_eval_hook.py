@@ -191,7 +191,8 @@ def test_eval_hook(EvalHookCls):
 
     # update "save_best" according to "key_indicator"
     data_loader = DataLoader(EvalDataset(), batch_size=1)
-    eval_hook = EvalHookCls(data_loader, key_indicator='score', save_best=True)
+    eval_hook = EvalHookCls(
+        data_loader, key_indicator='score', save_best=True, rule='greater')
     with tempfile.TemporaryDirectory() as tmpdir:
         logger = get_logger('test_eval')
         runner = EpochBasedRunner(
@@ -288,7 +289,3 @@ def test_eval_hook(EvalHookCls):
 
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
         assert runner.meta['hook_msgs']['best_score'] == 0.7
-
-
-if __name__ == '__main__':
-    test_eval_hook(EvalHook)
