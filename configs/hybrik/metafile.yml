@@ -23,6 +23,6 @@ Models:
       - Task: Human Pose and Shape Estimation
         Dataset: 3DPW
         Metrics:
-          MPJPE: 81.53
-          PA-MPJPE: 49.14
+          MPJPE: 81.08
+          PA-MPJPE: 49.01
     Weights: https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hybrik/resnet34_hybrik_pw3d-b2f87fa5_20211201.pth?versionId=CAEQHhiBgID_vYnS6xciIDAwZTk1MDJhNmM0ZDRlZmI5MTk3ZTAzNzJkOTIwZTc3

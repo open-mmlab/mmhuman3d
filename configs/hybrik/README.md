@@ -60,4 +60,4 @@ We evaluate HybrIK on 3DPW. Values are MPJPE/PA-MPJPE.
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [resnet34_hybrik_mixed.py](resnet34_hybrik_mixed.py) | 86.92 / 50.30 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hybrik/resnet34_hybrik_pw3d-b2f87fa5_20211201.pth?versionId=CAEQHhiBgID_vYnS6xciIDAwZTk1MDJhNmM0ZDRlZmI5MTk3ZTAzNzJkOTIwZTc3) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hybrik/20211109_164017.log?versionId=CAEQHhiBgICdvonS6xciIDdiNGYzY2Q3N2NiMTQ5MzdhOTZjYjEwZDM0ZjI3ODU1) |
+| [resnet34_hybrik_mixed.py](resnet34_hybrik_mixed.py) | 81.08 / 49.01 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hybrik/resnet34_hybrik_pw3d-b2f87fa5_20211201.pth?versionId=CAEQHhiBgID_vYnS6xciIDAwZTk1MDJhNmM0ZDRlZmI5MTk3ZTAzNzJkOTIwZTc3) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hybrik/20211109_164017.log?versionId=CAEQHhiBgICdvonS6xciIDdiNGYzY2Q3N2NiMTQ5MzdhOTZjYjEwZDM0ZjI3ODU1) |
