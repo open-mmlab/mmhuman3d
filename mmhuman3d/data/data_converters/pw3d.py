@@ -97,15 +97,16 @@ class Pw3dConverter(BaseModeConverter):
                     for valid_i in range(valid_pose.shape[0]):
                         keypoints2d = valid_keypoints_2d[valid_i, :, :].T
                         keypoints2d = keypoints2d[keypoints2d[:, 2] > 0, :]
-                        bbox_xywh = [
+                        bbox_xyxy = [
                             min(keypoints2d[:, 0]),
                             min(keypoints2d[:, 1]),
                             max(keypoints2d[:, 0]),
                             max(keypoints2d[:, 1])
                         ]
 
-                        bbox_xywh = self._bbox_expand(
-                            bbox_xywh, scale_factor=1.2)
+                        bbox_xyxy = self._bbox_expand(
+                            bbox_xyxy, scale_factor=1.2)
+                        bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
                         image_path = valid_img_names[valid_i]
                         image_abs_path = os.path.join(root_path, image_path)

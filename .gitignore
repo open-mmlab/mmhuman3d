@@ -127,6 +127,8 @@ logs/
 *.png
 *.gif
 *.jpg
+*.obj
+*.ply
 !demo/resources/*
 
 # Resources as exception

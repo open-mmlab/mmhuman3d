@@ -1,0 +1,27 @@
+Collections:
+  - Name: VIBE
+    Metadata:
+      Training Data:
+         - MPI-INF-3DHP
+         - InstaVariety
+      Architecture:
+        - ResNet
+        - HMRHead
+    Paper:
+      URL: https://arxiv.org/pdf/1912.05656.pdf
+      Title: "VIBE: Video Inference for Human Body Pose and Shape Estimation"
+    README: configs/vibe/README.md
+
+Models:
+  - Name: resnet50_vibe_pw3d
+    In Collection: VIBE
+    Config: configs/vibe/resnet50_vibe_pw3d.py
+    Metadata:
+      Epochs: 100
+    Results:
+      - Task: Human Pose and Shape Estimation
+        Dataset: 3DPW
+        Metrics:
+          MPJPE: 94.89
+          PA-MPJPE: 57.08
+    Weights: https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/vibe/resnet50_vibe_pw3d-2e05a122_20211201.pth?versionId=CAEQHhiBgMCNvonS6xciIGEyOGM1M2M0ZTdiMDQ4NTc4NDI1MjBmYzgyMjUwMWI2

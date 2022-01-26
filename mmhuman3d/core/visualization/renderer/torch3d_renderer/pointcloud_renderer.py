@@ -1,9 +1,6 @@
-import os.path as osp
 import warnings
-from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
-import mmcv
 import torch
 from pytorch3d.renderer import (
     AlphaCompositor,
@@ -14,7 +11,6 @@ from pytorch3d.structures import Meshes, Pointclouds
 
 from mmhuman3d.core.cameras import NewAttributeCameras
 from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
-from mmhuman3d.utils.path_utils import check_path_suffix
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER, build_raster
 
@@ -71,31 +67,22 @@ class PointCloudRenderer(MeshBaseRenderer):
         Returns:
             None
         """
-        self.device = device
-        self.output_path = output_path
-        self.resolution = resolution
-        self.return_type = return_type
-        self.out_img_format = out_img_format
         self.radius = radius
-        self.projection = projection
-        self.in_ndc = in_ndc
-        if output_path is not None:
-            if check_path_suffix(output_path, ['.mp4', '.gif']):
-                self.temp_path = osp.join(
-                    Path(output_path).parent,
-                    Path(output_path).name + '_output_temp')
-                mmcv.mkdir_or_exist(self.temp_path)
-                print('make dir', self.temp_path)
-            else:
-                self.temp_path = output_path
-        self.set_render_params(**kwargs)
-        super(MeshBaseRenderer, self).__init__()
+        super().__init__(
+            resolution=resolution,
+            device=device,
+            output_path=output_path,
+            obj_path=None,
+            return_type=return_type,
+            out_img_format=out_img_format,
+            projection=projection,
+            in_ndc=in_ndc,
+            **kwargs)
 
-    def set_render_params(self, **kwargs):
+    def init_renderer(self, **kwargs):
         """Set render params."""
-        self.raster_type = kwargs.get('raster_type', 'point')
-        self.shader_type = None
-        self.bg_color = torch.tensor(
+        raster_type = kwargs.get('raster_type', 'point')
+        bg_color = torch.tensor(
             kwargs.get('bg_color', [
                 1.0,
                 1.0,
@@ -104,21 +91,16 @@ class PointCloudRenderer(MeshBaseRenderer):
             ]),
             dtype=torch.float32,
             device=self.device)
-        self.raster_settings = PointsRasterizationSettings(
+        raster_settings = PointsRasterizationSettings(
             image_size=self.resolution,
             radius=self.radius
             if self.radius is not None else kwargs.get('radius'),
             points_per_pixel=kwargs.get('points_per_pixel', 10))
-
-    def init_renderer(self, cameras):
-        renderer = PointsRenderer(
+        self.shader_type = None
+        self.renderer = PointsRenderer(
             rasterizer=build_raster(
-                dict(
-                    type=self.raster_type,
-                    cameras=cameras,
-                    raster_settings=self.raster_settings)),
-            compositor=AlphaCompositor(background_color=self.bg_color))
-        return renderer
+                dict(type=raster_type, raster_settings=raster_settings)),
+            compositor=AlphaCompositor(background_color=bg_color))
 
     def forward(
         self,
@@ -179,9 +161,8 @@ class PointCloudRenderer(MeshBaseRenderer):
         pointclouds = pointclouds.to(self.device)
         cameras = self.init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-        renderer = self.init_renderer(cameras)
 
-        rendered_images = renderer(pointclouds)
+        rendered_images = self.renderer(pointclouds, cameras=cameras)
 
         if self.output_path is not None or 'rgba' in self.return_type:
             rgbs, valid_masks = rendered_images[

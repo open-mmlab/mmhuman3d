@@ -9,12 +9,7 @@ import mmcv
 import numpy as np
 import torch
 import torch.nn as nn
-from pytorch3d.renderer import (
-    BlendParams,
-    Materials,
-    MeshRenderer,
-    RasterizationSettings,
-)
+from pytorch3d.renderer import BlendParams, Materials, RasterizationSettings
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import NewAttributeCameras, build_cameras
@@ -38,10 +33,10 @@ class MeshBaseRenderer(nn.Module):
                  output_path: Optional[str] = None,
                  return_type: Optional[List] = None,
                  out_img_format: str = '%06d.png',
+                 in_ndc: bool = True,
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
                                      'fovorthographics'] = 'weakperspective',
-                 in_ndc: bool = True,
                  **kwargs) -> None:
         """MeshBaseRenderer for neural rendering and visualization.
 
@@ -63,10 +58,10 @@ class MeshBaseRenderer(nn.Module):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): Projection type of the cameras.
-                Defaults to 'weakperspective'.
             in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
+            projection (Literal[, optional): Projection type of the cameras.
+                Defaults to 'weakperspective'.
 
         **kwargs is used for render setting.
         You can set up your render kwargs like:
@@ -108,13 +103,12 @@ class MeshBaseRenderer(nn.Module):
         self.output_path = output_path
         self.return_type = return_type
         self.resolution = resolution
-        self.projection = projection
         self.temp_path = None
         self.in_ndc = in_ndc
+        self.projection = projection
         self.out_img_format = out_img_format
         self.set_output_path(output_path)
-
-        self.set_render_params(**kwargs)
+        self.init_renderer(**kwargs)
 
     def set_output_path(self, output_path):
         if output_path is not None:
@@ -126,26 +120,6 @@ class MeshBaseRenderer(nn.Module):
                 print('make dir', self.temp_path)
             else:
                 self.temp_path = output_path
-
-    def set_render_params(self, **kwargs):
-        """Set render params."""
-        material_params = kwargs.get('material', {})
-        light_params = kwargs.get('light', {'type': 'directional'})
-        self.raster_type = kwargs.get('raster_type', 'mesh')
-        raster_params = kwargs.get('raster_setting', {})
-        blend_params = kwargs.get('blend', {})
-        self.shader_type = kwargs.get('shader_type', 'phong')
-
-        default_resolution = raster_params.pop('resolution', [1024, 1024])
-        if self.resolution is None:
-            self.resolution = default_resolution
-
-        self.materials = Materials(device=self.device, **material_params)
-        self.raster_settings = RasterizationSettings(
-            image_size=self.resolution, **raster_params)
-        self.lights = build_lights(light_params).to(
-            self.device) if light_params is not None else None
-        self.blend_params = BlendParams(**blend_params)
 
     def export(self):
         """Export output video if need."""
@@ -187,28 +161,36 @@ class MeshBaseRenderer(nn.Module):
                 in_ndc=self.in_ndc)).to(self.device)
         return cameras
 
-    def init_renderer(self, cameras, lights):
+    def init_renderer(self, **kwargs):
         """Initial renderer."""
-        lights = lights if lights is not None else getattr(
-            self, 'lights', None)
-        raster = build_raster(
+        material_params = kwargs.get('material', {})
+        light_params = kwargs.get('light', {'type': 'directional'})
+        raster_type = kwargs.get('raster_type', 'mesh')
+        raster_params = kwargs.get('raster_setting', {})
+        blend_params = kwargs.get('blend', {})
+        shader_type = kwargs.get('shader_type', 'phong')
+
+        default_resolution = raster_params.pop('resolution', [1024, 1024])
+        if self.resolution is None:
+            self.resolution = default_resolution
+
+        materials = Materials(device=self.device, **material_params)
+        raster_settings = RasterizationSettings(
+            image_size=self.resolution, **raster_params)
+        self.lights = build_lights(light_params).to(
+            self.device) if light_params is not None else None
+        blend_params = BlendParams(**blend_params)
+
+        self.rasterizer = build_raster(
+            dict(type=raster_type, raster_settings=raster_settings))
+        self.shader = build_shader(
             dict(
-                type=self.raster_type,
-                cameras=cameras,
-                raster_settings=self.raster_settings))
-        renderer = MeshRenderer(
-            rasterizer=raster,
-            shader=build_shader(
-                dict(
-                    type=self.shader_type,
-                    cameras=cameras,
-                    device=self.device,
-                    lights=lights,
-                    materials=self.materials,
-                    blend_params=self.blend_params))
-            if self.shader_type != 'silhouette' else build_shader(
-                dict(type=self.shader_type, blend_params=self.blend_params)))
-        return renderer
+                type=shader_type,
+                device=self.device,
+                materials=materials,
+                blend_params=blend_params)
+        ) if shader_type != 'silhouette' else build_shader(
+            dict(type=shader_type, blend_params=blend_params))
 
     @staticmethod
     def rgb2bgr(rgbs):
@@ -299,9 +281,9 @@ class MeshBaseRenderer(nn.Module):
         cameras = self.init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
 
-        renderer = self.init_renderer(cameras, lights)
-
-        rendered_images = renderer(meshes)
+        fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
+        rendered_images = self.shader(
+            fragments=fragments, meshes=meshes, cameras=cameras, lights=lights)
 
         if self.output_path is not None or 'rgba' in self.return_type:
             valid_masks = (rendered_images[..., 3:] > 0

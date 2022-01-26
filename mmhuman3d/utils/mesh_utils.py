@@ -161,10 +161,16 @@ def save_meshes_as_objs(meshes: Meshes = None, paths: List[str] = []) -> None:
         prepare_output_path(
             paths[idx], allowed_suffix=['.obj'],
             path_type='file'), 'Please save as .obj files.'
-        save_obj(
-            f=paths[idx],
-            verts=meshes.verts_padded()[idx],
-            faces=meshes.faces_padded()[idx],
-            verts_uvs=meshes.textures.verts_uvs_padded()[idx],
-            faces_uvs=meshes.textures.faces_uvs_padded()[idx],
-            texture_map=meshes.textures.maps_padded()[idx])
+        if meshes.textures is not None:
+            save_obj(
+                f=paths[idx],
+                verts=meshes.verts_padded()[idx],
+                faces=meshes.faces_padded()[idx],
+                verts_uvs=meshes.textures.verts_uvs_padded()[idx],
+                faces_uvs=meshes.textures.faces_uvs_padded()[idx],
+                texture_map=meshes.textures.maps_padded()[idx])
+        else:
+            save_obj(
+                f=paths[idx],
+                verts=meshes.verts_padded()[idx],
+                faces=meshes.faces_padded()[idx])

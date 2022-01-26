@@ -1,7 +1,6 @@
 from typing import Iterable, List, Optional, Union
 
 import torch
-from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import NewAttributeCameras
@@ -73,10 +72,6 @@ class NormalRenderer(MeshBaseRenderer):
             in_ndc=in_ndc,
             **kwargs)
 
-    def set_render_params(self, **kwargs):
-        super().set_render_params(**kwargs)
-        self.shader_type = 'nolight'
-
     def forward(self,
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
@@ -118,15 +113,15 @@ class NormalRenderer(MeshBaseRenderer):
 
         cameras = self.init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-        verts_normals = cameras.compute_normal_of_meshes(meshes)
-        verts_normal_rgb = (verts_normals + 1) / 2
-        meshes.textures = TexturesVertex(verts_features=verts_normal_rgb)
-        renderer = self.init_renderer(cameras, self.lights)
-        rendered_images = renderer(meshes)
-        rgbs, valid_masks = rendered_images[
-            ..., :3], (rendered_images[..., 3:] > 0) * 1.0
-        normal = rgbs * 2 - 1
-        normal_map = torch.cat([normal * valid_masks, valid_masks], -1)
+
+        fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
+        normal_map = self.shader(
+            fragments=fragments, meshes=meshes, cameras=cameras)
+
+        print('normal_map', normal_map.shape)
+        rgbs, valid_masks = normal_map[
+            ..., :3], (normal_map[..., 3:] > 0) * 1.0
+        rgbs = (rgbs + 1) / 2
         if self.output_path is not None:
             self.write_images(rgbs, valid_masks, images, indexes)
 

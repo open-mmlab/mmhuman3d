@@ -1,0 +1,28 @@
+Collections:
+  - Name: HybrIK
+    Metadata:
+      Training Data:
+         - COCO
+         - Human3.6M
+         - MPI-INF-3DHP
+      Architecture:
+        - ResNet
+        - HybrIKHead
+    Paper:
+      URL: https://arxiv.org/pdf/2011.14672.pdf
+      Title: "HybrIK: A Hybrid Analytical-Neural Inverse Kinematics Solution for 3D Human Pose and Shape Estimation"
+    README: configs/hybrik/README.md
+
+Models:
+  - Name: resnet34_hybrik_mixed
+    In Collection: HybrIK
+    Config: configs/hybrik/resnet34_hybrik_mixed.py
+    Metadata:
+      Epochs: 400
+    Results:
+      - Task: Human Pose and Shape Estimation
+        Dataset: 3DPW
+        Metrics:
+          MPJPE: 86.92
+          PA-MPJPE: 50.30
+    Weights: https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hybrik/resnet34_hybrik_pw3d-b2f87fa5_20211201.pth?versionId=CAEQHhiBgID_vYnS6xciIDAwZTk1MDJhNmM0ZDRlZmI5MTk3ZTAzNzJkOTIwZTc3

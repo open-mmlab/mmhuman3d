@@ -1,7 +1,6 @@
 from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
-from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import NewAttributeCameras
@@ -26,10 +25,10 @@ class DepthRenderer(MeshBaseRenderer):
         output_path: Optional[str] = None,
         return_type: Optional[List] = None,
         out_img_format: str = '%06d.png',
+        in_ndc: bool = True,
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
-        in_ndc: bool = True,
         **kwargs,
     ) -> None:
         """Renderer for depth map of meshes.
@@ -54,10 +53,10 @@ class DepthRenderer(MeshBaseRenderer):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): Projection type of the cameras.
-                Defaults to 'weakperspective'.
             in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
+            projection (Literal[, optional): Projection type of the cameras.
+                Defaults to 'weakperspective'.
 
         Returns:
             None
@@ -72,10 +71,6 @@ class DepthRenderer(MeshBaseRenderer):
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
-
-    def set_render_params(self, **kwargs):
-        super().set_render_params(**kwargs)
-        self.shader_type = 'nolight'
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
@@ -118,24 +113,20 @@ class DepthRenderer(MeshBaseRenderer):
             K=K, R=R, T=T) if cameras is None else cameras
         meshes = self.prepare_meshes(meshes, vertices, faces)
         vertices = meshes.verts_padded()
-        verts_depth = cameras.compute_depth_of_points(vertices)
-        verts_depth_rgb = verts_depth.repeat(1, 1, 3)
 
-        meshes.textures = TexturesVertex(verts_features=verts_depth_rgb)
-        renderer = self.init_renderer(cameras, self.lights)
-
-        depth_map = renderer(meshes)
+        fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
+        depth_map = self.shader(
+            fragments=fragments, meshes=meshes, cameras=cameras)
 
         if self.output_path is not None or 'rgba' in self.return_type:
-            rgbs, valid_mask = depth_map[
-                ..., :3], (depth_map[..., 3:] > 0) * 1.0
+            rgbs, valid_mask = depth_map.repeat(1, 1, 1,
+                                                3), (depth_map > 0) * 1.0
             rgbs = rgbs / rgbs.max()
             if self.output_path is not None:
                 self.write_images(rgbs, valid_mask, images, indexes)
-
         results = {}
         if 'tensor' in self.return_type:
-            results.update(tensor=depth_map[..., 0])
+            results.update(tensor=depth_map)
         if 'rgba' in self.return_type:
             results.update(rgba=torch.cat([rgbs, valid_mask], -1))
 

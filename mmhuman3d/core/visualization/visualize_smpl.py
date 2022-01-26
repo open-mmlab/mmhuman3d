@@ -343,7 +343,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         elif verts.ndim == 4:
             joints = torch.einsum('fpik,ji->fpjk',
                                   [verts, body_model.J_regressor])
-        model_output = body_model(**pose_dict)
+
         num_verts = body_model.NUM_VERTS
         assert verts.shape[-2] == num_verts, 'Wrong input verts shape.'
         faces = body_model.faces_tensor
@@ -527,7 +527,9 @@ def render_smpl(
 
             Defaults to None.
         body_model (nn.Module, optional): body_model created from smplx.create.
-            Higher priority than `body_model_config`. Should not both be None.
+            Higher priority than `body_model_config`. If `body_model` is not
+            None, it will override `body_model_config` and `model_type`.
+            Should not both be None.
 
             Defaults to None.
         body_model_config (dict, optional): body_model_config for build_model.
@@ -590,21 +592,21 @@ def render_smpl(
             choose in ['lq', 'mq', 'hq', 'silhouette', 'depth', 'normal',
             'pointcloud', 'part_silhouette'] .
 
-            `lq`, `mq`, `hq` would output (frame, h, w, 4) tensor.
+            `lq`, `mq`, `hq` would output (frame, h, w, 4) FloatTensor.
 
             `lq` means low quality, `mq` means medium quality,
             h`q means high quality.
 
-            `silhouette` would output (frame, h, w) binary tensor.
+            `silhouette` would output (frame, h, w) soft binary FloatTensor.
 
-            `part_silhouette` would output (frame, h, w, n_class) tensor.
+            `part_silhouette` would output (frame, h, w, 1) LongTensor.
 
-            n_class is the body segmentation classes.
+            Every pixel stores a class index.
 
-            `depth` will output a depth map of (frame, h, w, 1) tensor
+            `depth` will output a depth map of (frame, h, w, 1) FloatTensor
             and 'normal' will output a normal map of (frame, h, w, 1).
 
-            `pointcloud` will output a (frame, h, w, 4) tensor.
+            `pointcloud` will output a (frame, h, w, 4) FloatTensor.
 
             Defaults to 'mq'.
         palette (Union[List[str], str, np.ndarray], optional):
@@ -739,11 +741,6 @@ def render_smpl(
     vertices = vertices.view(num_frames, num_person, -1, 3)
     num_verts = vertices.shape[-2]
 
-    if render_choice == 'pointcloud':
-        plot_kps = True
-    else:
-        plot_kps = False
-
     if not plot_kps:
         joints = None
         if kp3d is not None:
@@ -805,9 +802,9 @@ def render_smpl(
 
     # body part colorful visualization should use flat shader to be sharper.
     if isinstance(palette, str):
-        if (palette == 'segmentation') and ('silhouette'
-                                            not in render_choice.lower()):
-            render_param_dict['shader_type'] = 'flat'
+        # if (palette == 'segmentation') and ('silhouette'
+        #                                     not in render_choice.lower()):
+        #     render_param_dict['shader_type'] = 'flat'
 
         palette = [palette] * num_person
     elif isinstance(palette, np.ndarray):
@@ -890,7 +887,7 @@ def render_smpl(
     if K is None:
         projection = 'fovperspective'
         K, R, T = compute_orbit_cameras(
-            at=(torch.mean(vertices.view(-1, 3), 0)),
+            at=(torch.mean(vertices.view(-1, 3), 0)).detach().cpu(),
             orbit_speed=orbit_speed,
             batch_size=num_frames,
             convention=convention)
@@ -1174,4 +1171,4 @@ def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    return func(poses=poses, **kwargs)
+    return func(poses=poses, verts=verts, **kwargs)

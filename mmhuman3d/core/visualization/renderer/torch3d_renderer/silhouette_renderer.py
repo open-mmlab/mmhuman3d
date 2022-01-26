@@ -92,9 +92,11 @@ class SilhouetteRenderer(MeshBaseRenderer):
         meshes = self.prepare_meshes(meshes, vertices, faces)
         cameras = self.init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-        renderer = self.init_renderer(cameras, None)
 
-        rendered_images = renderer(meshes)
+        fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
+        rendered_images = self.shader(
+            fragments=fragments, meshes=meshes, cameras=cameras)
+
         silhouette_map = rendered_images[..., 3:]
         valid_masks = (silhouette_map > 0) * 1.0
         if self.output_path is not None or 'rgba' in self.return_type:

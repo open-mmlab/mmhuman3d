@@ -193,9 +193,8 @@ class SMPLRenderer(MeshBaseRenderer):
                 2). If render silhouette, the output tensor shape will be
                 (frame, h, w) or (frame, num_people, h, w).
                 3). If render part silhouette, the output tensor shape should
-                be (frame, h, w, n_class) or (frame, num_people, h, w, n_class
-                ). `n_class` is the number of part segments defined by smpl of
-                smplx.
+                be (frame, h, w, 1) or (frame, num_people, h, w, 1
+                ).
         """
         num_frames, num_person, _, _ = vertices.shape
         faces = self.raw_faces[None].repeat(num_frames, 1, 1)
@@ -237,22 +236,14 @@ class SMPLRenderer(MeshBaseRenderer):
             lights.location = -cameras.get_camera_plane_normals(
             ) - cameras.get_camera_center()
 
-        elif lights is None:
-            assert self.image_renderer.shader_type in [
-                'silhouette', 'nolight', None
-            ]
-            lights = None
-        else:
-            raise TypeError(
-                f'Wrong light type: {type(self.image_renderer.lights)}.')
-
         render_results = self.image_renderer(
             meshes=meshes, K=K, R=R, T=T, lights=lights, indexes=indexes)
         rendered_images = render_results['rgba']
 
         rgbs = rendered_images[..., :3]
-        valid_masks = (rendered_images[..., 3:] > 0) * 1.0
+        valid_masks = rendered_images[..., 3:]
         images = images / 255. if images is not None else None
+
         bgrs = self.rgb2bgr(rgbs)
 
         # write temp images for the output video

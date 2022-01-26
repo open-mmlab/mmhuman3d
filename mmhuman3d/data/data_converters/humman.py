@@ -206,7 +206,8 @@ class HuMManConverter(BaseModeConverter):
 
                 for xmin, xmax, ymin, ymax in zip(xmins, xmaxs, ymins, ymaxs):
                     bbox_xyxy = [xmin, ymin, xmax, ymax]
-                    bbox_xywh = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
+                    bbox_xywh = self._xyxy2xywh(bbox_xyxy)
                     bbox_xywh_.append(bbox_xywh)
 
                 # get keypoints3d (all frames)
@@ -253,11 +254,7 @@ class HuMManConverter(BaseModeConverter):
             kinect_image_id_, kinect_bbox_xywh_, kinect_keypoints_2d_,
             keypoints2d_mask_, kinect_keypoints_3d_, keypoints3d_mask_)
 
-        # store kinect human data
-        if mode == 'train' and self.downsample_ratio > 1:
-            file_name = f'humman_{mode}_kinect_ds{self.downsample_ratio}.npz'
-        else:
-            file_name = f'humman_{mode}_kinect.npz'
+        file_name = f'humman_{mode}_kinect_ds{self.downsample_ratio}.npz'
         out_file = os.path.join(out_path, file_name)
         kinect_human_data.dump(out_file)
 
@@ -267,10 +264,6 @@ class HuMManConverter(BaseModeConverter):
             iphone_image_id_, iphone_bbox_xywh_, iphone_keypoints_2d_,
             keypoints2d_mask_, iphone_keypoints_3d_, keypoints3d_mask_)
 
-        # store iphone human data
-        if mode == 'train' and self.downsample_ratio > 1:
-            file_name = f'humman_{mode}_iphone_ds{self.downsample_ratio}.npz'
-        else:
-            file_name = f'humman_{mode}_iphone.npz'
+        file_name = f'humman_{mode}_iphone_ds{self.downsample_ratio}.npz'
         out_file = os.path.join(out_path, file_name)
         iphone_human_data.dump(out_file)

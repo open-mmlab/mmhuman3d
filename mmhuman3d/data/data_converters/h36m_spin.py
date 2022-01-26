@@ -191,7 +191,9 @@ class H36mSpinConverter(BaseModeConverter):
                             np.max(xs) + 1,
                             np.max(ys) + 1
                         ])
-                        bbox = self._bbox_expand(bbox_xyxy, scale_factor=0.9)
+                        bbox_xyxy = self._bbox_expand(
+                            bbox_xyxy, scale_factor=0.9)
+                        bbox = self._xyxy2xywh(bbox_xyxy)
 
                         # read GT 2D pose
                         keypoints2dall = np.reshape(poses_2d[frame_i, :],
