@@ -18,7 +18,8 @@ DATASET_CONFIGS = dict(
         type='H36mConverter',
         modes=['train', 'valid'],
         protocol=1,
-        mosh_dir='data/datasets/h36m_mosh',
+        # mosh_dir='data/datasets/h36m_mosh',
+        extract_img=True,
         prefix='h36m'),
     h36m_p2=dict(
         type='H36mConverter', modes=['valid'], protocol=2, prefix='h36m'),
