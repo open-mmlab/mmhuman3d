@@ -123,8 +123,7 @@ data = dict(
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
-                    # ann_file='h36m_mosh_train.npz',
-                    ann_file='h36m_train.npz'),
+                    ann_file='h36m_mosh_train.npz'),
                 dict(
                     type=dataset_type,
                     dataset_name='mpi_inf_3dhp',
