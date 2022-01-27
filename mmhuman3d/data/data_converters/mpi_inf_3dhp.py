@@ -120,7 +120,11 @@ class MpiInf3dhpConverter(BaseModeConverter):
 
                         # per frame
                         for i in tqdm(range(0, len(vr), 10), desc='frame list', leave=False, position=2):
-                            image_path = os.path.join(imgs_path, 'frame_%06d.jpg' % i)
+                            img_name = 'frame_%06d.jpg' % i
+                            image_path = os.path.join('S' + str(user_i),
+                                                      'Seq' + str(seq_i),
+                                                      'video_' + str(vid_i),
+                                                      img_name)
 
                             # 2D keypoints
                             keypoints2d = np.reshape(annot2[vid_i][0][i],
@@ -138,9 +142,8 @@ class MpiInf3dhpConverter(BaseModeConverter):
                             if not valid:
                                 continue
 
-                            image = vr[i].asnumpy()
                             # save image
-                            cv2.imwrite(image_path, image)
+                            cv2.imwrite(os.path.join(imgs_path, img_name), vr[i].asnumpy())
 
                             # store the data
                             image_path_.append(image_path)
