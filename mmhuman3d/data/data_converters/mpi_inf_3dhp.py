@@ -143,7 +143,8 @@ class MpiInf3dhpConverter(BaseModeConverter):
                                 continue
 
                             # save image
-                            cv2.imwrite(os.path.join(imgs_path, img_name), vr[i].asnumpy())
+                            if self.extract_img:
+                                cv2.imwrite(os.path.join(imgs_path, img_name), vr[i].asnumpy())
 
                             # store the data
                             image_path_.append(image_path)
