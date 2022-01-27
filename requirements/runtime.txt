@@ -13,3 +13,4 @@ scipy
 smplx
 tqdm
 vedo
+decord
