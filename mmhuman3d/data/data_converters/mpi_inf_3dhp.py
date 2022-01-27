@@ -1,4 +1,3 @@
-import glob
 import os
 from typing import List, Tuple
 
@@ -6,9 +5,8 @@ import cv2
 import h5py
 import numpy as np
 import scipy.io as sio
+from decord import VideoReader, cpu
 from tqdm import tqdm
-from decord import VideoReader
-from decord import cpu
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
@@ -91,7 +89,8 @@ class MpiInf3dhpConverter(BaseModeConverter):
             seq_list = range(1, 3)
             vid_list = list(range(3)) + list(range(4, 9))
 
-            for user_i in tqdm(user_list, desc='user list', leave=False, position=0):
+            for user_i in tqdm(
+                    user_list, desc='user list', leave=False, position=0):
                 for seq_i in seq_list:
                     seq_path = os.path.join(dataset_path, 'S' + str(user_i),
                                             'Seq' + str(seq_i))
@@ -100,7 +99,9 @@ class MpiInf3dhpConverter(BaseModeConverter):
                     annot2 = sio.loadmat(annot_file)['annot2']
                     annot3 = sio.loadmat(annot_file)['annot3']
 
-                    for vid_i in tqdm(vid_list, desc='vid list', leave=False, position=1):
+                    for vid_i in tqdm(
+                            vid_list, desc='vid list', leave=False,
+                            position=1):
 
                         # image folder
                         imgs_path = os.path.join(seq_path,
@@ -112,14 +113,17 @@ class MpiInf3dhpConverter(BaseModeConverter):
                             os.makedirs(imgs_path)
 
                         # video file
-                        vid_file = os.path.join(
-                            seq_path, 'imageSequence',
-                            'video_' + str(vid_i) + '.avi')
-                        
+                        vid_file = os.path.join(seq_path, 'imageSequence',
+                                                'video_' + str(vid_i) + '.avi')
+
                         vr = VideoReader(vid_file, ctx=cpu(0))
 
                         # per frame
-                        for i in tqdm(range(0, len(vr), 10), desc='frame list', leave=False, position=2):
+                        for i in tqdm(
+                                range(0, len(vr), 10),
+                                desc='frame list',
+                                leave=False,
+                                position=2):
                             img_name = 'frame_%06d.jpg' % i
                             image_path = os.path.join('S' + str(user_i),
                                                       'Seq' + str(seq_i),
@@ -144,14 +148,16 @@ class MpiInf3dhpConverter(BaseModeConverter):
 
                             # save image
                             if self.extract_img:
-                                cv2.imwrite(os.path.join(imgs_path, img_name), vr[i].asnumpy())
+                                cv2.imwrite(
+                                    os.path.join(imgs_path, img_name),
+                                    vr[i].asnumpy())
 
                             # store the data
                             image_path_.append(image_path)
                             bbox_xywh_.append(bbox_xywh)
                             keypoints2d_.append(keypoints2d)
                             keypoints3d_.append(keypoints3d)
-            
+
             bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
             bbox_xywh_ = np.hstack(
                 [bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])

@@ -1,6 +1,7 @@
 cdflib
 chumpy
 colormap
+decord
 easydev
 h5py
 matplotlib
@@ -13,4 +14,3 @@ scipy
 smplx
 tqdm
 vedo
-decord
