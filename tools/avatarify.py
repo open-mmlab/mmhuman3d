@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm.notebook import tqdm
 from mmhuman3d.core.cameras import build_cameras
-
+from mmhuman3d.utils.mesh_utils import load_plys_as_meshes
 # Util function for loading meshes
 from pytorch3d.io import load_objs_as_meshes, save_obj
 
@@ -19,7 +19,7 @@ from pytorch3d.loss import (
     mesh_laplacian_smoothing,
     mesh_normal_consistency,
 )
-
+from pytorch3d.renderer import TexturesUV
 
 from pytorch3d.structures import Meshes
 from pytorch3d.renderer import (
@@ -38,6 +38,14 @@ import matplotlib.pyplot as plt
 from mmhuman3d.models.builder import build_body_model
 import torch
 
+import cv2
+import numpy as np
+import random
+import torch.nn.functional as F
+from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
+from pytorch3d.ops import interpolate_face_attributes
+from pytorch3d.renderer.cameras import FoVOrthographicCameras
+
 body_model = build_body_model(
     dict(type='smpl', model_path='/mnt/lustre/share/sugar/SMPLmodels/smpl'))
 pose_tensor = torch.zeros(1, 72)
@@ -55,9 +63,7 @@ else:
 
 
 def norm_mesh(mesh):
-
     verts = mesh.verts_packed()
-    N = verts.shape[0]
     center = verts.mean(0)
     scale = max((verts - center).abs().max(0)[0])
     mesh.offset_verts_(-center)
@@ -67,7 +73,19 @@ def norm_mesh(mesh):
 camera = OpenGLPerspectiveCameras(
     device=device, R=torch.eye(3, 3)[None], T=torch.zeros(1, 3))
 
-image_size = 400
+image_size = 1000
+
+im = cv2.imread('room.jpeg')
+im = cv2.resize(im, (image_size, image_size), cv2.INTER_CUBIC)
+im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+B_target = torch.FloatTensor(im)[None].to(device) / 255.0
+
+lights = PointLights(
+    ambient_color=((0.5, 0.5, 0.5), ),
+    diffuse_color=((0.3, 0.3, 0.3), ),
+    specular_color=((0.2, 0.2, 0.2), ),
+    location=((0, 2, 3), ),
+)
 
 renderer_rgb = MeshRenderer(
     rasterizer=MeshRasterizer(
@@ -82,10 +100,10 @@ renderer_rgb = MeshRenderer(
 
 # Silhouette renderer
 
-sigma = 1e-4
+sigma = 2e-6
 raster_settings_silhouette = RasterizationSettings(
     image_size=image_size,
-    blur_radius=np.log(1. / 1e-4 - 1.) * sigma,
+    blur_radius=np.log(1. / 2e-6 - 1.) * sigma,
     faces_per_pixel=50,
     perspective_correct=False,
 )
@@ -105,6 +123,7 @@ raster_settings_flow = RasterizationSettings(
 renderer_flow = OpticalFlowRenderer(
     rasterizer=MeshRasterizer(raster_settings=raster_settings_flow),
     shader=OpticalFlowShader())
+
 
 def visualize_prediction(predicted_mesh,
                          target_mesh,
@@ -142,14 +161,6 @@ def plot_losses(losses):
     ax.set_title("Loss vs iterations", fontsize="16")
 
 
-# Number of views to optimize over in each SGD iteration
-
-# Number of optimization steps
-
-# Plot period for the losses
-
-from pytorch3d.renderer import TexturesUV
-
 losses = {
     "silhouette": {
         "weight": 0,
@@ -160,36 +171,39 @@ losses = {
         "values": []
     },
     "normal": {
-        "weight": .2,
+        "weight": .01,
         "values": []
     },
     "laplacian": {
-        "weight": .5,
+        "weight": .01,
         "values": []
     },
     "min": {
-        "weight": 50,
+        "weight": 10,
         "values": []
     },
     "max": {
-        "weight": 50,
+        "weight": 10,
         "values": []
     },
-    "light": {},
     "mse_background": {
-        "weight": 10.0,
+        "weight": 20.0,
         "values": []
     },
     "mse_visible": {
-        "weight": 10.0,
+        "weight": 20.0,
+        "values": []
+    },
+    "kp2d_mse_loss": {
+        "weight": 1e-6,
         "values": []
     },
     "d_smooth": {
-        "weight": 1.,
+        "weight": 0.,
         "values": []
     },
     "normal_smooth": {
-        "weight": 1.,
+        "weight": 0.,
         "values": []
     },
     "background": {
@@ -213,8 +227,12 @@ losses = {
         "values": []
     },
 }
-Niter = 500
-num_views_per_iteration = 5
+
+max_bound = 0.03
+min_bound = 0
+
+Niter = 1
+num_views_per_iteration = 1
 plot_period = 50
 
 
@@ -230,45 +248,18 @@ def update_mesh_shape_prior_losses(mesh, loss):
     loss["laplacian"] = mesh_laplacian_smoothing(mesh, method="uniform")
 
 
-# We will learn to deform the source mesh by offsetting its vertices
-# The shape of the deform parameters is equal to the total number of vertices in
-# src_mesh
-# origin_mesh = load_objs_as_meshes(['data/cow_mesh/cow.obj'], device=device)
-# origin_mesh = load_objs_as_meshes(['data/cat/cat.obj'], device=device)
-origin_mesh = load_objs_as_meshes(
-    ['data/SMPL/SMPL_female_default_resolution.obj'], device=device)
-# # origin_mesh = smpl_mesh.clone().to(device)
-# origin_mesh.textures = TexturesVertex(torch.zeros_like(origin_mesh.verts_padded()))
-
-verts = origin_mesh.verts_packed()
-N = verts.shape[0]
-center = verts.mean(0)
-scale = max((verts - center).abs().max(0)[0])
-origin_mesh.offset_verts_(-center)
-origin_mesh.scale_verts_((2.0 / float(scale)))
+mesh_uv = load_objs_as_meshes(
+    ['/mnt/lustre/wangwenjia/mesh/SMPL/SMPL_female_default_resolution.obj'],
+    device=device)
+origin_mesh = load_plys_as_meshes(['/mnt/lustre/wangwenjia/mesh/ai.ply'],
+                                  device=device)
 
 mesh = origin_mesh.clone()
-mesh = mesh.update_padded(mesh.verts_padded() +
-                          mesh.verts_normals_padded() * 0.02)
 
-src_mesh = origin_mesh.clone()
+src_mesh = load_objs_as_meshes(['/mnt/lustre/wangwenjia/mesh/ai.obj'],
+                               device=device)
 src_mesh = src_mesh.update_padded(src_mesh.verts_padded() -
-                                  src_mesh.verts_normals_padded() * 0.008)
-# src_mesh = ico_sphere(4, device)
-# src_mesh = load_objs_as_meshes(['1.obj']).to(device)
-# src_mesh = src_mesh.update_padded(src_mesh.verts_padded())
-# src_mesh._verts_padded[..., 2] += 0.2
-# src_mesh._verts_padded[..., 1] -= 0.2
-# src_mesh = src_mesh.update_padded(src_mesh.verts_padded() * 0.9 + \
-#                                   torch.Tensor(np.random.uniform(size=src_mesh.verts_padded().shape,\
-#                                                      low=-0.05, high=0.05)).to(device))
-
-# verts = src_mesh.verts_packed()
-# N = verts.shape[0]
-# center = verts.mean(0)
-# scale = max((verts - center).abs().max(0)[0])
-# src_mesh.offset_verts_(-center)
-# src_mesh.scale_verts_((1.0 / float(scale)))
+                                  src_mesh.verts_normals_padded() * 0.006)
 
 verts_shape = src_mesh.verts_packed().shape
 src_mesh.textures = TexturesVertex(torch.zeros_like(src_mesh.verts_padded()))
@@ -281,33 +272,24 @@ texture_image = torch.full((1, 1024, 1024, 3),
                            0.0,
                            device=device,
                            requires_grad=True)
-background = torch.full((400, 400, 3), 0.0, device=device, requires_grad=True)
+background = torch.full((image_size, image_size, 3),
+                        0.0,
+                        device=device,
+                        requires_grad=True)
 
-# We will also learn per vertex colors for our sphere mesh that define texture
-# of the mesh
-# sphere_verts_rgb = torch.full([1, verts_shape[0], 3], 0.5, device=device, requires_grad=True)
+optimizer = torch.optim.SGD([deform_verts, background], lr=1.0, momentum=0.9)
 
-# shpere_texture_image = torch.full([1, 512, 512, 3], 0., device=device, requires_grad=True)
-# The optimizer
-# displacement_map = torch.zeros(400, 400, 3) + 0.1
-# displacement_map = torch.zeros(400, 400, 3, requires_grad=True, device=device)
-optimizer = torch.optim.SGD([deform_verts, background, texture_image],
-                            lr=1.0,
-                            momentum=0.9)
-# mesh.textures.verts_uv
-# deform_verts
+faces = src_mesh.faces_padded()[0]
 
 import cv2
 import numpy as np
 import random
 import torch.nn.functional as F
 from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
-# target_rgbs_all = renderer_textured(src_mesh, cameras=target_cameras, lights=lights)[..., :3]
-# world_to_view_transform = cameras.get_world_to_view_transform()
-# world_to_view_normals = world_to_view_transform.transform_normals(
-#     src_mesh.verts_normals_padded().to(device))
 from pytorch3d.ops import interpolate_face_attributes
 from pytorch3d.renderer.cameras import FoVOrthographicCameras
+
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 
 faces = src_mesh.faces_padded()[0]
 
@@ -335,9 +317,9 @@ for i in loop:
     for j in np.random.permutation(
             num_views).tolist()[:num_views_per_iteration]:
 
-        dist1 = 3 + random.uniform(-0.5, 0.5)
+        dist1 = 1.5 + random.uniform(-0.5, 0.5)
         elev1 = random.uniform(0, 360)
-        azim1 = random.uniform(0, 360)
+        azim1 = random.uniform(150, 210)
         fov1 = 90
 
         R1, T1 = look_at_view_transform(dist=dist1, elev=elev1, azim=azim1)
@@ -380,7 +362,7 @@ for i in loop:
             silhouette_target = renderer_silhouette(
                 new_src_mesh, cameras=random_camera2)[..., 3:]
 
-            #             loss_mse_visible = (((warped_images_source - rendered_images_target)*silhouette_target) **2).mean()
+            # loss_mse_visible = (((warped_images_source - rendered_images_target)*silhouette_target) **2).mean()
             loss_mse_visible = (
                 ((warped_images_source - rendered_images_target) *
                  visible_mask * silhouette_target)**2).mean()
@@ -392,6 +374,22 @@ for i in loop:
                 loss_silhouette = ((silhouette_target -
                                     silhouette_gt)**2).mean()
                 loss["silhouette"] += loss_silhouette / num_views_per_iteration
+
+        if losses["kp2d_mse_loss"]["weight"] > 0:
+            kp2d_target = random_camera2.transform_points_screen(
+                kp3d, image_size=(image_size, image_size))[..., :2]
+            kp3d_pred = torch.einsum(
+                'bik,ji->bjk',
+                [new_src_mesh.verts_padded(), body_model.J_regressor])
+            kp2d_pred = random_camera2.transform_points_screen(
+                kp3d_pred, image_size=(image_size, image_size))[..., :2]
+            kp2d_target_, mask = convert_kps(
+                kp2d_target, src='coco_wholebody', dst='smpl')
+            # mask = torch.Tensor(mask).to(device)
+            mask = mask.view(1, -1, 1)
+            loss_kp2d = ((
+                (kp2d_pred - kp2d_target_)**2) * mask).mean() / image_size
+            loss["kp2d_mse_loss"] += loss_kp2d / num_views_per_iteration
 
         if losses["texture_mse"]["weight"] > 0:
             images_predicted = renderer_rgb(
@@ -430,8 +428,8 @@ for i in loop:
             transform_target = random_camera2.get_world_to_view_transform()
             new_src_mesh_transformed = new_src_mesh.clone()
             new_src_mesh_transformed = new_src_mesh_transformed.\
-                                update_padded(transform_source.compose(transform_target.inverse()).\
-                                transform_points(new_src_mesh_transformed.verts_padded()))
+                            update_padded(transform_source.compose(transform_target.inverse()).\
+                            transform_points(new_src_mesh_transformed.verts_padded()))
             meshes_join = join_batch_meshes_as_scene(
                 [new_src_mesh, new_src_mesh_transformed])
             silhouette_union = renderer_silhouette(
@@ -456,12 +454,12 @@ for i in loop:
             D = deform_verts.shape[-1]
             face_attr = face_attr.view(faces.shape[0], 3, D)
             verts_uv = torch.cat([
-                mesh.textures.verts_uvs_padded(),
+                mesh_uv.textures.verts_uvs_padded(),
                 torch.ones(1,
-                           mesh.textures.verts_uvs_padded().shape[1],
+                           mesh_uv.textures.verts_uvs_padded().shape[1],
                            1).to(device)
             ], -1)
-            faces_uv = mesh.textures.faces_uvs_padded()
+            faces_uv = mesh_uv.textures.faces_uvs_padded()
             fragments = renderer_rgb.rasterizer(
                 Meshes(verts=verts_uv, faces=faces_uv),
                 cameras=FoVOrthographicCameras(
@@ -473,8 +471,8 @@ for i in loop:
                 barycentric_coords=bary_coords.to(device),
                 face_attributes=face_attr.to(device),
             ).squeeze(-2).squeeze(0)
-            #             loss_d_smooth = ((displacement_map[:-3]-displacement_map[3:])**2).mean() +\
-            #                 ((displacement_map[:, :-3]-displacement_map[:, 3:])**2).mean()
+            # loss_d_smooth = ((displacement_map[:-3]-displacement_map[3:])**2).mean() +\
+            #     ((displacement_map[:, :-3]-displacement_map[:, 3:])**2).mean()
             loss_d_smooth = ((displacement_map[:-1]-displacement_map[1:])**2).mean() +\
                 ((displacement_map[:, :-1]-displacement_map[:, 1:])**2).mean()
             loss["d_smooth"] += loss_d_smooth / num_views_per_iteration
@@ -485,12 +483,12 @@ for i in loop:
             face_attr = new_src_mesh.verts_normals_padded()[0][faces]
             face_attr = face_attr.view(faces.shape[0], 3, 3)
             verts_uv = torch.cat([
-                mesh.textures.verts_uvs_padded(),
+                mesh_uv.textures.verts_uvs_padded(),
                 torch.ones(1,
-                           mesh.textures.verts_uvs_padded().shape[1],
+                           mesh_uv.textures.verts_uvs_padded().shape[1],
                            1).to(device)
             ], -1)
-            faces_uv = mesh.textures.faces_uvs_padded()
+            faces_uv = mesh_uv.textures.faces_uvs_padded()
             fragments = renderer_rgb.rasterizer(
                 Meshes(verts=verts_uv, faces=faces_uv),
                 cameras=FoVOrthographicCameras(
@@ -511,27 +509,16 @@ for i in loop:
 
         if losses["max"]["weight"] > 0:
             #             norm_square = deform_verts[:, 0:1]**2 + deform_verts[:, 1:2]**2 + deform_verts[:, 2:3]**2
-            loss_max = ((deform_verts > 0.07) * 1.0 *
-                        (deform_verts - 0.07)**2).mean()
+            loss_max = ((deform_verts > max_bound) * 1.0 *
+                        (deform_verts - max_bound)**2).mean()
             #             loss_max = ((norm_square>0.2**2)*1.0 * (norm_square-0.2**2)**2).mean()
             loss["max"] += loss_max / num_views_per_iteration
 
         if losses["min"]["weight"] > 0:
-            #             normal_origin = src_mesh.verts_normals_padded()[0].unsqueeze(-2)
 
-            #             deform_verts_proj = torch.bmm(normal_origin, deform_verts.unsqueeze(-1)).view(-1)
-            #             loss_min = ((deform_verts_proj<0)*1.0 * (0-deform_verts_proj)**2).mean()
-            loss_min = ((deform_verts < 0) * 1.0 *
-                        (0 - deform_verts)**2).mean()
+            loss_min = ((deform_verts < min_bound) * 1.0 *
+                        (min_bound - deform_verts)**2).mean()
             loss["min"] += loss_min / num_views_per_iteration
-
-#         if losses["direction"]["weight"]>0:
-#             normal_origin = src_mesh.verts_normals_padded()[0].unsqueeze(-2)
-
-#             deform_verts_proj = torch.bmm(normal_origin, deform_verts.unsqueeze(-1)).view(-1, 1)
-#             direction_diff = deform_verts - deform_verts_proj * normal_origin.squeeze(-2)
-#             loss_direction = (direction_diff**2).mean()
-#             loss["direction"] += loss_direction / num_views_per_iteration
 
 # Weighted sum of the losses
     sum_loss = torch.tensor(0.0, device=device)
