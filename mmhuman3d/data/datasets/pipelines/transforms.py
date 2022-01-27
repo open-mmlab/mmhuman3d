@@ -705,7 +705,7 @@ class MeshAffine:
             body_pose = results['smpl_body_pose'].copy().reshape((-1))
             pose = np.concatenate((global_orient, body_pose), axis=-1)
             pose = _rotate_smpl_pose(pose, r)
-            results['global_orient'] = pose[:3]
-            results['body_pose'] = pose[3:].reshape((-1, 3))
+            results['smpl_global_orient'] = pose[:3]
+            results['smpl_body_pose'] = pose[3:].reshape((-1, 3))
 
         return results
