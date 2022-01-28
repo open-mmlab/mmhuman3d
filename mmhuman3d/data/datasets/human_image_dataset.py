@@ -182,14 +182,15 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def evaluate(self,
                  outputs: list,
                  res_folder: str,
-                 metric: Optional[str] = 'joint_error'):
+                 metric: Optional[str] = 'joint_error',
+                 **kwargs: dict):
         """Evaluate 3D keypoint results.
 
         Args:
             outputs (list): results from model inference.
             res_folder (str): path to store results.
             metric (str): the type of metric. Default: 'joint_error'
-
+            kwargs (dict): other arguments.
         Returns:
             dict:
                 A dict of all evaluation results.

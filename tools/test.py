@@ -130,12 +130,6 @@ def main():
 
     rank, _ = get_dist_info()
     eval_cfg = cfg.get('evaluation', args.metric_options)
-    # hard-code way to remove EvalHook args
-    for key in [
-            'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best', 'rule',
-            'dynamic_intervals'
-    ]:
-        eval_cfg.pop(key, None)
     eval_cfg.update(dict(metric=args.metrics))
     if rank == 0:
         results = dataset.evaluate(outputs, args.work_dir, **eval_cfg)

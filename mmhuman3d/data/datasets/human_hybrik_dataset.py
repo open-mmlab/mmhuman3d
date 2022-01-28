@@ -3,6 +3,7 @@ import os
 import os.path
 from abc import ABCMeta
 from collections import OrderedDict
+from typing import Optional
 
 import numpy as np
 
@@ -190,8 +191,22 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
             self.data_infos.append(info)
 
-    def evaluate(self, outputs, res_folder, metric='joint_error', logger=None):
-        """Evaluate 3D keypoint results."""
+    def evaluate(self,
+                 outputs: list,
+                 res_folder: str,
+                 metric: Optional[str] = 'joint_error',
+                 **kwargs: dict):
+        """Evaluate 3D keypoint results.
+
+        Args:
+            outputs (list): results from model inference.
+            res_folder (str): path to store results.
+            metric (str): the type of metric. Default: 'joint_error'
+            kwargs (dict): other arguments.
+        Returns:
+            dict:
+                A dict of all evaluation results.
+        """
         metrics = metric if isinstance(metric, list) else [metric]
         allowed_metrics = ['joint_error']
         for metric in metrics:
