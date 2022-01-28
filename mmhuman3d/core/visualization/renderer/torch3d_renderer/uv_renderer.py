@@ -356,7 +356,7 @@ class UVRenderer(nn.Module):
 
         return verts_feature
 
-    def warp_normal_map(
+    def wrap_normal(
         self,
         meshes: Meshes,
         normal: torch.Tensor = None,
@@ -393,7 +393,7 @@ class UVRenderer(nn.Module):
         meshes._set_verts_normals(normal)
         return meshes
 
-    def warp_displacement(
+    def wrap_displacement(
         self,
         meshes: Meshes,
         displacement: torch.Tensor = None,
@@ -437,17 +437,17 @@ class UVRenderer(nn.Module):
         meshes = meshes.offset_verts(displacement)
         return meshes
 
-    def warp_texture_map(self,
-                         meshes: Meshes,
-                         texture_map: torch.Tensor,
-                         resolution: Optional[Iterable[int]] = None,
-                         mode: Optional[str] = 'bicubic',
-                         is_bgr: bool = True) -> Meshes:
-        """warp a texture map to the input meshes.
+    def wrap_texture(self,
+                     meshes: Meshes,
+                     texture_map: torch.Tensor,
+                     resolution: Optional[Iterable[int]] = None,
+                     mode: Optional[str] = 'bicubic',
+                     is_bgr: bool = True) -> Meshes:
+        """Wrap a texture map to the input meshes.
 
         Args:
             meshes (Meshes): the input meshes.
-            texture_map (torch.Tensor): the texture map to be warped.
+            texture_map (torch.Tensor): the texture map to be wrapped.
                 Shape should be (N, H, W, 3)
             resolution (Optional[Iterable[int]], optional): resolution to
                 override self.resolution. If None, will use self.resolution.
@@ -506,15 +506,23 @@ class UVRenderer(nn.Module):
         return bgrs
 
     @staticmethod
-    def normalize(value, min_value, max_value,
-                  dtype) -> Union[torch.Tensor, np.ndarray]:
+    def normalize(value,
+                  min_value=0,
+                  max_value=1,
+                  dtype=None) -> Union[torch.Tensor, np.ndarray]:
         """Normalize the tensor or array."""
         value = (value - value.min()) / (value.max() - value.min() + 1e-9) * (
             max_value - min_value) + min_value
         if isinstance(value, torch.Tensor):
-            return value.type(dtype)
+            if dtype is not None:
+                return value.type(dtype)
+            else:
+                return value
         elif isinstance(value, np.ndarray):
-            return value.astype(dtype)
+            if dtype is not None:
+                return value.astype(dtype)
+            else:
+                return value
 
     def tensor2array(self, image) -> np.ndarray:
         """Convert image tensor to array."""
