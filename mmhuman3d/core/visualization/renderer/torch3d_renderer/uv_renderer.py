@@ -73,8 +73,7 @@ class UVRenderer(nn.Module):
         self.update_face_uv_pixel()
 
     def update_fragments(self):
-        """Update pix_to_face, bary_coords.
-        """
+        """Update pix_to_face, bary_coords."""
         rasterizer = MeshRasterizer(
             cameras=FoVOrthographicCameras(
                 min_x=1, max_x=0, max_y=1, min_y=0, device=self.device),
@@ -97,8 +96,8 @@ class UVRenderer(nn.Module):
 
     def update_face_uv_pixel(self):
         """Move the pixels lie on the edges inside the mask, then refine
-            the rest points by searching the nearest pixel in the faces
-            it should be in.
+        the rest points by searching the nearest pixel in the faces
+        it should be in.
         """
         H, W = self.resolution
         device = self.device
@@ -314,19 +313,19 @@ class UVRenderer(nn.Module):
         maps_padded: torch.Tensor,
         h_flip: bool = False,
     ) -> torch.Tensor:
-        """Resample the vertice attributes from a map.
+        """Resample the vertex attributes from a map.
 
         Args:
             maps_padded (torch.Tensor): shape should be (N, H, W, C). Required.
             h_flip (bool, optional): whether flip horizontally.
                 Defaults to False.
-            
+
         Returns:
             torch.Tensor: resampled vertex attributes. Shape will be (N, V, C)
         """
         if maps_padded.ndim == 3:
-            maps_padded = maps_padded[None].to(self.device)
-
+            maps_padded = maps_padded[None]
+        maps_padded = maps_padded.to(self.device)
         if h_flip:
             maps_padded = torch.flip(maps_padded, dims=[2])
         N, H, W, C = maps_padded.shape
@@ -347,13 +346,13 @@ class UVRenderer(nn.Module):
             N, 1, 1) + offset_idx.view(-1, 1, 1).to(self.device)
         faces_packed = faces_packed.view(-1, 3)
 
-        verts_feature = torch.zeros(N * self.NUM_VERTS, 3).to(self.device)
+        verts_feature = torch.zeros(N * self.NUM_VERTS, C).to(self.device)
 
         face_uv_pixel = self.face_uv_pixel.view(-1, 2)
         verts_feature[faces_packed] = maps_padded[:, face_uv_pixel[:, 1],
                                                   face_uv_pixel[:, 0]].view(
                                                       N * self.num_faces, 3, C)
-        verts_feature = verts_feature.view(N, self.NUM_VERTS, 3)
+        verts_feature = verts_feature.view(N, self.NUM_VERTS, C)
 
         return verts_feature
 
@@ -423,12 +422,18 @@ class UVRenderer(nn.Module):
         batch_size = len(meshes)
         if displacement.ndim == 2:
             displacement = displacement[None]
-        assert displacement.shape[1:] == (self.NUM_VERTS, 3)
+        assert displacement.shape[1] == self.NUM_VERTS
         assert displacement.shape[0] in [batch_size, 1]
 
         if displacement.shape[0] == 1:
             displacement = displacement.repeat(batch_size, 1, 1)
+        C = displacement.shape[-1]
+        if C == 1:
+            displacement = meshes.verts_normals_padded() * displacement
+
         displacement = padded_to_packed(displacement)
+
+        meshes = meshes.to(self.device)
         meshes = meshes.offset_verts(displacement)
         return meshes
 
