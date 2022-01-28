@@ -1,9 +1,8 @@
 import pickle
 import warnings
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, Optional, Union
 import numpy as np
 import torch
-import math
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch3d.io.obj_io import load_objs_as_meshes
@@ -119,6 +118,27 @@ class UVRenderer(nn.Module):
         verts_uv_pixel = verts_uv_pixel.long()
         mask = self.mask
 
+        wrong_indexes = torch.where(
+            mask[verts_uv_pixel.view(-1, 2)[:, 1],
+                 verts_uv_pixel.view(-1, 2)[:, 0]] == 0)[0]
+        for wrong_index in wrong_indexes:
+            proposed_faces = torch.where(self.faces_uv == wrong_index)[0]
+            vert_xy = verts_uv_pixel[wrong_index]
+            faces_xy = []
+            for face_id in proposed_faces:
+                x = torch.where(self.pix_to_face == face_id)[1]
+                y = torch.where(self.pix_to_face == face_id)[0]
+                if x.shape[0] > 0:
+                    face_xy = torch.cat([x.unsqueeze(-1), y.unsqueeze(-1)], -1)
+                    faces_xy.append(face_xy)
+            if len(faces_xy) > 0:
+                faces_xy = torch.cat(faces_xy, 0)
+                min_arg = torch.argmin(
+                    torch.sqrt(((faces_xy - vert_xy) *
+                                (faces_xy - vert_xy)).sum(-1).float()))
+
+                verts_uv_pixel[wrong_index] = faces_xy[min_arg]
+
         up_bound = ((mask[:-1] - mask[1:]) < 0).long()
         bottom_bound = ((mask[1:] - mask[:-1]) < 0).long()
         left_bound = ((mask[:, :-1] - mask[:, 1:]) < 0).long()
@@ -160,29 +180,10 @@ class UVRenderer(nn.Module):
             up_bound * 1 + bottom_bound * -1 + rightbottom_corner * -1 +
             leftbottom_corner * -1 + rightup_corner * 1 + leftup_corner * 1
         ], -1).long()
+
         verts_uv_pixel = verts_uv_pixel + stride_uv_mask[
             verts_uv_pixel.view(-1, 2)[:, 1],
             verts_uv_pixel.view(-1, 2)[:, 0]].view(self.NUM_VT, 2)
-
-        wrong_indexes = torch.where(
-            mask[verts_uv_pixel.view(-1, 2)[:, 1],
-                 verts_uv_pixel.view(-1, 2)[:, 0]] == 0)[0]
-        for wrong_index in wrong_indexes:
-            proposed_faces = torch.where(self.faces_uv == wrong_indexes[0])[0]
-            vert_xy = verts_uv_pixel[wrong_index]
-            faces_xy = []
-            for face_id in proposed_faces:
-                x = torch.where(self.pix_to_face == face_id)[1]
-                y = torch.where(self.pix_to_face == face_id)[0]
-                if x.shape[0] > 0:
-                    face_xy = torch.cat([x.unsqueeze(-1), y.unsqueeze(-1)], -1)
-                    faces_xy.append(face_xy)
-            faces_xy = torch.cat(faces_xy, 0)
-            min_arg = torch.argmin(
-                torch.sqrt(((faces_xy - vert_xy) *
-                            (faces_xy - vert_xy)).sum(-1).float()))
-
-            verts_uv_pixel[wrong_index] = faces_xy[min_arg]
 
         face_uv_pixel = verts_uv_pixel[self.faces_uv]
 
@@ -209,6 +210,7 @@ class UVRenderer(nn.Module):
         if resolution is not None and resolution != self.resolution:
             self.resolution = resolution
             self.update_fragments()
+            self.update_face_uv_pixel()
 
         bary_coords = self.bary_coords
         pix_to_face = self.pix_to_face
@@ -315,8 +317,7 @@ class UVRenderer(nn.Module):
         """Resample the vertice attributes from a map.
 
         Args:
-            maps_padded (torch.Tensor): shape should be (N, H, W, C) or
-                (N, C, H, W). Required.
+            maps_padded (torch.Tensor): shape should be (N, H, W, C). Required.
             h_flip (bool, optional): whether flip horizontally.
                 Defaults to False.
             
@@ -330,9 +331,13 @@ class UVRenderer(nn.Module):
             maps_padded = torch.flip(maps_padded, dims=[2])
         N, H, W, C = maps_padded.shape
 
-        maps_padded = self.gaussian_blur(
-            maps_padded.permute(0, 3, 1, 2),
-            iters=math.log2(H) / 2).permute(0, 2, 3, 1)
+        if H < 400 or W < 400:
+            maps_padded = F.interpolate(
+                maps_padded.permute(0, 3, 1, 2),
+                size=(400, 400),
+                mode='bicubic',
+                align_corners=False).permute(0, 2, 3, 1)
+            H, W = 400, 400
         if (H, W) != self.resolution:
             self.resolution = (H, W)
             self.update_fragments()
@@ -344,9 +349,9 @@ class UVRenderer(nn.Module):
 
         verts_feature = torch.zeros(N * self.NUM_VERTS, 3).to(self.device)
 
-        verts_feature[faces_packed] = maps_padded[:, self.face_uv_pixel[:, 0],
-                                                  self.
-                                                  face_uv_pixel[:, 1]].view(
+        face_uv_pixel = self.face_uv_pixel.view(-1, 2)
+        verts_feature[faces_packed] = maps_padded[:, face_uv_pixel[:, 1],
+                                                  face_uv_pixel[:, 0]].view(
                                                       N * self.num_faces, 3, C)
         verts_feature = verts_feature.view(N, self.NUM_VERTS, 3)
 
@@ -403,7 +408,7 @@ class UVRenderer(nn.Module):
                 shape should be (N, V, 3).
                 Defaults to None.
             displacement_map (torch.Tensor, optional): displacement_map,
-                shape should be (N, H, W, #).
+                shape should be (N, H, W, 3).
                 Defaults to None.
 
         Returns:
