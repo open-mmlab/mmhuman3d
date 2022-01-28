@@ -63,8 +63,6 @@ class ExampleModel(nn.Module):
         return outputs
 
 
-# @pytest.mark.skipif(
-#     not torch.cuda.is_available(), reason='requires CUDA support')
 @patch('mmhuman3d.apis.single_gpu_test', MagicMock)
 @patch('mmhuman3d.apis.multi_gpu_test', MagicMock)
 @pytest.mark.parametrize('EvalHookCls', (EvalHook, DistEvalHook))
@@ -289,7 +287,3 @@ def test_eval_hook(EvalHookCls):
 
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
         assert runner.meta['hook_msgs']['best_score'] == 0.7
-
-
-if __name__ == '__main__':
-    test_eval_hook(EvalHook)
