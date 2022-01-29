@@ -25,13 +25,12 @@ from .builder import DATA_CONVERTERS
 class GTAHumanConverter(BaseConverter):
     """GTA-Human dataset `Playing for 3D Human Recovery' arXiv`2021 More
     details can be found in the `paper.
-
     <https://arxiv.org/pdf/2110.07588.pdf>`__.
     """
 
     def __init__(self, *args, **kwargs):
         super(GTAHumanConverter, self).__init__(*args, **kwargs)
-        
+
         focal_length = 1158.0337
         camera_center = (960, 540)  # xy
         image_size = (1080, 1920)  # (height, width)
@@ -45,8 +44,8 @@ class GTAHumanConverter(BaseConverter):
                 keypoint_src='smpl_54',
                 keypoint_dst='smpl_49',
                 model_path='data/body_models/smpl',
-                extra_joints_regressor='data/body_models/J_regressor_extra.npy')
-        ).to(device)
+                extra_joints_regressor='data/body_models/J_regressor_extra.npy'
+            )).to(device)
 
         self.camera = build_cameras(
             dict(
@@ -63,7 +62,6 @@ class GTAHumanConverter(BaseConverter):
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
-
         Returns:
             dict:
                 A dict containing keys video_path, smplh, meta, frame_idx
