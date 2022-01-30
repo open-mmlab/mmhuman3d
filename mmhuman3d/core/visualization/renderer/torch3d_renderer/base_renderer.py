@@ -110,6 +110,12 @@ class MeshBaseRenderer(nn.Module):
         self.set_output_path(output_path)
         self.init_renderer(**kwargs)
 
+    def to(self, device):
+        # Rasterizer and shader have submodules which are not of type nn.Module
+        self.rasterizer.to(device)
+        self.shader.to(device)
+        self.device = device
+
     def set_output_path(self, output_path):
         if output_path is not None:
             if check_path_suffix(output_path, ['.mp4', '.gif']):

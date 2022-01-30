@@ -11,10 +11,14 @@ from .torch3d_renderer.smpl_renderer import SMPLRenderer
 from .torch3d_renderer.textures import TexturesNearest
 from .torch3d_renderer.uv_renderer import UVRenderer
 from .vedo_render import VedoRenderer
+from .torch3d_renderer.builder import (build_renderer, build_raster,
+                                       build_shader, build_textures,
+                                       build_lights)
 
 __all__ = [
     'NoLightShader', 'RenderDataset', 'MeshBaseRenderer', 'TexturesNearest',
     'SMPLRenderer', 'SilhouetteRenderer', 'Axes3dJointsRenderer',
     'VedoRenderer', 'DepthRenderer', 'NormalRenderer', 'SegmentationRenderer',
-    'PointCloudRenderer', 'UVRenderer'
+    'PointCloudRenderer', 'UVRenderer', 'build_renderer', 'build_raster',
+    'build_shader', 'build_textures', 'build_lights'
 ]

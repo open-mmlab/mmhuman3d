@@ -49,6 +49,7 @@ class OpticalFlowRenderer(nn.Module):
     def __init__(self, rasterizer, **kwargs):
         super().__init__()
         self.rasterizer = rasterizer
+        self.cameras = kwargs.get('cameras', None)
         self.shader = OpticalFlowShader()
 
     def to(self, device):
@@ -84,13 +85,13 @@ class OpticalFlowRenderer(nn.Module):
 
         Returns:
             Union[torch.Tensor, None]: [description]
-        """ 
+        """
         assert len(meshes_source) == len(meshes_target)
 
         if cameras_source is None:
-            cameras_source = cameras
+            cameras_source = cameras if cameras is not None else self.cameras
         if cameras_target is None:
-            cameras_target = cameras
+            cameras_target = cameras if cameras is not None else self.cameras
 
         fragments_source = self.rasterizer(meshes_source,
                                            **{'cameras': cameras_source})
