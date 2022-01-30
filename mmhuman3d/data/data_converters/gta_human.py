@@ -25,6 +25,7 @@ from .builder import DATA_CONVERTERS
 class GTAHumanConverter(BaseConverter):
     """GTA-Human dataset `Playing for 3D Human Recovery' arXiv`2021 More
     details can be found in the `paper.
+
     <https://arxiv.org/pdf/2110.07588.pdf>`__.
     """
 
@@ -54,7 +55,7 @@ class GTAHumanConverter(BaseConverter):
                 in_ndc=False,
                 focal_length=focal_length,
                 image_size=image_size,
-                principal_point=camera_center))
+                principal_point=camera_center)).to(device)
 
     def convert(self, dataset_path: str, out_path: str) -> dict:
         """
