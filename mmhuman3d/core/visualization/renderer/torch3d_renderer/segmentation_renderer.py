@@ -15,7 +15,7 @@ except ImportError:
 
 
 @RENDERER.register_module(name=[
-    'seg', 'segmentation', 'segmentation_renderer', 'Segmentation',
+    'segmentation', 'segmentation_renderer', 'Segmentation',
     'SegmentationRenderer'
 ])
 class SegmentationRenderer(MeshBaseRenderer):

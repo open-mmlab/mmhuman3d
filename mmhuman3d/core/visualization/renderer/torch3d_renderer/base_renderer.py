@@ -166,7 +166,7 @@ class MeshBaseRenderer(nn.Module):
         material_params = kwargs.get('material', {})
         light_params = kwargs.get('light', {'type': 'directional'})
         raster_type = kwargs.get('raster_type', 'mesh')
-        raster_params = kwargs.get('raster_setting', {})
+        raster_params = kwargs.get('raster_settings', {})
         blend_params = kwargs.get('blend', {})
         shader_type = kwargs.get('shader_type', 'phong')
 
@@ -192,8 +192,10 @@ class MeshBaseRenderer(nn.Module):
         ) if shader_type != 'silhouette' else build_shader(
             dict(type=shader_type, blend_params=blend_params))
 
+
     @staticmethod
-    def rgb2bgr(rgbs):
+    def rgb2bgr(rgbs) -> Union[torch.Tensor, np.ndarray]:
+        """Convert color channels."""
         if isinstance(rgbs, torch.Tensor):
             bgrs = torch.cat(
                 [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
@@ -205,8 +207,35 @@ class MeshBaseRenderer(nn.Module):
         return bgrs
 
     @staticmethod
-    def image_tensor2numpy(image):
-        return (image.detach().cpu().numpy() * 255).astype(np.uint8)
+    def normalize(value,
+                  min_value=0,
+                  max_value=1,
+                  dtype=None) -> Union[torch.Tensor, np.ndarray]:
+        """Normalize the tensor or array."""
+        value = (value - value.min()) / (value.max() - value.min() + 1e-9) * (
+            max_value - min_value) + min_value
+        if isinstance(value, torch.Tensor):
+            if dtype is not None:
+                return value.type(dtype)
+            else:
+                return value
+        elif isinstance(value, np.ndarray):
+            if dtype is not None:
+                return value.astype(dtype)
+            else:
+                return value
+
+    def tensor2array(self, image) -> np.ndarray:
+        """Convert image tensor to array."""
+        image = self.normalize(
+            image, min_value=0, max_value=255, dtype=np.uint8)
+        return image
+
+    def array2tensor(self, image) -> torch.Tensor:
+        """Convert image array to tensor."""
+        image = self.normalize(
+            image, min_value=0, max_value=1, dtype=torch.float32)
+        return image
 
     def write_images(self, rgbs, valid_masks, images, indexes):
         """Write output/temp images."""

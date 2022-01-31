@@ -49,7 +49,7 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'light': base_directional_light,
         'material': base_material,
-        'raster_setting': {
+        'raster_settings': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
@@ -64,7 +64,7 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'light': base_directional_light,
         'material': base_material,
-        'raster_setting': {
+        'raster_settings': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
@@ -79,7 +79,7 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'light': base_directional_light,
         'material': base_material,
-        'raster_setting': {
+        'raster_settings': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
@@ -95,7 +95,7 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'light': empty_light,
         'material': silhouete_material,
-        'raster_setting': {
+        'raster_settings': {
             'bin_size': 0,
             'blur_radius': 2e-5,
             'faces_per_pixel': 50,
@@ -110,7 +110,7 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'light': empty_light,
         'material': base_material,
-        'raster_setting': {
+        'raster_settings': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
@@ -125,7 +125,7 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'light': empty_light,
         'material': empty_material,
-        'raster_setting': {
+        'raster_settings': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
@@ -140,7 +140,7 @@ RENDER_CONFIGS = {
         'raster_type': 'mesh',
         'light': empty_light,
         'material': empty_material,
-        'raster_setting': {
+        'raster_settings': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,

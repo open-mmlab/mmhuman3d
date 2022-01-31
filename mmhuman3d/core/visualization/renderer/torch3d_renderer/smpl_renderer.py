@@ -293,7 +293,7 @@ class SMPLRenderer(MeshBaseRenderer):
                 output_images = output_images * (
                     1 - pointcloud_mask) + pointcloud_mask * pointcloud_bgr
 
-            output_images = self.image_tensor2numpy(output_images)
+            output_images = self.tensor2array(output_images)
 
             for frame_idx, real_idx in enumerate(indexes):
                 folder = self.temp_path if self.temp_path is not None else\
