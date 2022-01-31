@@ -106,6 +106,9 @@ stages = [
     ),
 ]
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> uv_map
 optimizer = dict(
     type='LBFGS', max_iter=20, lr=1e-2, line_search_fn='strong_wolfe')
