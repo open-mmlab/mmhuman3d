@@ -19,6 +19,13 @@ from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
 import numpy as np
 from mmhuman3d.core.visualization.visualize_keypoints2d import (_CavasProducer,
                                                                 visualize_kp2d)
+from mmhuman3d.utils.path_utils import prepare_output_path
+from pytorch3d.renderer import (MeshRenderer, MeshRasterizer,
+                                RasterizationSettings, SoftPhongShader,
+                                SoftSilhouetteShader)
+from mmhuman3d.core.visualization.renderer import (OpticalFlowRenderer,
+                                                   UVRenderer,
+                                                   OpticalFlowShader)
 
 
 @REGISTRANTS.register_module(name=['Flow2Avatar', 'flow2avatar'])
@@ -39,25 +46,23 @@ class Flow2Avatar(SMPLify):
             renderer_uv: dict = None,
             use_one_betas_per_video: bool = True,
             cameras_config: NewAttributeCameras = None,
-            image_paths: Iterable[str] = None,
             verbose: bool = False,
             device=torch.device(
                 'cuda' if torch.cuda.is_available() else 'cpu'),
     ):
-
         self.stages_config = stages
         self.num_epochs = num_epochs
-        self.cameras = build_cameras(cameras_config)
-        self.image_paths = image_paths
-        self.img_res = img_res
         self.device = device
+        self.img_res = img_res
         self.texture_res = texture_res
         self.use_one_betas_per_video = use_one_betas_per_video
         self.optimizer = optimizer
+        self.cameras = build_cameras(cameras_config).to(self.device)
+
         if isinstance(renderer_rgb, dict):
             self.renderer_rgb = build_renderer(renderer_rgb).to(self.device)
         elif isinstance(renderer_rgb, nn.Modudle):
-            self.renderer_rgb = renderer_rgb
+            self.renderer_rgb = renderer_rgb.to(self.device)
 
         if isinstance(renderer_silhouette, dict):
             self.renderer_silhouette = build_renderer(renderer_silhouette).to(
@@ -74,6 +79,7 @@ class Flow2Avatar(SMPLify):
             self.renderer_uv = build_renderer(renderer_uv).to(self.device)
         else:
             self.renderer_uv = renderer_uv.to(self.device)
+
         self.experiment_dir = experiment_dir
         # initialize body model
         if isinstance(body_model, dict):
@@ -88,11 +94,10 @@ class Flow2Avatar(SMPLify):
 
     def __call__(
         self,
-        batch_size: int,
+        num_frames: int,
+        image_paths: Iterable[str] = None,
         keypoints2d: torch.Tensor = None,
         keypoints2d_conf: torch.Tensor = None,
-        # keypoints3d: torch.Tensor = None,
-        # keypoints3d_conf: torch.Tensor = None,
         init_global_orient: torch.Tensor = None,
         init_transl: torch.Tensor = None,
         init_body_pose: torch.Tensor = None,
@@ -111,27 +116,29 @@ class Flow2Avatar(SMPLify):
         return_texture: bool = False,
         return_background: bool = False,
     ) -> dict:
-        self.image_reader = _CavasProducer(
-            frame_list=self.image_paths,
+        image_reader = _CavasProducer(
+            frame_list=image_paths,
             kp2d=keypoints2d,
             resolution=(self.img_res, self.img_res))
         self.keypoints2d_conf = keypoints2d_conf
 
+        self.cameras = self.cameras.extend(num_frames)
+
         global_orient = self._match_init_batch_size(
-            init_global_orient, self.body_model.global_orient, batch_size)
+            init_global_orient, self.body_model.global_orient, num_frames)
         transl = self._match_init_batch_size(init_transl,
                                              self.body_model.transl,
-                                             batch_size)
+                                             num_frames)
         body_pose = self._match_init_batch_size(init_body_pose,
                                                 self.body_model.body_pose,
-                                                batch_size)
+                                                num_frames)
         if init_betas is None and self.use_one_betas_per_video:
             betas = torch.zeros(1, self.body_model.betas.shape[-1]).to(
                 self.device)
         else:
             betas = self._match_init_batch_size(init_betas,
                                                 self.body_model.betas,
-                                                batch_size)
+                                                num_frames)
 
         displacement = torch.zeros(
             self.body_model.NUM_VERTS,
@@ -158,6 +165,7 @@ class Flow2Avatar(SMPLify):
                     texture_image=texture_image,
                     light=light,
                     stage_idx=stage_idx,
+                    image_reader=image_reader,
                     **stage_config,
                 )
 
@@ -214,6 +222,7 @@ class Flow2Avatar(SMPLify):
                         background: torch.Tensor,
                         light: DirectionalLights,
                         stage_idx: int,
+                        image_reader: object,
                         fit_global_orient: bool = False,
                         fit_transl: bool = False,
                         fit_body_pose: bool = False,
@@ -242,7 +251,9 @@ class Flow2Avatar(SMPLify):
             losses_plot[k] = {"values": []}
         for iter_idx in trange(num_iter):
             indexes_source, indexes_target = self.select_frames_index(
-                batch_size)
+                batch_size=batch_size,
+                temporal_successive=False,
+                interval_range=2)
             if (iter_idx % plot_period) == 0:
                 plot_flag = f'stage_{stage_idx}_iter_{iter_idx}'
             else:
@@ -251,10 +262,12 @@ class Flow2Avatar(SMPLify):
             def closure():
                 optimizer.zero_grad()
                 betas_video = self._expand_betas(body_pose.shape[0], betas)
-                images_source, keypoints2d_source = self.image_reader[
+                images_source, keypoints2d_source = image_reader[
                     indexes_source]
-                images_target, keypoints2d_target = self.image_reader[
+                images_target, keypoints2d_target = image_reader[
                     indexes_target]
+                cameras_source = self.cameras[indexes_source]
+                cameras_target = self.cameras[indexes_target]
 
                 loss_dict = self.evaluate(
                     betas=betas_video,
@@ -266,8 +279,8 @@ class Flow2Avatar(SMPLify):
                     transl_target=transl[indexes_target],
                     images_source=images_source,
                     images_target=images_target,
-                    cameras_source=self.cameras[indexes_source],
-                    cameras_target=self.cameras[indexes_target],
+                    cameras_source=cameras_source,
+                    cameras_target=cameras_target,
                     keypoints2d_source=keypoints2d_source,
                     keypoints2d_source_conf=self.keypoints2d_conf,
                     keypoints2d_target=keypoints2d_target,
@@ -290,6 +303,15 @@ class Flow2Avatar(SMPLify):
         self.plot_loss(
             losses_plot,
             path=f'{self.experiment_dir}/losses/stage_{stage_idx}.png')
+
+    @staticmethod
+    def select_frames_index(batch_size: int, num_frames: int,
+                            temporal_successive: bool, interval_range: int):
+        if temporal_successive:
+            pass
+            np.random.randint(low, high=None, size=None, dtype='l')
+        else:
+            pass
 
     def evaluate(
         self,
@@ -778,6 +800,8 @@ class Flow2Avatar(SMPLify):
             resolution=(512, 512),
             padding: Iterable[int] = (0, 0, 0, 50),
     ):
+        prepare_output_path(
+            path, allowed_suffix=['.png', '.jpg'], path_type='file')
         H, W = resolution
         image_num = len(images)
         final_images = np.ones(
@@ -808,10 +832,11 @@ class Flow2Avatar(SMPLify):
                          int(padding[2] + H + padding[3] / 2)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
-
         cv2.imwrite(path, final_images)
 
     def plot_loss(losses, path):
+        prepare_output_path(
+            path, allowed_suffix=['.png', '.jpg'], path_type='file')
         fig = plt.figure(figsize=(13, 5))
         ax = fig.gca()
         for k, l in losses.items():

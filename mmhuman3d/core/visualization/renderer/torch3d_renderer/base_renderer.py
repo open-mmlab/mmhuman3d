@@ -172,7 +172,7 @@ class MeshBaseRenderer(nn.Module):
         material_params = kwargs.get('material', {})
         light_params = kwargs.get('light', {'type': 'directional'})
         raster_type = kwargs.get('raster_type', 'mesh')
-        raster_params = kwargs.get('raster_setting', {})
+        raster_params = kwargs.get('raster_settings', {})
         blend_params = kwargs.get('blend', {})
         shader_type = kwargs.get('shader_type', 'phong')
 

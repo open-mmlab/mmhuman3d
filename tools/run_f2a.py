@@ -6,35 +6,36 @@ import numpy as np
 import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_pose
+from mmhuman3d.core.visualization import visualize_smpl_pose
 from mmhuman3d.models.builder import build_registrant
+
+from mmhuman3d.core.visualization.renderer import render_runner
+import os
+
+osj = os.path.join
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='mmhuman3d smplify tool')
     parser.add_argument(
-        '--input',
+        '--keypoint',
+        default=None,
         help=('input file path.'
               'Input shape should be [N, J, D] or [N, M, J, D],'
               ' where N is the sequence length, M is the number of persons,'
               ' J is the number of joints and D is the dimension.'))
     parser.add_argument(
-        '--input_type',
+        '--keypoint_type',
         choices=['keypoints2d', 'keypoints3d'],
         default='keypoints3d',
         help='input type')
     parser.add_argument(
-        '--J_regressor',
-        type=str,
-        default=None,
-        help='the path of the J_regressor')
-    parser.add_argument(
-        '--keypoint_type',
+        '--keypoint_src',
         default='coco_wholebody',
         help='the source type of input keypoints')
     parser.add_argument('--config', help='smplify config file path')
-    parser.add_argument('--body_model_dir', help='body models file path')
-    parser.add_argument('--batch_size', type=int, default=None)
+    parser.add_argument('--model_path', help='body models file path')
+    parser.add_argument('--uv_param_path', type=int, default=None)
     parser.add_argument('--num_betas', type=int, default=10)
     parser.add_argument('--num_epochs', type=int, default=20)
     parser.add_argument(
@@ -51,52 +52,49 @@ def parse_args():
         choices=['neutral', 'male', 'female'],
         default='neutral',
         help='gender of SMPL model')
-    parser.add_argument('--output', help='output result file')
-    parser.add_argument(
-        '--show_path', help='directory to save rendered images or video')
-    parser.add_argument('--tmpdir', help='tmp dir for writing some results')
+    parser.add_argument('--output_path', help='output result file')
+    parser.add_argument('--exp_dir', help='tmp dir for writing some results')
     args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_args()
-    smplify_config = mmcv.Config.fromfile(args.config)
-    assert smplify_config.body_model.type.lower() in ['smpl', 'smplx']
-    assert smplify_config.type.lower() in ['smplify', 'smplifyx']
+    flow2avatar_config = mmcv.Config.fromfile(args.config)
+    assert flow2avatar_config.body_model.type.lower() in ['smpld']
 
     # set cudnn_benchmark
-    if smplify_config.get('cudnn_benchmark', False):
+    if flow2avatar_config.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
 
     device = torch.device(args.device)
 
-    with open(args.input, 'rb') as f:
-        keypoints_src = pickle.load(f, encoding='latin1')
-        if args.input_type == 'keypoints2d':
-            assert keypoints_src.shape[-1] == 2
-        elif args.input_type == 'keypoints3d':
-            assert keypoints_src.shape[-1] == 3
-        else:
-            raise KeyError('Only support keypoints2d and keypoints3d')
+    if args.keypoint is not None:
+        with open(args.keypoint, 'rb') as f:
+            keypoints_src = pickle.load(f, encoding='latin1')
+            if args.input_type == 'keypoints2d':
+                assert keypoints_src.shape[-1] == 2
+            elif args.input_type == 'keypoints3d':
+                assert keypoints_src.shape[-1] == 3
+            else:
+                raise KeyError('Only support keypoints2d and keypoints3d')
 
-    keypoints, mask = convert_kps(
-        keypoints_src,
-        src=args.keypoint_type,
-        dst=smplify_config.body_model['keypoint_dst'])
-    keypoints_conf = np.repeat(mask[None], keypoints.shape[0], axis=0)
+        keypoints, mask = convert_kps(
+            keypoints_src,
+            src=args.keypoint_type,
+            dst=flow2avatar_config.body_model['keypoint_dst'])
+        keypoints_conf = np.repeat(mask[None], keypoints.shape[0], axis=0)
 
-    batch_size = args.batch_size if args.batch_size else keypoints.shape[0]
+        keypoints = torch.tensor(keypoints, dtype=torch.float32, device=device)
+        keypoints_conf = torch.tensor(
+            keypoints_conf, dtype=torch.float32, device=device)
 
-    keypoints = torch.tensor(keypoints, dtype=torch.float32, device=device)
-    keypoints_conf = torch.tensor(
-        keypoints_conf, dtype=torch.float32, device=device)
+        if args.keypoint_type == 'keypoints3d':
+            human_data = dict(
+                keypoints3d=keypoints, keypoints3d_conf=keypoints_conf)
 
-    if args.input_type == 'keypoints3d':
-        human_data = dict(
-            keypoints3d=keypoints, keypoints3d_conf=keypoints_conf)
+    flow2avatar = build_registrant(dict(flow2avatar_config))
 
-    # create body model
     body_model_config = dict(
         type=smplify_config.body_model.type,
         gender=args.gender,
@@ -104,39 +102,60 @@ def main():
         model_path=args.body_model_dir,
         batch_size=batch_size,
     )
+    
+    renderer_rgb = MeshRenderer(
+            rasterizer=MeshRasterizer(
+                raster_settings=RasterizationSettings(
+                    image_size=self.img_res,
+                    blur_radius=0.0,
+                    faces_per_pixel=1,
+                    perspective_correct=False,
+                )),
+            shader=SoftPhongShader())
 
-    if args.J_regressor is not None:
-        body_model_config.update(dict(joints_regressor=args.J_regressor))
+    renderer_silhouette = MeshRenderer(
+            rasterizer=MeshRasterizer(
+                raster_settings=RasterizationSettings(
+                    image_size=self.img_res,
+                    blur_radius=2e-5,
+                    bin_size=None,
+                    faces_per_pixel=50,
+                    perspective_correct=False,
+                )),
+            shader=SoftSilhouetteShader())
 
-    if smplify_config.body_model.type.lower() == 'smplx':
-        body_model_config.update(
-            dict(
-                use_face_contour=True,  # 127 -> 144
-                use_pca=False,  # current vis do not supports use_pca
-            ))
+    renderer_flow = OpticalFlowRenderer(
+            rasterizer=MeshRasterizer(
+                raster_settings=RasterizationSettings(
+                    image_size=self.img_res,
+                    blur_radius=0.0,
+                    faces_per_pixel=1,
+                    perspective_correct=False,
+                )),
+            shader=OpticalFlowShader())
 
-    smplify_config.update(
-        dict(
-            body_model=body_model_config,
-            use_one_betas_per_video=args.use_one_betas_per_video,
-            num_epochs=args.num_epochs))
+    renderer_uv = UVRenderer(
+            param_path='/mnt/lustre/wangwenjia/programs/smpl_uv.pkl')
 
-    smplify = build_registrant(dict(smplify_config))
 
     # run SMPLify(X)
-    smplify_output = smplify(**human_data)
+    flow2avatar_output = flow2avatar(**human_data)
 
+    avatar = flow2avatar_output.pop('meshes')
     # get smpl parameters directly from smplify output
-    poses = {k: v.detach().cpu() for k, v in smplify_output.items()}
+    with open(osj(output_path, 'smpld.pkl'), 'wb') as f:
+        pickle.dump(flow2avatar_output, f)
 
-    if args.show_path is not None:
-        # visualize mesh
-        visualize_smpl_pose(
-            poses=poses,
-            model_path=args.body_model_dir,
-            output_path=args.show_path,
-            model_type=smplify_config.body_model.type.lower(),
-            overwrite=True)
+    if args.visualize:
+        render_runner.render(
+            renderer=flow2avatar.renderer_rgb,
+            device=device,
+            meshes=avatar,
+            cameras=cameras,
+            no_grad=True,
+            return_tensor=False,
+            output_path=osj(output_path, 'demo.mp4'),
+        )
 
 
 if __name__ == '__main__':
