@@ -16,16 +16,15 @@ from .torch3d_renderer.shader import (DepthShader, SegmentationShader,
                                       OpticalFlowShader)
 from .vedo_render import VedoRenderer
 from .torch3d_renderer import render_runner
-from .torch3d_renderer.builder import (build_renderer, build_raster,
-                                       build_shader, build_textures,
-                                       build_lights)
+from .torch3d_renderer.builder import (build_renderer, build_shader,
+                                       build_textures, build_lights)
 
 __all__ = [
     'NoLightShader', 'RenderDataset', 'MeshBaseRenderer', 'TexturesNearest',
     'SMPLRenderer', 'SilhouetteRenderer', 'Axes3dJointsRenderer',
     'VedoRenderer', 'DepthRenderer', 'NormalRenderer', 'SegmentationRenderer',
-    'PointCloudRenderer', 'UVRenderer', 'build_renderer', 'build_raster',
-    'build_shader', 'build_textures', 'build_lights', 'OpticalFlowRenderer',
-    'DepthShader', 'SegmentationShader', 'NormalShader', 'NoLightShader',
-    'OpticalFlowShader', 'render_runner'
+    'PointCloudRenderer', 'UVRenderer', 'build_renderer', 'build_shader',
+    'build_textures', 'build_lights', 'OpticalFlowRenderer', 'DepthShader',
+    'SegmentationShader', 'NormalShader', 'NoLightShader', 'OpticalFlowShader',
+    'render_runner'
 ]

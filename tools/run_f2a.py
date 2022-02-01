@@ -103,40 +103,6 @@ def main():
         batch_size=batch_size,
     )
     
-    renderer_rgb = MeshRenderer(
-            rasterizer=MeshRasterizer(
-                raster_settings=RasterizationSettings(
-                    image_size=self.img_res,
-                    blur_radius=0.0,
-                    faces_per_pixel=1,
-                    perspective_correct=False,
-                )),
-            shader=SoftPhongShader())
-
-    renderer_silhouette = MeshRenderer(
-            rasterizer=MeshRasterizer(
-                raster_settings=RasterizationSettings(
-                    image_size=self.img_res,
-                    blur_radius=2e-5,
-                    bin_size=None,
-                    faces_per_pixel=50,
-                    perspective_correct=False,
-                )),
-            shader=SoftSilhouetteShader())
-
-    renderer_flow = OpticalFlowRenderer(
-            rasterizer=MeshRasterizer(
-                raster_settings=RasterizationSettings(
-                    image_size=self.img_res,
-                    blur_radius=0.0,
-                    faces_per_pixel=1,
-                    perspective_correct=False,
-                )),
-            shader=OpticalFlowShader())
-
-    renderer_uv = UVRenderer(
-            param_path='/mnt/lustre/wangwenjia/programs/smpl_uv.pkl')
-
 
     # run SMPLify(X)
     flow2avatar_output = flow2avatar(**human_data)

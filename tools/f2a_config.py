@@ -10,6 +10,41 @@ body_model = dict(
     model_path='data/body_models/smpl',
     batch_size=1)
 
+renderer_rgb = dict(
+    type='base',
+    rasterizer=dict(
+        image_size=img_res,
+        blur_radius=0.0,
+        faces_per_pixel=1,
+        perspective_correct=False,
+    ),
+    shader=dict(type='SoftPhongShader'))
+
+renderer_silhouette = dict(
+    type='silhouette',
+    rasterizer=dict(
+        image_size=img_res,
+        blur_radius=2e-5,
+        bin_size=None,
+        faces_per_pixel=50,
+        perspective_correct=False,
+    ),
+    shader=dict(type='SoftSilhouetteShader'))
+
+renderer_flow = dict(
+    type='flow',
+    rasterizer=dict(
+        image_size=img_res,
+        blur_radius=0.0,
+        faces_per_pixel=1,
+        perspective_correct=False,
+    ),
+    shader=dict(type='OpticalFlowShader'))
+
+renderer_uv = dict(
+    type='UVRenderer',
+    uv_param_path='/mnt/lustre/wangwenjia/programs/smpl_uv.pkl')
+
 stages = [
     dict(
         num_iter=500,
@@ -106,9 +141,5 @@ stages = [
     ),
 ]
 
-<<<<<<< HEAD
-
-=======
->>>>>>> uv_map
 optimizer = dict(
     type='LBFGS', max_iter=20, lr=1e-2, line_search_fn='strong_wolfe')
