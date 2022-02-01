@@ -35,7 +35,8 @@ class UVRenderer(nn.Module):
         body_model_class = {'smpl': SMPL, 'smplx': SMPLX}
         self.NUM_VERTS = body_model_class[model_type].NUM_VERTS
         self.device = device
-        self.resolution = resolution
+        self.resolution = (resolution, resolution) if isinstance(
+            resolution, int) else resolution
         if param_path is not None:
             check_path_suffix(param_path, allowed_suffix=['pkl', 'pickle'])
             with open(param_path, 'rb') as f:
