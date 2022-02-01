@@ -5,7 +5,7 @@ from typing import Optional, Union
 import torch
 from pytorch3d.structures.meshes import Meshes
 from tqdm import trange
-
+import torch.nn as nn
 from mmhuman3d.core.cameras.builder import build_cameras
 from mmhuman3d.core.cameras.cameras import NewAttributeCameras
 import torch.nn as nn
@@ -27,16 +27,17 @@ def render(output_path: Optional[str] = None,
     elif isinstance(renderer, nn.Module):
         renderer = renderer.to(device)
 
+    if isinstance(cameras, dict):
+        cameras = build_cameras(cameras).to(device)
+    elif isinstance(cameras, NewAttributeCameras):
+        cameras = cameras.to(device)
+
     if output_path is not None:
-        renderer.set_output_path(output_path)
+        renderer._set_output_path(output_path)
     if device is not None:
         renderer.device = device
 
     num_frames = len(meshes)
-    if isinstance(cameras, dict):
-        cameras = build_cameras(cameras).to(device)
-    elif isinstance(cameras, nn.Module):
-        cameras = cameras.to(device)
     if len(cameras) == 1:
         cameras = cameras.extend(num_frames)
 

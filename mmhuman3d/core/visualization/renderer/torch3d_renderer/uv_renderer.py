@@ -19,7 +19,7 @@ from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER
 
 
-@RENDERER.register_module('uv', 'UVRenderer', 'uv_renderer')
+@RENDERER.register_module(name=['uv_renderer', 'uv', 'UV', 'UVRenderer'])
 class UVRenderer(nn.Module):
     """Renderer for SMPL(x) UV map.
     # TODO: test smplx support.

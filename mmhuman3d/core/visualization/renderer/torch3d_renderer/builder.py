@@ -2,29 +2,22 @@ from mmcv.utils import Registry
 from pytorch3d.renderer import (
     AmbientLights,
     DirectionalLights,
-    HardFlatShader,
-    MeshRasterizer,
     PointLights,
-    PointsRasterizer,
+    HardPhongShader,
+    HardGouraudShader,
+    HardFlatShader,
     SoftGouraudShader,
     SoftPhongShader,
-    SoftSilhouetteShader,
     TexturesAtlas,
     TexturesUV,
     TexturesVertex,
 )
 
 from .shader import (DepthShader, NoLightShader, NormalShader,
-                     SegmentationShader, OpticalFlowShader)
+                     SegmentationShader, OpticalFlowShader, SilhouetteShader)
 from .textures import TexturesNearest
 
 RENDERER = Registry('renderer')
-RASETER = Registry('raster')
-RASETER.register_module(
-    name=['mesh', 'mesh_rasterizer', 'MeshRasterizer'], module=MeshRasterizer)
-RASETER.register_module(
-    name=['point', 'point_rasterizer', 'PointsRasterizer'],
-    module=PointsRasterizer)
 
 LIGHTS = Registry('lights')
 LIGHTS.register_module(
@@ -42,17 +35,21 @@ SHADER.register_module(
     ],
     module=HardFlatShader)
 SHADER.register_module(
-    name=['gouraud', 'soft_gouraud', 'SoftGouraud', 'SoftGouraudShader'],
+    name=['hard_phong', 'HardPhong', 'HardPhongShader'],
+    module=HardPhongShader)
+SHADER.register_module(
+    name=['hard_gouraud', 'HardGouraud', 'HardGouraudShader'],
+    module=HardGouraudShader)
+
+SHADER.register_module(
+    name=['soft_gouraud', 'SoftGouraud', 'SoftGouraudShader'],
     module=SoftGouraudShader)
 SHADER.register_module(
-    name=['phong', 'soft_phong', 'SoftPhong', 'SoftPhongShader'],
+    name=['soft_phong', 'SoftPhong', 'SoftPhongShader'],
     module=SoftPhongShader)
 SHADER.register_module(
-    name=[
-        'silhouette', 'soft_silhouette', 'SoftSilhouette',
-        'SoftSilhouetteShader'
-    ],
-    module=SoftSilhouetteShader)
+    name=['silhouette', 'Silhouette', 'SilhouetteShader'],
+    module=SilhouetteShader)
 SHADER.register_module(
     name=['nolight', 'nolight_shader', 'NoLight', 'NoLightShader'],
     module=NoLightShader)
@@ -86,11 +83,6 @@ TEXTURES.register_module(
 TEXTURES.register_module(
     name=['TexturesVertex', 'textures_vertex', 'vertex', 'vc'],
     module=TexturesVertex)
-
-
-def build_raster(cfg):
-    """Build raster."""
-    return RASETER.build(cfg)
 
 
 def build_textures(cfg):

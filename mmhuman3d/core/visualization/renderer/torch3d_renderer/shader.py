@@ -7,6 +7,7 @@ from pytorch3d.renderer import BlendParams, hard_rgb_blend
 from pytorch3d.structures.utils import padded_to_packed
 from pytorch3d.renderer.mesh.rasterizer import Fragments
 from pytorch3d.structures import Meshes
+from pytorch3d.renderer.mesh.shader import SoftSilhouetteShader
 
 
 class OpticalFlowShader(nn.Module):
@@ -41,6 +42,14 @@ class OpticalFlowShader(nn.Module):
         mesh_grid = self.gen_mesh_grid(N=N, H=H, W=W)
         pixel_flow = pixel_flow.squeeze(-2) + mesh_grid.to(pixel_flow.device)
         return pixel_flow
+
+
+class SilhouetteShader(SoftSilhouetteShader):
+
+    def __init__(self,
+                 blend_params: Optional[BlendParams] = None,
+                 **kwargs) -> None:
+        super().__init__(blend_params)
 
 
 class NoLightShader(nn.Module):

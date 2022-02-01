@@ -1,7 +1,6 @@
 from .renderer.torch3d_renderer import render_runner
 from .renderer.torch3d_renderer.builder import (
     build_lights,
-    build_raster,
     build_renderer,
     build_shader,
     build_textures,
@@ -21,6 +20,6 @@ __all__ = [
     'visualize_kp2d', 'visualize_kp3d', 'visualize_smpl_pose',
     'visualize_T_pose', 'render_smpl', 'visualize_smpl_vibe',
     'visualize_smpl_calibration', 'visualize_smpl_hmr', 'render_runner',
-    'build_lights', 'build_raster', 'build_renderer', 'build_shader',
+    'build_lights', 'build_renderer', 'build_shader',
     'build_textures'
 ]

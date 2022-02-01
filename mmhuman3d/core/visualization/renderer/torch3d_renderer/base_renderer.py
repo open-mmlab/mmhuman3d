@@ -2,20 +2,21 @@ import os.path as osp
 import shutil
 import warnings
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import cv2
 import mmcv
 import numpy as np
 import torch
 import torch.nn as nn
-from pytorch3d.renderer import BlendParams, Materials, RasterizationSettings
 from pytorch3d.structures import Meshes
-
+from pytorch3d.renderer import (DirectionalLights, PointLights, Materials,
+                                AmbientLights, RasterizationSettings,
+                                MeshRasterizer, BlendParams)
 from mmhuman3d.core.cameras import NewAttributeCameras, build_cameras
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
-from .builder import RENDERER, build_lights, build_raster, build_shader
+from .builder import RENDERER, build_lights, build_shader
 
 try:
     from typing import Literal
@@ -28,10 +29,9 @@ except ImportError:
 class MeshBaseRenderer(nn.Module):
 
     def __init__(self,
-                 resolution: Tuple[int, int],
+                 resolution: Tuple[int, int] = (1024, 1024),
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
-                 return_type: Optional[List] = None,
                  out_img_format: str = '%06d.png',
                  in_ndc: bool = True,
                  projection: Literal['weakperspective', 'fovperspective',
@@ -49,12 +49,6 @@ class MeshBaseRenderer(nn.Module):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_type (List, optional): the type of tensor to be
-                returned. 'tensor' denotes return the determined tensor. E.g.,
-                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
-                'rgba' denotes the colorful RGBA tensor to be written.
-                Will be same for MeshBaseRenderer.
-                Defaults to None.
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
@@ -66,32 +60,31 @@ class MeshBaseRenderer(nn.Module):
         **kwargs is used for render setting.
         You can set up your render kwargs like:
             {
-                'shader_type': 'flat',
-                'texture_type': 'closet',
-                'light': {
-                    'light_type': 'directional',
-                    'direction': [[1.0, 1.0, 1.0]],
-                    'ambient_color': [[0.5, 0.5, 0.5]],
-                    'diffuse_color': [[0.5, 0.5, 0.5]],
-                    'specular_color': [[1.0, 1.0, 1.0]],
+                'shader': {
+                    'type': 'soft_phong'
                 },
-                'material': {
-                    'ambient_color': [[1, 1, 1]],
-                    'diffuse_color': [[0.5, 0.5, 0.5]],
-                    'specular_color': [[0.5, 0.5, 0.5]],
-                    'shininess': 60.0,
-                },
-                'raster': {
-                    'type': 'mesh',
+                'lights': {
+                        'type': 'directional',
+                        'direction': [[10.0, 10.0, 10.0]],
+                        'ambient_color': [[0.5, 0.5, 0.5]],
+                        'diffuse_color': [[0.5, 0.5, 0.5]],
+                        'specular_color': [[0.5, 0.5, 0.5]],
+                    },
+                'materials': {
+                        'ambient_color': [[1, 1, 1]],
+                        'diffuse_color': [[0.5, 0.5, 0.5]],
+                        'specular_color': [[0.5, 0.5, 0.5]],
+                        'shininess': 60.0,
+                    },
+                'rasterizer': {
+                    'bin_size': 0,
                     'blur_radius': 0.0,
                     'faces_per_pixel': 1,
-                    'cull_to_frustum': True,
-                    'cull_backfaces': True,
+                    'perspective_correct': False,
+                    'bin_size': 0,
                 },
-                'blend': {
-                    'background_color': (1.0, 1.0, 1.0)
-                },
-            }
+                'blend_params': {'background_color': (1.0, 1.0, 1.0)},
+            },
         You can change any parameter in the suitable range, please check
         configs/render/smpl.py.
 
@@ -101,22 +94,16 @@ class MeshBaseRenderer(nn.Module):
         super().__init__()
         self.device = device
         self.output_path = output_path
-        self.return_type = return_type
         self.resolution = resolution
         self.temp_path = None
         self.in_ndc = in_ndc
         self.projection = projection
         self.out_img_format = out_img_format
-        self.set_output_path(output_path)
-        self.init_renderer(**kwargs)
+        self._set_output_path(output_path)
 
-    def to(self, device):
-        # Rasterizer and shader have submodules which are not of type nn.Module
-        self.rasterizer.to(device)
-        self.shader.to(device)
-        self.device = device
+        self._init_renderer(**kwargs)
 
-    def set_output_path(self, output_path):
+    def _set_output_path(self, output_path):
         if output_path is not None:
             if check_path_suffix(output_path, ['.mp4', '.gif']):
                 self.temp_path = osp.join(
@@ -126,6 +113,11 @@ class MeshBaseRenderer(nn.Module):
                 print('make dir', self.temp_path)
             else:
                 self.temp_path = output_path
+
+    def _update_resolution(self, **kwargs):
+        if 'resolution' in kwargs:
+            self.resolution = kwargs.get('resolution')
+            self.rasterizer.raster_settings.resolution = self.resolution
 
     def export(self):
         """Export output video if need."""
@@ -147,15 +139,15 @@ class MeshBaseRenderer(nn.Module):
         """remove_temp_files."""
         if self.output_path is not None:
             if Path(self.output_path).is_file():
-                self.remove_temp_frames()
+                self._remove_temp_frames()
 
-    def remove_temp_frames(self):
+    def _remove_temp_frames(self):
         """Remove temp files."""
         if self.temp_path:
             if osp.exists(self.temp_path) and osp.isdir(self.temp_path):
                 shutil.rmtree(self.temp_path)
 
-    def init_cameras(self, K, R, T):
+    def _init_cameras(self, K, R, T):
         """Build cameras."""
         cameras = build_cameras(
             dict(
@@ -167,37 +159,69 @@ class MeshBaseRenderer(nn.Module):
                 in_ndc=self.in_ndc)).to(self.device)
         return cameras
 
-    def init_renderer(self, **kwargs):
+    def _init_renderer(self,
+                       rasterizer: Union[dict, nn.Module] = None,
+                       shader: Union[dict, nn.Module] = None,
+                       materials: Union[dict, Materials] = None,
+                       lights: Union[dict, DirectionalLights, PointLights,
+                                     AmbientLights] = None,
+                       blend_params: Union[dict, BlendParams] = None,
+                       **kwargs):
         """Initial renderer."""
-        material_params = kwargs.get('material', {})
-        light_params = kwargs.get('light', {'type': 'directional'})
-        raster_type = kwargs.get('raster_type', 'mesh')
-        raster_params = kwargs.get('raster_settings', {})
-        blend_params = kwargs.get('blend', {})
-        shader_type = kwargs.get('shader_type', 'phong')
+        if isinstance(materials, dict):
+            materials = Materials(**materials)
+        elif materials is None:
+            materials = Materials()
+        elif not isinstance(materials, Materials):
+            raise TypeError(f'Wrong type of materials: {type(materials)}.')
 
-        default_resolution = raster_params.pop('resolution', [1024, 1024])
-        if self.resolution is None:
-            self.resolution = default_resolution
+        if isinstance(lights, dict):
+            self.lights = build_lights(lights)
+        elif lights is None:
+            self.lights = AmbientLights()
+        elif not isinstance(
+                lights, Union[AmbientLights, PointLights, DirectionalLights]):
+            raise TypeError(f'Wrong type of lights: {type(lights)}.')
 
-        materials = Materials(device=self.device, **material_params)
-        raster_settings = RasterizationSettings(
-            image_size=self.resolution, **raster_params)
-        self.lights = build_lights(light_params).to(
-            self.device) if light_params is not None else None
-        blend_params = BlendParams(**blend_params)
+        if isinstance(blend_params, dict):
+            blend_params = BlendParams(**blend_params)
+        elif blend_params is None:
+            blend_params = BlendParams()
+        elif not isinstance(blend_params, BlendParams):
+            raise TypeError(
+                f'Wrong type of blend_params: {type(blend_params)}.')
 
-        self.rasterizer = build_raster(
-            dict(type=raster_type, raster_settings=raster_settings))
-        self.shader = build_shader(
-            dict(
-                type=shader_type,
-                device=self.device,
+        if isinstance(rasterizer, nn.Module):
+            rasterizer.raster_settings.image_size = self.resolution
+            self.rasterizer = rasterizer
+        elif isinstance(rasterizer, dict):
+            rasterizer['image_size'] = self.resolution
+            raster_settings = RasterizationSettings(**rasterizer)
+            self.rasterizer = MeshRasterizer(raster_settings=raster_settings)
+        else:
+            raise TypeError(
+                f'Wrong type of rasterizer: {type(self.rasterizer)}.')
+
+        if isinstance(shader, nn.Module):
+            self.shader = shader
+        elif isinstance(shader, dict):
+            shader.update(
                 materials=materials,
+                lights=self.lights,
                 blend_params=blend_params)
-        ) if shader_type != 'silhouette' else build_shader(
-            dict(type=shader_type, blend_params=blend_params))
+            self.shader = build_shader(shader)
+        else:
+            raise TypeError(f'Wrong type of shader: {type(self.shader)}.')
+        self = self.to(self.device)
 
+    def to(self, device):
+        if self.rasterizer.cameras is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        if self.shader.cameras is not None:
+            self.shader.cameras = self.shader.cameras.to(device)
+        self.shader.materials = self.shader.materials.to(device)
+        self.shader.lights = self.shader.lights.to(device)
+        return self
 
     @staticmethod
     def rgb2bgr(rgbs) -> Union[torch.Tensor, np.ndarray]:
@@ -213,10 +237,10 @@ class MeshBaseRenderer(nn.Module):
         return bgrs
 
     @staticmethod
-    def normalize(value,
-                  min_value=0,
-                  max_value=1,
-                  dtype=None) -> Union[torch.Tensor, np.ndarray]:
+    def _normalize(value,
+                   min_value=0,
+                   max_value=1,
+                   dtype=None) -> Union[torch.Tensor, np.ndarray]:
         """Normalize the tensor or array."""
         value = (value - value.min()) / (value.max() - value.min() + 1e-9) * (
             max_value - min_value) + min_value
@@ -231,20 +255,23 @@ class MeshBaseRenderer(nn.Module):
             else:
                 return value
 
-    def tensor2array(self, image) -> np.ndarray:
+    def _tensor2array(self, image) -> np.ndarray:
         """Convert image tensor to array."""
-        image = self.normalize(
+        image = image.detach().cpu().numpy()
+        image = self._normalize(
             image, min_value=0, max_value=255, dtype=np.uint8)
         return image
 
-    def array2tensor(self, image) -> torch.Tensor:
+    def _array2tensor(self, image) -> torch.Tensor:
         """Convert image array to tensor."""
-        image = self.normalize(
+        image = torch.Tensor(image)
+        image = self._normalize(
             image, min_value=0, max_value=1, dtype=torch.float32)
         return image
 
-    def write_images(self, rgbs, valid_masks, images, indexes):
+    def _write_images(self, rgba, images, indexes):
         """Write output/temp images."""
+        rgbs, valid_masks = rgba[..., :3], rgba[..., 3:]
         rgbs = rgbs.clone()[..., :3] / rgbs[..., :3].max()
         bgrs = torch.cat(
             [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]], -1)
@@ -263,7 +290,7 @@ class MeshBaseRenderer(nn.Module):
                 osp.join(folder, self.out_img_format % real_idx),
                 output_images[idx])
 
-    def prepare_meshes(self, meshes, vertices, faces):
+    def _prepare_meshes(self, meshes, vertices, faces):
         if meshes is None:
             assert (vertices is not None) and (faces is not None),\
                 'No mesh data input.'
@@ -312,24 +339,20 @@ class MeshBaseRenderer(nn.Module):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        meshes = self.prepare_meshes(meshes, vertices, faces)
-        cameras = self.init_cameras(
+        self._update_resolution(**kwargs)
+        meshes = self._prepare_meshes(meshes, vertices, faces)
+        cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
 
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         rendered_images = self.shader(
             fragments=fragments, meshes=meshes, cameras=cameras, lights=lights)
 
-        if self.output_path is not None or 'rgba' in self.return_type:
-            valid_masks = (rendered_images[..., 3:] > 0
-                           ) * 1.0 if images is not None else None
-            if self.output_path is not None:
-                self.write_images(rendered_images, valid_masks, images,
-                                  indexes)
+        if self.output_path is not None:
+            rgba = self.tensor2rgba(rendered_images)
+            self._write_images(rgba, images, indexes)
+        return rendered_images
 
-        results = {}
-        if 'tensor' in self.return_type:
-            results.update(tensor=rendered_images)
-        if 'rgba' in self.return_type:
-            results.update(rgba=rendered_images)
-        return results
+    def tensor2rgba(self, tensor: torch.Tensor):
+        valid_masks = (tensor[..., 3:] > 0) * 1.0
+        return torch.cat([tensor[..., :3], valid_masks], -1)
