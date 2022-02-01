@@ -64,6 +64,11 @@ class SilhouetteRenderer(MeshBaseRenderer):
             in_ndc=in_ndc,
             **kwargs)
 
+    def to(self, device):
+        if self.rasterizer.cameras is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        return self
+
     def set_render_params(self, **kwargs):
         super().set_render_params(**kwargs)
         self.shader_type = 'silhouette'
@@ -81,8 +86,8 @@ class SilhouetteRenderer(MeshBaseRenderer):
                 **kwargs):
         """The params are the same as MeshBaseRenderer."""
         self._update_resolution(**kwargs)
-        meshes = self.prepare_meshes(meshes, vertices, faces)
-        cameras = self.init_cameras(
+        meshes = self._prepare_meshes(meshes, vertices, faces)
+        cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
 
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)

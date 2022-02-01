@@ -77,6 +77,12 @@ class PointCloudRenderer(MeshBaseRenderer):
             in_ndc=in_ndc,
             **kwargs)
 
+    def to(self, device):
+        if self.rasterizer.cameras is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        self.compositor = self.compositor.to(device)
+        return self
+
     def _init_renderer(self, rasterizer, compositor, **kwargs):
         """Set render params."""
 
@@ -84,17 +90,25 @@ class PointCloudRenderer(MeshBaseRenderer):
             rasterizer.raster_settings.image_size = self.resolution
             self.rasterizer = rasterizer
         elif isinstance(rasterizer, dict):
-            rasterizer.udpate(image_size=self.resolution)
+            rasterizer['image_size'] = self.resolution
             if self.radius is not None:
                 rasterizer.update(radius=self.radius)
             raster_settings = PointsRasterizationSettings(**rasterizer)
             self.rasterizer = PointsRasterizer(raster_settings=raster_settings)
+        else:
+            raise TypeError(
+                f'Wrong type of rasterizer: {type(self.rasterizer)}.')
 
-        compositor = AlphaCompositor(
-            **compositor) if isinstance(compositor, dict) else compositor
+        if isinstance(compositor, dict):
+            self.compositor = AlphaCompositor(**compositor)
+        elif isinstance(compositor, nn.Module):
+            self.compositor = compositor
+        else:
+            raise TypeError(
+                f'Wrong type of compositor: {type(self.compositor)}.')
+
         self.shader_type = None
-        self.renderer = PointsRenderer(
-            rasterizer=self.rasterizer, compositor=compositor).to(self.device)
+        self = self.to(self.device)
 
     def forward(
         self,
@@ -153,12 +167,23 @@ class PointCloudRenderer(MeshBaseRenderer):
                 warnings.warn(
                     'Redundant input, will ignore `vertices` and `verts_rgb`.')
         pointclouds = pointclouds.to(self.device)
-        cameras = self.init_cameras(
+        cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
 
-        rendered_images = self.renderer(pointclouds, cameras=cameras)
+        fragments = self.rasterizer(pointclouds, cameras=cameras)
+        r = self.rasterizer.raster_settings.radius
 
-        if self.output_path is not None or 'rgba' in self.return_type:
+        dists2 = fragments.dists.permute(0, 3, 1, 2)
+        weights = 1 - dists2 / (r * r)
+        rendered_images = self.compositor(
+            fragments.idx.long().permute(0, 3, 1, 2),
+            weights,
+            pointclouds.features_packed().permute(1, 0),
+            **kwargs,
+        )
+        rendered_images = rendered_images.permute(0, 2, 3, 1)
+
+        if self.output_path is not None:
             rgba = self.tensor2rgba(rendered_images)
             if self.output_path is not None:
                 self.write_images(rgba, images, indexes)

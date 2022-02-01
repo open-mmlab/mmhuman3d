@@ -212,6 +212,7 @@ class MeshBaseRenderer(nn.Module):
             self.shader = build_shader(shader)
         else:
             raise TypeError(f'Wrong type of shader: {type(self.shader)}.')
+        self = self.to(self.device)
 
     def to(self, device):
         if self.rasterizer.cameras is not None:
@@ -256,12 +257,14 @@ class MeshBaseRenderer(nn.Module):
 
     def _tensor2array(self, image) -> np.ndarray:
         """Convert image tensor to array."""
+        image = image.detach().cpu().numpy()
         image = self._normalize(
             image, min_value=0, max_value=255, dtype=np.uint8)
         return image
 
     def _array2tensor(self, image) -> torch.Tensor:
         """Convert image array to tensor."""
+        image = torch.Tensor(image)
         image = self._normalize(
             image, min_value=0, max_value=1, dtype=torch.float32)
         return image
@@ -337,7 +340,7 @@ class MeshBaseRenderer(nn.Module):
             Union[torch.Tensor, None]: return tensor or None.
         """
         self._update_resolution(**kwargs)
-        meshes = self.prepare_meshes(meshes, vertices, faces)
+        meshes = self._prepare_meshes(meshes, vertices, faces)
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
 

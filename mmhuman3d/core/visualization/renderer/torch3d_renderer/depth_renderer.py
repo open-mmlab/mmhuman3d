@@ -72,6 +72,11 @@ class DepthRenderer(MeshBaseRenderer):
             in_ndc=in_ndc,
             **kwargs)
 
+    def to(self, device):
+        if self.rasterizer.cameras is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        return self
+
     def forward(self,
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
@@ -110,25 +115,23 @@ class DepthRenderer(MeshBaseRenderer):
             Union[torch.Tensor, None]: return tensor or None.
         """
         self._update_resolution(**kwargs)
-        cameras = self.init_cameras(
+        cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-        meshes = self.prepare_meshes(meshes, vertices, faces)
+        meshes = self._prepare_meshes(meshes, vertices, faces)
         vertices = meshes.verts_padded()
 
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         depth_map = self.shader(
             fragments=fragments, meshes=meshes, cameras=cameras)
 
-        if self.output_path is not None or 'rgba' in self.return_type:
-            rgbs, valid_mask = depth_map.repeat(1, 1, 1,
-                                                3), (depth_map > 0) * 1.0
-            rgbs = rgbs / rgbs.max()
+        if self.output_path is not None:
+            rgba = self.tensor2rgba(depth_map)
             if self.output_path is not None:
-                self.write_images(rgbs, valid_mask, images, indexes)
-        results = {}
-        if 'tensor' in self.return_type:
-            results.update(tensor=depth_map)
-        if 'rgba' in self.return_type:
-            results.update(rgba=torch.cat([rgbs, valid_mask], -1))
+                self.write_images(rgba, images, indexes)
 
-        return results
+        return depth_map
+
+    def tensor2rgba(self, tensor: torch.Tensor):
+        rgbs, valid_masks = tensor.repeat(1, 1, 1, 3), (tensor > 0) * 1.0
+        rgbs = rgbs / rgbs.max()
+        return torch.cat([rgbs, valid_masks], -1)

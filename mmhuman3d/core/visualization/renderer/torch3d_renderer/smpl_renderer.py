@@ -79,7 +79,7 @@ class SMPLRenderer(MeshBaseRenderer):
                 self.temp_path = output_path
 
         self.texture_type = kwargs.pop('texture_type', 'vertex')
-        
+
         self.image_renderer = build_renderer(
             dict(
                 device=device,
@@ -135,6 +135,9 @@ class SMPLRenderer(MeshBaseRenderer):
         Returns:
             None
         """
+
+    def to(self, device):
+        return super(MeshBaseRenderer, self).to(device)
 
     def forward(
         self,
@@ -222,7 +225,7 @@ class SMPLRenderer(MeshBaseRenderer):
             mesh_list.append(mesh)
         meshes = join_batch_meshes_as_scene(mesh_list)
 
-        cameras = self.init_cameras(K, R, T) if cameras is None else cameras
+        cameras = self._init_cameras(K, R, T) if cameras is None else cameras
 
         lights = getattr(self.image_renderer, 'lights', None)
         if isinstance(lights, DirectionalLights):
@@ -290,7 +293,7 @@ class SMPLRenderer(MeshBaseRenderer):
                 output_images = output_images * (
                     1 - pointcloud_mask) + pointcloud_mask * pointcloud_bgr
 
-            output_images = self.tensor2array(output_images)
+            output_images = self._tensor2array(output_images)
 
             for frame_idx, real_idx in enumerate(indexes):
                 folder = self.temp_path if self.temp_path is not None else\

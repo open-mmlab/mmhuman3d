@@ -75,8 +75,15 @@ class SegmentationRenderer(MeshBaseRenderer):
             **kwargs)
         self.num_class = num_class
 
+    def to(self, device):
+        if self.rasterizer.cameras is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        return self
+
     def forward(self,
                 meshes: Optional[Meshes] = None,
+                vertices: Optional[torch.Tensor] = None,
+                faces: Optional[torch.Tensor] = None,
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
@@ -90,6 +97,12 @@ class SegmentationRenderer(MeshBaseRenderer):
             meshes (Optional[Meshes], optional): meshes to be rendered.
                 Require the textures type is `TexturesClosest`.
                 The color indicates the class index of the triangle.
+                Defaults to None.
+            vertices (Optional[torch.Tensor], optional): vertices to be
+                rendered. Should be passed together with faces.
+                Defaults to None.
+            faces (Optional[torch.Tensor], optional): faces of the meshes,
+                should be passed together with the vertices.
                 Defaults to None.
             K (Optional[torch.Tensor], optional): Camera intrinsic matrixs.
                 Defaults to None.
@@ -105,13 +118,10 @@ class SegmentationRenderer(MeshBaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        # It is recommended that you use `TexturesClosest` to exclude
-        # inappropriate interpolation among the faces, to make sure the
-        # segmentation map is sharp.
         self._update_resolution(**kwargs)
-        cameras = self.init_cameras(
+        cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-
+        meshes = self._prepare_meshes(meshes, vertices, faces)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         segmentation_map = self.shader(
             fragments=fragments, meshes=meshes, cameras=cameras)
@@ -129,5 +139,6 @@ class SegmentationRenderer(MeshBaseRenderer):
         color = torch.cat([torch.zeros(1, 3), color]).to(self.device)
         B, H, W, _ = tensor.shape
         rgbs = color[tensor.view(-1)].view(B, H, W, 3) * valid_masks
+        rgbs = self._normalize(rgbs.float(), min_value=0, max_value=1)
         rgba = torch.cat([rgbs, valid_masks], -1)
         return rgba

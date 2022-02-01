@@ -62,6 +62,11 @@ class NormalRenderer(MeshBaseRenderer):
             in_ndc=in_ndc,
             **kwargs)
 
+    def to(self, device):
+        if self.rasterizer.cameras is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        return self
+        
     def forward(self,
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
@@ -100,9 +105,9 @@ class NormalRenderer(MeshBaseRenderer):
             Union[torch.Tensor, None]: return tensor or None.
         """
         self._update_resolution(**kwargs)
-        meshes = self.prepare_meshes(meshes, vertices, faces)
+        meshes = self._prepare_meshes(meshes, vertices, faces)
 
-        cameras = self.init_cameras(
+        cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
 
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
