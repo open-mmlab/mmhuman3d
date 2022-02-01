@@ -33,135 +33,127 @@ silhouete_material = {
     'shininess': 1.0,
 }
 
-empty_light = None
-
-empty_material = {}
-
 white_blend_params = {'background_color': (1.0, 1.0, 1.0)}
 
 black_blend_params = {'background_color': (0.0, 0.0, 0.0)}
 
 RENDER_CONFIGS = {
     'lq': {
-        'renderer_type': 'base',
-        'shader_type': 'flat',
-        'texture_type': 'vertex',
-        'raster_type': 'mesh',
-        'light': base_directional_light,
-        'material': base_material,
-        'raster_settings': {
+        'type': 'base',
+        'shader': {
+            'type': 'hard_flat'
+        },
+        'lights': base_directional_light,
+        'materials': base_material,
+        'rasterizer': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'perspective_correct': False,
         },
-        'blend': white_blend_params,
+        'blend_params': white_blend_params,
     },
     'mq': {
-        'renderer_type': 'base',
-        'shader_type': 'gouraud',
-        'texture_type': 'vertex',
-        'raster_type': 'mesh',
-        'light': base_directional_light,
-        'material': base_material,
-        'raster_settings': {
+        'type': 'base',
+        'shader': {
+            'type': 'soft_gouraud'
+        },
+        'lights': base_directional_light,
+        'materials': base_material,
+        'rasterizer': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'perspective_correct': False,
         },
-        'blend': white_blend_params,
+        'blend_params': white_blend_params,
     },
     'hq': {
-        'renderer_type': 'base',
-        'shader_type': 'phong',
-        'texture_type': 'vertex',
-        'raster_type': 'mesh',
-        'light': base_directional_light,
-        'material': base_material,
-        'raster_settings': {
+        'type': 'base',
+        'shader': {
+            'type': 'soft_phong'
+        },
+        'lights': base_directional_light,
+        'materials': base_material,
+        'rasterizer': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'perspective_correct': False,
             'bin_size': 0,
         },
-        'blend': white_blend_params,
+        'blend_params': white_blend_params,
     },
     'silhouette': {
-        'renderer_type': 'silhouette',
-        'shader_type': 'silhouette',
-        'texture_type': 'vertex',
-        'raster_type': 'mesh',
-        'light': empty_light,
-        'material': silhouete_material,
-        'raster_settings': {
+        'type': 'silhouette',
+        'shader': {
+            'type': 'silhouette'
+        },
+        'lights': None,
+        'materials': silhouete_material,
+        'rasterizer': {
             'bin_size': 0,
             'blur_radius': 2e-5,
             'faces_per_pixel': 50,
             'perspective_correct': False,
         },
-        'blend': black_blend_params,
+        'blend_params': black_blend_params,
     },
     'part_silhouette': {
-        'renderer_type': 'segmentation',
-        'shader_type': 'segmentation',
-        'texture_type': 'nearest',
-        'raster_type': 'mesh',
-        'light': empty_light,
+        'type': 'segmentation',
+        'shader': {
+            'type': 'segmentation'
+        },
         'material': base_material,
-        'raster_settings': {
+        'rasterizer': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'perspective_correct': False,
         },
-        'blend': black_blend_params,
+        'blend_params': black_blend_params,
     },
     'depth': {
-        'renderer_type': 'depth',
-        'shader_type': 'depth',
-        'texture_type': 'vertex',
-        'raster_type': 'mesh',
-        'light': empty_light,
-        'material': empty_material,
-        'raster_settings': {
+        'type': 'depth',
+        'shader': {
+            'type': 'depth'
+        },
+        'rasterizer': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'perspective_correct': False,
         },
-        'blend': black_blend_params,
+        'blend_params': black_blend_params,
     },
     'normal': {
-        'renderer_type': 'normal',
-        'shader_type': 'normal',
-        'texture_type': 'vertex',
-        'raster_type': 'mesh',
-        'light': empty_light,
-        'material': empty_material,
-        'raster_settings': {
+        'type': 'normal',
+        'shader': {
+            'type': 'normal'
+        },
+        'rasterizer': {
             'bin_size': 0,
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'perspective_correct': False,
         },
-        'blend': white_blend_params,
+        'blend_params': white_blend_params,
     },
     'pointcloud': {
-        'renderer_type': 'pointcloud',
-        'shader_type': None,
-        'raster_type': 'point',
-        'light': empty_light,
-        'material': empty_material,
-        'blend': white_blend_params,
-        'bg_color': [
-            1.0,
-            1.0,
-            1.0,
-            0.0,
-        ],
-        'points_per_pixel': 10,
-        'radius': 0.003
+        'type': 'pointcloud',
+        'compositor': {
+            'background_color': [
+                1.0,
+                1.0,
+                1.0,
+                0.0,
+            ],
+        },
+        'rasterizer': {
+            'points_per_pixel': 10,
+            'radius': 0.003,
+            'bin_size': None,
+            'max_points_per_bin': None,
+        }
     }
 }

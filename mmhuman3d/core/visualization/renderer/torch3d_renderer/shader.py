@@ -5,6 +5,15 @@ import torch.nn as nn
 from pytorch3d.ops import interpolate_face_attributes
 from pytorch3d.renderer import BlendParams, hard_rgb_blend
 from pytorch3d.structures.utils import padded_to_packed
+from pytorch3d.renderer.mesh.shader import SoftSilhouetteShader
+
+
+class SilhouetteShader(SoftSilhouetteShader):
+
+    def __init__(self,
+                 blend_params: Optional[BlendParams] = None,
+                 **kwargs) -> None:
+        super().__init__(blend_params)
 
 
 class NoLightShader(nn.Module):

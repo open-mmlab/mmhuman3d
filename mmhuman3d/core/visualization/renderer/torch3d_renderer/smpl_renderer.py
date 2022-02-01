@@ -78,17 +78,14 @@ class SMPLRenderer(MeshBaseRenderer):
             else:
                 self.temp_path = output_path
 
-        renderer_type = kwargs.pop('renderer_type', 'base')
         self.texture_type = kwargs.pop('texture_type', 'vertex')
-
+        
         self.image_renderer = build_renderer(
             dict(
-                type=renderer_type,
                 device=device,
                 resolution=resolution,
                 projection=projection,
                 in_ndc=in_ndc,
-                return_type=['tensor', 'rgba'] if return_tensor else ['rgba'],
                 **kwargs))
 
         if plot_kps:
@@ -236,9 +233,9 @@ class SMPLRenderer(MeshBaseRenderer):
             lights.location = -cameras.get_camera_plane_normals(
             ) - cameras.get_camera_center()
 
-        render_results = self.image_renderer(
+        render_tensor = self.image_renderer(
             meshes=meshes, K=K, R=R, T=T, lights=lights, indexes=indexes)
-        rendered_images = render_results['rgba']
+        rendered_images = self.image_renderer.tensor2rgba(render_tensor)
 
         rgbs = rendered_images[..., :3]
         valid_masks = rendered_images[..., 3:]
@@ -285,9 +282,9 @@ class SMPLRenderer(MeshBaseRenderer):
                     verts_rgba=joints_rgb_padded.to(self.device),
                     K=K,
                     R=R,
-                    T=T)['rgba']
+                    T=T)
 
-                pointcloud_rgb = pointcloud_images[..., :3]
+                pointcloud_rgb, = pointcloud_images[..., :3]
                 pointcloud_bgr = self.rgb2bgr(pointcloud_rgb)
                 pointcloud_mask = (pointcloud_images[..., 3:] > 0) * 1.0
                 output_images = output_images * (
@@ -316,7 +313,7 @@ class SMPLRenderer(MeshBaseRenderer):
 
         # return
         if self.return_tensor:
-            rendered_map = render_results['tensor']
+            rendered_map = render_tensor
 
             if self.final_resolution != self.resolution:
                 rendered_map = interpolate(

@@ -99,7 +99,7 @@ class DepthRenderer(MeshBaseRenderer):
             R (Optional[torch.Tensor], optional): Camera rotation matrixs.
                 Defaults to None.
             T (Optional[torch.Tensor], optional): Camera tranlastion matrixs.
-                Defaults to None.
+                Defaults to None.   
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for the
@@ -109,6 +109,7 @@ class DepthRenderer(MeshBaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
+        self._update_resolution(**kwargs)
         cameras = self.init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
         meshes = self.prepare_meshes(meshes, vertices, faces)

@@ -2,17 +2,15 @@ import warnings
 from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
-from pytorch3d.renderer import (
-    AlphaCompositor,
-    PointsRasterizationSettings,
-    PointsRenderer,
-)
+from pytorch3d.renderer import (AlphaCompositor, PointsRasterizationSettings,
+                                PointsRenderer, PointsRasterizer)
+import torch.nn as nn
 from pytorch3d.structures import Meshes, Pointclouds
 
 from mmhuman3d.core.cameras import NewAttributeCameras
 from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
 from .base_renderer import MeshBaseRenderer
-from .builder import RENDERER, build_raster
+from .builder import RENDERER
 
 try:
     from typing import Literal
@@ -79,28 +77,24 @@ class PointCloudRenderer(MeshBaseRenderer):
             in_ndc=in_ndc,
             **kwargs)
 
-    def init_renderer(self, **kwargs):
+    def _init_renderer(self, rasterizer, compositor, **kwargs):
         """Set render params."""
-        raster_type = kwargs.get('raster_type', 'point')
-        bg_color = torch.tensor(
-            kwargs.get('bg_color', [
-                1.0,
-                1.0,
-                1.0,
-                0.0,
-            ]),
-            dtype=torch.float32,
-            device=self.device)
-        raster_settings = PointsRasterizationSettings(
-            image_size=self.resolution,
-            radius=self.radius
-            if self.radius is not None else kwargs.get('radius'),
-            points_per_pixel=kwargs.get('points_per_pixel', 10))
+
+        if isinstance(rasterizer, nn.Module):
+            rasterizer.raster_settings.image_size = self.resolution
+            self.rasterizer = rasterizer
+        elif isinstance(rasterizer, dict):
+            rasterizer.udpate(image_size=self.resolution)
+            if self.radius is not None:
+                rasterizer.update(radius=self.radius)
+            raster_settings = PointsRasterizationSettings(**rasterizer)
+            self.rasterizer = PointsRasterizer(raster_settings=raster_settings)
+
+        compositor = AlphaCompositor(
+            **compositor) if isinstance(compositor, dict) else compositor
         self.shader_type = None
         self.renderer = PointsRenderer(
-            rasterizer=build_raster(
-                dict(type=raster_type, raster_settings=raster_settings)),
-            compositor=AlphaCompositor(background_color=bg_color))
+            rasterizer=self.rasterizer, compositor=compositor).to(self.device)
 
     def forward(
         self,
@@ -165,14 +159,8 @@ class PointCloudRenderer(MeshBaseRenderer):
         rendered_images = self.renderer(pointclouds, cameras=cameras)
 
         if self.output_path is not None or 'rgba' in self.return_type:
-            rgbs, valid_masks = rendered_images[
-                ..., :3], (rendered_images[..., 3:] > 0) * 1.0
+            rgba = self.tensor2rgba(rendered_images)
             if self.output_path is not None:
-                self.write_images(rgbs, valid_masks, images, indexes)
+                self.write_images(rgba, images, indexes)
 
-        results = {}
-        if 'tensor' in self.return_type:
-            results.update(tensor=rendered_images)
-        if 'rgba' in self.return_type:
-            results.update(rgba=rendered_images)
-        return results
+        return rendered_images

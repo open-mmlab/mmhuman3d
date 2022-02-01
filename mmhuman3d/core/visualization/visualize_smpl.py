@@ -800,12 +800,11 @@ def render_smpl(
     ]:
         raise ValueError('Please choose the right render_choice.')
 
+    if render_choice == 'part_silhouette':
+        render_param_dict.update(texture_type='nearest')
+
     # body part colorful visualization should use flat shader to be sharper.
     if isinstance(palette, str):
-        # if (palette == 'segmentation') and ('silhouette'
-        #                                     not in render_choice.lower()):
-        #     render_param_dict['shader_type'] = 'flat'
-
         palette = [palette] * num_person
     elif isinstance(palette, np.ndarray):
         palette = torch.Tensor(palette)

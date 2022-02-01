@@ -23,7 +23,6 @@ class NormalRenderer(MeshBaseRenderer):
         resolution: Iterable[int] = [1024, 1024],
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
-        return_type: Optional[List] = None,
         out_img_format: str = '%06d.png',
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
@@ -42,14 +41,6 @@ class NormalRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_type (List, optional): the type of tensor to be
-                returned. 'tensor' denotes return the determined tensor. E.g.,
-                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
-                'rgba' denotes the colorful RGBA tensor to be written.
-                Will be same for MeshBaseRenderer.
-                Will return a normal_map for 'tensor' and a normalize normal
-                map for 'rgba'.
-                Defaults to None.
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
@@ -66,7 +57,6 @@ class NormalRenderer(MeshBaseRenderer):
             device=device,
             output_path=output_path,
             obj_path=None,
-            return_type=return_type,
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
@@ -109,6 +99,7 @@ class NormalRenderer(MeshBaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
+        self._update_resolution(**kwargs)
         meshes = self.prepare_meshes(meshes, vertices, faces)
 
         cameras = self.init_cameras(
@@ -118,16 +109,14 @@ class NormalRenderer(MeshBaseRenderer):
         normal_map = self.shader(
             fragments=fragments, meshes=meshes, cameras=cameras)
 
-        print('normal_map', normal_map.shape)
-        rgbs, valid_masks = normal_map[
-            ..., :3], (normal_map[..., 3:] > 0) * 1.0
-        rgbs = (rgbs + 1) / 2
         if self.output_path is not None:
-            self.write_images(rgbs, valid_masks, images, indexes)
+            rgba = self.tensor2rgba(normal_map)
+            self.write_images(rgba, images, indexes)
 
-        results = {}
-        if 'tensor' in self.return_type:
-            results.update(tensor=normal_map)
-        if 'rgba' in self.return_type:
-            results.update(rgba=torch.cat([rgbs, valid_masks], -1))
-        return results
+        return normal_map
+
+    def tensor2rgba(self, tensor: torch.Tensor):
+        rgbs, valid_masks = tensor[
+            ..., :3], (tensor[..., 3:] > 0) * 1.0
+        rgbs = (rgbs + 1) / 2
+        return torch.cat([rgbs, valid_masks], -1)
