@@ -1,5 +1,6 @@
 img_res = 1000
 texture_res = 1024
+uv_res = 512
 
 body_model = dict(
     type='SMPL',
@@ -43,7 +44,8 @@ renderer_flow = dict(
 
 renderer_uv = dict(
     type='UVRenderer',
-    uv_param_path='/mnt/lustre/wangwenjia/programs/smpl_uv.pkl')
+    resolution=uv_res,
+    param_path='/mnt/lustre/wangwenjia/programs/smpl_uv.pkl')
 
 stages = [
     dict(
