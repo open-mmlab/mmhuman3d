@@ -74,6 +74,15 @@ class UVRenderer(nn.Module):
         self.update_fragments()
         self.update_face_uv_pixel()
 
+    def to(self, device):
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
+        for k in dir(self):
+            if isinstance(getattr(self, k), (torch.Tensor)):
+                setattr(self, k, getattr(self, k).to(device))
+        return self
+
     def update_fragments(self):
         """Update pix_to_face, bary_coords."""
         rasterizer = MeshRasterizer(
