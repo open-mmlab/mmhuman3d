@@ -66,12 +66,12 @@ def test_get_kinect_resolution():
     color_resolution = smc.get_kinect_color_resolution(0)
     assert color_resolution.shape == (
         2, ), 'Kinect Color Resolution should be a 2D matrix'
-    assert color_resolution == (1920, 1080)
+    assert tuple(color_resolution) == (1920, 1080)
 
     depth_resolution = smc.get_kinect_depth_resolution(0)
     assert depth_resolution.shape == (
         2, ), 'Kinect Depth Resolution should be a 2D matrix'
-    assert color_resolution == (640, 576)
+    assert tuple(depth_resolution) == (640, 576)
 
 
 def test_get_iphone_extrinsics():
