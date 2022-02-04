@@ -169,10 +169,7 @@ class HuMManConverter(BaseModeConverter):
             mask=self.keypoints2d_humman_mask,
             src=self.keypoint_convention_humman,
             dst='human_data')
-        keypoints2d_humman = np.concatenate(
-            [keypoints2d_humman,
-             np.ones([*keypoints2d_humman.shape[:2], 1])],
-            axis=-1)
+
         human_data['keypoints2d_humman'] = keypoints2d_humman[selected_inds]
         human_data['keypoints2d_humman_mask'] = keypoints2d_humman_mask
 
@@ -185,10 +182,7 @@ class HuMManConverter(BaseModeConverter):
             mask=self.keypoints3d_humman_mask,
             src=self.keypoint_convention_humman,
             dst='human_data')
-        keypoints3d_humman = np.concatenate(
-            [keypoints3d_humman,
-             np.ones([*keypoints3d_humman.shape[:2], 1])],
-            axis=-1)
+
         human_data['keypoints3d_humman'] = keypoints3d_humman[selected_inds]
         human_data['keypoints3d_humman_mask'] = keypoints3d_humman_mask
 
