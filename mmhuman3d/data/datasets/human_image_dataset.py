@@ -271,9 +271,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             body_pose = torch.FloatTensor(body_pose).view(-1, 69)
             global_orient = torch.FloatTensor(global_orient)
             gt_output = self.body_model(
-                betas=betas,
-                body_pose=body_pose,
-                global_orient=global_orient)
+                betas=betas, body_pose=body_pose, global_orient=global_orient)
             gt_keypoints3d = gt_output['joints'].detach().cpu().numpy()
             gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 24))
         elif self.dataset_name == 'h36m':

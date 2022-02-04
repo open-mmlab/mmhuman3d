@@ -4,10 +4,8 @@ import cv2
 import h5py
 import numpy as np
 import tqdm
-from mmhuman3d.utils.transforms import (
-    aa_to_rotmat,
-    rotmat_to_aa
-)
+
+from mmhuman3d.utils.transforms import aa_to_rotmat, rotmat_to_aa
 
 
 class SMCReader:

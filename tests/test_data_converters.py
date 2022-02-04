@@ -237,7 +237,9 @@ def test_preprocessed_npz():
         'keypoints3d17_cam', 'keypoints3d17', 'keypoints3d17_relative',
         'keypoints3d_cam', 'keypoints3d_relative_mask', 'phi', 'phi_weight',
         'features', 'has_smpl', 'keypoints2d_gta', 'keypoints3d_gta',
-        'keypoints2d_gta_mask', 'keypoints3d_gta_mask', 'image_id'
+        'keypoints2d_gta_mask', 'keypoints3d_gta_mask', 'image_id',
+        'keypoints2d_humman', 'keypoints3d_humman', 'keypoints2d_humman_mask',
+        'keypoints3d_humman_mask'
     ]
 
     for npf in os.listdir(npz_folder):
