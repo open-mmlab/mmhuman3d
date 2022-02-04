@@ -33,7 +33,7 @@ class GTAHumanConverter(BaseConverter):
     def __init__(self, *args, **kwargs):
         super(GTAHumanConverter, self).__init__(*args, **kwargs)
 
-        focal_length = 1158.0337
+        focal_length = 1158.0337  # default setting
         camera_center = (960, 540)  # xy
         image_size = (1080, 1920)  # (height, width)
 
