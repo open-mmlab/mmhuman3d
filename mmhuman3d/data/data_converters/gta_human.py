@@ -36,7 +36,7 @@ class GTAHumanConverter(BaseConverter):
         camera_center = (960, 540)  # xy
         image_size = (1080, 1920)  # (height, width)
 
-        device = torch.device(
+        self.device = torch.device(
             'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         self.smpl = build_body_model(
@@ -46,7 +46,7 @@ class GTAHumanConverter(BaseConverter):
                 keypoint_dst='smpl_49',
                 model_path='data/body_models/smpl',
                 extra_joints_regressor='data/body_models/J_regressor_extra.npy'
-            )).to(device)
+            )).to(self.device)
 
         self.camera = build_cameras(
             dict(
@@ -55,7 +55,7 @@ class GTAHumanConverter(BaseConverter):
                 in_ndc=False,
                 focal_length=focal_length,
                 image_size=image_size,
-                principal_point=camera_center)).to(device)
+                principal_point=camera_center)).to(self.device)
 
     def convert(self, dataset_path: str, out_path: str) -> dict:
         """
