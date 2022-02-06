@@ -64,7 +64,6 @@ class GTAHumanConverter(BaseConverter):
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
-
         Returns:
             dict:
                 A dict containing keys video_path, smplh, meta, frame_idx

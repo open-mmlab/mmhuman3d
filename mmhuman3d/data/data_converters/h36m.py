@@ -316,6 +316,9 @@ class H36mConverter(BaseModeConverter):
                         image_abs_path = os.path.join(dataset_path, image_path)
                         # save image
                         if self.extract_img:
+                            folder = os.path.dirname(image_abs_path)
+                            if not os.path.exists(folder):
+                                os.makedirs(folder, exist_ok=True)
                             cv2.imwrite(image_abs_path, image)
 
                         # get bbox from mask
