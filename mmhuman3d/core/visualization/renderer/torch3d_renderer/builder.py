@@ -14,7 +14,7 @@ from pytorch3d.renderer import (
 )
 
 from .shader import (DepthShader, NoLightShader, NormalShader,
-                     SegmentationShader, SilhouetteShader)
+                     SegmentationShader, OpticalFlowShader, SilhouetteShader)
 from .textures import TexturesNearest
 
 RENDERER = Registry('renderer')
@@ -64,6 +64,12 @@ SHADER.register_module(
         'SegmentationShader'
     ],
     module=SegmentationShader)
+SHADER.register_module(
+    name=[
+        'optical_flow', 'optical_flow_shader', 'flow', 'OpticalFlowShader',
+        'OpticalFlow'
+    ],
+    module=OpticalFlowShader)
 
 TEXTURES = Registry('textures')
 TEXTURES.register_module(

@@ -28,8 +28,8 @@ class SMPLRenderer(MeshBaseRenderer):
     """Render SMPL(X) with different render choices."""
 
     def __init__(self,
-                 resolution: Tuple[int, int],
                  faces: Union[np.ndarray, torch.LongTensor],
+                 resolution: Tuple[int, int] = None,
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  colors: Optional[Union[List[str], np.ndarray,
@@ -139,6 +139,9 @@ class SMPLRenderer(MeshBaseRenderer):
         """
 
     def to(self, device):
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
         return super(MeshBaseRenderer, self).to(device)
 
     def forward(

@@ -8,8 +8,7 @@ from tqdm import trange
 import torch.nn as nn
 from mmhuman3d.core.cameras.builder import build_cameras
 from mmhuman3d.core.cameras.cameras import NewAttributeCameras
-from mmhuman3d.core.visualization.renderer import MeshBaseRenderer
-from .builder import build_renderer
+import torch.nn as nn
 
 osj = os.path.join
 
@@ -18,19 +17,14 @@ def render(output_path: Optional[str] = None,
            device: Union[str, torch.device, None] = None,
            meshes: Meshes = None,
            cameras: Optional[NewAttributeCameras] = None,
-           renderer: Optional[MeshBaseRenderer] = None,
+           renderer: Optional[nn.Module] = None,
            batch_size: int = 5,
-           return_tensor: bool = False,
+           return_tensor=False,
            no_grad: bool = False):
-    if isinstance(renderer, dict):
-        renderer = build_renderer(renderer).to(device)
-    elif isinstance(renderer, nn.Module):
-        renderer = renderer.to(device)
 
-    if isinstance(cameras, dict):
-        cameras = build_cameras(cameras).to(device)
-    elif isinstance(cameras, NewAttributeCameras):
-        cameras = cameras.to(device)
+    renderer = renderer.to(device)
+
+    cameras = cameras.to(device)
 
     if output_path is not None:
         renderer._set_output_path(output_path)
@@ -38,7 +32,6 @@ def render(output_path: Optional[str] = None,
         renderer.device = device
 
     num_frames = len(meshes)
-
     if len(cameras) == 1:
         cameras = cameras.extend(num_frames)
 

@@ -233,7 +233,7 @@ SMPL_SUPER_SET = {
     'HAND': ['leftHand', 'rightHand', 'leftHandIndex1', 'rightHandIndex1'],
     'LEG': ['rightUpLeg', 'leftUpLeg', 'leftLeg', 'rightLeg'],
     'ARM': ['leftForeArm', 'rightForeArm', 'leftArm', 'rightArm'],
-    'HEAD': ['neck', 'eyeballs', 'head'],
+    'HEAD': ['neck', 'head'],
     'UPBODY': ['spine1', 'spine2', 'leftShoulder', 'rightShoulder'],
     'DOWNBODY': ['spine', 'hips']
 }
