@@ -970,7 +970,7 @@ def render_smpl(
         return_tensor=return_tensor,
         alpha=alpha,
         model_type=model_type,
-        img_format=img_format,
+        read_img_format=img_format,
         render_choice=render_choice,
         projection=projection,
         frames_folder=frames_folder,

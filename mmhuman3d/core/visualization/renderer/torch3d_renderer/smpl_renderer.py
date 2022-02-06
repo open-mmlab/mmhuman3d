@@ -38,6 +38,7 @@ class SMPLRenderer(MeshBaseRenderer):
                  alpha: float = 1.0,
                  model_type='smpl',
                  out_img_format: str = '%06d.png',
+                 read_img_format: str = None,
                  render_choice='mq',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
@@ -64,6 +65,7 @@ class SMPLRenderer(MeshBaseRenderer):
         self.frames_folder = frames_folder
         self.plot_kps = plot_kps
         self.vis_kp_index = vis_kp_index
+        self.read_img_format = read_img_format
         self.out_img_format = out_img_format
         self.final_resolution = final_resolution
         self.segmentation = body_segmentation(self.model_type)
@@ -202,7 +204,7 @@ class SMPLRenderer(MeshBaseRenderer):
             images = images_to_array(
                 self.frames_folder,
                 resolution=self.resolution,
-                img_format=self.img_format,
+                img_format=self.read_img_format,
                 start=indexes[0],
                 end=indexes[-1],
                 disable_log=True).astype(np.float64)
