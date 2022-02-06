@@ -243,12 +243,17 @@ class MeshBaseRenderer(nn.Module):
 
     @staticmethod
     def _normalize(value,
-                   min_value=0,
-                   max_value=1,
+                   origin_value_range=None,
+                   out_value_range=[0, 1],
                    dtype=None) -> Union[torch.Tensor, np.ndarray]:
         """Normalize the tensor or array."""
-        value = (value - value.min()) / (value.max() - value.min() + 1e-9) * (
-            max_value - min_value) + min_value
+        if origin_value_range is not None:
+            value = (value - origin_value_range[0]) / (
+                origin_value_range[1] - origin_value_range[0] + 1e-9
+            ) * (out_value_range[1] - out_value_range[0]) + out_value_range[0]
+        else:
+            value = value * (out_value_range[1] -
+                             out_value_range[0]) + out_value_range[0]
         if isinstance(value, torch.Tensor):
             if dtype is not None:
                 return value.type(dtype)
@@ -264,14 +269,20 @@ class MeshBaseRenderer(nn.Module):
         """Convert image tensor to array."""
         image = image.detach().cpu().numpy()
         image = self._normalize(
-            image, min_value=0, max_value=255, dtype=np.uint8)
+            image,
+            origin_value_range=[0, 1],
+            out_value_range=[0, 255],
+            dtype=np.uint8)
         return image
 
     def _array2tensor(self, image) -> torch.Tensor:
         """Convert image array to tensor."""
         image = torch.Tensor(image)
         image = self._normalize(
-            image, min_value=0, max_value=1, dtype=torch.float32)
+            image,
+            origin_value_range=[0, 255],
+            out_value_range=[0, 1],
+            dtype=torch.float32)
         return image
 
     def _write_images(self, rgba, images, indexes):
@@ -348,7 +359,6 @@ class MeshBaseRenderer(nn.Module):
         meshes = self._prepare_meshes(meshes, vertices, faces)
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         rendered_images = self.shader(
             fragments=fragments, meshes=meshes, cameras=cameras, lights=lights)
