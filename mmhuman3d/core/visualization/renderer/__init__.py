@@ -10,7 +10,6 @@ from .torch3d_renderer.silhouette_renderer import SilhouetteRenderer
 from .torch3d_renderer.smpl_renderer import SMPLRenderer
 from .torch3d_renderer.textures import TexturesNearest
 from .torch3d_renderer.uv_renderer import UVRenderer
-from .torch3d_renderer.opticalflow_renderer import OpticalFlowRenderer
 from .torch3d_renderer.shader import (DepthShader, SegmentationShader,
                                       NormalShader, NoLightShader,
                                       OpticalFlowShader)
@@ -24,7 +23,7 @@ __all__ = [
     'SMPLRenderer', 'SilhouetteRenderer', 'Axes3dJointsRenderer',
     'VedoRenderer', 'DepthRenderer', 'NormalRenderer', 'SegmentationRenderer',
     'PointCloudRenderer', 'UVRenderer', 'build_renderer', 'build_shader',
-    'build_textures', 'build_lights', 'OpticalFlowRenderer', 'DepthShader',
-    'SegmentationShader', 'NormalShader', 'NoLightShader', 'OpticalFlowShader',
+    'build_textures', 'build_lights', 'DepthShader',
+    'SegmentationShader', 'NormalShader', 'NoLightShader',
     'render_runner'
 ]
