@@ -29,30 +29,33 @@ class GTAHumanConverter(BaseConverter):
     <https://arxiv.org/pdf/2110.07588.pdf>`__.
     """
 
-    focal_length = 1158.0337
-    camera_center = (960, 540)  # xy
-    image_size = (1080, 1920)  # (height, width)
+    def __init__(self, *args, **kwargs):
+        super(GTAHumanConverter, self).__init__(*args, **kwargs)
 
-    device = torch.device(
-        'cuda') if torch.cuda.is_available() else torch.device('cpu')
+        focal_length = 1158.0337
+        camera_center = (960, 540)  # xy
+        image_size = (1080, 1920)  # (height, width)
 
-    smpl = build_body_model(
-        dict(
-            type='SMPL',
-            keypoint_src='smpl_54',
-            keypoint_dst='smpl_49',
-            model_path='data/body_models/smpl',
-            extra_joints_regressor='data/body_models/J_regressor_extra.npy')
-    ).to(device)
+        self.device = torch.device(
+            'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    camera = build_cameras(
-        dict(
-            type='PerspectiveCameras',
-            convention='opencv',
-            in_ndc=False,
-            focal_length=focal_length,
-            image_size=image_size,
-            principal_point=camera_center))
+        self.smpl = build_body_model(
+            dict(
+                type='SMPL',
+                keypoint_src='smpl_54',
+                keypoint_dst='smpl_49',
+                model_path='data/body_models/smpl',
+                extra_joints_regressor='data/body_models/J_regressor_extra.npy'
+            )).to(self.device)
+
+        self.camera = build_cameras(
+            dict(
+                type='PerspectiveCameras',
+                convention='opencv',
+                in_ndc=False,
+                focal_length=focal_length,
+                image_size=image_size,
+                principal_point=camera_center)).to(self.device)
 
     def convert(self, dataset_path: str, out_path: str) -> dict:
         """
@@ -60,7 +63,6 @@ class GTAHumanConverter(BaseConverter):
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
-
         Returns:
             dict:
                 A dict containing keys video_path, smplh, meta, frame_idx
