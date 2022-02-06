@@ -215,9 +215,13 @@ def test_preprocess():
     data_converter = build_data_converter(cfg)
     data_converter.convert(HUMMAN_ROOT, output_path)
     assert os.path.exists(
-        '/tmp/preprocessed_npzs/humman_train_kinect_ds10.npz')
+        '/tmp/preprocessed_npzs/humman_train_kinect_ds10_smpl.npz')
     assert os.path.exists(
-        '/tmp/preprocessed_npzs/humman_train_iphone_ds10.npz')
+        '/tmp/preprocessed_npzs/humman_test_kinect_ds10_smpl.npz')
+    assert os.path.exists(
+        '/tmp/preprocessed_npzs/humman_train_iphone_ds10_smpl.npz')
+    assert os.path.exists(
+        '/tmp/preprocessed_npzs/humman_test_iphone_ds10_smpl.npz')
 
 
 def test_preprocessed_npz():
@@ -233,7 +237,9 @@ def test_preprocessed_npz():
         'keypoints3d17_cam', 'keypoints3d17', 'keypoints3d17_relative',
         'keypoints3d_cam', 'keypoints3d_relative_mask', 'phi', 'phi_weight',
         'features', 'has_smpl', 'keypoints2d_gta', 'keypoints3d_gta',
-        'keypoints2d_gta_mask', 'keypoints3d_gta_mask', 'image_id'
+        'keypoints2d_gta_mask', 'keypoints3d_gta_mask', 'image_id',
+        'keypoints2d_humman', 'keypoints3d_humman', 'keypoints2d_humman_mask',
+        'keypoints3d_humman_mask'
     ]
 
     for npf in os.listdir(npz_folder):

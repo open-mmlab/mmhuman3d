@@ -66,10 +66,12 @@ def test_get_kinect_resolution():
     color_resolution = smc.get_kinect_color_resolution(0)
     assert color_resolution.shape == (
         2, ), 'Kinect Color Resolution should be a 2D matrix'
+    assert tuple(color_resolution) == (1920, 1080)
 
     depth_resolution = smc.get_kinect_depth_resolution(0)
     assert depth_resolution.shape == (
         2, ), 'Kinect Depth Resolution should be a 2D matrix'
+    assert tuple(depth_resolution) == (640, 576)
 
 
 def test_get_iphone_extrinsics():
@@ -94,12 +96,12 @@ def test_get_iphone_resolution():
     color_resolution = smc.get_iphone_color_resolution(0, vertical=True)
     assert color_resolution.shape == (
         2, ), 'iPhone Color Resolution should be a 2D matrix'
-    assert tuple(color_resolution) == (1920, 1440)
+    assert tuple(color_resolution) == (1440, 1920)
 
     color_resolution = smc.get_iphone_color_resolution(0, vertical=False)
     assert color_resolution.shape == (
         2, ), 'iPhone Color Resolution should be a 2D matrix'
-    assert tuple(color_resolution) == (1440, 1920)
+    assert tuple(color_resolution) == (1920, 1440)
 
 
 def test_get_iphone_color():
@@ -449,7 +451,7 @@ def test_iphone_rotation():
 
     # rotate vertical keypoints2d back to horizontal
     # counter-clockwise by 90 degrees
-    H, W = smc.get_iphone_color_resolution(vertical=True)
+    W, H = smc.get_iphone_color_resolution(vertical=True)
     xs, ys = keypoints2d[..., 0], keypoints2d[..., 1]
     xs, ys = ys, W - xs  # vertical -> horizontal
     keypoints2d[..., 0], keypoints2d[..., 1] = xs.copy(), ys.copy()

@@ -258,10 +258,25 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 gender=gender)
             gt_keypoints3d = gt_output['joints'].detach().cpu().numpy()
             gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 24))
-        elif self.dataset_name in ['h36m', 'humman']:
+        elif self.dataset_name == 'humman':
+            betas = []
+            body_pose = []
+            global_orient = []
+            smpl_dict = self.human_data['smpl']
+            for idx in range(self.num_data):
+                betas.append(smpl_dict['betas'][idx])
+                body_pose.append(smpl_dict['body_pose'][idx])
+                global_orient.append(smpl_dict['global_orient'][idx])
+            betas = torch.FloatTensor(betas)
+            body_pose = torch.FloatTensor(body_pose).view(-1, 69)
+            global_orient = torch.FloatTensor(global_orient)
+            gt_output = self.body_model(
+                betas=betas, body_pose=body_pose, global_orient=global_orient)
+            gt_keypoints3d = gt_output['joints'].detach().cpu().numpy()
+            gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 24))
+        elif self.dataset_name == 'h36m':
             gt_keypoints3d = self.human_data['keypoints3d'][:, :, :3]
             gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 17))
-
         else:
             raise NotImplementedError()
 
@@ -308,13 +323,38 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             pred_pelvis = (pred_keypoints3d[:, 2] + pred_keypoints3d[:, 3]) / 2
             gt_pelvis = (gt_keypoints3d[:, 2] + gt_keypoints3d[:, 3]) / 2
 
+        # humman keypoints (not SMPL keypoints)
+        elif gt_keypoints3d.shape[1] == 133:
+            assert pred_keypoints3d.shape[1] == 17
+
+            H36M_TO_J17 = [
+                6, 5, 4, 1, 2, 3, 16, 15, 14, 11, 12, 13, 8, 10, 0, 7, 9
+            ]
+            H36M_TO_J14 = H36M_TO_J17[:14]
+            pred_joint_mapper = H36M_TO_J14
+            pred_keypoints3d = pred_keypoints3d[:, pred_joint_mapper, :]
+
+            # the last two are not mapped
+            gt_joint_mapper = [16, 14, 12, 11, 13, 15, 10, 8, 6, 5, 7, 9, 0, 0]
+            gt_keypoints3d = gt_keypoints3d[:, gt_joint_mapper, :]
+
+            pred_pelvis = (pred_keypoints3d[:, 2] + pred_keypoints3d[:, 3]) / 2
+            gt_pelvis = (gt_keypoints3d[:, 2] + gt_keypoints3d[:, 3]) / 2
+
+            # TODO: temp solution
+            joint_mapper = None
+            gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), 14))
+            gt_keypoints3d_mask[:, 12:14] = 0  # the last two are invalid
+            gt_keypoints3d_mask = gt_keypoints3d_mask > 0
+
         else:
-            pass
+            raise NotImplementedError
 
         pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
         gt_keypoints3d = gt_keypoints3d - gt_pelvis[:, None, :]
 
-        gt_keypoints3d_mask = gt_keypoints3d_mask[:, joint_mapper] > 0
+        if joint_mapper is not None:
+            gt_keypoints3d_mask = gt_keypoints3d_mask[:, joint_mapper] > 0
 
         mpjpe = keypoint_mpjpe(pred_keypoints3d, gt_keypoints3d,
                                gt_keypoints3d_mask)

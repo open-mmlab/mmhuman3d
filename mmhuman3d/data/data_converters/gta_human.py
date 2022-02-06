@@ -19,6 +19,7 @@ from .builder import DATA_CONVERTERS
 # TODO:
 # 1. camera parameters
 # 2. root align using mid-point of hips
+# 3. keypoint conversion
 
 
 @DATA_CONVERTERS.register_module()
@@ -32,7 +33,7 @@ class GTAHumanConverter(BaseConverter):
     def __init__(self, *args, **kwargs):
         super(GTAHumanConverter, self).__init__(*args, **kwargs)
 
-        focal_length = 1158.0337
+        focal_length = 1158.0337  # default setting
         camera_center = (960, 540)  # xy
         image_size = (1080, 1920)  # (height, width)
 
