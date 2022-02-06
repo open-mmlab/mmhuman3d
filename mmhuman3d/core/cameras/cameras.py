@@ -130,19 +130,6 @@ class NewAttributeCameras(cameras.CamerasBase):
 
         super().__init__(**kwargs)
 
-    def get_ndc_camera_transform(self, **kwargs) -> Transform3d:
-        """Fix Pytorch3D multiple values bug."""
-        kwargs.pop('cameras', None)
-        return super().get_ndc_camera_transform(**kwargs)
-
-    def transform_points_screen(self,
-                                points,
-                                eps: Optional[float] = None,
-                                **kwargs) -> torch.Tensor:
-        """Fix Pytorch3D multiple values bug."""
-        kwargs.pop('cameras', None)
-        return super().transform_points_screen(points, eps, **kwargs)
-
     def get_camera_plane_normals(self, **kwargs) -> torch.Tensor:
         """Get the identity normal vector which stretchs out of the camera
         plane.
@@ -774,16 +761,15 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
             orthographic=False)
 
     def get_ndc_camera_transform(self, **kwargs) -> Transform3d:
-        return super(cameras.PerspectiveCameras,
-                     self).get_ndc_camera_transform(**kwargs)
+        kwargs.pop('cameras', None)
+        return super().get_ndc_camera_transform(**kwargs)
 
     def transform_points_screen(self,
                                 points,
                                 eps: Optional[float] = None,
                                 **kwargs) -> torch.Tensor:
         kwargs.pop('cameras', None)
-        return super(cameras.PerspectiveCameras, self).transform_points_screen(
-            points, eps, **kwargs)
+        return super().transform_points_screen(points, eps, **kwargs)
 
 
 @CAMERAS.register_module(
@@ -853,16 +839,15 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
         return super(cameras.FoVPerspectiveCameras, self).__getitem__(index)
 
     def get_ndc_camera_transform(self, **kwargs) -> Transform3d:
-        return super(cameras.FoVPerspectiveCameras,
-                     self).get_ndc_camera_transform(**kwargs)
+        kwargs.pop('cameras', None)
+        return super().get_ndc_camera_transform(**kwargs)
 
     def transform_points_screen(self,
                                 points,
                                 eps: Optional[float] = None,
                                 **kwargs) -> torch.Tensor:
         kwargs.pop('cameras', None)
-        return super(cameras.FoVPerspectiveCameras, self).transform_points_screen(
-            points, eps, **kwargs)
+        return super().transform_points_screen(points, eps, **kwargs)
 
     @classmethod
     def get_default_projection_matrix(cls, **args) -> torch.Tensor:
@@ -984,16 +969,15 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
             self.image_size = None
 
     def get_ndc_camera_transform(self, **kwargs) -> Transform3d:
-        return super(cameras.OrthographicCameras,
-                     self).get_ndc_camera_transform(**kwargs)
+        kwargs.pop('cameras', None)
+        return super().get_ndc_camera_transform(**kwargs)
 
     def transform_points_screen(self,
                                 points,
                                 eps: Optional[float] = None,
                                 **kwargs) -> torch.Tensor:
         kwargs.pop('cameras', None)
-        return super(cameras.OrthographicCameras, self).transform_points_screen(
-            points, eps, **kwargs)
+        return super().transform_points_screen(points, eps, **kwargs)
 
     def __getitem__(self, index: Union[slice, int, torch.Tensor, List, Tuple]):
         """Slice the cameras by batch dim.
@@ -1194,16 +1178,15 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
         raise NotImplementedError()
 
     def get_ndc_camera_transform(self, **kwargs) -> Transform3d:
-        return super(cameras.FoVOrthographicCameras,
-                     self).get_ndc_camera_transform(**kwargs)
+        kwargs.pop('cameras', None)
+        return super().get_ndc_camera_transform(**kwargs)
 
     def transform_points_screen(self,
                                 points,
                                 eps: Optional[float] = None,
                                 **kwargs) -> torch.Tensor:
         kwargs.pop('cameras', None)
-        return super(cameras.FoVOrthographicCameras,
-                     self).transform_points_screen(points, eps, **kwargs)
+        return super().transform_points_screen(points, eps, **kwargs)
 
 
 def concat_cameras(
