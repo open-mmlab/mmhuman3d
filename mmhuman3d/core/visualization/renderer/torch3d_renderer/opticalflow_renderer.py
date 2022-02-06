@@ -1,4 +1,5 @@
-from typing import Optional, Union
+from typing import Optional, Union, Iterable, Literal
+from mmhuman3d.core.visualization.renderer.torch3d_renderer.base_renderer import MeshBaseRenderer
 
 import torch
 import torch.nn as nn
@@ -6,22 +7,41 @@ import torch.nn as nn
 from pytorch3d.structures import Meshes
 
 from .builder import RENDERER
-from .shader import OpticalFlowShader
 
 
 @RENDERER.register_module(name=['opticalflow', 'optical_flow', 'OpticalFlow'])
-class OpticalFlowRenderer(nn.Module):
+class OpticalFlowRenderer(MeshBaseRenderer):
 
-    def __init__(self, rasterizer, **kwargs):
-        super().__init__()
-        self.rasterizer = rasterizer
-        self.cameras = kwargs.get('cameras', None)
-        self.shader = OpticalFlowShader()
+    def __init__(
+        self,
+        resolution: Iterable[int] = None,
+        device: Union[torch.device, str] = 'cpu',
+        output_path: Optional[str] = None,
+        out_img_format: str = '%06d.png',
+        projection: Literal['weakperspective', 'fovperspective',
+                            'orthographics', 'perspective',
+                            'fovorthographics'] = 'weakperspective',
+        in_ndc: bool = True,
+        **kwargs,
+    ) -> None:
+        super().__init__(
+            resolution=resolution,
+            device=device,
+            output_path=output_path,
+            obj_path=None,
+            out_img_format=out_img_format,
+            projection=projection,
+            in_ndc=in_ndc,
+            **kwargs)
 
     def to(self, device):
-        # Rasterizer and shader have submodules which are not of type nn.Module
-        self.rasterizer.to(device)
-        self.shader.to(device)
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
+        if self.rasterizer.cameras is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        self.shader = self.shader.to(device)
+        return self
 
     def forward(
         self,
@@ -55,9 +75,9 @@ class OpticalFlowRenderer(nn.Module):
         assert len(meshes_source) == len(meshes_target)
 
         if cameras_source is None:
-            cameras_source = cameras if cameras is not None else self.cameras
+            cameras_source = cameras
         if cameras_target is None:
-            cameras_target = cameras if cameras is not None else self.cameras
+            cameras_target = cameras
 
         fragments_source = self.rasterizer(meshes_source,
                                            **{'cameras': cameras_source})

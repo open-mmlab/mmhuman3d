@@ -1,6 +1,6 @@
 import pickle
 import warnings
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,7 +14,6 @@ from pytorch3d.renderer.mesh.rasterizer import (MeshRasterizer,
                                                 RasterizationSettings)
 from mmhuman3d.core.cameras.cameras import (NewAttributeCameras,
                                             FoVOrthographicCameras)
-from mmhuman3d.models.body_models import SMPL, SMPLX
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER
 
@@ -25,21 +24,25 @@ class UVRenderer(nn.Module):
     # TODO: test smplx support.
     """
 
-    def __init__(self,
-                 param_path: Optional[str] = None,
-                 obj_path: Optional[str] = None,
-                 model_type: Optional[str] = 'smpl',
-                 device: Union[torch.device, str] = 'cpu',
-                 resolution: Iterable[int] = (256, 256)):
+    def __init__(
+        self,
+        resolution: Tuple[int] = None,
+        model_type: Optional[str] = 'smpl',
+        uv_param_path: Optional[str] = None,
+        obj_path: Optional[str] = None,
+        device: Union[torch.device, str] = 'cpu',
+    ):
         super().__init__()
-        body_model_class = {'smpl': SMPL, 'smplx': SMPLX}
-        self.NUM_VERTS = body_model_class[model_type].NUM_VERTS
+        num_verts = {'smpl': 6890, 'smplx': 10475}
+        self.NUM_VERTS = num_verts[model_type]
         self.device = device
         self.resolution = (resolution, resolution) if isinstance(
             resolution, int) else resolution
-        if param_path is not None:
-            check_path_suffix(param_path, allowed_suffix=['pkl', 'pickle'])
-            with open(param_path, 'rb') as f:
+        self.uv_param_path = uv_param_path
+        self.obj_path = obj_path
+        if uv_param_path is not None:
+            check_path_suffix(uv_param_path, allowed_suffix=['pkl', 'pickle'])
+            with open(uv_param_path, 'rb') as f:
                 param_dict = pickle.load(f)
 
             verts_uv = torch.Tensor(param_dict['texcoords']).to(self.device)

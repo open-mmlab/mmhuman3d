@@ -300,19 +300,21 @@ class _CavasProducer:
 
         # with numpy array frames
         self.image_array = image_array
-        if self.image_array is not None:
-            self.auto_resolution = self.image_array.shape[1:3]
-        elif len(self.frame_list) > 1 and \
-                check_path_existence(
-                    self.frame_list[0], 'file') == Existence.FileExist:
-            tmp_image_array = cv2.imread(self.frame_list[0])
-            self.auto_resolution = tmp_image_array.shape[:2]
-        else:
 
-            self.auto_resolution = [
-                int(np.max(kp2d) * default_scale),
-                int(np.max(kp2d) * default_scale)
-            ]
+        if self.resolution is None:
+            if self.image_array is not None:
+                self.auto_resolution = self.image_array.shape[1:3]
+            elif len(self.frame_list) > 1 and \
+                    check_path_existence(
+                        self.frame_list[0], 'file') == Existence.FileExist:
+                tmp_image_array = cv2.imread(self.frame_list[0])
+                self.auto_resolution = tmp_image_array.shape[:2]
+            else:
+
+                self.auto_resolution = [
+                    int(np.max(kp2d) * default_scale),
+                    int(np.max(kp2d) * default_scale)
+                ]
         if self.image_array is None:
             self.len = len(self.frame_list)
         else:
@@ -364,6 +366,9 @@ class _CavasProducer:
             else:
                 kp2d_frame = self.kp2d[frame_index]
             return canvas, kp2d_frame
+
+    def __len__(self):
+        return self.len
 
 
 def update_frame_list(frame_list, origin_frames, img_format, start, end):

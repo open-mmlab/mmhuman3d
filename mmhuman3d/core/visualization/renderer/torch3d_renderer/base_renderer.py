@@ -29,7 +29,7 @@ except ImportError:
 class MeshBaseRenderer(nn.Module):
 
     def __init__(self,
-                 resolution: Tuple[int, int] = (1024, 1024),
+                 resolution: Tuple[int, int] = None,
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  out_img_format: str = '%06d.png',
@@ -103,6 +103,75 @@ class MeshBaseRenderer(nn.Module):
 
         self._init_renderer(**kwargs)
 
+    def _init_renderer(self,
+                       rasterizer: Union[dict, nn.Module] = None,
+                       shader: Union[dict, nn.Module] = None,
+                       materials: Union[dict, Materials] = None,
+                       lights: Union[dict, DirectionalLights, PointLights,
+                                     AmbientLights] = None,
+                       blend_params: Union[dict, BlendParams] = None,
+                       **kwargs):
+        """Initial renderer."""
+        if isinstance(materials, dict):
+            materials = Materials(**materials)
+        elif materials is None:
+            materials = Materials()
+        elif not isinstance(materials, Materials):
+            raise TypeError(f'Wrong type of materials: {type(materials)}.')
+
+        if isinstance(lights, dict):
+            self.lights = build_lights(lights)
+        elif lights is None:
+            self.lights = AmbientLights()
+        elif not isinstance(
+                lights, Union[AmbientLights, PointLights, DirectionalLights]):
+            raise TypeError(f'Wrong type of lights: {type(lights)}.')
+
+        if isinstance(blend_params, dict):
+            blend_params = BlendParams(**blend_params)
+        elif blend_params is None:
+            blend_params = BlendParams()
+        elif not isinstance(blend_params, BlendParams):
+            raise TypeError(
+                f'Wrong type of blend_params: {type(blend_params)}.')
+
+        if isinstance(rasterizer, nn.Module):
+            if self.resolution is not None:
+                rasterizer.raster_settings.image_size = self.resolution
+            self.rasterizer = rasterizer
+        elif isinstance(rasterizer, dict):
+            if self.resolution is not None:
+                rasterizer['image_size'] = self.resolution
+            raster_settings = RasterizationSettings(**rasterizer)
+            self.rasterizer = MeshRasterizer(raster_settings=raster_settings)
+        else:
+            raise TypeError(
+                f'Wrong type of rasterizer: {type(self.rasterizer)}.')
+
+        if isinstance(shader, nn.Module):
+            self.shader = shader
+        elif isinstance(shader, dict):
+            shader.update(
+                materials=materials,
+                lights=self.lights,
+                blend_params=blend_params)
+            self.shader = build_shader(shader)
+        else:
+            raise TypeError(f'Wrong type of shader: {type(self.shader)}.')
+        self = self.to(self.device)
+
+    def to(self, device):
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
+        if self.rasterizer.cameras is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        if self.shader.cameras is not None:
+            self.shader.cameras = self.shader.cameras.to(device)
+        self.shader.materials = self.shader.materials.to(device)
+        self.shader.lights = self.shader.lights.to(device)
+        return self
+
     def _set_output_path(self, output_path):
         if output_path is not None:
             if check_path_suffix(output_path, ['.mp4', '.gif']):
@@ -117,7 +186,7 @@ class MeshBaseRenderer(nn.Module):
     def _update_resolution(self, **kwargs):
         if 'resolution' in kwargs:
             self.resolution = kwargs.get('resolution')
-            self.rasterizer.raster_settings.resolution = self.resolution
+            self.rasterizer.raster_settings.image_size = self.resolution
 
     def export(self):
         """Export output video if need."""
@@ -158,70 +227,6 @@ class MeshBaseRenderer(nn.Module):
                 image_size=self.resolution,
                 in_ndc=self.in_ndc)).to(self.device)
         return cameras
-
-    def _init_renderer(self,
-                       rasterizer: Union[dict, nn.Module] = None,
-                       shader: Union[dict, nn.Module] = None,
-                       materials: Union[dict, Materials] = None,
-                       lights: Union[dict, DirectionalLights, PointLights,
-                                     AmbientLights] = None,
-                       blend_params: Union[dict, BlendParams] = None,
-                       **kwargs):
-        """Initial renderer."""
-        if isinstance(materials, dict):
-            materials = Materials(**materials)
-        elif materials is None:
-            materials = Materials()
-        elif not isinstance(materials, Materials):
-            raise TypeError(f'Wrong type of materials: {type(materials)}.')
-
-        if isinstance(lights, dict):
-            self.lights = build_lights(lights)
-        elif lights is None:
-            self.lights = AmbientLights()
-        elif not isinstance(
-                lights, Union[AmbientLights, PointLights, DirectionalLights]):
-            raise TypeError(f'Wrong type of lights: {type(lights)}.')
-
-        if isinstance(blend_params, dict):
-            blend_params = BlendParams(**blend_params)
-        elif blend_params is None:
-            blend_params = BlendParams()
-        elif not isinstance(blend_params, BlendParams):
-            raise TypeError(
-                f'Wrong type of blend_params: {type(blend_params)}.')
-
-        if isinstance(rasterizer, nn.Module):
-            rasterizer.raster_settings.image_size = self.resolution
-            self.rasterizer = rasterizer
-        elif isinstance(rasterizer, dict):
-            rasterizer['image_size'] = self.resolution
-            raster_settings = RasterizationSettings(**rasterizer)
-            self.rasterizer = MeshRasterizer(raster_settings=raster_settings)
-        else:
-            raise TypeError(
-                f'Wrong type of rasterizer: {type(self.rasterizer)}.')
-
-        if isinstance(shader, nn.Module):
-            self.shader = shader
-        elif isinstance(shader, dict):
-            shader.update(
-                materials=materials,
-                lights=self.lights,
-                blend_params=blend_params)
-            self.shader = build_shader(shader)
-        else:
-            raise TypeError(f'Wrong type of shader: {type(self.shader)}.')
-        self = self.to(self.device)
-
-    def to(self, device):
-        if self.rasterizer.cameras is not None:
-            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
-        if self.shader.cameras is not None:
-            self.shader.cameras = self.shader.cameras.to(device)
-        self.shader.materials = self.shader.materials.to(device)
-        self.shader.lights = self.shader.lights.to(device)
-        return self
 
     @staticmethod
     def rgb2bgr(rgbs) -> Union[torch.Tensor, np.ndarray]:

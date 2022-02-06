@@ -20,7 +20,7 @@ class NormalRenderer(MeshBaseRenderer):
 
     def __init__(
         self,
-        resolution: Iterable[int] = [1024, 1024],
+        resolution: Iterable[int] = None,
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         out_img_format: str = '%06d.png',
@@ -63,10 +63,13 @@ class NormalRenderer(MeshBaseRenderer):
             **kwargs)
 
     def to(self, device):
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
         if self.rasterizer.cameras is not None:
             self.rasterizer.cameras = self.rasterizer.cameras.to(device)
         return self
-        
+
     def forward(self,
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
@@ -121,7 +124,6 @@ class NormalRenderer(MeshBaseRenderer):
         return normal_map
 
     def tensor2rgba(self, tensor: torch.Tensor):
-        rgbs, valid_masks = tensor[
-            ..., :3], (tensor[..., 3:] > 0) * 1.0
+        rgbs, valid_masks = tensor[..., :3], (tensor[..., 3:] > 0) * 1.0
         rgbs = (rgbs + 1) / 2
         return torch.cat([rgbs, valid_masks], -1)

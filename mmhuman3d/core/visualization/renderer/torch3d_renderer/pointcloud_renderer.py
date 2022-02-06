@@ -25,7 +25,7 @@ except ImportError:
 class PointCloudRenderer(MeshBaseRenderer):
 
     def __init__(self,
-                 resolution: Tuple[int, int],
+                 resolution: Tuple[int, int] = None,
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  return_type: Optional[List] = None,
@@ -78,6 +78,9 @@ class PointCloudRenderer(MeshBaseRenderer):
             **kwargs)
 
     def to(self, device):
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
         if self.rasterizer.cameras is not None:
             self.rasterizer.cameras = self.rasterizer.cameras.to(device)
         self.compositor = self.compositor.to(device)

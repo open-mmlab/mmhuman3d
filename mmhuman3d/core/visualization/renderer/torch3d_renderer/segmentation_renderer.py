@@ -22,7 +22,7 @@ class SegmentationRenderer(MeshBaseRenderer):
     """Render segmentation map into a segmentation index tensor."""
 
     def __init__(self,
-                 resolution: Tuple[int, int],
+                 resolution: Tuple[int, int] = None,
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  out_img_format: str = '%06d.png',
@@ -76,6 +76,9 @@ class SegmentationRenderer(MeshBaseRenderer):
         self.num_class = num_class
 
     def to(self, device):
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
         if self.rasterizer.cameras is not None:
             self.rasterizer.cameras = self.rasterizer.cameras.to(device)
         return self
