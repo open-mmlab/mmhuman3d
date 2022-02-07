@@ -549,6 +549,27 @@ class HumanData(dict):
             # keys not expected be sliced
             if dim is None:
                 ret_human_data[key] = self[key]
+            elif isinstance(dim, dict):
+                value_dict = self.get_raw_value(key)
+                sliced_dict = {}
+                for sub_key in value_dict.keys():
+                    sub_value = value_dict[sub_key]
+                    if dim[sub_key] is None:
+                        sliced_dict[sub_key] = sub_value
+                    else:
+                        sub_dim = dim[sub_key]
+                        if isinstance(sub_value, np.ndarray):
+                            slice_list = [
+                                slice(None),
+                            ] * len(sub_value.shape)
+                            sliced_sub_value = sub_value[tuple(slice_list)]
+                            slice_list[sub_dim] = slice_index
+                            sliced_sub_value = sub_value[tuple(slice_list)]
+                            sliced_dict[sub_key] = sliced_sub_value
+                        else:
+                            sliced_sub_value = \
+                                sub_value[slice_index]
+                            sliced_dict[sub_key] = sliced_sub_value
             else:
                 value = self[key]
                 if isinstance(value, np.ndarray):
