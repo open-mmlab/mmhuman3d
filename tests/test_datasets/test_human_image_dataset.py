@@ -132,7 +132,7 @@ def test_pipeline():
                         original_keypoints3d).all()
     assert not np.equal(results_flip_smpl['keypoints2d'],
                         original_keypoints2d).all()
-    assert not np.equal(results_flip_smpl['smpl_body_pose'],
+    assert not np.equal(results_flip_smpl['smpl_global_orient'],
                         original_body_pose).all()
 
     # test random affine
@@ -146,7 +146,7 @@ def test_pipeline():
                         original_keypoints3d).all()
     assert not np.equal(results_affine['keypoints2d'],
                         original_keypoints2d).all()
-    assert not np.equal(results_affine['smpl_body_pose'],
+    assert not np.equal(results_affine['smpl_global_orient'],
                         original_body_pose).all()
 
 
