@@ -6,18 +6,23 @@ import numpy as np
 import torch
 import tqdm
 
-from mmhuman3d.models.builder import build_body_model
 from mmhuman3d.models.body_models.utils import batch_transform_to_camera_frame
+from mmhuman3d.models.builder import build_body_model
 
 
 class SMCReader:
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, body_model=None):
         """Read SenseMocapFile endswith ".smc".
 
         Args:
             file_path (str):
                 Path to an SMC file.
+            body_model (nn.Module or dict):
+                Only needed for SMPL transformation to device frame
+                if nn.Module: a body_model instance
+                if dict: a body_model config
+
         """
         self.smc = h5py.File(file_path, 'r')
         self.__calibration_dict__ = None
@@ -48,17 +53,27 @@ class SMCReader:
         if self.smpl_exists:
             self.smpl_num_frames = self.smc['SMPL'].attrs['num_frame']
             self.smpl_created_time = self.smc['SMPL'].attrs['created_time']
-            self.body_model = build_body_model(
-                dict(
-                    type='SMPL',
-                    gender='neutral',
-                    num_betas=10,
-                    keypoint_src='smpl_45',
-                    keypoint_dst='smpl_45',
-                    model_path='data/body_models/smpl',
-                    batch_size=1,
-                )
-            )
+
+            # initialize body model
+            if isinstance(body_model, torch.nn.Module):
+                self.body_model = body_model
+            elif isinstance(body_model, dict):
+                self.body_model = build_body_model(
+                    dict(
+                        type='SMPL',
+                        gender='neutral',
+                        num_betas=10,
+                        keypoint_src='smpl_45',
+                        keypoint_dst='smpl_45',
+                        model_path='data/body_models/smpl',
+                        batch_size=1,
+                    ))
+            else:
+                self.body_model = None
+                print('body_model should be nn.Module or dict to'
+                      'allow rigid transformation to device frame. '
+                      'Ignore this msg if you are not using relevant '
+                      'functions.')
 
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
@@ -956,6 +971,10 @@ class SMCReader:
 
         # return SMPL parameters in device coordinate system
         else:
+            assert isinstance(self.body_model, torch.nn.Module), \
+                'body_model should be nn.Module or dict to allow rigid ' \
+                'transformation to device frame.'
+
             if device == 'Kinect':
                 T_cam2world = self.get_kinect_color_extrinsics(
                     kinect_id=device_id, homogeneous=True)
@@ -988,8 +1007,7 @@ class SMCReader:
                 global_orient=torch.tensor(global_orient),
                 body_pose=torch.tensor(body_pose),
                 transl=torch.tensor(transl),
-                betas=torch.tensor(betas)
-            )
+                betas=torch.tensor(betas))
             joints = output['joints'].detach().numpy()
             pelvis = joints[:, 0, :]
 
@@ -997,8 +1015,7 @@ class SMCReader:
                 global_orient=global_orient,
                 transl=transl,
                 pelvis=pelvis,
-                extrinsic=T_world2cam
-            )
+                extrinsic=T_world2cam)
 
             smpl_dict = dict(
                 global_orient=new_global_orient,
