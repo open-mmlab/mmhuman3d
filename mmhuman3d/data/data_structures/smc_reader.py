@@ -69,10 +69,6 @@ class SMCReader:
                     ))
             else:
                 self.body_model = None
-                print('body_model should be nn.Module or dict to'
-                      'allow rigid transformation to device frame. '
-                      'Ignore this msg if you are not using relevant '
-                      'functions.')
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.
