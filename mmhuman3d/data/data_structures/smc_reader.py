@@ -22,7 +22,6 @@ class SMCReader:
                 Only needed for SMPL transformation to device frame
                 if nn.Module: a body_model instance
                 if dict: a body_model config
-
         """
         self.smc = h5py.File(file_path, 'r')
         self.__calibration_dict__ = None
@@ -74,7 +73,6 @@ class SMCReader:
                       'allow rigid transformation to device frame. '
                       'Ignore this msg if you are not using relevant '
                       'functions.')
-
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.

@@ -1,11 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 import numpy as np
-from mmhuman3d.utils.transforms import (aa_to_rotmat, rotmat_to_aa)
+
+from mmhuman3d.utils.transforms import aa_to_rotmat, rotmat_to_aa
 
 
 def transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
-    """ Transform body model parameters to camera frame
+    """Transform body model parameters to camera frame.
 
     Args:
         global_orient (np.ndarray): shape (3, ). Only global_orient and
@@ -58,7 +59,7 @@ def transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
 
 
 def batch_transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
-    """ Transform body model parameters to camera frame by batch
+    """Transform body model parameters to camera frame by batch.
 
     Args:
         global_orient (np.ndarray): shape (N, 3). Only global_orient and
