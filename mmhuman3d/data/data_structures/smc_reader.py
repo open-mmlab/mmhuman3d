@@ -3,10 +3,11 @@ import json
 import cv2
 import h5py
 import numpy as np
+import torch
 import tqdm
 
-from mmhuman3d.models.body_models import transform_to_camera_frame
 from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.body_models.utils import batch_transform_to_camera_frame
 
 
 class SMCReader:
@@ -48,13 +49,15 @@ class SMCReader:
             self.smpl_num_frames = self.smc['SMPL'].attrs['num_frame']
             self.smpl_created_time = self.smc['SMPL'].attrs['created_time']
             self.body_model = build_body_model(
-                type='SMPL',
-                gender='neutral',
-                num_betas=10,
-                keypoint_src='smpl_45',
-                keypoint_dst='smpl_45',
-                model_path='data/body_models/smpl',
-                batch_size=1,
+                dict(
+                    type='SMPL',
+                    gender='neutral',
+                    num_betas=10,
+                    keypoint_src='smpl_45',
+                    keypoint_dst='smpl_45',
+                    model_path='data/body_models/smpl',
+                    batch_size=1,
+                )
             )
 
 
@@ -982,15 +985,15 @@ class SMCReader:
             # transl = T_smpl2world[:, :3, 3]
 
             output = self.body_model(
-                global_orient=global_orient,
-                body_pose=body_pose,
-                transl=transl,
-                betas=betas
+                global_orient=torch.tensor(global_orient),
+                body_pose=torch.tensor(body_pose),
+                transl=torch.tensor(transl),
+                betas=torch.tensor(betas)
             )
-            joints = output['joints']
-            pelvis = joints[0]
+            joints = output['joints'].detach().numpy()
+            pelvis = joints[:, 0, :]
 
-            new_global_orient, new_transl = transform_to_camera_frame(
+            new_global_orient, new_transl = batch_transform_to_camera_frame(
                 global_orient=global_orient,
                 transl=transl,
                 pelvis=pelvis,
