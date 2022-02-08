@@ -5,7 +5,8 @@ import h5py
 import numpy as np
 import tqdm
 
-from mmhuman3d.utils.transforms import aa_to_rotmat, rotmat_to_aa
+from mmhuman3d.models.body_models import transform_to_camera_frame
+from mmhuman3d.models.builder import build_body_model
 
 
 class SMCReader:
@@ -46,6 +47,16 @@ class SMCReader:
         if self.smpl_exists:
             self.smpl_num_frames = self.smc['SMPL'].attrs['num_frame']
             self.smpl_created_time = self.smc['SMPL'].attrs['created_time']
+            self.body_model = build_body_model(
+                type='SMPL',
+                gender='neutral',
+                num_betas=10,
+                keypoint_src='smpl_45',
+                keypoint_dst='smpl_45',
+                model_path='data/body_models/smpl',
+                batch_size=1,
+            )
+
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.
@@ -943,35 +954,53 @@ class SMCReader:
         # return SMPL parameters in device coordinate system
         else:
             if device == 'Kinect':
-                cam2world = self.get_kinect_color_extrinsics(
+                T_cam2world = self.get_kinect_color_extrinsics(
                     kinect_id=device_id, homogeneous=True)
             else:
-                cam2world = self.get_iphone_extrinsics(
+                T_cam2world = self.get_iphone_extrinsics(
                     iphone_id=device_id, vertical=vertical)
 
-            num_frames = global_orient.shape[0]
+            T_world2cam = np.linalg.inv(T_cam2world)
 
-            T_smpl2world = np.repeat(
-                np.eye(4).reshape(1, 4, 4), num_frames, axis=0)
-            assert T_smpl2world.shape == (num_frames, 4, 4)
+            # num_frames = global_orient.shape[0]
+            #
+            # T_smpl2world = np.repeat(
+            #     np.eye(4).reshape(1, 4, 4), num_frames, axis=0)
+            # assert T_smpl2world.shape == (num_frames, 4, 4)
+            #
+            # T_smpl2world[:, :3, :3] = aa_to_rotmat(global_orient)
+            # T_smpl2world[:, :3, 3] = transl
+            #
+            # T_world2cam = np.linalg.inv(cam2world)
+            # T_world2cam = np.repeat(
+            #     T_world2cam.reshape(1, 4, 4), num_frames, axis=0)
+            # assert T_world2cam.shape == (num_frames, 4, 4)
+            #
+            # T_smpl2cam = T_world2cam @ T_smpl2world
+            #
+            # global_orient = rotmat_to_aa(T_smpl2cam[:, :3, :3])
+            # transl = T_smpl2world[:, :3, 3]
 
-            T_smpl2world[:, :3, :3] = aa_to_rotmat(global_orient)
-            T_smpl2world[:, :3, 3] = transl
-
-            T_world2cam = np.linalg.inv(cam2world)
-            T_world2cam = np.repeat(
-                T_world2cam.reshape(1, 4, 4), num_frames, axis=0)
-            assert T_world2cam.shape == (num_frames, 4, 4)
-
-            T_smpl2cam = T_world2cam @ T_smpl2world
-
-            global_orient = rotmat_to_aa(T_smpl2cam[:, :3, :3])
-            transl = T_smpl2world[:, :3, 3]
-
-            smpl_dict = dict(
+            output = self.body_model(
                 global_orient=global_orient,
                 body_pose=body_pose,
                 transl=transl,
+                betas=betas
+            )
+            joints = output['joints']
+            pelvis = joints[0]
+
+            new_global_orient, new_transl = transform_to_camera_frame(
+                global_orient=global_orient,
+                transl=transl,
+                pelvis=pelvis,
+                extrinsic=T_world2cam
+            )
+
+            smpl_dict = dict(
+                global_orient=new_global_orient,
+                body_pose=body_pose,
+                transl=new_transl,
                 betas=betas)
 
             return smpl_dict
