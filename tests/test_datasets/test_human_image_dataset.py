@@ -1,6 +1,13 @@
+import copy
+
 import numpy as np
 
 from mmhuman3d.data.datasets import HumanImageDataset
+from mmhuman3d.data.datasets.pipelines import (
+    LoadImageFromFile,
+    MeshAffine,
+    RandomHorizontalFlip,
+)
 
 
 def test_human_image_dataset():
@@ -81,6 +88,66 @@ def test_human_image_dataset():
     assert 'MPJPE-PA' in res
     assert res['MPJPE'] > 0
     assert res['MPJPE-PA'] > 0
+
+
+def test_pipeline():
+    train_dataset = HumanImageDataset(
+        data_prefix='tests/data',
+        pipeline=[],
+        dataset_name='3dpw',
+        ann_file='sample_3dpw_train.npz')
+
+    info = train_dataset.prepare_raw_data(0)
+
+    # keypoints2d and 3d
+    info['keypoints2d'] = np.random.rand(*info['keypoints2d'].shape).astype(
+        np.float32)
+    info['keypoints3d'] = np.random.rand(*info['keypoints3d'].shape).astype(
+        np.float32)
+    info['smpl_body_pose'] = info['smpl_body_pose'].astype('f')
+
+    # test loading image
+    transform = LoadImageFromFile()
+    results = transform(copy.deepcopy(info))
+
+    # test no flip
+    original_img = results['img']
+    original_keypoints2d = results['keypoints2d']
+    original_keypoints3d = results['keypoints3d']
+    original_body_pose = results['smpl_body_pose']
+
+    transform = RandomHorizontalFlip(flip_prob=0., convention='smpl_54')
+    results_no_flip = transform(copy.deepcopy(results))
+    assert np.equal(results_no_flip['img'], original_img).all()
+    assert np.equal(results_no_flip['keypoints2d'], original_keypoints2d).all()
+    assert np.equal(results_no_flip['keypoints3d'], original_keypoints3d).all()
+    assert np.equal(results_no_flip['smpl_body_pose'],
+                    original_body_pose).all()
+
+    # test flip
+    transform = RandomHorizontalFlip(flip_prob=1., convention='smpl_54')
+    results_flip_smpl = transform(copy.deepcopy(results))
+    assert not np.equal(results_flip_smpl['img'], original_img).all()
+    assert not np.equal(results_flip_smpl['keypoints3d'],
+                        original_keypoints3d).all()
+    assert not np.equal(results_flip_smpl['keypoints2d'],
+                        original_keypoints2d).all()
+    assert not np.equal(results_flip_smpl['smpl_global_orient'],
+                        original_body_pose).all()
+
+    # test random affine
+    transform = MeshAffine(img_res=224)
+    results['rotation'] = 30
+    results['scale'] = 0.25 * results['scale']
+    results_affine = transform(copy.deepcopy(results))
+    assert results_affine['img'].shape == (224, 224, 3)
+    assert not np.equal(results_affine['img'].shape, original_img.shape).all()
+    assert not np.equal(results_affine['keypoints3d'],
+                        original_keypoints3d).all()
+    assert not np.equal(results_affine['keypoints2d'],
+                        original_keypoints2d).all()
+    assert not np.equal(results_affine['smpl_global_orient'],
+                        original_body_pose).all()
 
 
 def test_human_image_dataset_smc():
