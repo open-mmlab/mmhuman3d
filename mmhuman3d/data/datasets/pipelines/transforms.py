@@ -280,7 +280,7 @@ def _rotate_smpl_pose(pose, rot):
         rot_mat = _construct_rotation_matrix(-rot)
         orient = pose[:3]
         # find the rotation of the body in camera frame
-        per_rdg, _ = cv2.Rodrigues(orient)
+        per_rdg, _ = cv2.Rodrigues(orient.astype(np.float32))
         # apply the global rotation to the global orientation
         res_rot, _ = cv2.Rodrigues(np.dot(rot_mat, per_rdg))
         pose_rotated[:3] = (res_rot.T)[0]
