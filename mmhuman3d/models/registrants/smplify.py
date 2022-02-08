@@ -206,6 +206,9 @@ class SMPLify(object):
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
+                if i > 0 and stage_config.pop('warmup', False):
+                    continue
+                print(f'epoch {i}, stage {stage_idx}')
                 self._optimize_stage(
                     global_orient=global_orient,
                     transl=transl,
@@ -280,7 +283,8 @@ class SMPLify(object):
                         smooth_loss_weight: float = None,
                         pose_prior_weight: float = None,
                         joint_weights: dict = {},
-                        num_iter: int = 1) -> None:
+                        num_iter: int = 1,
+                        **kwargs) -> None:
         """Optimize a stage of body model parameters according to
         configuration.
 
@@ -530,6 +534,15 @@ class SMPLify(object):
 
         # 3D keypoint loss
         if keypoints3d is not None:
+            # keypoints3d_loss = self.keypoints3d_mse_loss(
+            #     pred=model_joints,
+            #     # pred_conf=model_joint_conf,
+            #     target=keypoints3d,
+            #     # target_conf=keypoints3d_conf,
+            #     # keypoint_weight=weight,
+            #     weight=weight,
+            #     # loss_weight_override=keypoints3d_weight,
+            #     reduction_override=reduction_override)
             keypoints3d_loss = self.keypoints3d_mse_loss(
                 pred=model_joints,
                 pred_conf=model_joint_conf,
@@ -575,8 +588,12 @@ class SMPLify(object):
         if self.verbose:
             msg = ''
             for loss_name, loss in losses.items():
-                msg += f'{loss_name}={loss.mean().item():.6f}'
-            print(msg)
+                msg += f'{loss_name}={loss.mean().item():.6f}, '
+                if loss_name == 'keypoints3d_loss':
+                    mpjpe = (loss.pow(0.5).sum() /
+                             keypoints3d_conf.sum()).item() * 1000
+                    msg += f'MPJPE={mpjpe:.6f} mm, '
+            print(msg.strip(', '))
 
         total_loss = 0
         for loss_name, loss in losses.items():
