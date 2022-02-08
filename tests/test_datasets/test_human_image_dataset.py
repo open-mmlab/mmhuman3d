@@ -167,7 +167,3 @@ def test_human_image_dataset_smc():
     for i, data in enumerate(train_dataset):
         for key in data_keys:
             assert key in data
-
-
-if __name__ == '__main__':
-    test_pipeline()
