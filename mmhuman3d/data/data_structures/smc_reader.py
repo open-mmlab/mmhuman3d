@@ -972,6 +972,7 @@ class SMCReader:
             assert isinstance(self.body_model, torch.nn.Module), \
                 'body_model should be nn.Module or dict to allow rigid ' \
                 'transformation to device frame.'
+            torch_device = self.body_model.global_orient.device
 
             if device == 'Kinect':
                 T_cam2world = self.get_kinect_color_extrinsics(
@@ -982,31 +983,12 @@ class SMCReader:
 
             T_world2cam = np.linalg.inv(T_cam2world)
 
-            # num_frames = global_orient.shape[0]
-            #
-            # T_smpl2world = np.repeat(
-            #     np.eye(4).reshape(1, 4, 4), num_frames, axis=0)
-            # assert T_smpl2world.shape == (num_frames, 4, 4)
-            #
-            # T_smpl2world[:, :3, :3] = aa_to_rotmat(global_orient)
-            # T_smpl2world[:, :3, 3] = transl
-            #
-            # T_world2cam = np.linalg.inv(cam2world)
-            # T_world2cam = np.repeat(
-            #     T_world2cam.reshape(1, 4, 4), num_frames, axis=0)
-            # assert T_world2cam.shape == (num_frames, 4, 4)
-            #
-            # T_smpl2cam = T_world2cam @ T_smpl2world
-            #
-            # global_orient = rotmat_to_aa(T_smpl2cam[:, :3, :3])
-            # transl = T_smpl2world[:, :3, 3]
-
             output = self.body_model(
-                global_orient=torch.tensor(global_orient),
-                body_pose=torch.tensor(body_pose),
-                transl=torch.tensor(transl),
-                betas=torch.tensor(betas))
-            joints = output['joints'].detach().numpy()
+                global_orient=torch.tensor(global_orient, device=torch_device),
+                body_pose=torch.tensor(body_pose, device=torch_device),
+                transl=torch.tensor(transl, device=torch_device),
+                betas=torch.tensor(betas, device=torch_device))
+            joints = output['joints'].detach().cpu().numpy()
             pelvis = joints[:, 0, :]
 
             new_global_orient, new_transl = batch_transform_to_camera_frame(
