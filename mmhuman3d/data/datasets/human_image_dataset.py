@@ -263,28 +263,44 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         with open(res_file, 'w') as f:
             json.dump(keypoints, f, sort_keys=True, indent=4)
 
-    def _process_res_file(self, res, mode='keypoint'):
-        """Process results."""
-        gts = self.data_infos
+    def _parse_result(self, res, mode='keypoint'):
+        """Parse results."""
+
         if mode == 'vertice':
-            pred_pose = torch.FloatTensor(res['poses']).view(-1, 72)
+            # gt
+            gt_beta, gt_pose, gt_global_orient, gender = [], [], [], []
+            gt_smpl_dict = self.human_data['smpl']
+            for idx in range(self.num_data):
+                gt_beta.append(gt_smpl_dict['betas'][idx])
+                gt_pose.append(gt_smpl_dict['body_pose'][idx])
+                gt_global_orient.append(gt_smpl_dict['global_orient'][idx])
+                if self.human_data['meta']['gender'][idx] == 'm':
+                    gender.append(0)
+                else:
+                    gender.append(1)
+            gt_beta = torch.FloatTensor(gt_beta)
+            gt_pose = torch.FloatTensor(gt_pose).view(-1, 69)
+            gt_global_orient = torch.FloatTensor(gt_global_orient)
+            gender = torch.Tensor(gender)
+            gt_output = self.body_model(
+                betas=gt_beta,
+                body_pose=gt_pose,
+                global_orient=gt_global_orient,
+                gender=gender)
+            gt_vertices = gt_output['vertices'].detach().cpu().numpy() * 1000.
+            gt_mask = np.ones(gt_vertices.shape[:-1])
+            # pred
+            pred_pose = torch.FloatTensor(res['poses'])
             pred_beta = torch.FloatTensor(res['betas'])
             pred_output = self.body_model(
                 betas=pred_beta,
-                body_pose=pred_pose[:, 3:],
-                global_orient=pred_pose[:, :3])
+                body_pose=pred_pose[:, 1:],
+                global_orient=pred_pose[:, 0].unsqueeze(1),
+                pose2rot=False,
+                gender=gender)
             pred_vertices = pred_output['vertices'].detach().cpu().numpy(
             ) * 1000.
 
-            gt_pose = torch.FloatTensor([gt['pose']
-                                         for gt in gts]).view(-1, 72)
-            gt_beta = torch.FloatTensor([gt['beta'] for gt in gts])
-            gt_output = self.body_model(
-                betas=gt_beta,
-                body_pose=gt_pose[:, 3:],
-                global_orient=gt_pose[:, :3])
-            gt_vertices = gt_output['vertices'].detach().cpu().numpy() * 1000.
-            gt_mask = np.ones(gt_vertices.shape[:-1])
             assert len(gt_vertices) == len(pred_vertices)
 
             return pred_vertices, gt_vertices, gt_mask
@@ -393,7 +409,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         position error after rigid alignment (MPJPE-PA)
         """
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
-            self._process_res_file(res_file, mode='keypoint')
+            self._parse_result(res_file, mode='keypoint')
 
         err_name = metric.upper()
         if metric == 'mpjpe':
@@ -423,7 +439,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         """
 
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
-            self._process_res_file(res_file)
+            self._parse_result(res_file)
 
         err_name = metric.upper()
         if metric == '3dpck':
@@ -453,7 +469,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         """
 
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
-            self._process_res_file(res_file)
+            self._parse_result(res_file)
 
         err_name = metric.upper()
         if metric == '3dauc':
@@ -472,6 +488,6 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def _report_pve(self, res_file):
         """Cauculate per vertex error."""
         pred_verts, gt_verts, _ = \
-            self._process_res_file(res_file, mode='vertice')
+            self._parse_result(res_file, mode='vertice')
         error = vertice_PVE(pred_verts, gt_verts)
         return [('PVE', error)]

@@ -238,8 +238,8 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             for i in range(batch_size):
                 res_dict[int(target_id[i])] = dict(
                     keypoints=out['xyz_17'][i],
-                    poses=out['poses'][i],
-                    betas=out['betas'][i],
+                    poses=out['smpl_pose'][i],
+                    betas=out['smpl_beta'][i],
                 )
 
         keypoints, poses, betas = [], [], []
@@ -280,16 +280,17 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         with open(res_file, 'w') as f:
             json.dump(keypoints, f, sort_keys=True, indent=4)
 
-    def _process_res_file(self, res, mode='keypoint'):
-        """Process results."""
+    def _parse_result(self, res, mode='keypoint'):
+        """Parse results."""
         gts = self.data_infos
         if mode == 'vertice':
-            pred_pose = torch.FloatTensor(res['poses']).view(-1, 72)
+            pred_pose = torch.FloatTensor(res['poses'])
             pred_beta = torch.FloatTensor(res['betas'])
             pred_output = self.body_model(
                 betas=pred_beta,
-                body_pose=pred_pose[:, 3:],
-                global_orient=pred_pose[:, :3])
+                body_pose=pred_pose[:, 1:],
+                global_orient=pred_pose[:, 0].unsqueeze(1),
+                pose2rot=False)
             pred_vertices = pred_output['vertices'].detach().cpu().numpy()
 
             gt_pose = torch.FloatTensor([gt['pose']
@@ -335,15 +336,15 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
             assert len(gts) == len(pred_keypoints3d)
 
-            print('Evaluation start...')
             pred_keypoints3d = pred_keypoints3d * (2000 / factor)
             if self.dataset_name == 'mpi_inf_3dhp':
                 gt_keypoints3d = gt_keypoints3d[:, joint_mapper, :]
             # root joint alignment
-            pred_keypoints3d = pred_keypoints3d - \
-                pred_keypoints3d[:, None, root_idx_17] * factor
-            gt_keypoints3d = gt_keypoints3d - \
-                gt_keypoints3d[:, None, root_idx_17] * factor
+            pred_keypoints3d = (
+                pred_keypoints3d -
+                pred_keypoints3d[:, None, root_idx_17]) * factor
+            gt_keypoints3d = (gt_keypoints3d -
+                              gt_keypoints3d[:, None, root_idx_17]) * factor
 
             if self.dataset_name == 'pw3d' or self.dataset_name == 'h36m':
                 # select eval 14 joints
@@ -365,7 +366,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         position error after rigid alignment (MPJPE-PA)
         """
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
-            self._process_res_file(res_file, mode='keypoint')
+            self._parse_result(res_file, mode='keypoint')
 
         err_name = metric.upper()
         if metric == 'mpjpe':
@@ -395,7 +396,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         """
 
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
-            self._process_res_file(res_file)
+            self._parse_result(res_file, mode='keypoint')
 
         err_name = metric.upper()
         if metric == '3dpck':
@@ -425,7 +426,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         """
 
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
-            self._process_res_file(res_file)
+            self._parse_result(res_file, mode='keypoint')
 
         err_name = metric.upper()
         if metric == '3dauc':
@@ -444,6 +445,6 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def _report_pve(self, res_file):
         """Cauculate per vertex error."""
         pred_verts, gt_verts, _ = \
-            self._process_res_file(res_file, mode='vertice')
+            self._parse_result(res_file, mode='vertice')
         error = vertice_PVE(pred_verts, gt_verts)
         return [('PVE', error)]

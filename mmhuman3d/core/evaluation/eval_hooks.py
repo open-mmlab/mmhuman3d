@@ -5,6 +5,9 @@ import warnings
 from mmcv.runner import DistEvalHook as BaseDistEvalHook
 from mmcv.runner import EvalHook as BaseEvalHook
 
+MMPOSE_GREATER_KEYS = ['3dpck', 'p-3dpck', '3dauc', 'p-3dauc']
+MMPOSE_LESS_KEYS = ['mpjpe', 'p-mpjpe', 'pve']
+
 
 class EvalHook(BaseEvalHook):
 
@@ -22,7 +25,6 @@ class EvalHook(BaseEvalHook):
         if test_fn is None:
             from mmhuman3d.apis import single_gpu_test
             test_fn = single_gpu_test
-        # to be compatible with the config before v0.16.0
 
         # remove "gpu_collect" from eval_kwargs
         if 'gpu_collect' in eval_kwargs:
@@ -37,7 +39,7 @@ class EvalHook(BaseEvalHook):
             warnings.warn(
                 '"key_indicator" will be deprecated in EvalHook.'
                 'Please use "save_best" to specify the metric key,'
-                'e.g., save_best="AP".', DeprecationWarning)
+                'e.g., save_best="p-mpjpe".', DeprecationWarning)
 
             key_indicator = eval_kwargs.pop('key_indicator', None)
             if save_best is True and key_indicator is None:

@@ -13,7 +13,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 )
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.models.utils import batch_inverse_kinematics_transform
-from mmhuman3d.utils.transforms import quat_to_rotmat, rotmat_to_aa
+from mmhuman3d.utils.transforms import quat_to_rotmat
 from ..builder import BODY_MODELS
 
 
@@ -596,9 +596,7 @@ class HybrIKSMPL(SMPL):
         joints_from_verts = vertices2joints(self.joints_regressor_extra,
                                             vertices)
 
-        rot_mats = rot_mats.reshape(batch_size * 24, 3, 3)
-        # rot_mats = rotmat_to_quat(rot_mats).reshape(batch_size, 24 * 4)
-        poses = rotmat_to_aa(rot_mats).reshape(batch_size, 24 * 3)
+        # rot_mats = rot_mats.reshape(batch_size * 24, 3, 3)
         if transl is not None:
             new_joints += transl.unsqueeze(dim=1)
             vertices += transl.unsqueeze(dim=1)
@@ -612,7 +610,7 @@ class HybrIKSMPL(SMPL):
         output = {
             'vertices': vertices,
             'joints': new_joints,
-            'poses': poses,
+            'poses': rot_mats,
             'joints_from_verts': joints_from_verts,
         }
         return output
