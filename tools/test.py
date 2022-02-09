@@ -29,7 +29,7 @@ def parse_args():
         '--metrics',
         type=str,
         nargs='+',
-        default='joint_error',
+        default=['mpjpe', 'p-mpjpe', 'pve'],
         help='evaluation metrics, which depends on the dataset, e.g., '
         '"joint_error"')
     parser.add_argument('--show', action='store_true', help='show results')
