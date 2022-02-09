@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union
 
+import numpy as np
 import torch
 from mmcv.runner import build_optimizer
 
@@ -64,6 +65,7 @@ class SMPLify(object):
         joint_prior_loss: dict = None,
         smooth_loss: dict = None,
         pose_prior_loss: dict = None,
+        pose_reg_loss: dict = None,
         use_one_betas_per_video: bool = False,
         ignore_keypoints: List[int] = None,
         device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
@@ -110,6 +112,7 @@ class SMPLify(object):
         self.joint_prior_loss = build_loss(joint_prior_loss)
         self.smooth_loss = build_loss(smooth_loss)
         self.pose_prior_loss = build_loss(pose_prior_loss)
+        self.pose_reg_loss = build_loss(pose_reg_loss)
 
         if self.joint_prior_loss is not None:
             self.joint_prior_loss = self.joint_prior_loss.to(self.device)
@@ -117,6 +120,8 @@ class SMPLify(object):
             self.smooth_loss = self.smooth_loss.to(self.device)
         if self.pose_prior_loss is not None:
             self.pose_prior_loss = self.pose_prior_loss.to(self.device)
+        if self.pose_reg_loss is not None:
+            self.pose_reg_loss = self.pose_reg_loss.to(self.device)
 
         # initialize body model
         if isinstance(body_model, dict):
@@ -206,7 +211,7 @@ class SMPLify(object):
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
-                if i > 0 and stage_config.pop('warmup', False):
+                if i > 0 and stage_config.get('warmup', False):
                     continue
                 print(f'epoch {i}, stage {stage_idx}')
                 self._optimize_stage(
@@ -282,6 +287,7 @@ class SMPLify(object):
                         joint_prior_weight: float = None,
                         smooth_loss_weight: float = None,
                         pose_prior_weight: float = None,
+                        pose_reg_weight: float = None,
                         joint_weights: dict = {},
                         num_iter: int = 1,
                         **kwargs) -> None:
@@ -327,6 +333,8 @@ class SMPLify(object):
 
         optimizer = build_optimizer(parameters, self.optimizer)
 
+        pre_loss = None
+        self.epsilon = 1e-4
         for iter_idx in range(num_iter):
 
             def closure():
@@ -348,13 +356,21 @@ class SMPLify(object):
                     shape_prior_weight=shape_prior_weight,
                     smooth_loss_weight=smooth_loss_weight,
                     pose_prior_weight=pose_prior_weight,
+                    pose_reg_weight=pose_reg_weight,
                     joint_weights=joint_weights)
 
                 loss = loss_dict['total_loss']
                 loss.backward()
                 return loss
 
-            optimizer.step(closure)
+            loss = optimizer.step(closure)
+            if iter_idx > 0 and pre_loss is not None and self.epsilon > 0:
+                loss_rel_change = self._compute_relative_loss_change(
+                    pre_loss, loss.item())
+                if loss_rel_change < self.epsilon:
+                    print(f'Early stop at {iter_idx} iter!')
+                    break
+            pre_loss = loss.item()
 
     def evaluate(
         self,
@@ -372,6 +388,7 @@ class SMPLify(object):
         joint_prior_weight: float = None,
         smooth_loss_weight: float = None,
         pose_prior_weight: float = None,
+        pose_reg_weight: float = None,
         joint_weights: dict = {},
         return_verts: bool = False,
         return_full_pose: bool = False,
@@ -439,6 +456,7 @@ class SMPLify(object):
             shape_prior_weight=shape_prior_weight,
             smooth_loss_weight=smooth_loss_weight,
             pose_prior_weight=pose_prior_weight,
+            pose_reg_weight=pose_reg_weight,
             joint_weights=joint_weights,
             reduction_override=reduction_override,
             body_pose=body_pose,
@@ -467,6 +485,7 @@ class SMPLify(object):
                       joint_prior_weight: float = None,
                       smooth_loss_weight: float = None,
                       pose_prior_weight: float = None,
+                      pose_reg_weight: float = None,
                       joint_weights: dict = {},
                       reduction_override: str = None,
                       body_pose: torch.Tensor = None,
@@ -534,15 +553,6 @@ class SMPLify(object):
 
         # 3D keypoint loss
         if keypoints3d is not None:
-            # keypoints3d_loss = self.keypoints3d_mse_loss(
-            #     pred=model_joints,
-            #     # pred_conf=model_joint_conf,
-            #     target=keypoints3d,
-            #     # target_conf=keypoints3d_conf,
-            #     # keypoint_weight=weight,
-            #     weight=weight,
-            #     # loss_weight_override=keypoints3d_weight,
-            #     reduction_override=reduction_override)
             keypoints3d_loss = self.keypoints3d_mse_loss(
                 pred=model_joints,
                 pred_conf=model_joint_conf,
@@ -552,6 +562,7 @@ class SMPLify(object):
                 loss_weight_override=keypoints3d_weight,
                 reduction_override=reduction_override)
             losses['keypoints3d_loss'] = keypoints3d_loss
+            print('kp3d', keypoints3d_loss, keypoints3d_weight)
 
         # regularizer to prevent betas from taking large values
         if self.shape_prior_loss is not None:
@@ -560,6 +571,7 @@ class SMPLify(object):
                 loss_weight_override=shape_prior_weight,
                 reduction_override=reduction_override)
             losses['shape_prior_loss'] = shape_prior_loss
+            print('shape_prior_loss', shape_prior_loss, shape_prior_weight)
 
         # joint prior loss
         if self.joint_prior_loss is not None:
@@ -584,6 +596,15 @@ class SMPLify(object):
                 loss_weight_override=pose_prior_weight,
                 reduction_override=reduction_override)
             losses['pose_prior_loss'] = pose_prior_loss
+
+        # pose reg loss
+        if self.pose_reg_loss is not None:
+            print(self.pose_reg_loss, pose_reg_weight)
+            pose_reg_loss = self.pose_reg_loss(
+                body_pose=body_pose,
+                loss_weight_override=pose_reg_weight,
+                reduction_override=reduction_override)
+            losses['pose_reg_loss'] = pose_reg_loss
 
         if self.verbose:
             msg = ''
@@ -732,3 +753,7 @@ class SMPLify(object):
             betas_video = betas.view(1, feat_dim).expand(batch_size, feat_dim)
 
         return betas_video
+
+    @staticmethod
+    def _compute_relative_loss_change(pre_v, cur_v):
+        return (pre_v - cur_v) / max([np.abs(pre_v), np.abs(cur_v), 1])
