@@ -48,17 +48,17 @@ _HumanData_SUPPORTED_KEYS = {
     },
     'smpl': {
         'type': dict,
-        'slice_key': 'global_orient',
+        'slice_key': 'betas',
         'slice_dim': 0
     },
     'smplh': {
         'type': dict,
-        'slice_key': 'global_orient',
+        'slice_key': 'betas',
         'slice_dim': 0
     },
     'smplx': {
         'type': dict,
-        'slice_key': 'global_orient',
+        'slice_key': 'betas',
         'slice_dim': 0
     },
     'meta': {
