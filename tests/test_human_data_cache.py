@@ -24,6 +24,7 @@ def test_write():
     human_data['image_path'] = [str(x) for x in range(100)]
     human_data['smpl'] = {
         'global_orient': np.ones(shape=(100, 3)),
+        'betas': np.ones(shape=(100, 10)),
         'body_pose': np.ones(shape=(100, 21, 3)),
         'expression': [
             0,
