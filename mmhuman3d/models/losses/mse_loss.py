@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -158,3 +159,38 @@ class KeypointMSELoss(nn.Module):
             sigma=self.sigma)
 
         return loss
+
+
+@LOSSES.register_module()
+class PoseRegLoss(nn.Module):
+
+    def __init__(self, reduction='mean', loss_weight=1.0):
+        super().__init__()
+        assert reduction in (None, 'none', 'mean', 'sum')
+        self.reduction = reduction
+        self.loss_weight = loss_weight
+
+    def _func_l2(self, x):
+        return torch.sum(x**2)
+
+    def forward(self,
+                body_pose,
+                weight=None,
+                avg_factor=None,
+                loss_weight_override=None,
+                reduction_override=None):
+        # reduction = (
+        #     reduction_override if reduction_override else self.reduction)
+        loss_weight = (
+            loss_weight_override
+            if loss_weight_override is not None else self.loss_weight)
+
+        'regulizer for body poses'
+        # if self.cfg.model in ['smplh', 'smplx']:
+        #     poses = poses[:, :66]
+        loss = loss_weight * self._func_l2(body_pose)
+        loss /= body_pose.shape[0]
+        return loss
+
+    def __str__(self) -> str:
+        return 'Loss function for Regulizer of Poses'

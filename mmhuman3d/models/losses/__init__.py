@@ -1,5 +1,5 @@
 from .gan_loss import GANLoss
-from .mse_loss import KeypointMSELoss, MSELoss
+from .mse_loss import KeypointMSELoss, MSELoss, PoseRegLoss
 from .prior_loss import (
     CameraPriorLoss,
     JointPriorLoss,
@@ -20,6 +20,7 @@ from .utils import (
 __all__ = [
     'reduce_loss', 'weight_reduce_loss', 'weighted_loss', 'convert_to_one_hot',
     'MSELoss', 'L1Loss', 'SmoothL1Loss', 'GANLoss', 'JointPriorLoss',
-    'ShapePriorLoss', 'KeypointMSELoss', 'CameraPriorLoss', 'SmoothJointLoss',
-    'SmoothPelvisLoss', 'SmoothTranslationLoss', 'MaxMixturePrior'
+    'PoseRegLoss', 'ShapePriorLoss', 'KeypointMSELoss', 'CameraPriorLoss',
+    'SmoothJointLoss', 'SmoothPelvisLoss', 'SmoothTranslationLoss',
+    'MaxMixturePrior'
 ]
