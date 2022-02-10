@@ -59,16 +59,19 @@ class SMCReader:
             elif isinstance(body_model, dict):
                 self.body_model = build_body_model(body_model)
             else:
-                self.body_model = build_body_model(
-                    dict(
-                        type='SMPL',
-                        gender='neutral',
-                        num_betas=10,
-                        keypoint_src='smpl_45',
-                        keypoint_dst='smpl_45',
-                        model_path='data/body_models/smpl',
-                        batch_size=1,
-                    ))
+                # in most cases, SMCReader is instantiated for image reading
+                # only. Hence, it is wasteful to initialize a body model until
+                # really needed in get_smpl()
+                self.body_model = None
+                self.default_body_model_config = dict(
+                    type='SMPL',
+                    gender='neutral',
+                    num_betas=10,
+                    keypoint_src='smpl_45',
+                    keypoint_dst='smpl_45',
+                    model_path='data/body_models/smpl',
+                    batch_size=1,
+                )
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.
@@ -974,9 +977,9 @@ class SMCReader:
         # return SMPL parameters in device coordinate system
         else:
 
-            assert isinstance(self.body_model, torch.nn.Module), \
-                'body_model should be nn.Module or dict to allow rigid ' \
-                'transformation to device frame.'
+            if self.body_model is None:
+                self.body_model = \
+                    build_body_model(self.default_body_model_config)
             torch_device = self.body_model.global_orient.device
 
             assert device in {
