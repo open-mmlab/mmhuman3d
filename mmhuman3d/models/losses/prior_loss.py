@@ -12,6 +12,7 @@ from mmhuman3d.core.conventions.joints_mapping.standard_joint_angles import (
     TRANSFORMATION_AA_TO_SJA,
     TRANSFORMATION_SJA_TO_AA,
 )
+from mmhuman3d.utils.keypoint_utils import search_limbs
 from mmhuman3d.utils.transforms import aa_to_rot6d, aa_to_sja
 from ..builder import LOSSES
 
@@ -63,6 +64,89 @@ class ShapePriorLoss(nn.Module):
             shape_prior_loss = shape_prior_loss.sum()
 
         return shape_prior_loss
+
+
+@LOSSES.register_module()
+class LimbLengthLoss(nn.Module):
+    """Limb length loss for body shape parameters.
+
+    Args:
+        reduction (str, optional): The method that reduces the loss to a
+            scalar. Options are "none", "mean" and "sum".
+        loss_weight (float, optional): The weight of the loss. Defaults to 1.0
+    """
+
+    def __init__(self, reduction='mean', loss_weight=1.0):
+        super().__init__()
+        assert reduction in (None, 'none', 'mean', 'sum')
+        self.reduction = reduction
+        self.loss_weight = loss_weight
+        self.limb_conf = None
+        self.limb_length = None
+        self.eps = 1e-4
+        # limb_idxs, _ = search_limbs(data_source='smpl_45')
+        limb_idxs, _ = search_limbs(data_source='smpl')
+        self.limb_idxs = np.array(limb_idxs['body'])
+
+    def _get_limb_vec(self, keypoints3d):
+        kp_src = keypoints3d[:, self.limb_idxs[:, 0], :3]
+        kp_dst = keypoints3d[:, self.limb_idxs[:, 1], :3]
+        limb_vec = (kp_dst - kp_src).detach()
+        return limb_vec
+
+    def _compute_normed_limb(self, keypoints3d):
+        limb_vec = self._get_limb_vec(keypoints3d)
+        limb_length = torch.norm(limb_vec, dim=2, keepdim=True)
+        limb_vec_normed = limb_vec / (limb_length + self.eps)
+        return limb_vec, limb_vec_normed, limb_length
+
+    def forward(self,
+                keypoints3d_pred,
+                keypoints3d_target,
+                keypoints3d_pred_conf=None,
+                keypoints3d_target_conf=None,
+                loss_weight_override=None,
+                reduction_override=None):
+        """Forward function of loss.
+
+        Args:
+            betas (torch.Tensor): The body shape parameters
+            loss_weight_override (float, optional): The weight of loss used to
+                override the original weight of loss
+            reduction_override (str, optional): The reduction method used to
+                override the original reduction method of the loss.
+                Defaults to None
+        Returns:
+            torch.Tensor: The calculated loss
+        """
+        assert reduction_override in (None, 'none', 'mean', 'sum')
+        # reduction = (
+        #     reduction_override if reduction_override else self.reduction)
+        loss_weight = (
+            loss_weight_override
+            if loss_weight_override is not None else self.loss_weight)
+
+        if self.limb_conf is None:
+            _, _, self.limb_length = self._compute_normed_limb(
+                keypoints3d_target)
+            print('limb_length 1', self.limb_length.shape)
+            self.limb_conf = torch.min(
+                keypoints3d_target_conf[:, self.limb_idxs[:, 1]],
+                keypoints3d_target_conf[:,
+                                        self.limb_idxs[:,
+                                                       0]]).unsqueeze(dim=-1)
+            print('limb_conf', self.limb_conf.shape)
+
+        pred_limb_vec, pred_limb_vec_normed, _ = self._compute_normed_limb(
+            keypoints3d_pred)
+        # TODO: use keypoints3d_pred_conf
+
+        loss = pred_limb_vec - pred_limb_vec_normed * self.limb_length
+        print(loss.shape)
+        loss = loss_weight * torch.sum(
+            loss**2 * self.limb_conf) / keypoints3d_pred.shape[0]
+
+        return loss
 
 
 @LOSSES.register_module()
