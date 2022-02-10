@@ -211,7 +211,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def evaluate(self,
                  outputs: list,
                  res_folder: str,
-                 metric: Optional[str] = 'mpjpe',
+                 metric: Optional[str] = 'p-mpjpe',
                  **kwargs: dict):
         """Evaluate 3D keypoint results.
 
@@ -302,12 +302,12 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 global_orient=gt_pose[:, :3])
             gt_vertices = gt_output['vertices'].detach().cpu().numpy()
             gt_mask = np.ones(gt_vertices.shape[:-1])
-            assert len(gt_vertices) == len(pred_vertices)
+            assert len(pred_vertices) == self.num_data
 
             return pred_vertices * 1000., gt_vertices * 1000., gt_mask
         elif mode == 'keypoint':
             pred_keypoints3d = res['keypoints']
-            assert len(pred_keypoints3d) == len(self.data_infos)
+            assert len(pred_keypoints3d) == self.num_data
             # (B, 17, 3)
             pred_keypoints3d = np.array(pred_keypoints3d)
             factor, root_idx_17 = 1, 0
@@ -334,7 +334,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 if self.dataset_name == 'pw3d':
                     factor = 1000
 
-            assert len(gts) == len(pred_keypoints3d)
+            assert len(pred_keypoints3d) == self.num_data
 
             pred_keypoints3d = pred_keypoints3d * (2000 / factor)
             if self.dataset_name == 'mpi_inf_3dhp':
@@ -363,7 +363,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         P-MPJPE.
 
         Report mean per joint position error (MPJPE) and mean per joint
-        position error after rigid alignment (MPJPE-PA)
+        position error after rigid alignment (P-MPJPE)
         """
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
             self._parse_result(res_file, mode='keypoint')

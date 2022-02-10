@@ -301,7 +301,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             pred_vertices = pred_output['vertices'].detach().cpu().numpy(
             ) * 1000.
 
-            assert len(gt_vertices) == len(pred_vertices)
+            assert len(pred_vertices) == self.num_data
 
             return pred_vertices, gt_vertices, gt_mask
         elif mode == 'keypoint':
@@ -403,7 +403,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         P-MPJPE.
 
         Report mean per joint position error (MPJPE) and mean per joint
-        position error after rigid alignment (MPJPE-PA)
+        position error after rigid alignment (P-MPJPE)
         """
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
             self._parse_result(res_file, mode='keypoint')
