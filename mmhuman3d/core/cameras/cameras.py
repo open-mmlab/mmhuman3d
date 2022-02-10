@@ -683,7 +683,7 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
     ) -> None:
         """
         Args:
-            focal_length (float, optional):  Defaults to 1.0.
+            focal_length (float, torch.Tensor, optional):  Defaults to 1.0.
             principal_point (tuple, optional):  Defaults to ((0.0, 0.0), ).
             R (Optional[torch.Tensor], optional):  Defaults to None.
             T (Optional[torch.Tensor], optional):  Defaults to None.

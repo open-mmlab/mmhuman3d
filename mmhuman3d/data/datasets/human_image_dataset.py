@@ -398,9 +398,6 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
             return pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask
 
-        else:
-            raise NotImplementedError()
-
     def _report_mpjpe(self, res_file, metric='mpjpe'):
         """Cauculate mean per joint position error (MPJPE) or its variants
         P-MPJPE.
