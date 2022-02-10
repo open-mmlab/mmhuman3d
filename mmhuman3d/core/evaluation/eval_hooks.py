@@ -99,7 +99,7 @@ class DistEvalHook(BaseDistEvalHook):
             warnings.warn(
                 '"key_indicator" will be deprecated in EvalHook.'
                 'Please use "save_best" to specify the metric key,'
-                'e.g., save_best="joint_error".', DeprecationWarning)
+                'e.g., save_best="p-mpjpe".', DeprecationWarning)
 
             key_indicator = eval_kwargs.pop('key_indicator', None)
             if save_best is True and key_indicator is None:

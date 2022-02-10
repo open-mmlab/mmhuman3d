@@ -218,7 +218,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         Args:
             outputs (list): results from model inference.
             res_folder (str): path to store results.
-            metric (str): the type of metric. Default: 'joint_error'
+            metric (str): the type of metric. Default: 'p-mpjpe'
             kwargs (dict): other arguments.
         Returns:
             dict:
