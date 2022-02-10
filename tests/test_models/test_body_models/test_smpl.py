@@ -8,7 +8,7 @@ extra_joints_regressor = 'data/J_regressor_extra.npy'
 
 def test_smpl():
 
-    random_betas = torch.rand((1, 69))
+    random_body_pose = torch.rand((1, 69))
 
     # test SMPL
     smpl_54 = build_body_model(
@@ -19,7 +19,7 @@ def test_smpl():
             model_path=body_model_load_dir,
             extra_joints_regressor=extra_joints_regressor))
 
-    smpl_54_output = smpl_54(betas=random_betas)
+    smpl_54_output = smpl_54(body_pose=random_body_pose)
     smpl_54_joints = smpl_54_output['joints']
 
     smpl_49 = build_body_model(
@@ -27,10 +27,11 @@ def test_smpl():
             type='SMPL',
             keypoint_src='smpl_54',
             keypoint_dst='smpl_49',
+            keypoint_approximate=True,
             model_path=body_model_load_dir,
             extra_joints_regressor=extra_joints_regressor))
 
-    smpl_49_output = smpl_49(betas=random_betas)
+    smpl_49_output = smpl_49(body_pose=random_body_pose)
     smpl_49_joints = smpl_49_output['joints']
 
     joint_mapping = [
@@ -39,8 +40,7 @@ def test_smpl():
         48, 49, 50, 51, 52, 53, 24, 26, 25, 28, 27
     ]
 
-    assert torch.isclose(smpl_54_joints[:, joint_mapping, :],
-                         smpl_49_joints).all()
+    assert torch.allclose(smpl_54_joints[:, joint_mapping, :], smpl_49_joints)
 
 
 def test_gendered_smpl():
@@ -96,4 +96,4 @@ def test_gendered_smpl():
 
     gendered_smpl_output = gendered_smpl(betas=betas_concat, gender=gender)
 
-    assert torch.isclose(joint_concat, gendered_smpl_output['joints']).all()
+    assert torch.allclose(joint_concat, gendered_smpl_output['joints'])
