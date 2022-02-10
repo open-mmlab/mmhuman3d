@@ -94,7 +94,7 @@ def vertice_pve(pred_verts, target_verts=None, target_theta=None):
     return error
 
 
-def keypoint_3d_pck(pred, gt, mask, alignment='none', threshold=0.15):
+def keypoint_3d_pck(pred, gt, mask, alignment='none', threshold=150.):
     """Calculate the Percentage of Correct Keypoints (3DPCK) w. or w/o rigid
     alignment.
     Paper ref: `Monocular 3D Human Pose Estimation In The Wild Using Improved
@@ -117,7 +117,7 @@ def keypoint_3d_pck(pred, gt, mask, alignment='none', threshold=0.15):
                 rotation and translation.
         threshold:  If L2 distance between the prediction and the groundtruth
             is less then threshold, the predicted result is considered as
-            correct. Default: 0.15 (m).
+            correct. Default: 150 (mm).
     Returns:
         pck: percentage of correct keypoints.
     """
@@ -189,7 +189,7 @@ def keypoint_3d_auc(pred, gt, mask, alignment='none'):
 
     error = np.linalg.norm(pred - gt, ord=2, axis=-1)
 
-    thresholds = np.linspace(0., 0.15, 31)
+    thresholds = np.linspace(0., 150, 31)
     pck_values = np.zeros(len(thresholds))
     for i in range(len(thresholds)):
         pck_values[i] = (error < thresholds[i]).astype(np.float32)[mask].mean()
