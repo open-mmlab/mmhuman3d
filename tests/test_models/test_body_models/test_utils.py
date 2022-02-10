@@ -66,7 +66,7 @@ def test_transform_to_camera_frame():
     test_joints = torch.einsum('ij,kj->ki', random_extrinsic,
                                random_joints)  # (45, 4)
     test_joints = test_joints[:, :3]  # (45, 3)
-    assert torch.allclose(transformed_joints, test_joints)
+    assert torch.allclose(transformed_joints, test_joints, atol=1e-6)
 
 
 def test_batch_transform_to_camera_frame():
@@ -129,4 +129,4 @@ def test_batch_transform_to_camera_frame():
     test_joints = torch.einsum('ij,bkj->bki', random_extrinsic,
                                random_joints)  # (N, 45, 4)
     test_joints = test_joints[:, :, :3]  # (N, 45, 3)
-    assert torch.allclose(transformed_joints, test_joints)
+    assert torch.allclose(transformed_joints, test_joints, atol=1e-6)
