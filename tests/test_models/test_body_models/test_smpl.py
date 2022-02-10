@@ -1,5 +1,4 @@
 import torch
-import smplx
 from mmhuman3d.models.builder import build_body_model
 
 body_model_load_dir = 'data/body_models/smpl'
