@@ -57,6 +57,8 @@ class SMCReader:
             if isinstance(body_model, torch.nn.Module):
                 self.body_model = body_model
             elif isinstance(body_model, dict):
+                self.body_model = build_body_model(body_model)
+            else:
                 self.body_model = build_body_model(
                     dict(
                         type='SMPL',
@@ -67,8 +69,6 @@ class SMCReader:
                         model_path='data/body_models/smpl',
                         batch_size=1,
                     ))
-            else:
-                self.body_model = None
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.
