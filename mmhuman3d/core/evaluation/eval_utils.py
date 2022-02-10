@@ -50,7 +50,7 @@ def keypoint_mpjpe(pred, gt, mask, alignment='none'):
     return error
 
 
-def compute_error_accel(joints_gt, joints_pred, vis=None):
+def keypoint_accel_error(joints_gt, joints_pred, vis=None):
     """Computes acceleration error:
 
     Note that for each frame that is not visible, three entries in the
@@ -80,7 +80,7 @@ def compute_error_accel(joints_gt, joints_pred, vis=None):
     return np.mean(normed[new_vis], axis=1)
 
 
-def vertice_PVE(pred_verts, target_verts=None, target_theta=None):
+def vertice_pve(pred_verts, target_verts=None, target_theta=None):
     """Computes per vertex error (PVE).
 
     Args:

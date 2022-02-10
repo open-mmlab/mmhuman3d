@@ -397,10 +397,12 @@ def test_human_hybrik_dataset():
     dataset = 'HybrIKHumanImageDataset'
     dataset_class = DATASETS.get(dataset)
 
+    body_model = dict(type='GenderedSMPL', model_path='data/body_models/smpl')
     # train mode
     custom_dataset = dataset_class(
         dataset_name='h36m',
         data_prefix='tests/data',
+        body_model=body_model,
         pipeline=[],
         ann_file='h36m_hybrik_train.npz')
 

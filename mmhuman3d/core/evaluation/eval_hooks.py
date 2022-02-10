@@ -93,8 +93,6 @@ class DistEvalHook(BaseDistEvalHook):
             from mmhuman3d.apis import multi_gpu_test
             test_fn = multi_gpu_test
 
-        # to be compatible with the config before v0.16.0
-
         # update "save_best" according to "key_indicator" and remove the
         # latter from eval_kwargs
         if 'key_indicator' in eval_kwargs or isinstance(save_best, bool):

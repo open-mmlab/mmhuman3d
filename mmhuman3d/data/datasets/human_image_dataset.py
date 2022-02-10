@@ -17,7 +17,7 @@ from mmhuman3d.core.evaluation import (
     keypoint_3d_auc,
     keypoint_3d_pck,
     keypoint_mpjpe,
-    vertice_PVE,
+    vertice_pve,
 )
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.models.builder import build_body_model
@@ -486,5 +486,5 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         """Cauculate per vertex error."""
         pred_verts, gt_verts, _ = \
             self._parse_result(res_file, mode='vertice')
-        error = vertice_PVE(pred_verts, gt_verts)
+        error = vertice_pve(pred_verts, gt_verts)
         return [('PVE', error)]
