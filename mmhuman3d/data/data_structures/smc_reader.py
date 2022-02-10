@@ -5,10 +5,6 @@ import h5py
 import numpy as np
 import torch
 import tqdm
-from mmhuman3d.utils.transforms import (
-    aa_to_rotmat,
-    rotmat_to_aa
-)
 
 from mmhuman3d.models.body_models.utils import batch_transform_to_camera_frame
 from mmhuman3d.models.builder import build_body_model
