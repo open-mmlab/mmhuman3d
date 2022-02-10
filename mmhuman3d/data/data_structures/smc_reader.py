@@ -57,6 +57,8 @@ class SMCReader:
             if isinstance(body_model, torch.nn.Module):
                 self.body_model = body_model
             elif isinstance(body_model, dict):
+                self.body_model = build_body_model(body_model)
+            else:
                 self.body_model = build_body_model(
                     dict(
                         type='SMPL',
@@ -67,8 +69,6 @@ class SMCReader:
                         model_path='data/body_models/smpl',
                         batch_size=1,
                     ))
-            else:
-                self.body_model = None
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.
@@ -860,12 +860,6 @@ class SMCReader:
         if device_id is not None:
             assert device_id >= 0
 
-        kps3d_dict = self.smc['Keypoints3D']
-
-        # keypoints3d are in world coordinate system
-        keypoints3d_world = kps3d_dict['keypoints3d'][...]
-        keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
-
         if frame_id is None:
             frame_list = range(self.get_keypoints_num_frames())
         elif isinstance(frame_id, list):
@@ -877,7 +871,12 @@ class SMCReader:
         else:
             raise TypeError('frame_id should be int, list or None.')
 
+        kps3d_dict = self.smc['Keypoints3D']
+
+        # keypoints3d are in world coordinate system
+        keypoints3d_world = kps3d_dict['keypoints3d'][...]
         keypoints3d_world = keypoints3d_world[frame_list, ...]
+        keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
 
         # return keypoints3d in world coordinate system
         if device is None:
@@ -946,12 +945,21 @@ class SMCReader:
         body_pose = smpl_dict['body_pose'][...]
         transl = smpl_dict['transl'][...]
         betas = smpl_dict['betas'][...]
-        if frame_id is not None:
-            if isinstance(frame_id, int):
-                frame_id = [frame_id]
-            body_pose = body_pose[frame_id, ...]
-            global_orient = global_orient[frame_id, ...]
-            transl = transl[frame_id, ...]
+
+        if frame_id is None:
+            frame_list = range(self.get_smpl_num_frames())
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
+            assert frame_id < self.get_keypoints_num_frames(),\
+                'Index out of range...'
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
+
+        body_pose = body_pose[frame_list, ...]
+        global_orient = global_orient[frame_list, ...]
+        transl = transl[frame_list, ...]
 
         # return SMPL parameters in world coordinate system
         if device is None:
@@ -965,10 +973,16 @@ class SMCReader:
 
         # return SMPL parameters in device coordinate system
         else:
+
             assert isinstance(self.body_model, torch.nn.Module), \
                 'body_model should be nn.Module or dict to allow rigid ' \
                 'transformation to device frame.'
             torch_device = self.body_model.global_orient.device
+
+            assert device in {
+                'Kinect', 'iPhone'
+            }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+            assert device_id >= 0
 
             if device == 'Kinect':
                 T_cam2world = self.get_kinect_color_extrinsics(
