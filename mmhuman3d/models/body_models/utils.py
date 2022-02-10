@@ -45,15 +45,15 @@ def transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
     T_v2c = T_w2c @ T_v2w
 
     # decompose vertex to camera transformation
-    # p_: new pelvis frame
-    # T_v2c = T_p_2c x T_v2p_
-    T_p_2c = T_p2w
-    T_v2p_ = np.linalg.inv(T_p_2c) @ T_v2c
+    # np: new pelvis frame
+    # T_v2c = T_np2c x T_v2np
+    T_np2c = T_p2w
+    T_v2np = np.linalg.inv(T_np2c) @ T_v2c
 
     # decompose into new global orient and new transl
-    new_global_orient_mat = T_v2p_[:3, :3]
+    new_global_orient_mat = T_v2np[:3, :3]
     new_gloabl_orient = rotmat_to_aa(new_global_orient_mat)
-    new_transl = T_v2p_[:3, 3]
+    new_transl = T_v2np[:3, 3]
 
     return new_gloabl_orient, new_transl
 
@@ -102,15 +102,15 @@ def batch_transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
     T_v2c = T_w2c @ T_v2w
 
     # decompose vertex to camera transformation
-    # p_: new pelvis frame
-    # T_v2c = T_p_2c x T_v2p_
-    T_p_2c = T_p2w
-    T_v2p_ = np.linalg.inv(T_p_2c) @ T_v2c
+    # np: new pelvis frame
+    # T_v2c = T_np2c x T_v2np
+    T_np2c = T_p2w
+    T_v2np = np.linalg.inv(T_np2c) @ T_v2c
 
     # decompose into new global orient and new transl
-    new_global_orient_mat = T_v2p_[:, :3, :3]
+    new_global_orient_mat = T_v2np[:, :3, :3]
     new_gloabl_orient = rotmat_to_aa(new_global_orient_mat)
-    new_transl = T_v2p_[:, :3, 3]
+    new_transl = T_v2np[:, :3, 3]
 
     assert new_gloabl_orient.shape == (N, 3)
     assert new_transl.shape == (N, 3)
