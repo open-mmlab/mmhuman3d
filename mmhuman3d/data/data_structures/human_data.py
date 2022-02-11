@@ -1,6 +1,7 @@
 import logging
 import pickle
 from enum import Enum
+from math import ceil
 from typing import Any, Optional, Type, TypeVar, Union, overload
 
 import numpy as np
@@ -30,36 +31,36 @@ _HumanData_SUPPORTED_KEYS = {
     'bbox_xywh': {
         'type': np.ndarray,
         'shape': (-1, 5),
-        'slice_dim': 0
+        'major_dim': 0
     },
     'config': {
         'type': str,
-        'slice_dim': -1
+        'major_dim': None
     },
     'keypoints2d': {
         'type': np.ndarray,
         'shape': (-1, -1, 3),
-        'slice_dim': 0
+        'major_dim': 0
     },
     'keypoints3d': {
         'type': np.ndarray,
         'shape': (-1, -1, 4),
-        'slice_dim': 0
+        'major_dim': 0
     },
     'smpl': {
         'type': dict,
         'slice_key': 'betas',
-        'slice_dim': 0
+        'major_dim': 0
     },
     'smplh': {
         'type': dict,
         'slice_key': 'betas',
-        'slice_dim': 0
+        'major_dim': 0
     },
     'smplx': {
         'type': dict,
         'slice_key': 'betas',
-        'slice_dim': 0
+        'major_dim': 0
     },
     'meta': {
         'type': dict,
@@ -67,20 +68,20 @@ _HumanData_SUPPORTED_KEYS = {
     'keypoints2d_mask': {
         'type': np.ndarray,
         'shape': (-1, ),
-        'slice_dim': -1
+        'major_dim': None
     },
     'keypoints2d_convention': {
         'type': str,
-        'slice_dim': -1
+        'major_dim': None
     },
     'keypoints3d_mask': {
         'type': np.ndarray,
         'shape': (-1, ),
-        'slice_dim': -1
+        'major_dim': None
     },
     'keypoints3d_convention': {
         'type': str,
-        'slice_dim': -1
+        'major_dim': None
     },
     'misc': {
         'type': dict,
@@ -109,7 +110,7 @@ class HumanData(dict):
             _T1: An instance of HumanData.
         """
         ret_human_data = super().__new__(cls, args, kwargs)
-        setattr(ret_human_data, '__temporal_len__', -1)
+        setattr(ret_human_data, '__data_len__', -1)
         setattr(ret_human_data, '__key_strict__', False)
         setattr(ret_human_data, '__keypoints_compressed__', False)
         return ret_human_data
@@ -218,7 +219,7 @@ class HumanData(dict):
                 if value is None:
                     tmp_data_dict.pop(key)
                 elif key == '__key_strict__' or \
-                        key == '__temporal_len__' or\
+                        key == '__data_len__' or\
                         key == '__keypoints_compressed__':
                     self.__setattr__(key, value)
                     # pop the attributes to keep dict clean
@@ -254,7 +255,7 @@ class HumanData(dict):
                 raise FileExistsError
         dict_to_dump = {
             '__key_strict__': self.__key_strict__,
-            '__temporal_len__': self.__temporal_len__,
+            '__data_len__': self.__data_len__,
             '__keypoints_compressed__': self.__keypoints_compressed__,
         }
         dict_to_dump.update(self)
@@ -264,7 +265,7 @@ class HumanData(dict):
         keypoints_info = {}
         non_sliced_data = {}
         sliced_data = {}
-        slice_num = int(self.__temporal_len__ / slice_size) + 1
+        slice_num = ceil(self.__data_len__ / slice_size)
         for slice_index in range(slice_num):
             sliced_data[str(slice_index)] = {}
         dim_dict = self.__get_slice_dim__()
@@ -286,32 +287,19 @@ class HumanData(dict):
                         non_sliced_sub_dict[sub_key] = sub_value
                     else:
                         sub_dim = dim[sub_key]
-                        if isinstance(sub_value, np.ndarray):
-                            slice_list = [
-                                slice(None),
-                            ] * len(sub_value.shape)
-                            for slice_index in range(slice_num):
-                                slice_start = slice_index * slice_size
-                                slice_end = min((slice_index + 1) * slice_size,
-                                                self.__temporal_len__)
-                                slice_list[sub_dim] = \
-                                    slice(slice_start, slice_end)
-                                sliced_sub_value = sub_value[tuple(slice_list)]
-                                if key not in sliced_data[str(slice_index)]:
-                                    sliced_data[str(slice_index)][key] = {}
-                                sliced_data[str(slice_index)][key][sub_key] = \
-                                    sliced_sub_value
-                        else:
-                            for slice_index in range(slice_num):
-                                slice_start = slice_index * slice_size
-                                slice_end = min((slice_index + 1) * slice_size,
-                                                self.__temporal_len__)
-                                sliced_sub_value = \
-                                    sub_value[slice(slice_start, slice_end)]
-                                if key not in sliced_data[str(slice_index)]:
-                                    sliced_data[str(slice_index)][key] = {}
-                                sliced_data[str(slice_index)][key][sub_key] = \
-                                    sliced_sub_value
+                        for slice_index in range(slice_num):
+                            slice_start = slice_index * slice_size
+                            slice_end = min((slice_index + 1) * slice_size,
+                                            self.__data_len__)
+                            slice_range = slice(slice_start, slice_end)
+                            sliced_sub_value = \
+                                HumanData.__get_sliced_result__(
+                                    sub_value, sub_dim, slice_range
+                                )
+                            if key not in sliced_data[str(slice_index)]:
+                                sliced_data[str(slice_index)][key] = {}
+                            sliced_data[str(slice_index)][key][sub_key] = \
+                                sliced_sub_value
                 if len(non_sliced_sub_dict) > 0:
                     non_sliced_data[key] = non_sliced_sub_dict
             else:
@@ -324,7 +312,7 @@ class HumanData(dict):
                     for slice_index in range(slice_num):
                         slice_start = slice_index * slice_size
                         slice_end = min((slice_index + 1) * slice_size,
-                                        self.__temporal_len__)
+                                        self.__data_len__)
                         slice_list[dim] = slice(slice_start, slice_end)
                         sliced_value = value[tuple(slice_list)]
                         sliced_data[str(slice_index)][key] = sliced_value
@@ -333,7 +321,7 @@ class HumanData(dict):
                     for slice_index in range(slice_num):
                         slice_start = slice_index * slice_size
                         slice_end = min((slice_index + 1) * slice_size,
-                                        self.__temporal_len__)
+                                        self.__data_len__)
                         sliced_value = value[slice(slice_start, slice_end)]
                         sliced_data[str(slice_index)][key] = sliced_value
         writer_args_dict = {
@@ -501,25 +489,25 @@ class HumanData(dict):
         return pad_value[tuple(slice_list)]
 
     @overload
-    def get_temporal_slice(self, stop: int):
-        """Slice [0, stop, 1] of all temporal values."""
+    def get_slice(self, stop: int):
+        """Slice [0, stop, 1] of all sliceable values."""
         ...
 
     @overload
-    def get_temporal_slice(self, start: int, stop: int):
-        """Slice [start, stop, 1] of all temporal values."""
+    def get_slice(self, start: int, stop: int):
+        """Slice [start, stop, 1] of all sliceable values."""
         ...
 
     @overload
-    def get_temporal_slice(self, start: int, stop: int, step: int):
-        """Slice [start, stop, step] of all temporal values."""
+    def get_slice(self, start: int, stop: int, step: int):
+        """Slice [start, stop, step] of all sliceable values."""
         ...
 
-    def get_temporal_slice(self,
-                           arg_0: int,
-                           arg_1: Union[int, Any] = None,
-                           step: int = 1):
-        """Slice all temporal values along timeline dimension.
+    def get_slice(self,
+                  arg_0: int,
+                  arg_1: Union[int, Any] = None,
+                  step: int = 1):
+        """Slice all sliceable values along major_dim dimension.
 
         Args:
             arg_0 (int):
@@ -558,30 +546,16 @@ class HumanData(dict):
                         sliced_dict[sub_key] = sub_value
                     else:
                         sub_dim = dim[sub_key]
-                        if isinstance(sub_value, np.ndarray):
-                            slice_list = [
-                                slice(None),
-                            ] * len(sub_value.shape)
-                            sliced_sub_value = sub_value[tuple(slice_list)]
-                            slice_list[sub_dim] = slice_index
-                            sliced_sub_value = sub_value[tuple(slice_list)]
-                            sliced_dict[sub_key] = sliced_sub_value
-                        else:
-                            sliced_sub_value = \
-                                sub_value[slice_index]
-                            sliced_dict[sub_key] = sliced_sub_value
+                        sliced_sub_value = \
+                            HumanData.__get_sliced_result__(
+                                sub_value, sub_dim, slice_index)
+                        sliced_dict[sub_key] = sliced_sub_value
             else:
                 value = self[key]
-                if isinstance(value, np.ndarray):
-                    slice_list = [
-                        slice(None),
-                    ] * len(value.shape)
-                    slice_list[dim] = slice_index
-                    sliced_value = value[tuple(slice_list)]
-                    ret_human_data[key] = sliced_value
-                else:
-                    sliced_value = value[slice_index]
-                    ret_human_data[key] = sliced_value
+                sliced_value = \
+                    HumanData.__get_sliced_result__(
+                        value, dim, slice_index)
+                ret_human_data[key] = sliced_value
         return ret_human_data
 
     def __get_slice_dim__(self):
@@ -600,8 +574,8 @@ class HumanData(dict):
         for key in self.keys():
             # keys not expected be sliced
             if key in supported_keys and \
-                    'slice_dim' in supported_keys[key] and \
-                    supported_keys[key]['slice_dim'] == -1:
+                    'major_dim' in supported_keys[key] and \
+                    supported_keys[key]['major_dim'] is None:
                 ret_dict[key] = None
             else:
                 value = self[key]
@@ -610,7 +584,7 @@ class HumanData(dict):
                     for sub_key in value.keys():
                         try:
                             sub_value_len = len(value[sub_key])
-                            if sub_value_len != self.__temporal_len__:
+                            if sub_value_len != self.__data_len__:
                                 ret_dict[key][sub_key] = None
                             else:
                                 ret_dict[key][sub_key] = 0
@@ -626,13 +600,13 @@ class HumanData(dict):
                 # slice on dim 0 by default
                 slice_dim = 0
                 if key in supported_keys and \
-                        'slice_dim' in supported_keys[key]:
+                        'major_dim' in supported_keys[key]:
                     slice_dim = \
-                        supported_keys[key]['slice_dim']
-                temporal_len = value_len if slice_dim == 0 \
+                        supported_keys[key]['major_dim']
+                data_len = value_len if slice_dim == 0 \
                     else value.shape[slice_dim]
                 # dim not for slice
-                if temporal_len != self.__temporal_len__:
+                if data_len != self.__data_len__:
                     ret_dict[key] = None
                     continue
                 else:
@@ -861,24 +835,24 @@ class HumanData(dict):
         return ret_bool
 
     @property
-    def temporal_len(self) -> int:
+    def data_len(self) -> int:
         """Get the temporal length of this HumanData instance.
 
         Returns:
             int:
                 Number of frames related to this instance.
         """
-        return self.__temporal_len__
+        return self.__data_len__
 
-    @temporal_len.setter
-    def temporal_len(self, value: int):
+    @data_len.setter
+    def data_len(self, value: int):
         """Set the temporal length of this HumanData instance.
 
         Args:
             value (int):
                 Number of frames related to this instance.
         """
-        self.__temporal_len__ = value
+        self.__data_len__ = value
 
     def __check_value_temporal__(self, key: Any, val: Any) -> bool:
         """Check whether the temporal length of val matches other values.
@@ -900,25 +874,25 @@ class HumanData(dict):
         # check definition
         if key in supported_keys:
             # check temporal length
-            if 'slice_dim' in supported_keys[key] and \
-                    supported_keys[key]['slice_dim'] >= 0:
-                val_slice_dim = supported_keys[key]['slice_dim']
+            if 'major_dim' in supported_keys[key] and \
+                    supported_keys[key]['major_dim'] is not None:
+                val_slice_dim = supported_keys[key]['major_dim']
                 if supported_keys[key]['type'] == dict:
                     slice_key = supported_keys[key]['slice_key']
-                    val_temporal_len = val[slice_key].shape[val_slice_dim]
+                    val_data_len = val[slice_key].shape[val_slice_dim]
                 else:
-                    val_temporal_len = val.shape[val_slice_dim]
-                if self.temporal_len < 0:
-                    # no temporal_len yet, assign a new one
-                    self.temporal_len = val_temporal_len
+                    val_data_len = val.shape[val_slice_dim]
+                if self.data_len < 0:
+                    # no data_len yet, assign a new one
+                    self.data_len = val_data_len
                 else:
-                    # check if val_temporal_len matches recorded temporal_len
-                    if self.temporal_len != val_temporal_len:
+                    # check if val_data_len matches recorded data_len
+                    if self.data_len != val_data_len:
                         ret_bool = False
         if not ret_bool:
             err_msg = 'Temporal check Failed:\n'
             err_msg += f'key={str(key)}\n'
-            err_msg += f'val\'s temporal_len={val_temporal_len}\n'
+            err_msg += f'val\'s data_len={val_data_len}\n'
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
@@ -1019,7 +993,7 @@ class HumanData(dict):
                 raise FileExistsError
         dict_to_dump = {
             '__key_strict__': self.__key_strict__,
-            '__temporal_len__': self.__temporal_len__,
+            '__data_len__': self.__data_len__,
             '__keypoints_compressed__': self.__keypoints_compressed__,
         }
         dict_to_dump.update(self)
@@ -1042,7 +1016,7 @@ class HumanData(dict):
                 if value is None:
                     tmp_data_dict.pop(key)
                 elif key == '__key_strict__' or \
-                        key == '__temporal_len__' or\
+                        key == '__data_len__' or\
                         key == '__keypoints_compressed__':
                     self.__setattr__(key, value)
                     # pop the attributes to keep dict clean
@@ -1059,20 +1033,20 @@ class HumanData(dict):
         """For older versions of HumanData, call this method to apply missing
         values (also attributes)."""
         supported_keys = self.__class__.SUPPORTED_KEYS
-        if self.__temporal_len__ == -1:
+        if self.__data_len__ == -1:
             for key in supported_keys:
                 if key in self and \
-                        'slice_dim' in supported_keys[key] and\
-                        supported_keys[key]['slice_dim'] != -1:
+                        'major_dim' in supported_keys[key] and\
+                        supported_keys[key]['major_dim'] is not None:
                     if 'slice_key' in supported_keys[key] and\
                             supported_keys[key]['type'] == dict:
                         sub_key = supported_keys[key]['slice_key']
-                        slice_dim = supported_keys[key]['slice_dim']
-                        self.__temporal_len__ = \
+                        slice_dim = supported_keys[key]['major_dim']
+                        self.__data_len__ = \
                             self[key][sub_key].shape[slice_dim]
                     else:
-                        slice_dim = supported_keys[key]['slice_dim']
-                        self.__temporal_len__ = self[key].shape[slice_dim]
+                        slice_dim = supported_keys[key]['major_dim']
+                        self.__data_len__ = self[key].shape[slice_dim]
                     break
         for key in list(self.keys()):
             convention_key = f'{key}_convention'
@@ -1098,10 +1072,10 @@ class HumanData(dict):
                 A keypoints array in full-size.
         """
         assert mask_array.sum() == compressed_array.shape[1]
-        temporal_len, _, dim = compressed_array.shape
+        data_len, _, dim = compressed_array.shape
         mask_len = mask_array.shape[0]
         ret_value = np.zeros(
-            shape=[temporal_len, mask_len, dim], dtype=compressed_array.dtype)
+            shape=[data_len, mask_len, dim], dtype=compressed_array.dtype)
         valid_mask_index = np.where(mask_array == 1)[0]
         ret_value[:, valid_mask_index, :] = compressed_array
         return ret_value
@@ -1184,3 +1158,32 @@ class HumanData(dict):
         suggestion_message = \
             'See error log for details.\n'
         return error_message + suggestion_message
+
+    @classmethod
+    def __get_sliced_result__(
+            cls, input_data: Union[np.ndarray, list, tuple], slice_dim: int,
+            slice_range: slice) -> Union[np.ndarray, list, tuple]:
+        """Slice input_data along slice_dim with slice_range.
+
+        Args:
+            input_data (Union[np.ndarray, list, tuple]):
+                Data to be sliced.
+            slice_dim (int):
+                Dimension to be sliced.
+            slice_range (slice):
+                An instance of class slice.
+
+        Returns:
+            Union[np.ndarray, list, tuple]:
+                A slice of input_data.
+        """
+        if isinstance(input_data, np.ndarray):
+            slice_list = [
+                slice(None),
+            ] * len(input_data.shape)
+            slice_list[slice_dim] = slice_range
+            sliced_data = input_data[tuple(slice_list)]
+        else:
+            sliced_data = \
+                input_data[slice_range]
+        return sliced_data

@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_num
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.data.data_structures.human_data_cache import (
     HumanDataCacheReader,
@@ -12,12 +13,14 @@ human_data_cache_path = 'tests/data/human_data/human_data_cache.npz'
 
 def test_write():
     human_data = HumanData.new(key_strict=False)
-    human_data['keypoints2d'] = np.ones(shape=(100, 199, 3))
-    human_data['keypoints2d_mask'] = np.ones(shape=(199, ))
+    keypoint_num_hd = get_keypoint_num(convention='human_data')
+    human_data['keypoints2d'] = np.ones(shape=(100, keypoint_num_hd, 3))
+    human_data['keypoints2d_mask'] = np.ones(shape=(keypoint_num_hd, ))
     human_data['keypoints2d_convention'] = 'human_data'
     human_data['keypoints2d'][50, 50, :] *= 3
-    human_data['keypoints4d'] = np.ones(shape=(100, 144, 3))
-    human_data['keypoints4d_mask'] = np.ones(shape=(144, ))
+    keypoint_num_smplx = get_keypoint_num(convention='smplx')
+    human_data['keypoints4d'] = np.ones(shape=(100, keypoint_num_smplx, 3))
+    human_data['keypoints4d_mask'] = np.ones(shape=(keypoint_num_smplx, ))
     human_data['keypoints4d_mask'][0:10] *= 0
     human_data['keypoints4d_convention'] = 'smplx'
     human_data['config'] = 'config/example'
