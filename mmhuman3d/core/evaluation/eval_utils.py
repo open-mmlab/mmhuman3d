@@ -50,28 +50,28 @@ def keypoint_mpjpe(pred, gt, mask, alignment='none'):
     return error
 
 
-def keypoint_accel_error(joints_gt, joints_pred, vis=None):
+def keypoint_accel_error(gt, pred, mask=None):
     """Computes acceleration error:
 
     Note that for each frame that is not visible, three entries in the
     acceleration error should be zero'd out.
     Args:
-        joints_gt (Nx14x3).
-        joints_pred (Nx14x3).
-        vis (N).
+        gt (Nx14x3).
+        pred (Nx14x3).
+        mask (N).
     Returns:
         error_accel (N-2).
     """
     # (N-2)x14x3
-    accel_gt = joints_gt[:-2] - 2 * joints_gt[1:-1] + joints_gt[2:]
-    accel_pred = joints_pred[:-2] - 2 * joints_pred[1:-1] + joints_pred[2:]
+    accel_gt = gt[:-2] - 2 * gt[1:-1] + gt[2:]
+    accel_pred = pred[:-2] - 2 * pred[1:-1] + pred[2:]
 
     normed = np.linalg.norm(accel_pred - accel_gt, axis=2)
 
-    if vis is None:
+    if mask is None:
         new_vis = np.ones(len(normed), dtype=bool)
     else:
-        invis = np.logical_not(vis)
+        invis = np.logical_not(mask)
         invis1 = np.roll(invis, -1)
         invis2 = np.roll(invis, -2)
         new_invis = np.logical_or(invis, np.logical_or(invis1, invis2))[:-2]
@@ -80,7 +80,7 @@ def keypoint_accel_error(joints_gt, joints_pred, vis=None):
     return np.mean(normed[new_vis], axis=1)
 
 
-def vertice_pve(pred_verts, target_verts=None):
+def vertice_pve(pred_verts, target_verts):
     """Computes per vertex error (PVE).
 
     Args:
