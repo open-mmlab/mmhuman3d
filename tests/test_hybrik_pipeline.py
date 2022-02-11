@@ -439,3 +439,28 @@ def test_human_hybrik_dataset():
         eval_result = custom_dataset.evaluate(outputs, tmpdir)
         assert 'P-MPJPE' in eval_result
         assert eval_result['P-MPJPE'] > 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='mpjpe')
+        assert 'MPJPE' in res
+        assert res['MPJPE'] > 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='p-3dpck')
+        assert 'P-3DPCK' in res
+        assert res['P-3DPCK'] >= 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='3dpck')
+        assert '3DPCK' in res
+        assert res['3DPCK'] >= 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='p-3dauc')
+        assert 'P-3DAUC' in res
+        assert res['P-3DAUC'] >= 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='3dauc')
+        assert '3DAUC' in res
+        assert res['3DAUC'] >= 0
