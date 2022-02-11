@@ -42,7 +42,7 @@ def tets_keypoinyt_pve():
 
 
 def test_keypoint_3d_pck():
-    target = np.random.rand(2, 5, 3)
+    target = np.random.rand(2, 5, 3) * 1000
     output = np.copy(target)
     mask = np.ones((output.shape[0], output.shape[1]), dtype=bool)
 
@@ -52,7 +52,7 @@ def test_keypoint_3d_pck():
     pck = keypoint_3d_pck(output, target, mask, alignment='none')
     np.testing.assert_almost_equal(pck, 100)
 
-    output[0, 0, :] = target[0, 0, :] + 1
+    output[0, 0, :] = target[0, 0, :] + 1000
     pck = keypoint_3d_pck(output, target, mask, alignment='none')
     np.testing.assert_almost_equal(pck, 90, 5)
 
@@ -66,7 +66,7 @@ def test_keypoint_3d_pck():
 
 
 def test_keypoint_3d_auc():
-    target = np.random.rand(2, 5, 3)
+    target = np.random.rand(2, 5, 3) * 1000
     output = np.copy(target)
     mask = np.ones((output.shape[0], output.shape[1]), dtype=bool)
 
@@ -80,6 +80,6 @@ def test_keypoint_3d_auc():
     auc = keypoint_3d_auc(output, target, mask, alignment='scale')
     np.testing.assert_almost_equal(auc, 30 / 31 * 100)
 
-    output = target + 2
+    output = target + 2000
     auc = keypoint_3d_auc(output, target, mask, alignment='procrustes')
     np.testing.assert_almost_equal(auc, 30 / 31 * 100)
