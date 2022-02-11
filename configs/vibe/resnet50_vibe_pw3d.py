@@ -54,7 +54,7 @@ extractor = dict(
         out_indices=[3],
         norm_eval=False,
         norm_cfg=dict(type='SyncBN', requires_grad=True)),
-    checkpoint='data/vibe_backbone.pth')
+    checkpoint='data/pretrained/spin.pth')
 # dataset settings
 dataset_type = 'HumanVideoDataset'
 data_keys = [
