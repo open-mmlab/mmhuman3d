@@ -84,8 +84,8 @@ def vertice_pve(pred_verts, target_verts=None):
     """Computes per vertex error (PVE).
 
     Args:
-        verts_gt (Nx6890x3).
-        verts_pred (Nx6890x3).
+        verts_gt (N x verts_num x 3).
+        verts_pred (N x verts_num x 3).
     Returns:
         error_verts.
     """
