@@ -1,6 +1,9 @@
 _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
+# evaluate
+evaluation = dict(metric=['pa-mpjpe', 'mpjpe'])
+
 # optimizer
 optimizer = dict(
     neck=dict(type='Adam', lr=2.5e-4), head=dict(type='Adam', lr=2.5e-4))

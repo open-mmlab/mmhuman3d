@@ -1,5 +1,6 @@
 import argparse
 import os
+import os.path as osp
 
 import mmcv
 import torch
@@ -28,38 +29,27 @@ def parse_args():
         '--metrics',
         type=str,
         nargs='+',
-        help='evaluation metrics, which depends on the dataset, e.g., '
-        '"accuracy", "precision", "recall", "f1_score", "support" for single '
-        'label dataset, and "mAP", "CP", "CR", "CF1", "OP", "OR", "OF1" for '
-        'multi-label dataset')
-    parser.add_argument('--show', action='store_true', help='show results')
-    parser.add_argument(
-        '--show-dir', help='directory where painted images will be saved')
+        default='pa-mpjpe',
+        help='evaluation metric, which depends on the dataset,'
+        ' e.g., "pa-mpjpe" for H36M')
     parser.add_argument(
         '--gpu_collect',
         action='store_true',
         help='whether to use gpu to collect results')
     parser.add_argument('--tmpdir', help='tmp dir for writing some results')
     parser.add_argument(
-        '--options',
+        '--cfg-options',
         nargs='+',
         action=DictAction,
         help='override some settings in the used config, the key-value pair '
         'in xxx=yyy format will be merged into config file.')
     parser.add_argument(
-        '--metric-options',
+        '--eval-options',
         nargs='+',
-        action=DictAction,
         default={},
-        help='custom options for evaluation, the key-value pair in xxx=yyy '
-        'format will be parsed as a dict metric_options for dataset.evaluate()'
-        ' function.')
-    parser.add_argument(
-        '--show-options',
-        nargs='+',
         action=DictAction,
-        help='custom options for show_result. key-value pair in xxx=yyy.'
-        'Check available options in `model.show_result`.')
+        help='custom options for evaluation, the key-value pair in xxx=yyy '
+        'format will be kwargs for dataset.evaluate() function')
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
@@ -81,8 +71,8 @@ def main():
     args = parse_args()
 
     cfg = mmcv.Config.fromfile(args.config)
-    if args.options is not None:
-        cfg.merge_from_dict(args.options)
+    if args.cfg_options is not None:
+        cfg.merge_from_dict(args.cfg_options)
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
@@ -118,9 +108,7 @@ def main():
             model = model.cpu()
         else:
             model = MMDataParallel(model, device_ids=[0])
-        show_kwargs = {} if args.show_options is None else args.show_options
-        outputs = single_gpu_test(model, data_loader, args.show, args.show_dir,
-                                  **show_kwargs)
+        outputs = single_gpu_test(model, data_loader)
     else:
         model = MMDistributedDataParallel(
             model.cuda(),
@@ -130,8 +118,10 @@ def main():
                                  args.gpu_collect)
 
     rank, _ = get_dist_info()
-    eval_cfg = cfg.get('evaluation', {})
+    eval_cfg = cfg.get('evaluation', args.eval_options)
+    eval_cfg.update(dict(metric=args.metrics))
     if rank == 0:
+        mmcv.mkdir_or_exist(osp.abspath(args.work_dir))
         results = dataset.evaluate(outputs, args.work_dir, **eval_cfg)
         for k, v in results.items():
             print(f'\n{k} : {v:.2f}')

@@ -1,5 +1,7 @@
 _base_ = ['../_base_/default_runtime.py']
 
+# evaluate
+evaluation = dict(metric=['pa-mpjpe', 'mpjpe'])
 # optimizer
 optimizer = dict(type='Adam', lr=1e-3, weight_decay=0)
 optimizer_config = dict(grad_clip=None)
@@ -11,7 +13,7 @@ log_config = dict(
     interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
-        # dict(type='TensorboardLoggerHook')
+        #    dict(type='TensorboardLoggerHook')
     ])
 
 img_res = 256
@@ -166,7 +168,16 @@ data = dict(
         partition=[0.4, 0.1, 0.5]),
     test=dict(
         type=dataset_type,
+        body_model=dict(
+            type='GenderedSMPL', model_path='data/body_models/smpl'),
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='hybrik_pw3d_test.npz'))
+        ann_file='hybrik_pw3d_test.npz'),
+    val=dict(
+        type=dataset_type,
+        dataset_name='pw3d',
+        data_prefix='data',
+        pipeline=test_pipeline,
+        ann_file='hybrik_pw3d_test.npz'),
+)
