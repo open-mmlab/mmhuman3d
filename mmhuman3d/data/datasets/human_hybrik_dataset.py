@@ -3,7 +3,7 @@ import os
 import os.path
 from abc import ABCMeta
 from collections import OrderedDict
-from typing import Optional
+from typing import List, Optional, Union
 
 import mmcv
 import numpy as np
@@ -211,14 +211,15 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def evaluate(self,
                  outputs: list,
                  res_folder: str,
-                 metric: Optional[str] = 'pa-mpjpe',
+                 metric: Optional[Union[str, List(str)]] = 'pa-mpjpe',
                  **kwargs: dict):
         """Evaluate 3D keypoint results.
 
         Args:
             outputs (list): results from model inference.
             res_folder (str): path to store results.
-            metric (str): the type of metric. Default: 'pa-mpjpe'
+            metric (Optional[Union[str, List(str)]]):
+                the type of metric. Default: 'pa-mpjpe'
             kwargs (dict): other arguments.
         Returns:
             dict:
