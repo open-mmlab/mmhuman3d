@@ -19,7 +19,7 @@ class ExampleDataset(Dataset):
 
     def __init__(self):
         self.index = 0
-        self.eval_result = [0.1, 0.4, 0.3, 0.7, 0.2, 0.05, 0.4, 0.6]
+        self.eval_result = [0.1, 0.4, 0.3, 0.05, 0.2, 0.7, 0.4, 0.6]
 
     def __getitem__(self, idx):
         results = dict(imgs=torch.tensor([1]))
@@ -37,7 +37,7 @@ class EvalDataset(ExampleDataset):
 
     def evaluate(self, results, res_folder=None, logger=None):
         acc = self.eval_result[self.index]
-        output = OrderedDict(acc=acc, index=self.index, score=acc)
+        output = OrderedDict(mpjpe=acc, index=self.index, pve=acc)
         self.index += 1
         return output
 
@@ -159,15 +159,15 @@ def test_eval_hook(EvalHookCls):
         runner.register_hook(eval_hook)
         runner.run([loader], [('train', 1)])
 
-        real_path = osp.join(tmpdir, 'best_acc_epoch_4.pth')
+        real_path = osp.join(tmpdir, 'best_mpjpe_epoch_4.pth')
 
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
-        assert runner.meta['hook_msgs']['best_score'] == 0.7
+        assert runner.meta['hook_msgs']['best_score'] == 0.05
 
     loader = DataLoader(EvalDataset(), batch_size=1)
     model = ExampleModel()
     data_loader = DataLoader(EvalDataset(), batch_size=1)
-    eval_hook = EvalHookCls(data_loader, interval=1, save_best='acc')
+    eval_hook = EvalHookCls(data_loader, interval=1, save_best='mpjpe')
 
     with tempfile.TemporaryDirectory() as tmpdir:
         logger = get_logger('test_eval')
@@ -182,15 +182,15 @@ def test_eval_hook(EvalHookCls):
         runner.register_hook(eval_hook)
         runner.run([loader], [('train', 1)])
 
-        real_path = osp.join(tmpdir, 'best_acc_epoch_4.pth')
+        real_path = osp.join(tmpdir, 'best_mpjpe_epoch_4.pth')
 
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
-        assert runner.meta['hook_msgs']['best_score'] == 0.7
+        assert runner.meta['hook_msgs']['best_score'] == 0.05
 
     # update "save_best" according to "key_indicator"
     data_loader = DataLoader(EvalDataset(), batch_size=1)
     eval_hook = EvalHookCls(
-        data_loader, key_indicator='score', save_best=True, rule='greater')
+        data_loader, key_indicator='mpjpe', save_best=True, rule='less')
     with tempfile.TemporaryDirectory() as tmpdir:
         logger = get_logger('test_eval')
         runner = EpochBasedRunner(
@@ -203,53 +203,53 @@ def test_eval_hook(EvalHookCls):
         runner.register_hook(eval_hook)
         runner.run([loader], [('train', 1)], 8)
 
-        real_path = osp.join(tmpdir, 'best_score_epoch_4.pth')
-
-        assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
-        assert runner.meta['hook_msgs']['best_score'] == 0.7
-
-    data_loader = DataLoader(EvalDataset(), batch_size=1)
-    eval_hook = EvalHookCls(
-        data_loader, interval=1, save_best='score', rule='greater')
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = get_logger('test_eval')
-        runner = EpochBasedRunner(
-            model=model,
-            batch_processor=None,
-            optimizer=optimizer,
-            work_dir=tmpdir,
-            logger=logger)
-        runner.register_checkpoint_hook(dict(interval=1))
-        runner.register_hook(eval_hook)
-        runner.run([loader], [('train', 1)], 8)
-
-        real_path = osp.join(tmpdir, 'best_score_epoch_4.pth')
-
-        assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
-        assert runner.meta['hook_msgs']['best_score'] == 0.7
-
-    data_loader = DataLoader(EvalDataset(), batch_size=1)
-    eval_hook = EvalHookCls(data_loader, save_best='acc', rule='less')
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = get_logger('test_eval')
-        runner = EpochBasedRunner(
-            model=model,
-            batch_processor=None,
-            optimizer=optimizer,
-            work_dir=tmpdir,
-            logger=logger,
-            max_epochs=8)
-        runner.register_checkpoint_hook(dict(interval=1))
-        runner.register_hook(eval_hook)
-        runner.run([loader], [('train', 1)])
-
-        real_path = osp.join(tmpdir, 'best_acc_epoch_6.pth')
+        real_path = osp.join(tmpdir, 'best_mpjpe_epoch_4.pth')
 
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
         assert runner.meta['hook_msgs']['best_score'] == 0.05
 
     data_loader = DataLoader(EvalDataset(), batch_size=1)
-    eval_hook = EvalHookCls(data_loader, save_best='acc')
+    eval_hook = EvalHookCls(
+        data_loader, interval=1, save_best='pve', rule='less')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        logger = get_logger('test_eval')
+        runner = EpochBasedRunner(
+            model=model,
+            batch_processor=None,
+            optimizer=optimizer,
+            work_dir=tmpdir,
+            logger=logger)
+        runner.register_checkpoint_hook(dict(interval=1))
+        runner.register_hook(eval_hook)
+        runner.run([loader], [('train', 1)], 8)
+
+        real_path = osp.join(tmpdir, 'best_pve_epoch_4.pth')
+
+        assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
+        assert runner.meta['hook_msgs']['best_score'] == 0.05
+
+    data_loader = DataLoader(EvalDataset(), batch_size=1)
+    eval_hook = EvalHookCls(data_loader, save_best='mpjpe', rule='greater')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        logger = get_logger('test_eval')
+        runner = EpochBasedRunner(
+            model=model,
+            batch_processor=None,
+            optimizer=optimizer,
+            work_dir=tmpdir,
+            logger=logger,
+            max_epochs=8)
+        runner.register_checkpoint_hook(dict(interval=1))
+        runner.register_hook(eval_hook)
+        runner.run([loader], [('train', 1)])
+
+        real_path = osp.join(tmpdir, 'best_mpjpe_epoch_6.pth')
+
+        assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
+        assert runner.meta['hook_msgs']['best_score'] == 0.7
+
+    data_loader = DataLoader(EvalDataset(), batch_size=1)
+    eval_hook = EvalHookCls(data_loader, save_best='mpjpe')
     with tempfile.TemporaryDirectory() as tmpdir:
         logger = get_logger('test_eval')
         runner = EpochBasedRunner(
@@ -263,14 +263,14 @@ def test_eval_hook(EvalHookCls):
         runner.register_hook(eval_hook)
         runner.run([loader], [('train', 1)])
 
-        real_path = osp.join(tmpdir, 'best_acc_epoch_2.pth')
+        real_path = osp.join(tmpdir, 'best_mpjpe_epoch_1.pth')
 
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
-        assert runner.meta['hook_msgs']['best_score'] == 0.4
+        assert runner.meta['hook_msgs']['best_score'] == 0.1
 
         resume_from = osp.join(tmpdir, 'latest.pth')
         loader = DataLoader(ExampleDataset(), batch_size=1)
-        eval_hook = EvalHookCls(data_loader, save_best='acc')
+        eval_hook = EvalHookCls(data_loader, save_best='mpjpe')
         runner = EpochBasedRunner(
             model=model,
             batch_processor=None,
@@ -283,7 +283,7 @@ def test_eval_hook(EvalHookCls):
         runner.resume(resume_from)
         runner.run([loader], [('train', 1)])
 
-        real_path = osp.join(tmpdir, 'best_acc_epoch_4.pth')
+        real_path = osp.join(tmpdir, 'best_mpjpe_epoch_4.pth')
 
         assert runner.meta['hook_msgs']['best_ckpt'] == osp.realpath(real_path)
-        assert runner.meta['hook_msgs']['best_score'] == 0.7
+        assert runner.meta['hook_msgs']['best_score'] == 0.05
