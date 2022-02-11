@@ -6,7 +6,7 @@ from .mesh_eval import compute_similarity_transform
 
 def keypoint_mpjpe(pred, gt, mask, alignment='none'):
     """Calculate the mean per-joint position error (MPJPE) and the error after
-    rigid alignment with the ground truth (P-MPJPE).
+    rigid alignment with the ground truth (PA-MPJPE).
     batch_size: N
     num_keypoints: K
     keypoint_dims: C
@@ -25,7 +25,7 @@ def keypoint_mpjpe(pred, gt, mask, alignment='none'):
     Returns:
         tuple: A tuple containing joint position errors
         - mpjpe (float|np.ndarray[N]): mean per-joint position error.
-        - p-mpjpe (float|np.ndarray[N]): mpjpe after rigid alignment with the
+        - pa-mpjpe (float|np.ndarray[N]): mpjpe after rigid alignment with the
             ground truth
     """
     assert mask.any()

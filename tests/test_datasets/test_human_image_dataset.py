@@ -44,8 +44,8 @@ def test_human_image_dataset():
         'image_idx': np.arange(num_data)
     }]
     res = test_dataset.evaluate(outputs, res_folder='tests/data')
-    assert 'P-MPJPE' in res
-    assert res['P-MPJPE'] > 0
+    assert 'PA-MPJPE' in res
+    assert res['PA-MPJPE'] > 0
 
     res = test_dataset.evaluate(
         outputs, res_folder='tests/data', metric='mpjpe')
@@ -94,8 +94,8 @@ def test_human_image_dataset():
         'image_idx': np.arange(num_data)
     }]
     res = test_dataset.evaluate(outputs, res_folder='tests/data')
-    assert 'P-MPJPE' in res
-    assert res['P-MPJPE'] > 0
+    assert 'PA-MPJPE' in res
+    assert res['PA-MPJPE'] > 0
 
     test_dataset = HumanImageDataset(
         data_prefix='tests/data',
@@ -115,8 +115,8 @@ def test_human_image_dataset():
         'image_idx': np.arange(num_data)
     }]
     res = test_dataset.evaluate(outputs, res_folder='tests/data')
-    assert 'P-MPJPE' in res
-    assert res['P-MPJPE'] > 0
+    assert 'PA-MPJPE' in res
+    assert res['PA-MPJPE'] > 0
 
 
 def test_pipeline():

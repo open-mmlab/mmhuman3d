@@ -437,8 +437,8 @@ def test_human_hybrik_dataset():
     }]
     with tempfile.TemporaryDirectory() as tmpdir:
         eval_result = custom_dataset.evaluate(outputs, tmpdir)
-        assert 'P-MPJPE' in eval_result
-        assert eval_result['P-MPJPE'] > 0
+        assert 'PA-MPJPE' in eval_result
+        assert eval_result['PA-MPJPE'] > 0
 
         res = custom_dataset.evaluate(
             outputs, res_folder=tmpdir, metric='mpjpe')

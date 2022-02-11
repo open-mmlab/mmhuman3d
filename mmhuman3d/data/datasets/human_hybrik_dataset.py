@@ -42,7 +42,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     """
     # metric
     ALLOWED_METRICS = {
-        'mpjpe', 'p-mpjpe', 'pve', '3dpck', 'p-3dpck', '3dauc', 'p-3dauc'
+        'mpjpe', 'pa-mpjpe', 'pve', '3dpck', 'p-3dpck', '3dauc', 'p-3dauc'
     }
 
     def __init__(self,
@@ -211,14 +211,14 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def evaluate(self,
                  outputs: list,
                  res_folder: str,
-                 metric: Optional[str] = 'p-mpjpe',
+                 metric: Optional[str] = 'pa-mpjpe',
                  **kwargs: dict):
         """Evaluate 3D keypoint results.
 
         Args:
             outputs (list): results from model inference.
             res_folder (str): path to store results.
-            metric (str): the type of metric. Default: 'p-mpjpe'
+            metric (str): the type of metric. Default: 'pa-mpjpe'
             kwargs (dict): other arguments.
         Returns:
             dict:
@@ -255,8 +255,8 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         for _metric in metrics:
             if _metric == 'mpjpe':
                 _nv_tuples = self._report_mpjpe(res)
-            elif _metric == 'p-mpjpe':
-                _nv_tuples = self._report_mpjpe(res, metric='p-mpjpe')
+            elif _metric == 'pa-mpjpe':
+                _nv_tuples = self._report_mpjpe(res, metric='pa-mpjpe')
             elif _metric == '3dpck':
                 _nv_tuples = self._report_3d_pck(res)
             elif _metric == 'p-3dpck':
@@ -359,11 +359,11 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             raise NotImplementedError()
 
     def _report_mpjpe(self, res_file, metric='mpjpe'):
-        """Cauculate mean per joint position error (MPJPE) or its variants
-        P-MPJPE.
+        """Cauculate mean per joint position error (MPJPE) or its variants PA-
+        MPJPE.
 
         Report mean per joint position error (MPJPE) and mean per joint
-        position error after rigid alignment (P-MPJPE)
+        position error after rigid alignment (PA-MPJPE)
         """
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
             self._parse_result(res_file, mode='keypoint')
@@ -371,7 +371,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         err_name = metric.upper()
         if metric == 'mpjpe':
             alignment = 'none'
-        elif metric == 'p-mpjpe':
+        elif metric == 'pa-mpjpe':
             alignment = 'procrustes'
         else:
             raise ValueError(f'Invalid metric: {metric}')

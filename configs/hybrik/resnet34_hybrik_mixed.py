@@ -1,7 +1,7 @@
 _base_ = ['../_base_/default_runtime.py']
 
 # evaluate
-evaluation = dict(interval=1, metric='p-mpjpe')
+evaluation = dict(interval=1, metric='pa-mpjpe')
 # optimizer
 optimizer = dict(type='Adam', lr=1e-3, weight_decay=0)
 optimizer_config = dict(grad_clip=None)

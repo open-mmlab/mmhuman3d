@@ -29,9 +29,9 @@ def parse_args():
         '--metrics',
         type=str,
         nargs='+',
-        default='p-mpjpe',
+        default='pa-mpjpe',
         help='evaluation metric, which depends on the dataset,'
-        ' e.g., "p-mpjpe" for H36M')
+        ' e.g., "pa-mpjpe" for H36M')
     parser.add_argument(
         '--gpu_collect',
         action='store_true',

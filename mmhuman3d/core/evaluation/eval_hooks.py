@@ -6,7 +6,7 @@ from mmcv.runner import DistEvalHook as BaseDistEvalHook
 from mmcv.runner import EvalHook as BaseEvalHook
 
 MMPOSE_GREATER_KEYS = ['3dpck', 'p-3dpck', '3dauc', 'p-3dauc']
-MMPOSE_LESS_KEYS = ['mpjpe', 'p-mpjpe', 'pve']
+MMPOSE_LESS_KEYS = ['mpjpe', 'pa-mpjpe', 'pve']
 
 
 class EvalHook(BaseEvalHook):
@@ -39,7 +39,7 @@ class EvalHook(BaseEvalHook):
             warnings.warn(
                 '"key_indicator" will be deprecated in EvalHook.'
                 'Please use "save_best" to specify the metric key,'
-                'e.g., save_best="p-mpjpe".', DeprecationWarning)
+                'e.g., save_best="pa-mpjpe".', DeprecationWarning)
 
             key_indicator = eval_kwargs.pop('key_indicator', None)
             if save_best is True and key_indicator is None:
@@ -99,7 +99,7 @@ class DistEvalHook(BaseDistEvalHook):
             warnings.warn(
                 '"key_indicator" will be deprecated in EvalHook.'
                 'Please use "save_best" to specify the metric key,'
-                'e.g., save_best="p-mpjpe".', DeprecationWarning)
+                'e.g., save_best="pa-mpjpe".', DeprecationWarning)
 
             key_indicator = eval_kwargs.pop('key_indicator', None)
             if save_best is True and key_indicator is None:
