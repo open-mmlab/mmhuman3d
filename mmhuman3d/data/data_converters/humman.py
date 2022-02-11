@@ -52,6 +52,7 @@ class HuMManConverter(BaseModeConverter):
         self.device = torch.device(
             'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+        # Body model used for keypoint computation
         self.smpl = build_body_model(
             dict(
                 type='SMPL',
@@ -59,6 +60,18 @@ class HuMManConverter(BaseModeConverter):
                 keypoint_dst=self.keypoint_convention_smpl,
                 model_path='data/body_models/smpl',
                 extra_joints_regressor='data/body_models/J_regressor_extra.npy'
+            )).to(self.device)
+
+        # Body model used for pelvis computation in SMCReader
+        self.smpl_smc = build_body_model(
+            dict(
+                type='SMPL',
+                gender='neutral',
+                num_betas=10,
+                keypoint_src='smpl_45',
+                keypoint_dst='smpl_45',
+                model_path='data/body_models/smpl',
+                batch_size=1,
             )).to(self.device)
 
     def _derive_keypoints(self, global_orient, body_pose, betas, transl,
@@ -250,7 +263,7 @@ class HuMManConverter(BaseModeConverter):
                 continue
 
             try:
-                smc_reader = SMCReader(ann_path)
+                smc_reader = SMCReader(ann_path, body_model=self.smpl_smc)
             except OSError:
                 print(f'Unable to load {ann_path}.')
                 continue
