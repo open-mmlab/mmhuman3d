@@ -42,7 +42,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     """
     # metric
     ALLOWED_METRICS = {
-        'mpjpe', 'pa-mpjpe', 'pve', '3dpck', 'p-3dpck', '3dauc', 'p-3dauc'
+        'mpjpe', 'pa-mpjpe', 'pve', '3dpck', 'pa-3dpck', '3dauc', 'pa-3dauc'
     }
 
     def __init__(self,
@@ -260,12 +260,12 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 _nv_tuples = self._report_mpjpe(res, metric='pa-mpjpe')
             elif _metric == '3dpck':
                 _nv_tuples = self._report_3d_pck(res)
-            elif _metric == 'p-3dpck':
-                _nv_tuples = self._report_3d_pck(res, metric='p-3dpck')
+            elif _metric == 'pa-3dpck':
+                _nv_tuples = self._report_3d_pck(res, metric='pa-3dpck')
             elif _metric == '3dauc':
                 _nv_tuples = self._report_3d_auc(res)
-            elif _metric == 'p-3dauc':
-                _nv_tuples = self._report_3d_auc(res, metric='p-3dauc')
+            elif _metric == 'pa-3dauc':
+                _nv_tuples = self._report_3d_auc(res, metric='pa-3dauc')
             elif _metric == 'pve':
                 _nv_tuples = self._report_pve(res)
             else:
@@ -391,7 +391,8 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 'Body3DMpiInf3dhpDataset.evaluate' for details.
             metric (str): Specify mpjpe variants. Supported options are:
                 - ``'3dpck'``: Standard 3DPCK.
-                - ``'p-3dpck'``: 3DPCK after aligning prediction to groundtruth
+                - ``'pa-3dpck'``:
+                    3DPCK after aligning prediction to groundtruth
                     via a rigid transformation (scale, rotation and
                     translation).
         """
@@ -402,7 +403,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         err_name = metric.upper()
         if metric == '3dpck':
             alignment = 'none'
-        elif metric == 'p-3dpck':
+        elif metric == 'pa-3dpck':
             alignment = 'procrustes'
         else:
             raise ValueError(f'Invalid metric: {metric}')
@@ -421,7 +422,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 'Body3DMpiInf3dhpDataset.evaluate' for details.
             metric (str): Specify mpjpe variants. Supported options are:
                 - ``'3dauc'``: Standard 3DAUC.
-                - ``'p-3dauc'``: 3DAUC after aligning prediction to
+                - ``'pa-3dauc'``: 3DAUC after aligning prediction to
                     groundtruth via a rigid transformation (scale, rotation and
                     translation).
         """
@@ -432,7 +433,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         err_name = metric.upper()
         if metric == '3dauc':
             alignment = 'none'
-        elif metric == 'p-3dauc':
+        elif metric == 'pa-3dauc':
             alignment = 'procrustes'
         else:
             raise ValueError(f'Invalid metric: {metric}')

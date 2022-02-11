@@ -57,9 +57,9 @@ def test_human_image_dataset():
     assert res['PVE'] > 0
 
     res = test_dataset.evaluate(
-        outputs, res_folder='tests/data', metric='p-3dpck')
-    assert 'P-3DPCK' in res
-    assert res['P-3DPCK'] >= 0
+        outputs, res_folder='tests/data', metric='pa-3dpck')
+    assert 'PA-3DPCK' in res
+    assert res['PA-3DPCK'] >= 0
 
     res = test_dataset.evaluate(
         outputs, res_folder='tests/data', metric='3dpck')
@@ -67,9 +67,9 @@ def test_human_image_dataset():
     assert res['3DPCK'] >= 0
 
     res = test_dataset.evaluate(
-        outputs, res_folder='tests/data', metric='p-3dauc')
-    assert 'P-3DAUC' in res
-    assert res['P-3DAUC'] >= 0
+        outputs, res_folder='tests/data', metric='pa-3dauc')
+    assert 'PA-3DAUC' in res
+    assert res['PA-3DAUC'] >= 0
 
     res = test_dataset.evaluate(
         outputs, res_folder='tests/data', metric='3dauc')

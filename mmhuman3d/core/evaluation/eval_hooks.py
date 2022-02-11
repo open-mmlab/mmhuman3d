@@ -5,8 +5,8 @@ import warnings
 from mmcv.runner import DistEvalHook as BaseDistEvalHook
 from mmcv.runner import EvalHook as BaseEvalHook
 
-MMPOSE_GREATER_KEYS = ['3dpck', 'p-3dpck', '3dauc', 'p-3dauc']
-MMPOSE_LESS_KEYS = ['mpjpe', 'pa-mpjpe', 'pve']
+MMHUMAN3D_GREATER_KEYS = ['3dpck', 'pa-3dpck', '3dauc', 'pa-3dauc']
+MMHUMAN3D_LESS_KEYS = ['mpjpe', 'pa-mpjpe', 'pve']
 
 
 class EvalHook(BaseEvalHook):
@@ -19,8 +19,8 @@ class EvalHook(BaseEvalHook):
                  save_best=None,
                  rule=None,
                  test_fn=None,
-                 greater_keys=None,
-                 less_keys=None,
+                 greater_keys=MMHUMAN3D_GREATER_KEYS,
+                 less_keys=MMHUMAN3D_LESS_KEYS,
                  **eval_kwargs):
         if test_fn is None:
             from mmhuman3d.apis import single_gpu_test
