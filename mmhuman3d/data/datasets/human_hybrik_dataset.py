@@ -211,7 +211,7 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def evaluate(self,
                  outputs: list,
                  res_folder: str,
-                 metric: Optional[Union[str, List(str)]] = 'pa-mpjpe',
+                 metric: Optional[Union[str, List[str]]] = 'pa-mpjpe',
                  **kwargs: dict):
         """Evaluate 3D keypoint results.
 
