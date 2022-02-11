@@ -121,8 +121,7 @@ def main():
     eval_cfg = cfg.get('evaluation', args.eval_options)
     eval_cfg.update(dict(metric=args.metrics))
     if rank == 0:
-        if args.work_dir is not None:
-            mmcv.mkdir_or_exist(osp.abspath(args.work_dir))
+        mmcv.mkdir_or_exist(osp.abspath(args.work_dir))
         results = dataset.evaluate(outputs, args.work_dir, **eval_cfg)
         for k, v in results.items():
             print(f'\n{k} : {v:.2f}')
