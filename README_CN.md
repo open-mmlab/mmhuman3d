@@ -41,6 +41,14 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
+## 最新进展
+- 2022-02-11: MMHuman3D [v0.5.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.5.0) 已经发布. 主要更新包括:
+  - 支持新的数据结构SMC以及即将发布的新数据集HuMMan
+  - 支持在非slurm环境下的多GPU训练/测试
+  - 支持训练时验证及更多测试指标如PVE
+  - 修复数据增强的问题使训练稳定
+  - 更强的HybrIK基线（3DPW上达到PA-MPJPE 49.02）
+
 ## 基准与模型库
 
 更多详情可见 [模型库](docs/model_zoo.md)。
@@ -145,6 +153,9 @@ MMHuman3D是一款由不同学校和公司共同贡献的开源项目。我们�
 - [MMFlow](https://github.com/open-mmlab/mmflow): OpenMMLab 光流估计工具箱与测试基准
 - [MMFewShot](https://github.com/open-mmlab/mmfewshot): OpenMMLab 少样本学习工具箱与测试基准
 - [MMHuman3D](https://github.com/open-mmlab/mmhuman3d)：OpenMMLab 人体参数化模型工具箱与测试基准
+- [MMSelfSup](https://github.com/open-mmlab/mmselfsup): OpenMMLab 自监督学习工具箱与测试基准
+- [MMRazor](https://github.com/open-mmlab/mmrazor): OpenMMLab 模型压缩工具箱与测试基准
+- [MMDeploy](https://github.com/open-mmlab/mmdeploy):OpenMMLab 模型部署框架
 
 ## 欢迎加入 OpenMMLab 社区
 

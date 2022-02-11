@@ -41,6 +41,14 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
   A suite of differentiale visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
 
+## News
+- 2022-02-11: MMHuman3D [v0.5.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.5.0) is released. Major updates include:
+  - Support new data structure SMC for new dataset HuMMan, which will soon be released
+  - Support for multi-GPU training/testing without slurm
+  - Support training-time validation and additional metrics such as PVE
+  - Bug fixes in data augmentation for more stable training
+  - Stronger HybrIK baseline (PA-MPJPE 49.02 on 3DPW)
+
 ## Benchmark and Model Zoo
 
 More details can be found in [model_zoo.md](docs/model_zoo.md).
@@ -146,3 +154,6 @@ We wish that the toolbox and benchmark could serve the growing research communit
 - [MMFlow](https://github.com/open-mmlab/mmflow): OpenMMLab optical flow toolbox and benchmark.
 - [MMFewShot](https://github.com/open-mmlab/mmfewshot): OpenMMLab FewShot Learning Toolbox and Benchmark.
 - [MMHuman3D](https://github.com/open-mmlab/mmhuman3d): OpenMMLab 3D Human Parametric Model Toolbox and Benchmark.
+- [MMSelfSup](https://github.com/open-mmlab/mmselfsup): OpenMMLab self-supervised learning toolbox and benchmark.
+- [MMRazor](https://github.com/open-mmlab/mmrazor): OpenMMLab model compression toolbox and benchmark.
+- [MMDeploy](https://github.com/open-mmlab/mmdeploy): OpenMMLab model deployment framework.
