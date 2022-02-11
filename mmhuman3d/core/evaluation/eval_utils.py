@@ -80,7 +80,7 @@ def keypoint_accel_error(joints_gt, joints_pred, vis=None):
     return np.mean(normed[new_vis], axis=1)
 
 
-def vertice_pve(pred_verts, target_verts=None, target_theta=None):
+def vertice_pve(pred_verts, target_verts=None):
     """Computes per vertex error (PVE).
 
     Args:
