@@ -134,12 +134,7 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
 
         losses = self.compute_losses(predictions, labels)
 
-        loss, log_vars = self._parse_losses(losses)
-
-        output = {
-            'loss': loss,
-        }
-        return output
+        return losses
 
     def compute_losses(self, predictions, targets):
         """Compute regression losses for beta, theta, twist and uvd."""
