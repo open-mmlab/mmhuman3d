@@ -323,7 +323,7 @@ class UVRenderer(nn.Module):
         uvd_map = self.forward(verts_attr=verts_uvd, resolution=resolution)
         return uvd_map
 
-    def resample(
+    def vertex_resample(
         self,
         maps_padded: torch.Tensor,
         h_flip: bool = False,
@@ -390,7 +390,7 @@ class UVRenderer(nn.Module):
             Meshes: returned meshes.
         """
         if normal_map is not None and normal is None:
-            normal = self.resample(normal_map)
+            normal = self.vertex_resample(normal_map)
         elif normal_map is not None and normal is not None:
             normal_map = None
         elif normal_map is None and normal is None:
@@ -429,7 +429,7 @@ class UVRenderer(nn.Module):
             Meshes: returned meshes.
         """
         if displacement_map is not None and displacement is None:
-            displacement = self.resample(displacement_map)
+            displacement = self.vertex_resample(displacement_map)
         elif displacement_map is not None and displacement is not None:
             displacement_map = None
         elif displacement_map is None and displacement is None:

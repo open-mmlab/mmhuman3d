@@ -5,7 +5,7 @@ from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import NewAttributeCameras
 from .base_renderer import MeshBaseRenderer
-from .builder import RENDERER
+from .builder import RENDERER, build_shader
 
 try:
     from typing import Literal
@@ -29,6 +29,7 @@ class DepthRenderer(MeshBaseRenderer):
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
+        depth_max: Union[int, float, torch.Tensor] = None,
         **kwargs,
     ) -> None:
         """Renderer for depth map of meshes.
@@ -57,7 +58,8 @@ class DepthRenderer(MeshBaseRenderer):
                 Defaults to True.
             projection (Literal[, optional): Projection type of the cameras.
                 Defaults to 'weakperspective'.
-
+            depth_max (Union[int, float, torch.Tensor], optional):
+                The max value for normalize depth range. Defaults to None.
         Returns:
             None
         """
@@ -71,6 +73,19 @@ class DepthRenderer(MeshBaseRenderer):
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
+        self.depth_max = depth_max
+
+    def _init_renderer(self,
+                       rasterizer=None,
+                       shader=None,
+                       materials=None,
+                       lights=None,
+                       blend_params=None,
+                       **kwargs):
+        shader = build_shader(dict(
+            type='DepthShader')) if shader is None else shader
+        return super()._init_renderer(rasterizer, shader, materials, lights,
+                                      blend_params, **kwargs)
 
     def to(self, device):
         if isinstance(device, str):
@@ -136,5 +151,8 @@ class DepthRenderer(MeshBaseRenderer):
 
     def tensor2rgba(self, tensor: torch.Tensor):
         rgbs, valid_masks = tensor.repeat(1, 1, 1, 3), (tensor > 0) * 1.0
-        rgbs = rgbs / rgbs.max()
+        depth_max = self.depth_max if self.depth_max is not None else rgbs.max(
+        )
+        rgbs = self._normalize(
+            rgbs, origin_value_range=(0, depth_max), out_value_range=(0, 1))
         return torch.cat([rgbs, valid_masks], -1)

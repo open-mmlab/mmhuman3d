@@ -147,7 +147,10 @@ class MeshBaseRenderer(nn.Module):
         else:
             raise TypeError(
                 f'Wrong type of rasterizer: {type(self.rasterizer)}.')
-
+        if self.resolution is None:
+            self.resolution = tuple(self.rasterizer.raster_settings.image_size)
+            self.resolution = (self.resolution, self.resolution) if isinstance(
+                self.resolution, int) else self.resolution
         if isinstance(shader, nn.Module):
             self.shader = shader
         elif isinstance(shader, dict):
@@ -244,16 +247,21 @@ class MeshBaseRenderer(nn.Module):
     @staticmethod
     def _normalize(value,
                    origin_value_range=None,
-                   out_value_range=[0, 1],
-                   dtype=None) -> Union[torch.Tensor, np.ndarray]:
+                   out_value_range=(0, 1),
+                   dtype=None,
+                   clip=False) -> Union[torch.Tensor, np.ndarray]:
         """Normalize the tensor or array."""
         if origin_value_range is not None:
             value = (value - origin_value_range[0]) / (
-                origin_value_range[1] - origin_value_range[0] + 1e-9
-            ) * (out_value_range[1] - out_value_range[0]) + out_value_range[0]
+                origin_value_range[1] - origin_value_range[0] + 1e-9)
+
         else:
-            value = value * (out_value_range[1] -
-                             out_value_range[0]) + out_value_range[0]
+            value = (value - value.min()) / (value.max() - value.min())
+        value = value * (out_value_range[1] -
+                         out_value_range[0]) + out_value_range[0]
+        if clip:
+            value = torch.clip(
+                value, min=out_value_range[0], max=out_value_range[1])
         if isinstance(value, torch.Tensor):
             if dtype is not None:
                 return value.type(dtype)
@@ -270,8 +278,8 @@ class MeshBaseRenderer(nn.Module):
         image = image.detach().cpu().numpy()
         image = self._normalize(
             image,
-            origin_value_range=[0, 1],
-            out_value_range=[0, 255],
+            origin_value_range=(0, 1),
+            out_value_range=(0, 255),
             dtype=np.uint8)
         return image
 
@@ -280,25 +288,27 @@ class MeshBaseRenderer(nn.Module):
         image = torch.Tensor(image)
         image = self._normalize(
             image,
-            origin_value_range=[0, 255],
-            out_value_range=[0, 1],
+            origin_value_range=(0, 255),
+            out_value_range=(0, 1),
             dtype=torch.float32)
         return image
 
     def _write_images(self, rgba, images, indexes):
         """Write output/temp images."""
         rgbs, valid_masks = rgba[..., :3], rgba[..., 3:]
-        rgbs = rgbs.clone()[..., :3] / rgbs[..., :3].max()
-        bgrs = torch.cat(
-            [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]], -1)
+        rgbs = self._normalize(rgbs, origin_value_range=(0, 1), clip=True)
+        bgrs = self.rgb2bgr(rgbs)
         if images is not None:
-            output_images = bgrs * 255 * valid_masks + (1 -
-                                                        valid_masks) * images
-            output_images = output_images.detach().cpu().numpy().astype(
-                np.uint8)
+            image_max = 1.0 if images.max() <= 1.0 else 255
+            images = self._normalize(
+                images,
+                origin_value_range=(0, image_max),
+                out_value_range=(0, 1))
+            output_images = bgrs * valid_masks + (1 - valid_masks) * images
+            output_images = self._tensor2array(output_images)
+
         else:
-            output_images = (bgrs.detach().cpu().numpy() * 255).astype(
-                np.uint8)
+            output_images = self._tensor2array(bgrs)
         for idx, real_idx in enumerate(indexes):
             folder = self.temp_path if self.temp_path is not None else\
                 self.output_path
@@ -371,4 +381,7 @@ class MeshBaseRenderer(nn.Module):
 
     def tensor2rgba(self, tensor: torch.Tensor):
         valid_masks = (tensor[..., 3:] > 0) * 1.0
-        return torch.cat([tensor[..., :3], valid_masks], -1)
+        rgbs = tensor[..., :3]
+        rgbs = self._normalize(rgbs, out_value_range=[0, 1])
+        rgba = torch.cat([rgbs, valid_masks], -1)
+        return rgba

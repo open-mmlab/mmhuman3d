@@ -6,7 +6,7 @@ from pytorch3d.structures import Meshes
 from mmhuman3d.core.cameras import NewAttributeCameras
 from mmhuman3d.utils import get_different_colors
 from .base_renderer import MeshBaseRenderer
-from .builder import RENDERER
+from .builder import RENDERER, build_shader
 
 try:
     from typing import Literal
@@ -75,6 +75,18 @@ class SegmentationRenderer(MeshBaseRenderer):
             **kwargs)
         self.num_class = num_class
 
+    def _init_renderer(self,
+                       rasterizer=None,
+                       shader=None,
+                       materials=None,
+                       lights=None,
+                       blend_params=None,
+                       **kwargs):
+        shader = build_shader(dict(
+            type='SegmentationShader')) if shader is None else shader
+        return super()._init_renderer(rasterizer, shader, materials, lights,
+                                      blend_params, **kwargs)
+
     def to(self, device):
         if isinstance(device, str):
             device = torch.device(device)
@@ -142,6 +154,7 @@ class SegmentationRenderer(MeshBaseRenderer):
         color = torch.cat([torch.zeros(1, 3), color]).to(self.device)
         B, H, W, _ = tensor.shape
         rgbs = color[tensor.view(-1)].view(B, H, W, 3) * valid_masks
-        rgbs = self._normalize(rgbs.float(), min_value=0, max_value=1)
+        rgbs = self._normalize(
+            rgbs.float(), origin_value_range=(0, 255), out_value_range=(0, 1))
         rgba = torch.cat([rgbs, valid_masks], -1)
         return rgba

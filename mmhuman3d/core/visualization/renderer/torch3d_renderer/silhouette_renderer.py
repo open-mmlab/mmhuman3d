@@ -5,7 +5,7 @@ from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import NewAttributeCameras
 from .base_renderer import MeshBaseRenderer
-from .builder import RENDERER
+from .builder import RENDERER, build_shader
 
 try:
     from typing import Literal
@@ -64,6 +64,18 @@ class SilhouetteRenderer(MeshBaseRenderer):
             in_ndc=in_ndc,
             **kwargs)
 
+    def _init_renderer(self,
+                       rasterizer=None,
+                       shader=None,
+                       materials=None,
+                       lights=None,
+                       blend_params=None,
+                       **kwargs):
+        shader = build_shader(dict(
+            type='SilhouetteShader')) if shader is None else shader
+        return super()._init_renderer(rasterizer, shader, materials, lights,
+                                      blend_params, **kwargs)
+
     def to(self, device):
         if isinstance(device, str):
             device = torch.device(device)
@@ -71,10 +83,6 @@ class SilhouetteRenderer(MeshBaseRenderer):
         if self.rasterizer.cameras is not None:
             self.rasterizer.cameras = self.rasterizer.cameras.to(device)
         return self
-
-    def set_render_params(self, **kwargs):
-        super().set_render_params(**kwargs)
-        self.shader_type = 'silhouette'
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
@@ -107,4 +115,5 @@ class SilhouetteRenderer(MeshBaseRenderer):
         silhouette = tensor[..., 3:]
         rgbs = silhouette.repeat(1, 1, 1, 3)
         valid_masks = (silhouette > 0) * 1.0
+        rgbs = self._normalize(rgbs, out_value_range=(0, 1))
         return torch.cat([rgbs, valid_masks], -1)

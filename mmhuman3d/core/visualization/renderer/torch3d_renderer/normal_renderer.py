@@ -5,7 +5,7 @@ from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import NewAttributeCameras
 from .base_renderer import MeshBaseRenderer
-from .builder import RENDERER
+from .builder import RENDERER, build_shader
 
 try:
     from typing import Literal
@@ -61,6 +61,18 @@ class NormalRenderer(MeshBaseRenderer):
             projection=projection,
             in_ndc=in_ndc,
             **kwargs)
+
+    def _init_renderer(self,
+                       rasterizer=None,
+                       shader=None,
+                       materials=None,
+                       lights=None,
+                       blend_params=None,
+                       **kwargs):
+        shader = build_shader(dict(
+            type='NormalShader')) if shader is None else shader
+        return super()._init_renderer(rasterizer, shader, materials, lights,
+                                      blend_params, **kwargs)
 
     def to(self, device):
         if isinstance(device, str):
@@ -125,5 +137,6 @@ class NormalRenderer(MeshBaseRenderer):
 
     def tensor2rgba(self, tensor: torch.Tensor):
         rgbs, valid_masks = tensor[..., :3], (tensor[..., 3:] > 0) * 1.0
-        rgbs = (rgbs + 1) / 2
+        rgbs = self._normalize(
+            rgbs, origin_value_range=(-1, 1), out_value_range=(0, 1))
         return torch.cat([rgbs, valid_masks], -1)
