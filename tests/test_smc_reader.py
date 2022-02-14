@@ -66,10 +66,12 @@ def test_get_kinect_resolution():
     color_resolution = smc.get_kinect_color_resolution(0)
     assert color_resolution.shape == (
         2, ), 'Kinect Color Resolution should be a 2D matrix'
+    assert tuple(color_resolution) == (1920, 1080)
 
     depth_resolution = smc.get_kinect_depth_resolution(0)
     assert depth_resolution.shape == (
         2, ), 'Kinect Depth Resolution should be a 2D matrix'
+    assert tuple(depth_resolution) == (640, 576)
 
 
 def test_get_iphone_extrinsics():
@@ -94,12 +96,12 @@ def test_get_iphone_resolution():
     color_resolution = smc.get_iphone_color_resolution(0, vertical=True)
     assert color_resolution.shape == (
         2, ), 'iPhone Color Resolution should be a 2D matrix'
-    assert tuple(color_resolution) == (1920, 1440)
+    assert tuple(color_resolution) == (1440, 1920)
 
     color_resolution = smc.get_iphone_color_resolution(0, vertical=False)
     assert color_resolution.shape == (
         2, ), 'iPhone Color Resolution should be a 2D matrix'
-    assert tuple(color_resolution) == (1440, 1920)
+    assert tuple(color_resolution) == (1920, 1440)
 
 
 def test_get_iphone_color():
@@ -343,7 +345,7 @@ def test_get_keypoints3d_by_device():
     with pytest.raises(KeyError):
         _ = smc.get_keypoints3d(device='Kinect', device_id=10)
     with pytest.raises(TypeError):
-        _ = smc.get_color(device='Kinect', device_id=0, frame_id=0.0)
+        _ = smc.get_keypoints3d(device='Kinect', device_id=0, frame_id=0.0)
 
     # get by frame_id
     with pytest.raises(AssertionError):
@@ -383,10 +385,9 @@ def test_get_all_smpl():
     body_pose = smpl['body_pose']
     transl = smpl['transl']
     betas = smpl['betas']
-    assert body_pose.shape[0] == smpl_num_frames
-    assert global_orient.shape == (1, 3)
-    assert body_pose.shape == (1, 69)
-    assert transl.shape == (1, 3)
+    assert global_orient.shape == (smpl_num_frames, 3)
+    assert body_pose.shape == (smpl_num_frames, 69)
+    assert transl.shape == (smpl_num_frames, 3)
     assert betas.shape == (1, 10)
     assert isinstance(smpl_created_time, str)
     assert isinstance(global_orient, np.ndarray)
@@ -407,6 +408,45 @@ def test_get_smpl_by_frame():
     assert body_pose.shape == (1, 69)
     assert transl.shape == (1, 3)
     assert betas.shape == (1, 10)
+    assert isinstance(global_orient, np.ndarray)
+    assert isinstance(body_pose, np.ndarray)
+    assert isinstance(transl, np.ndarray)
+    assert isinstance(betas, np.ndarray)
+
+
+def test_get_smpl_by_device():
+    smc = SMCReader(TEST_SMC_PATH)
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_smpl(device='kinect', device_id=0)
+    with pytest.raises(AssertionError):
+        _ = smc.get_smpl(device='Kinect', device_id=-1)
+    with pytest.raises(KeyError):
+        _ = smc.get_smpl(device='Kinect', device_id=10)
+    with pytest.raises(TypeError):
+        _ = smc.get_smpl(device='Kinect', device_id=0, frame_id=0.0)
+
+    with pytest.raises(AssertionError):
+        _ = smc.get_smpl(device='iphone', device_id=0)
+    with pytest.raises(AssertionError):
+        _ = smc.get_smpl(device='iPhone', device_id=-1)
+    with pytest.raises(KeyError):
+        _ = smc.get_smpl(device='iPhone', device_id=10)
+    with pytest.raises(TypeError):
+        _ = smc.get_smpl(device='iPhone', device_id=0, frame_id=0.0)
+
+    smpl = smc.get_smpl(device='Kinect', device_id=0)
+    smpl_num_frames = smc.get_smpl_num_frames()
+    smpl_created_time = smc.get_smpl_created_time()
+    global_orient = smpl['global_orient']
+    body_pose = smpl['body_pose']
+    transl = smpl['transl']
+    betas = smpl['betas']
+    assert global_orient.shape == (smpl_num_frames, 3)
+    assert body_pose.shape == (smpl_num_frames, 69)
+    assert transl.shape == (smpl_num_frames, 3)
+    assert betas.shape == (1, 10)
+    assert isinstance(smpl_created_time, str)
     assert isinstance(global_orient, np.ndarray)
     assert isinstance(body_pose, np.ndarray)
     assert isinstance(transl, np.ndarray)
@@ -449,7 +489,7 @@ def test_iphone_rotation():
 
     # rotate vertical keypoints2d back to horizontal
     # counter-clockwise by 90 degrees
-    H, W = smc.get_iphone_color_resolution(vertical=True)
+    W, H = smc.get_iphone_color_resolution(vertical=True)
     xs, ys = keypoints2d[..., 0], keypoints2d[..., 1]
     xs, ys = ys, W - xs  # vertical -> horizontal
     keypoints2d[..., 0], keypoints2d[..., 1] = xs.copy(), ys.copy()

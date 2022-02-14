@@ -3,17 +3,25 @@ import json
 import cv2
 import h5py
 import numpy as np
+import torch
 import tqdm
+
+from mmhuman3d.models.body_models.utils import batch_transform_to_camera_frame
+from mmhuman3d.models.builder import build_body_model
 
 
 class SMCReader:
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, body_model=None):
         """Read SenseMocapFile endswith ".smc".
 
         Args:
             file_path (str):
                 Path to an SMC file.
+            body_model (nn.Module or dict):
+                Only needed for SMPL transformation to device frame
+                if nn.Module: a body_model instance
+                if dict: a body_model config
         """
         self.smc = h5py.File(file_path, 'r')
         self.__calibration_dict__ = None
@@ -44,6 +52,26 @@ class SMCReader:
         if self.smpl_exists:
             self.smpl_num_frames = self.smc['SMPL'].attrs['num_frame']
             self.smpl_created_time = self.smc['SMPL'].attrs['created_time']
+
+            # initialize body model
+            if isinstance(body_model, torch.nn.Module):
+                self.body_model = body_model
+            elif isinstance(body_model, dict):
+                self.body_model = build_body_model(body_model)
+            else:
+                # in most cases, SMCReader is instantiated for image reading
+                # only. Hence, it is wasteful to initialize a body model until
+                # really needed in get_smpl()
+                self.body_model = None
+                self.default_body_model_config = dict(
+                    type='SMPL',
+                    gender='neutral',
+                    num_betas=10,
+                    keypoint_src='smpl_45',
+                    keypoint_dst='smpl_45',
+                    model_path='data/body_models/smpl',
+                    batch_size=1,
+                )
 
     def get_kinect_color_extrinsics(self, kinect_id, homogeneous=True):
         """Get extrinsics(cam2world) of a kinect RGB camera by kinect id.
@@ -215,7 +243,7 @@ class SMCReader:
         if vertical:
             fx, fy = intrinsics[0, 0], intrinsics[1, 1]
             cx, cy = intrinsics[0, 2], intrinsics[1, 2]
-            H, W = self.get_iphone_color_resolution(vertical=False)
+            W, H = self.get_iphone_color_resolution(vertical=False)
             intrinsics = np.eye(3)
             intrinsics[0, 0], intrinsics[1, 1] = fy, fx
             intrinsics[0, 2], intrinsics[1, 2] = H - cy, cx
@@ -295,10 +323,11 @@ class SMCReader:
         if iphone_id != 0:
             raise KeyError('Currently only one iPhone.')
         if vertical:
-            return self.iphone_color_resolution
+            W_horizontal, H_horizontal = self.iphone_color_resolution
+            W_vertical, H_vertical = H_horizontal, W_horizontal
+            return np.array([W_vertical, H_vertical])
         else:
-            H, W = self.iphone_color_resolution
-            return np.array([W, H])
+            return self.iphone_color_resolution
 
     def get_kinect_color(self, kinect_id, frame_id=None, disable_tqdm=True):
         """Get several frames captured by a kinect RGB camera.
@@ -684,7 +713,7 @@ class SMCReader:
 
         if device == 'iPhone' and vertical:
             # rotate keypoints 2D clockwise by 90 degrees
-            H, W = self.get_iphone_color_resolution(vertical=False)
+            W, H = self.get_iphone_color_resolution(vertical=False)
             xs, ys, conf = \
                 keypoints2d[..., 0], keypoints2d[..., 1], keypoints2d[..., 2]
             xs, ys = H - ys, xs  # horizontal -> vertical
@@ -834,12 +863,6 @@ class SMCReader:
         if device_id is not None:
             assert device_id >= 0
 
-        kps3d_dict = self.smc['Keypoints3D']
-
-        # keypoints3d are in world coordinate system
-        keypoints3d_world = kps3d_dict['keypoints3d'][...]
-        keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
-
         if frame_id is None:
             frame_list = range(self.get_keypoints_num_frames())
         elif isinstance(frame_id, list):
@@ -851,7 +874,12 @@ class SMCReader:
         else:
             raise TypeError('frame_id should be int, list or None.')
 
+        kps3d_dict = self.smc['Keypoints3D']
+
+        # keypoints3d are in world coordinate system
+        keypoints3d_world = kps3d_dict['keypoints3d'][...]
         keypoints3d_world = keypoints3d_world[frame_list, ...]
+        keypoints3d_mask = kps3d_dict['keypoints3d_mask'][...]
 
         # return keypoints3d in world coordinate system
         if device is None:
@@ -860,15 +888,16 @@ class SMCReader:
         # return keypoints3d in device coordinate system
         else:
             if device == 'Kinect':
-                world2cam = self.get_kinect_color_extrinsics(
+                cam2world = self.get_kinect_color_extrinsics(
                     kinect_id=device_id, homogeneous=True)
             else:
-                world2cam = self.get_iphone_extrinsics(
+                cam2world = self.get_iphone_extrinsics(
                     iphone_id=device_id, vertical=vertical)
 
             xyz, conf = keypoints3d_world[..., :3], keypoints3d_world[..., [3]]
             xyz_homogeneous = np.ones([*xyz.shape[:-1], 4])
             xyz_homogeneous[..., :3] = xyz
+            world2cam = np.linalg.inv(cam2world)
             keypoints3d = np.einsum('ij,kmj->kmi', world2cam, xyz_homogeneous)
             keypoints3d = np.concatenate([keypoints3d[..., :3], conf], axis=-1)
 
@@ -880,34 +909,111 @@ class SMCReader:
     def get_smpl_created_time(self):
         return self.smpl_created_time
 
-    def get_smpl(self, frame_id=None):
+    def get_smpl(self,
+                 device=None,
+                 device_id=None,
+                 frame_id=None,
+                 vertical=True):
         """Get SMPL (world coordinate) computed by mocap processing pipeline.
 
         Args:
+            device (str):
+                Device name, should be Kinect or iPhone.
+                None: world coordinate
+                Defaults to None.
+            device_id (int):
+                ID of a device, starts from 0.
+                None: world coordinate
+                Defaults to None
             frame_id (int, list or None, optional):
                 int: frame id of one selected frame
                 list: a list of frame id
                 None: all frames will be returned
                 Defaults to None.
+            vertical (bool, optional):
+                Only applicable to iPhone as device
+                iPhone assumes horizontal orientation
+                if True, convert data to vertical orientation
+                Defaults to True.
 
         Returns:
             dict:
-                A dict with 'global_orient', 'body_pose', 'transl' and 'betas'
+                'global_orient': np.ndarray of shape (N, 3)
+                'body_pose': np.ndarray of shape (N, 69)
+                'transl': np.ndarray of shape (N, 3)
+                'betas': np.ndarray of shape (N, 10)
         """
         smpl_dict = self.smc['SMPL']
         global_orient = smpl_dict['global_orient'][...]
         body_pose = smpl_dict['body_pose'][...]
         transl = smpl_dict['transl'][...]
         betas = smpl_dict['betas'][...]
-        if frame_id is not None:
-            if isinstance(frame_id, int):
-                frame_id = [frame_id]
-            body_pose = body_pose[frame_id, ...]
-            global_orient = global_orient[frame_id, ...]
-            transl = transl[frame_id, ...]
-        smpl_dict = dict(
-            global_orient=global_orient,
-            body_pose=body_pose,
-            transl=transl,
-            betas=betas)
-        return smpl_dict
+
+        if frame_id is None:
+            frame_list = range(self.get_smpl_num_frames())
+        elif isinstance(frame_id, list):
+            frame_list = frame_id
+        elif isinstance(frame_id, int):
+            assert frame_id < self.get_keypoints_num_frames(),\
+                'Index out of range...'
+            frame_list = [frame_id]
+        else:
+            raise TypeError('frame_id should be int, list or None.')
+
+        body_pose = body_pose[frame_list, ...]
+        global_orient = global_orient[frame_list, ...]
+        transl = transl[frame_list, ...]
+
+        # return SMPL parameters in world coordinate system
+        if device is None:
+            smpl_dict = dict(
+                global_orient=global_orient,
+                body_pose=body_pose,
+                transl=transl,
+                betas=betas)
+
+            return smpl_dict
+
+        # return SMPL parameters in device coordinate system
+        else:
+
+            if self.body_model is None:
+                self.body_model = \
+                    build_body_model(self.default_body_model_config)
+            torch_device = self.body_model.global_orient.device
+
+            assert device in {
+                'Kinect', 'iPhone'
+            }, f'Undefined device: {device}, should be "Kinect" or "iPhone"'
+            assert device_id >= 0
+
+            if device == 'Kinect':
+                T_cam2world = self.get_kinect_color_extrinsics(
+                    kinect_id=device_id, homogeneous=True)
+            else:
+                T_cam2world = self.get_iphone_extrinsics(
+                    iphone_id=device_id, vertical=vertical)
+
+            T_world2cam = np.linalg.inv(T_cam2world)
+
+            output = self.body_model(
+                global_orient=torch.tensor(global_orient, device=torch_device),
+                body_pose=torch.tensor(body_pose, device=torch_device),
+                transl=torch.tensor(transl, device=torch_device),
+                betas=torch.tensor(betas, device=torch_device))
+            joints = output['joints'].detach().cpu().numpy()
+            pelvis = joints[:, 0, :]
+
+            new_global_orient, new_transl = batch_transform_to_camera_frame(
+                global_orient=global_orient,
+                transl=transl,
+                pelvis=pelvis,
+                extrinsic=T_world2cam)
+
+            smpl_dict = dict(
+                global_orient=new_global_orient,
+                body_pose=body_pose,
+                transl=new_transl,
+                betas=betas)
+
+            return smpl_dict
