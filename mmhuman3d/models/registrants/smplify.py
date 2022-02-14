@@ -372,8 +372,6 @@ class SMPLify(object):
         return_verts: bool = False,
         return_full_pose: bool = False,
         return_joints: bool = False,
-        return_mesh: bool = False,
-        return_texture: bool = False,
         reduction_override: str = None,
     ) -> dict:
         """Evaluate fitted parameters through loss computation. This function
@@ -419,9 +417,7 @@ class SMPLify(object):
             betas=betas,
             transl=transl,
             return_verts=return_verts,
-            return_full_pose=return_full_pose,
-            return_mesh=return_mesh,
-            return_texture=return_texture)
+            return_full_pose=return_full_pose)
 
         model_joints = body_model_output['joints']
         model_joint_mask = body_model_output['joint_mask']
@@ -449,8 +445,6 @@ class SMPLify(object):
             ret['vertices'] = body_model_output['vertices']
         if return_full_pose:
             ret['full_pose'] = body_model_output['full_pose']
-        if return_mesh:
-            ret['mesh'] = body_model_output['mesh']
         if return_joints:
             ret['joints'] = model_joints
 

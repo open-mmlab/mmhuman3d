@@ -928,7 +928,7 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
         convention: str = 'pytorch3d',
         **kwargs,
     ) -> None:
-        """Initialize cameras.
+        """Initialize OrthographicCameras.
 
         Args:
             focal_length (float, optional):  Defaults to 1.0.
@@ -1206,7 +1206,6 @@ def concat_cameras(
     in_ndc = cameras_list[0].in_ndc()
     cam_cls = type(cameras_list[0])
     image_size = cameras_list[0].get_image_size()
-    convention = cameras_list[0].convention
     device = cameras_list[0].device
     for cam in cameras_list:
         assert type(cam) is cam_cls
@@ -1226,8 +1225,7 @@ def concat_cameras(
         device=device,
         is_perspective=is_perspective,
         in_ndc=in_ndc,
-        image_size=image_size,
-        convention=convention)
+        image_size=image_size)
     return concated_cameras
 
 
