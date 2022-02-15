@@ -9,10 +9,17 @@ import mmcv
 import numpy as np
 import torch
 import torch.nn as nn
+from pytorch3d.renderer import (
+    AmbientLights,
+    BlendParams,
+    DirectionalLights,
+    Materials,
+    MeshRasterizer,
+    PointLights,
+    RasterizationSettings,
+)
 from pytorch3d.structures import Meshes
-from pytorch3d.renderer import (DirectionalLights, PointLights, Materials,
-                                AmbientLights, RasterizationSettings,
-                                MeshRasterizer, BlendParams)
+
 from mmhuman3d.core.cameras import NewAttributeCameras, build_cameras
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
@@ -250,7 +257,7 @@ class MeshBaseRenderer(nn.Module):
                    out_value_range=(0, 1),
                    dtype=None,
                    clip=False) -> Union[torch.Tensor, np.ndarray]:
-        """Normalize the tensor or array."""
+        """Normalize the tensor or array and convert dtype."""
         if origin_value_range is not None:
             value = (value - origin_value_range[0]) / (
                 origin_value_range[1] - origin_value_range[0] + 1e-9)
