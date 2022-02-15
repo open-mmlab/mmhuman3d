@@ -2,10 +2,10 @@ from mmcv.utils import Registry
 from pytorch3d.renderer import (
     AmbientLights,
     DirectionalLights,
-    PointLights,
-    HardPhongShader,
-    HardGouraudShader,
     HardFlatShader,
+    HardGouraudShader,
+    HardPhongShader,
+    PointLights,
     SoftGouraudShader,
     SoftPhongShader,
     TexturesAtlas,
@@ -13,8 +13,14 @@ from pytorch3d.renderer import (
     TexturesVertex,
 )
 
-from .shader import (DepthShader, NoLightShader, NormalShader,
-                     SegmentationShader, OpticalFlowShader, SilhouetteShader)
+from .shader import (
+    DepthShader,
+    NoLightShader,
+    NormalShader,
+    OpticalFlowShader,
+    SegmentationShader,
+    SilhouetteShader,
+)
 from .textures import TexturesNearest
 
 RENDERER = Registry('renderer')
@@ -40,7 +46,6 @@ SHADER.register_module(
 SHADER.register_module(
     name=['hard_gouraud', 'HardGouraud', 'HardGouraudShader'],
     module=HardGouraudShader)
-
 SHADER.register_module(
     name=['soft_gouraud', 'SoftGouraud', 'SoftGouraudShader'],
     module=SoftGouraudShader)
