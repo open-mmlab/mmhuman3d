@@ -20,6 +20,5 @@ __all__ = [
     'visualize_kp2d', 'visualize_kp3d', 'visualize_smpl_pose',
     'visualize_T_pose', 'render_smpl', 'visualize_smpl_vibe',
     'visualize_smpl_calibration', 'visualize_smpl_hmr', 'render_runner',
-    'build_lights', 'build_renderer', 'build_shader',
-    'build_textures'
+    'build_lights', 'build_renderer', 'build_shader', 'build_textures'
 ]
