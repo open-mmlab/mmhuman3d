@@ -151,13 +151,20 @@ class MeshBaseRenderer(nn.Module):
                 rasterizer['image_size'] = self.resolution
             raster_settings = RasterizationSettings(**rasterizer)
             self.rasterizer = MeshRasterizer(raster_settings=raster_settings)
+        elif rasterizer is None:
+            self.rasterizer = MeshRasterizer(
+                raster_settings=RasterizationSettings(
+                    bin_size=0,
+                    blur_radius=0,
+                    faces_per_pixel=1,
+                    perspective_correct=False))
         else:
             raise TypeError(
                 f'Wrong type of rasterizer: {type(self.rasterizer)}.')
         if self.resolution is None:
-            self.resolution = tuple(self.rasterizer.raster_settings.image_size)
+            self.resolution = self.rasterizer.raster_settings.image_size
             self.resolution = (self.resolution, self.resolution) if isinstance(
-                self.resolution, int) else self.resolution
+                self.resolution, int) else tuple(self.resolution)
         if isinstance(shader, nn.Module):
             self.shader = shader
         elif isinstance(shader, dict):

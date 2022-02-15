@@ -1310,7 +1310,7 @@ def compute_direction_cameras(
     K: Union[torch.Tensor, np.ndarray, None] = None,
     at: Union[torch.Tensor, List, Tuple, None] = None,
     eye: Union[torch.Tensor, List, Tuple, None] = None,
-    plane: Iterable[torch.Tensor, None] = None,
+    plane: Union[Iterable[torch.Tensor], None] = None,
     dist: float = 1.0,
     batch_size: int = 1,
     dist_speed: float = 0.0,

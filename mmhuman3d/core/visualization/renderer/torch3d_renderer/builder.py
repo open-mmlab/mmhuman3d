@@ -17,7 +17,6 @@ from .shader import (
     DepthShader,
     NoLightShader,
     NormalShader,
-    OpticalFlowShader,
     SegmentationShader,
     SilhouetteShader,
 )
@@ -69,12 +68,6 @@ SHADER.register_module(
         'SegmentationShader'
     ],
     module=SegmentationShader)
-SHADER.register_module(
-    name=[
-        'optical_flow', 'optical_flow_shader', 'flow', 'OpticalFlowShader',
-        'OpticalFlow'
-    ],
-    module=OpticalFlowShader)
 
 TEXTURES = Registry('textures')
 TEXTURES.register_module(
