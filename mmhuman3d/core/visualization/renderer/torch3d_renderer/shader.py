@@ -4,12 +4,13 @@ import torch
 import torch.nn as nn
 from pytorch3d.ops import interpolate_face_attributes
 from pytorch3d.renderer import BlendParams, hard_rgb_blend
-from pytorch3d.structures.utils import padded_to_packed
 from pytorch3d.renderer.mesh.shader import SoftSilhouetteShader
+from pytorch3d.structures.utils import padded_to_packed
 
 
 class SilhouetteShader(SoftSilhouetteShader):
     """Avoid unexpected keyword argument error."""
+
     def __init__(self,
                  blend_params: Optional[BlendParams] = None,
                  **kwargs) -> None:
