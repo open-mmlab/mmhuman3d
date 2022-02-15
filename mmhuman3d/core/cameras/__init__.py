@@ -7,6 +7,7 @@ from mmhuman3d.core.cameras.cameras import (
     OrthographicCameras,
     PerspectiveCameras,
     WeakPerspectiveCameras,
+    compute_direction_cameras,
     compute_orbit_cameras,
 )
 
@@ -14,5 +15,5 @@ __all__ = [
     'CAMERAS', 'FoVOrthographicCameras', 'FoVPerspectiveCameras',
     'NewAttributeCameras', 'OrthographicCameras', 'PerspectiveCameras',
     'WeakPerspectiveCameras', 'build_cameras', 'builder', 'camera_parameters',
-    'cameras', 'compute_orbit_cameras'
+    'cameras', 'compute_orbit_cameras', 'compute_direction_cameras'
 ]

@@ -38,8 +38,10 @@ class UVRenderer(nn.Module):
         uv_param_path: Optional[str] = None,
         obj_path: Optional[str] = None,
         device: Union[torch.device, str] = 'cpu',
+        threshold_size: int = 512,
     ):
         super().__init__()
+        self.threshold_size = threshold_size
         num_verts = {'smpl': 6890, 'smplx': 10475}
         self.NUM_VERTS = num_verts[model_type]
         self.device = device
@@ -52,26 +54,23 @@ class UVRenderer(nn.Module):
             with open(uv_param_path, 'rb') as f:
                 param_dict = pickle.load(f)
 
-            verts_uv = torch.Tensor(param_dict['texcoords']).to(self.device)
+            verts_uv = torch.Tensor(param_dict['texcoords'])
             verts_u, verts_v = torch.unbind(verts_uv, -1)
             verts_v_ = 1 - verts_u.unsqueeze(-1)
             verts_u_ = verts_v.unsqueeze(-1)
-            self.verts_uv = torch.cat([verts_u_, verts_v_], -1).to(self.device)
-            self.faces_uv = torch.LongTensor(param_dict['vt_faces']).to(
-                self.device)
+            self.verts_uv = torch.cat([verts_u_, verts_v_], -1)
+            self.faces_uv = torch.LongTensor(param_dict['vt_faces'])
 
             self.NUM_VT = self.verts_uv.shape[0]
 
             if resolution == (256, 256):
-                self.bary_coords = torch.Tensor(param_dict['bary_weights']).to(
-                    self.device)
-                self.pix_to_face = torch.LongTensor(param_dict['face_id']).to(
-                    self.device)
+                self.bary_coords = torch.Tensor(param_dict['bary_weights'])
+                self.pix_to_face = torch.LongTensor(param_dict['face_id'])
             else:
                 self.update_fragments()
                 self.update_face_uv_pixel()
             self.face_tensor = torch.LongTensor(param_dict['faces'].astype(
-                np.int64)).to(self.device)
+                np.int64))
             self.num_faces = self.faces_uv.shape[0]
         elif obj_path is not None:
             check_path_suffix(obj_path, allowed_suffix=['obj'])
@@ -84,6 +83,7 @@ class UVRenderer(nn.Module):
 
         self.update_fragments()
         self.update_face_uv_pixel()
+        self = self.to(self.device)
 
     def to(self, device):
         if isinstance(device, str):
@@ -351,13 +351,13 @@ class UVRenderer(nn.Module):
             maps_padded = torch.flip(maps_padded, dims=[2])
         N, H, W, C = maps_padded.shape
 
-        if H < 400 or W < 400:
+        if H < self.threshold_size or W < self.threshold_size:
             maps_padded = F.interpolate(
                 maps_padded.permute(0, 3, 1, 2),
-                size=(400, 400),
+                size=(self.threshold_size, self.threshold_size),
                 mode='bicubic',
                 align_corners=False).permute(0, 2, 3, 1)
-            H, W = 400, 400
+            H, W = self.threshold_size, self.threshold_size
         if (H, W) != self.resolution:
             self.resolution = (H, W)
             self.update_fragments()
@@ -485,18 +485,21 @@ class UVRenderer(nn.Module):
         Returns:
             Meshes: returned meshes.
         """
-        texture_map_padded = self.normalize(
-            texture_map, min_value=0, max_value=1, dtype=torch.float32)
-        resolution = resolution if resolution is not None else self.resolution
 
         batch_size = len(meshes)
-        if texture_map_padded.ndim == 3:
-            texture_map_padded = texture_map_padded[None]
+        if texture_map.ndim == 3:
+            texture_map_padded = texture_map[None]
+        else:
+            texture_map_padded = texture_map
+        assert texture_map.shape[-1] == 3
         _, H, W, _ = texture_map_padded.shape
+
+        resolution = resolution if resolution is not None else (H, W)
 
         if resolution != (H, W):
             texture_map_padded = F.interpolate(
-                texture_map_padded, resolution, mode=mode)
+                texture_map_padded.view(0, 3, 1, 2), resolution,
+                mode=mode).view(0, 2, 3, 1)
         assert texture_map_padded.shape[0] in [batch_size, 1]
 
         if isinstance(texture_map_padded, np.ndarray):
