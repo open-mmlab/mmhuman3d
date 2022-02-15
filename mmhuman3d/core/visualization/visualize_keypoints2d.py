@@ -365,7 +365,7 @@ class _CavasProducer:
                 kp2d_frame = None
             else:
                 kp2d_frame = self.kp2d[frame_index]
-            return canvas, kp2d_frame
+        return canvas, kp2d_frame
 
     def __len__(self):
         return self.len

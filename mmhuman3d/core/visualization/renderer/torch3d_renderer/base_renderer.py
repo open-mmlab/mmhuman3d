@@ -130,8 +130,10 @@ class MeshBaseRenderer(nn.Module):
             self.lights = build_lights(lights)
         elif lights is None:
             self.lights = AmbientLights()
-        elif not isinstance(
-                lights, Union[AmbientLights, PointLights, DirectionalLights]):
+        elif isinstance(lights,
+                        (AmbientLights, PointLights, DirectionalLights)):
+            self.lights = lights
+        else:
             raise TypeError(f'Wrong type of lights: {type(lights)}.')
 
         if isinstance(blend_params, dict):
@@ -173,6 +175,8 @@ class MeshBaseRenderer(nn.Module):
                 lights=self.lights,
                 blend_params=blend_params)
             self.shader = build_shader(shader)
+        elif shader is None:
+            self.shader = build_shader(dict(type='soft_phong'))
         else:
             raise TypeError(f'Wrong type of shader: {type(self.shader)}.')
         self = self.to(self.device)
@@ -200,10 +204,13 @@ class MeshBaseRenderer(nn.Module):
             else:
                 self.temp_path = output_path
 
-    def _update_resolution(self, **kwargs):
+    def _update_resolution(self, cameras, **kwargs):
+        if isinstance(cameras, NewAttributeCameras):
+            self.resolution = (int(cameras.resolution[0][0]),
+                               int(cameras.resolution[0][1]))
         if 'resolution' in kwargs:
             self.resolution = kwargs.get('resolution')
-            self.rasterizer.raster_settings.image_size = self.resolution
+        self.rasterizer.raster_settings.image_size = self.resolution
 
     def export(self):
         """Export output video if need."""
@@ -379,11 +386,11 @@ class MeshBaseRenderer(nn.Module):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        self._update_resolution(**kwargs)
+
         meshes = self._prepare_meshes(meshes, vertices, faces)
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-
+        self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         rendered_images = self.shader(
             fragments=fragments, meshes=meshes, cameras=cameras, lights=lights)

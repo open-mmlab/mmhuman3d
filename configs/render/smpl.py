@@ -80,7 +80,6 @@ RENDER_CONFIGS = {
             'blur_radius': 0.0,
             'faces_per_pixel': 1,
             'perspective_correct': False,
-            'bin_size': 0,
         },
         'blend_params': white_blend_params,
     },

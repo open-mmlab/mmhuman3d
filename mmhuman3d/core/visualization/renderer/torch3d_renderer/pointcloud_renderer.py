@@ -175,7 +175,7 @@ class PointCloudRenderer(MeshBaseRenderer):
         pointclouds = pointclouds.to(self.device)
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-
+        self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(pointclouds, cameras=cameras)
         r = self.rasterizer.raster_settings.radius
 

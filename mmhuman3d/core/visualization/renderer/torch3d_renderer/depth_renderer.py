@@ -132,10 +132,11 @@ class DepthRenderer(MeshBaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        self._update_resolution(**kwargs)
+
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
         meshes = self._prepare_meshes(meshes, vertices, faces)
+        self._update_resolution(cameras, **kwargs)
         vertices = meshes.verts_padded()
 
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)

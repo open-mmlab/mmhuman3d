@@ -4,6 +4,11 @@ from typing import Optional, Union
 
 import torch
 import torch.nn as nn
+from pytorch3d.renderer.lighting import (
+    AmbientLights,
+    DirectionalLights,
+    PointLights,
+)
 from pytorch3d.structures.meshes import Meshes
 from tqdm import trange
 
@@ -16,6 +21,7 @@ def render(output_path: Optional[str] = None,
            device: Union[str, torch.device, None] = None,
            meshes: Meshes = None,
            cameras: Optional[NewAttributeCameras] = None,
+           lights: Union[AmbientLights, DirectionalLights, PointLights] = None,
            renderer: Optional[nn.Module] = None,
            batch_size: int = 5,
            return_tensor=False,
@@ -24,7 +30,8 @@ def render(output_path: Optional[str] = None,
     renderer = renderer.to(device)
 
     cameras = cameras.to(device)
-
+    lights = AmbientLights() if lights is None else lights
+    lights = lights.to(device)
     if output_path is not None:
         renderer._set_output_path(output_path)
     if device is not None:
@@ -43,14 +50,16 @@ def render(output_path: Optional[str] = None,
                 images_batch = renderer(
                     meshes=meshes[indexes],
                     cameras=cameras[indexes],
+                    lights=lights,
                     indexes=indexes)
         else:
             images_batch = renderer(
                 meshes=meshes[indexes],
                 cameras=cameras[indexes],
+                lights=lights,
                 indexes=indexes)
         if return_tensor:
-            tensors.append(images_batch['tensor'])
+            tensors.append(images_batch)
     renderer.export()
     if return_tensor:
         tensors = torch.cat(tensors)

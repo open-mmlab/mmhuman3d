@@ -133,10 +133,11 @@ class SegmentationRenderer(MeshBaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-        self._update_resolution(**kwargs)
+
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
         meshes = self._prepare_meshes(meshes, vertices, faces)
+        self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         segmentation_map = self.shader(
             fragments=fragments, meshes=meshes, cameras=cameras)

@@ -96,11 +96,10 @@ class SilhouetteRenderer(MeshBaseRenderer):
                 indexes: Iterable[str] = None,
                 **kwargs):
         """The params are the same as MeshBaseRenderer."""
-        self._update_resolution(**kwargs)
         meshes = self._prepare_meshes(meshes, vertices, faces)
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
-
+        self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         silhouette_map = self.shader(
             fragments=fragments, meshes=meshes, cameras=cameras)
