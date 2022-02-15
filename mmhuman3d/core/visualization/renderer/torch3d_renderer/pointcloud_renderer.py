@@ -2,9 +2,12 @@ import warnings
 from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
-from pytorch3d.renderer import (AlphaCompositor, PointsRasterizationSettings,
-                                PointsRenderer, PointsRasterizer)
 import torch.nn as nn
+from pytorch3d.renderer import (
+    AlphaCompositor,
+    PointsRasterizationSettings,
+    PointsRasterizer,
+)
 from pytorch3d.structures import Meshes, Pointclouds
 
 from mmhuman3d.core.cameras import NewAttributeCameras
