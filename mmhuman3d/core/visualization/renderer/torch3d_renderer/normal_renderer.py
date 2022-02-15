@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, Optional, Union
 
 import torch
 from pytorch3d.structures import Meshes

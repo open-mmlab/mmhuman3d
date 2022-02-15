@@ -3,12 +3,11 @@ import os
 from typing import Optional, Union
 
 import torch
+import torch.nn as nn
 from pytorch3d.structures.meshes import Meshes
 from tqdm import trange
-import torch.nn as nn
-from mmhuman3d.core.cameras.builder import build_cameras
+
 from mmhuman3d.core.cameras.cameras import NewAttributeCameras
-import torch.nn as nn
 
 osj = os.path.join
 

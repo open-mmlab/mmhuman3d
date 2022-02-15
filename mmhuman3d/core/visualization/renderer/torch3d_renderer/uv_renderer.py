@@ -1,6 +1,7 @@
 import pickle
 import warnings
 from typing import Iterable, Optional, Tuple, Union
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -8,12 +9,17 @@ import torch.nn.functional as F
 from pytorch3d.io.obj_io import load_objs_as_meshes
 from pytorch3d.ops import interpolate_face_attributes
 from pytorch3d.renderer.mesh import TexturesUV
+from pytorch3d.renderer.mesh.rasterizer import (
+    MeshRasterizer,
+    RasterizationSettings,
+)
 from pytorch3d.structures import Meshes
 from pytorch3d.structures.utils import padded_to_packed
-from pytorch3d.renderer.mesh.rasterizer import (MeshRasterizer,
-                                                RasterizationSettings)
-from mmhuman3d.core.cameras.cameras import (NewAttributeCameras,
-                                            FoVOrthographicCameras)
+
+from mmhuman3d.core.cameras.cameras import (
+    FoVOrthographicCameras,
+    NewAttributeCameras,
+)
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER
 
@@ -21,6 +27,7 @@ from .builder import RENDERER
 @RENDERER.register_module(name=['uv_renderer', 'uv', 'UV', 'UVRenderer'])
 class UVRenderer(nn.Module):
     """Renderer for SMPL(x) UV map.
+
     # TODO: test smplx support.
     """
 
@@ -110,10 +117,9 @@ class UVRenderer(nn.Module):
         self.mask = (self.pix_to_face >= 0).long()
 
     def update_face_uv_pixel(self):
-        """Move the pixels lie on the edges inside the mask, then refine
-        the rest points by searching the nearest pixel in the faces
-        it should be in.
-        """
+        """Move the pixels lie on the edges inside the mask, then refine the
+        rest points by searching the nearest pixel in the faces it should be
+        in."""
         H, W = self.resolution
         device = self.device
         cameras = FoVOrthographicCameras(
@@ -381,9 +387,10 @@ class UVRenderer(nn.Module):
 
         Args:
             meshes (Meshes): the input meshes.
-            normal (torch.Tensor, optional): vertex normal. Shape should be (N, V, 3).
+            normal (torch.Tensor, optional): vertex normal. Shape should be
+                (N, V, 3).
                 Defaults to None.
-            normal_map (torch.Tensor, optional): 
+            normal_map (torch.Tensor, optional):
                 normal map. Defaults to None.
 
         Returns:
@@ -414,7 +421,8 @@ class UVRenderer(nn.Module):
         displacement: torch.Tensor = None,
         displacement_map: torch.Tensor = None,
     ) -> Meshes:
-        """Offset a vertex displacement or displacement_map to the input meshes.
+        """Offset a vertex displacement or displacement_map to the input
+        meshes.
 
         Args:
             meshes (Meshes): the input meshes.
