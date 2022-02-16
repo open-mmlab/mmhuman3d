@@ -10,15 +10,14 @@ else:
     device_name = 'cpu'
 
 device = torch.device(device_name)
-uv_param_path = '/home/SENSETIME/wangwenjia/programs/data/smpl_uv.pkl'
+uv_param_path = 'data/smpl_uv.pkl'
 uv_renderer = UVRenderer(
     resolution=(512, 512),
     model_type='smpl',
     uv_param_path=uv_param_path,
     device=device)
 
-# model_path = 'data/body_models'
-model_path = '/home/SENSETIME/wangwenjia/programs/data/smpl_models/smpl'
+model_path = 'data/body_models/smpl'
 body_model = build_body_model(dict(type='smpl',
                                    model_path=model_path)).to(device)
 
