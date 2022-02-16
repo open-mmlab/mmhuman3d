@@ -58,31 +58,36 @@ class UVRenderer(nn.Module):
             verts_u, verts_v = torch.unbind(verts_uv, -1)
             verts_v_ = 1 - verts_u.unsqueeze(-1)
             verts_u_ = verts_v.unsqueeze(-1)
-            self.verts_uv = torch.cat([verts_u_, verts_v_], -1)
-            self.faces_uv = torch.LongTensor(param_dict['vt_faces'])
+            self.verts_uv = torch.cat([verts_u_, verts_v_], -1).to(self.device)
+            self.faces_uv = torch.LongTensor(param_dict['vt_faces']).to(
+                self.device)
 
             self.NUM_VT = self.verts_uv.shape[0]
 
             if resolution == (256, 256):
-                self.bary_coords = torch.Tensor(param_dict['bary_weights'])
-                self.pix_to_face = torch.LongTensor(param_dict['face_id'])
+                self.bary_coords = torch.Tensor(param_dict['bary_weights']).to(
+                    self.device)
+                self.pix_to_face = torch.LongTensor(param_dict['face_id']).to(
+                    self.device)
             else:
                 self.update_fragments()
                 self.update_face_uv_pixel()
-            self.face_tensor = torch.LongTensor(param_dict['faces'].astype(
-                np.int64))
+            self.faces_tensor = torch.LongTensor(param_dict['faces'].astype(
+                np.int64)).to(self.device)
             self.num_faces = self.faces_uv.shape[0]
         elif obj_path is not None:
             check_path_suffix(obj_path, allowed_suffix=['obj'])
             mesh_template = load_objs_as_meshes([obj_path])
-            self.faces_uv = mesh_template.textures.faces_uvs_padded()[0]
-            self.verts_uv = mesh_template.textures.verts_uvs_padded()[0]
+            self.faces_uv = mesh_template.textures.faces_uvs_padded()[0].to(
+                self.device)
+            self.verts_uv = mesh_template.textures.verts_uvs_padded()[0].to(
+                self.device)
             self.NUM_VT = self.verts_uv.shape[0]
-            self.face_tensor = mesh_template.faces_padded()[0]
+            self.faces_tensor = mesh_template.faces_padded()[0].to(self.device)
             self.num_faces = self.faces_uv.shape[0]
+            self.update_fragments()
+            self.update_face_uv_pixel()
 
-        self.update_fragments()
-        self.update_face_uv_pixel()
         self = self.to(self.device)
 
     def to(self, device):
@@ -239,7 +244,7 @@ class UVRenderer(nn.Module):
         assert V == self.NUM_VERTS
         verts_attr = verts_attr.view(N * V, C).to(self.device)
         offset_idx = torch.arange(0, N).long() * (self.NUM_VERTS - 1)
-        faces_packed = self.face_tensor[None].repeat(
+        faces_packed = self.faces_tensor[None].repeat(
             N, 1, 1) + offset_idx.view(-1, 1, 1).to(self.device)
         faces_packed = faces_packed.view(-1, 3)
         face_attr = verts_attr[faces_packed]
@@ -256,7 +261,7 @@ class UVRenderer(nn.Module):
 
     def forward_normal_map(
             self,
-            meshes: Meshes,
+            meshes: Meshes = None,
             vertices: torch.Tensor = None,
             resolution: Optional[Iterable[int]] = None,
             cameras: NewAttributeCameras = None) -> torch.Tensor:
@@ -282,7 +287,7 @@ class UVRenderer(nn.Module):
         elif meshes is None and vertices is not None:
             meshes = Meshes(
                 verts=vertices,
-                faces=self.face_tensor[None].repeat(vertices.shape[0]))
+                faces=self.faces_tensor[None].repeat(vertices.shape[0], 1, 1))
             verts_normals = meshes.verts_normals_padded()
         else:
             raise ValueError('No valid input.')
@@ -346,7 +351,7 @@ class UVRenderer(nn.Module):
         """
         if maps_padded.ndim == 3:
             maps_padded = maps_padded[None]
-        maps_padded = maps_padded.to(self.device)
+
         if h_flip:
             maps_padded = torch.flip(maps_padded, dims=[2])
         N, H, W, C = maps_padded.shape
@@ -363,19 +368,21 @@ class UVRenderer(nn.Module):
             self.update_fragments()
             self.update_face_uv_pixel()
         offset_idx = torch.arange(0, N).long() * (self.NUM_VERTS - 1)
-        faces_packed = self.face_tensor[None].repeat(
+        faces_packed = self.faces_tensor[None].repeat(
             N, 1, 1) + offset_idx.view(-1, 1, 1).to(self.device)
         faces_packed = faces_packed.view(-1, 3)
 
-        verts_feature = torch.zeros(N * self.NUM_VERTS, C).to(self.device)
+        verts_feature_packed = torch.zeros(N * self.NUM_VERTS,
+                                           C).to(self.device)
 
         face_uv_pixel = self.face_uv_pixel.view(-1, 2)
-        verts_feature[faces_packed] = maps_padded[:, face_uv_pixel[:, 1],
-                                                  face_uv_pixel[:, 0]].view(
-                                                      N * self.num_faces, 3, C)
-        verts_feature = verts_feature.view(N, self.NUM_VERTS, C)
+        verts_feature_packed[
+            faces_packed] = maps_padded[:, face_uv_pixel[:, 1],
+                                        face_uv_pixel[:, 0]].view(
+                                            N * self.num_faces, 3, C)
+        verts_feature_padded = verts_feature_packed.view(N, self.NUM_VERTS, C)
 
-        return verts_feature
+        return verts_feature_padded
 
     def wrap_normal(
         self,
@@ -411,7 +418,7 @@ class UVRenderer(nn.Module):
         if normal.shape[0] == 1:
             normal = normal.repeat(batch_size, 1, 1)
         meshes = meshes.clone()
-        normal = padded_to_packed(normal)
+
         meshes._set_verts_normals(normal)
         return meshes
 
@@ -517,3 +524,16 @@ class UVRenderer(nn.Module):
             faces_uvs=faces_uvs, verts_uvs=verts_uvs, maps=texture_map_padded)
         meshes.textures = textures
         return meshes
+
+    @staticmethod
+    def rgb2bgr(rgbs) -> Union[torch.Tensor, np.ndarray]:
+        """Convert color channels."""
+        if isinstance(rgbs, torch.Tensor):
+            bgrs = torch.cat(
+                [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
+                -1)
+        elif isinstance(rgbs, np.ndarray):
+            bgrs = np.concatenate(
+                [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
+                -1)
+        return bgrs

@@ -10,33 +10,36 @@ else:
     device_name = 'cpu'
 
 device = torch.device(device_name)
-uv_param_path = 'data/smpl_uv.pkl'
+uv_param_path = '/home/SENSETIME/wangwenjia/programs/data/smpl_uv.pkl'
 uv_renderer = UVRenderer(
     resolution=(512, 512),
     model_type='smpl',
     uv_param_path=uv_param_path,
     device=device)
 
-model_path = 'data/body_models'
+# model_path = 'data/body_models'
+model_path = '/home/SENSETIME/wangwenjia/programs/data/smpl_models/smpl'
 body_model = build_body_model(dict(type='smpl',
                                    model_path=model_path)).to(device)
 
 
 def test_uv_resample():
-    pose_dict = body_model.tensor2dict(torch.zeros(1, body_model.NUM_VERTS, 3))
+    pose_dict = body_model.tensor2dict(
+        torch.zeros(1, (body_model.NUM_BODY_JOINTS + 1) * 3).to(device))
     smpl_output = body_model(**pose_dict)
     verts = smpl_output['vertices'].view(1, body_model.NUM_VERTS, 3)
     mesh = Meshes(
         verts=verts,
-        faces=body_model.face_tensor.to(device).view(1, body_model.NUM_FACES,
-                                                     3))
+        faces=body_model.faces_tensor.to(device).view(1, body_model.NUM_FACES,
+                                                      3))
 
-    displacement_map = torch.ones(1, 600, 600, 3)
-    normal_map = torch.ones(1, 600, 600, 3)
-    texture_map = torch.ones(1, 600, 600, 3)
+    displacement_map = torch.ones(1, 600, 600, 3).to(device)
+    normal_map = torch.ones(1, 600, 600, 3).to(device)
+    texture_map = torch.ones(1, 600, 600, 3).to(device)
     mesh1 = uv_renderer.wrap_displacement(
         mesh, displacement_map=displacement_map)
-    assert ((mesh1.verts_padded() - mesh.verts_padded()) == 1).all()
+    assert torch.isclose(
+        mesh.verts_padded(), mesh1.verts_padded() - 1, atol=1e-3).all()
     mesh2 = uv_renderer.wrap_normal(mesh, normal_map=normal_map)
     assert (mesh2.verts_normals_padded() == 1).all()
     mesh3 = uv_renderer.wrap_texture(mesh, texture_map=texture_map)
@@ -48,7 +51,8 @@ def test_uv_forward():
     attr_map = uv_renderer(verts_attr, resolution=(600, 600))
     assert attr_map.shape == (2, 600, 600, 3)
 
-    pose_dict = body_model.tensor2dict(torch.zeros(1, body_model.NUM_VERTS, 3))
+    pose_dict = body_model.tensor2dict(
+        torch.zeros(1, (body_model.NUM_BODY_JOINTS + 1) * 3).to(device))
     smpl_output = body_model(**pose_dict)
     verts = smpl_output['vertices'].view(1, body_model.NUM_VERTS, 3)
     normal_map = uv_renderer.forward_normal_map(
