@@ -151,12 +151,12 @@ def save_meshes_as_objs(meshes: Meshes = None, paths: List[str] = []) -> None:
         paths (List[str], optional): Output .obj file list.
             Defaults to [].
     """
-
+    if not isinstance(paths, list):
+        paths = [paths]
     assert len(paths) >= len(meshes), 'Not enough output paths.'
     assert not isinstance(meshes.textures, TexturesVertex), 'For vertex '
     'color mesh please use save_meshes_as_plys.'
-    if not isinstance(paths, list):
-        paths = [paths]
+
     for idx in range(len(meshes)):
         prepare_output_path(
             paths[idx], allowed_suffix=['.obj'],
