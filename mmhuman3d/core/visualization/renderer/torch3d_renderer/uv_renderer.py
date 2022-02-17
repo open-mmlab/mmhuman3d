@@ -1,4 +1,3 @@
-import pickle
 import warnings
 from typing import Iterable, Optional, Tuple, Union
 
@@ -50,25 +49,24 @@ class UVRenderer(nn.Module):
         self.uv_param_path = uv_param_path
         self.obj_path = obj_path
         if uv_param_path is not None:
-            check_path_suffix(uv_param_path, allowed_suffix=['pkl', 'pickle'])
-            with open(uv_param_path, 'rb') as f:
-                param_dict = pickle.load(f)
+            check_path_suffix(uv_param_path, allowed_suffix=['npz'])
+            param_dict = dict(np.load(uv_param_path))
 
-            verts_uv = torch.Tensor(param_dict['texcoords'])
+            verts_uv = torch.Tensor(param_dict['verts_uv'])
             verts_u, verts_v = torch.unbind(verts_uv, -1)
             verts_v_ = 1 - verts_u.unsqueeze(-1)
             verts_u_ = verts_v.unsqueeze(-1)
             self.verts_uv = torch.cat([verts_u_, verts_v_], -1).to(self.device)
-            self.faces_uv = torch.LongTensor(param_dict['vt_faces']).to(
+            self.faces_uv = torch.LongTensor(param_dict['faces_uv']).to(
                 self.device)
 
             self.NUM_VT = self.verts_uv.shape[0]
 
             if resolution == (256, 256):
-                self.bary_coords = torch.Tensor(param_dict['bary_weights']).to(
+                self.bary_coords = torch.Tensor(param_dict['bary_coords']).to(
                     self.device)
-                self.pix_to_face = torch.LongTensor(param_dict['face_id']).to(
-                    self.device)
+                self.pix_to_face = torch.LongTensor(
+                    param_dict['pix_to_face']).to(self.device)
             else:
                 self.update_fragments()
                 self.update_face_uv_pixel()

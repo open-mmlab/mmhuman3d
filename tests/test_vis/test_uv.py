@@ -10,7 +10,7 @@ else:
     device_name = 'cpu'
 
 device = torch.device(device_name)
-uv_param_path = 'data/smpl_uv.pkl'
+uv_param_path = 'data/body_models/smpl/smpl_uv.npz'
 uv_renderer = UVRenderer(
     resolution=(512, 512),
     model_type='smpl',
