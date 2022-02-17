@@ -31,36 +31,36 @@ _HumanData_SUPPORTED_KEYS = {
     'bbox_xywh': {
         'type': np.ndarray,
         'shape': (-1, 5),
-        'major_dim': 0
+        'dim': 0
     },
     'config': {
         'type': str,
-        'major_dim': None
+        'dim': None
     },
     'keypoints2d': {
         'type': np.ndarray,
         'shape': (-1, -1, 3),
-        'major_dim': 0
+        'dim': 0
     },
     'keypoints3d': {
         'type': np.ndarray,
         'shape': (-1, -1, 4),
-        'major_dim': 0
+        'dim': 0
     },
     'smpl': {
         'type': dict,
         'slice_key': 'betas',
-        'major_dim': 0
+        'dim': 0
     },
     'smplh': {
         'type': dict,
         'slice_key': 'betas',
-        'major_dim': 0
+        'dim': 0
     },
     'smplx': {
         'type': dict,
         'slice_key': 'betas',
-        'major_dim': 0
+        'dim': 0
     },
     'meta': {
         'type': dict,
@@ -68,20 +68,20 @@ _HumanData_SUPPORTED_KEYS = {
     'keypoints2d_mask': {
         'type': np.ndarray,
         'shape': (-1, ),
-        'major_dim': None
+        'dim': None
     },
     'keypoints2d_convention': {
         'type': str,
-        'major_dim': None
+        'dim': None
     },
     'keypoints3d_mask': {
         'type': np.ndarray,
         'shape': (-1, ),
-        'major_dim': None
+        'dim': None
     },
     'keypoints3d_convention': {
         'type': str,
-        'major_dim': None
+        'dim': None
     },
     'misc': {
         'type': dict,
@@ -574,8 +574,8 @@ class HumanData(dict):
         for key in self.keys():
             # keys not expected be sliced
             if key in supported_keys and \
-                    'major_dim' in supported_keys[key] and \
-                    supported_keys[key]['major_dim'] is None:
+                    'dim' in supported_keys[key] and \
+                    supported_keys[key]['dim'] is None:
                 ret_dict[key] = None
             else:
                 value = self[key]
@@ -600,9 +600,9 @@ class HumanData(dict):
                 # slice on dim 0 by default
                 slice_dim = 0
                 if key in supported_keys and \
-                        'major_dim' in supported_keys[key]:
+                        'dim' in supported_keys[key]:
                     slice_dim = \
-                        supported_keys[key]['major_dim']
+                        supported_keys[key]['dim']
                 data_len = value_len if slice_dim == 0 \
                     else value.shape[slice_dim]
                 # dim not for slice
@@ -874,9 +874,9 @@ class HumanData(dict):
         # check definition
         if key in supported_keys:
             # check temporal length
-            if 'major_dim' in supported_keys[key] and \
-                    supported_keys[key]['major_dim'] is not None:
-                val_slice_dim = supported_keys[key]['major_dim']
+            if 'dim' in supported_keys[key] and \
+                    supported_keys[key]['dim'] is not None:
+                val_slice_dim = supported_keys[key]['dim']
                 if supported_keys[key]['type'] == dict:
                     slice_key = supported_keys[key]['slice_key']
                     val_data_len = val[slice_key].shape[val_slice_dim]
@@ -1036,16 +1036,16 @@ class HumanData(dict):
         if self.__data_len__ == -1:
             for key in supported_keys:
                 if key in self and \
-                        'major_dim' in supported_keys[key] and\
-                        supported_keys[key]['major_dim'] is not None:
+                        'dim' in supported_keys[key] and\
+                        supported_keys[key]['dim'] is not None:
                     if 'slice_key' in supported_keys[key] and\
                             supported_keys[key]['type'] == dict:
                         sub_key = supported_keys[key]['slice_key']
-                        slice_dim = supported_keys[key]['major_dim']
+                        slice_dim = supported_keys[key]['dim']
                         self.__data_len__ = \
                             self[key][sub_key].shape[slice_dim]
                     else:
-                        slice_dim = supported_keys[key]['major_dim']
+                        slice_dim = supported_keys[key]['dim']
                         self.__data_len__ = self[key].shape[slice_dim]
                     break
         for key in list(self.keys()):
