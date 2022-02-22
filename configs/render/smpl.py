@@ -1,6 +1,6 @@
 base_directional_light = {
     'type': 'directional',
-    'direction': [[10.0, 10.0, 10.0]],
+    'direction': [[1, 1, 1]],
     'ambient_color': [[0.5, 0.5, 0.5]],
     'diffuse_color': [[0.5, 0.5, 0.5]],
     'specular_color': [[0.5, 0.5, 0.5]],
@@ -8,7 +8,7 @@ base_directional_light = {
 
 base_point_light = {
     'type': 'point',
-    'ambient_color': [[0.5, 0.5, 0.5]],
+    'ambient_color': [[1, 1, 1]],
     'diffuse_color': [[0.3, 0.3, 0.3]],
     'specular_color': [[0.5, 0.5, 0.5]],
     'location': [[2.0, 2.0, -2.0]],

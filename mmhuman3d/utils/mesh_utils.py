@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 
 import torch
 from pytorch3d.io import IO, save_obj
-from pytorch3d.renderer import TexturesVertex
+from pytorch3d.renderer import TexturesUV, TexturesVertex
 from pytorch3d.structures import (
     Meshes,
     Pointclouds,
@@ -153,24 +153,25 @@ def save_meshes_as_objs(meshes: Meshes = None, paths: List[str] = []) -> None:
     """
     if not isinstance(paths, list):
         paths = [paths]
+
     assert len(paths) >= len(meshes), 'Not enough output paths.'
-    assert not isinstance(meshes.textures, TexturesVertex), 'For vertex '
-    'color mesh please use save_meshes_as_plys.'
 
     for idx in range(len(meshes)):
         prepare_output_path(
             paths[idx], allowed_suffix=['.obj'],
             path_type='file'), 'Please save as .obj files.'
-        if meshes.textures is not None:
-            save_obj(
-                f=paths[idx],
-                verts=meshes.verts_padded()[idx],
-                faces=meshes.faces_padded()[idx],
-                verts_uvs=meshes.textures.verts_uvs_padded()[idx],
-                faces_uvs=meshes.textures.faces_uvs_padded()[idx],
-                texture_map=meshes.textures.maps_padded()[idx])
+        if isinstance(meshes.textures, TexturesUV):
+            verts_uvs = meshes.textures.verts_uvs_padded()[idx]
+            faces_uvs = meshes.textures.faces_uvs_padded()[idx]
+            texture_map = meshes.textures.maps_padded()[idx]
         else:
-            save_obj(
-                f=paths[idx],
-                verts=meshes.verts_padded()[idx],
-                faces=meshes.faces_padded()[idx])
+            verts_uvs = None
+            faces_uvs = None
+            texture_map = None
+        save_obj(
+            f=paths[idx],
+            verts=meshes.verts_padded()[idx],
+            faces=meshes.faces_padded()[idx],
+            verts_uvs=verts_uvs,
+            faces_uvs=faces_uvs,
+            texture_map=texture_map)

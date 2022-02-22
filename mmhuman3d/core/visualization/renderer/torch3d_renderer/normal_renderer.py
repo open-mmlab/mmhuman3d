@@ -3,7 +3,7 @@ from typing import Iterable, Optional, Union
 import torch
 from pytorch3d.structures import Meshes
 
-from mmhuman3d.core.cameras import NewAttributeCameras
+from mmhuman3d.core.cameras import MMCamerasBase
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER, build_shader
 
@@ -74,14 +74,6 @@ class NormalRenderer(MeshBaseRenderer):
         return super()._init_renderer(rasterizer, shader, materials, lights,
                                       blend_params, **kwargs)
 
-    def to(self, device):
-        if isinstance(device, str):
-            device = torch.device(device)
-        self.device = device
-        if self.rasterizer.cameras is not None:
-            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
-        return self
-
     def forward(self,
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
@@ -89,7 +81,7 @@ class NormalRenderer(MeshBaseRenderer):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                cameras: Optional[NewAttributeCameras] = None,
+                cameras: Optional[MMCamerasBase] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
                 **kwargs):

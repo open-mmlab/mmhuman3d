@@ -17,7 +17,7 @@ from mmhuman3d.utils.transforms import ee_to_rotmat
 from .builder import CAMERAS
 
 
-class NewAttributeCameras(cameras.CamerasBase):
+class MMCamerasBase(cameras.CamerasBase):
     """Inherited from Pytorch3D CamerasBase and provide some new functions."""
 
     def __init__(self, **kwargs) -> None:
@@ -204,7 +204,7 @@ class NewAttributeCameras(cameras.CamerasBase):
             index for slicing.
 
         Returns:
-            NewAttributeCameras: sliced cameras.
+            MMCamerasBase: sliced cameras.
         """
         if isinstance(index, int):
             index = [index]
@@ -226,7 +226,7 @@ class NewAttributeCameras(cameras.CamerasBase):
             N: number of new copies of each camera.
 
         Returns:
-            NewAttributeCameras object.
+            MMCamerasBase object.
         """
         return self.__class__(
             K=self.K.repeat(N, 1, 1),
@@ -343,7 +343,7 @@ class NewAttributeCameras(cameras.CamerasBase):
 
 @CAMERAS.register_module(
     name=('WeakPerspectiveCameras', 'WeakPerspective', 'weakperspective'))
-class WeakPerspectiveCameras(NewAttributeCameras):
+class WeakPerspectiveCameras(MMCamerasBase):
     """Inherited from [Pytorch3D cameras](https://github.com/facebookresearch/
     pytorch3d/blob/main/pytorch3d/renderer/cameras.py) and mimiced the code
     style. And re-inmplemented functions: compute_projection_matrix,
@@ -668,7 +668,7 @@ class WeakPerspectiveCameras(NewAttributeCameras):
 
 @CAMERAS.register_module(
     name=('PerspectiveCameras', 'perspective', 'Perspective'))
-class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
+class PerspectiveCameras(cameras.PerspectiveCameras, MMCamerasBase):
     """Inherited from Pytorch3D `PerspectiveCameras`."""
 
     def __init__(
@@ -730,7 +730,7 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
             index for slicing.
 
         Returns:
-            NewAttributeCameras: sliced cameras.
+            MMCamerasBase: sliced cameras.
         """
         return super(cameras.PerspectiveCameras, self).__getitem__(index)
 
@@ -773,8 +773,7 @@ class PerspectiveCameras(cameras.PerspectiveCameras, NewAttributeCameras):
 
 @CAMERAS.register_module(
     name=('FoVPerspectiveCameras', 'FoVPerspective', 'fovperspective'))
-class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
-                            NewAttributeCameras):
+class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras, MMCamerasBase):
     """Inherited from Pytorch3D `FoVPerspectiveCameras`."""
 
     def __init__(
@@ -833,7 +832,7 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
             index for slicing.
 
         Returns:
-            NewAttributeCameras: sliced cameras.
+            MMCamerasBase: sliced cameras.
         """
         return super(cameras.FoVPerspectiveCameras, self).__getitem__(index)
 
@@ -912,7 +911,7 @@ class FoVPerspectiveCameras(cameras.FoVPerspectiveCameras,
 
 @CAMERAS.register_module(
     name=('OrthographicCameras', 'Orthographic', 'orthographic'))
-class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
+class OrthographicCameras(cameras.OrthographicCameras, MMCamerasBase):
     """Inherited from Pytorch3D `OrthographicCameras`."""
 
     def __init__(
@@ -986,7 +985,7 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
             index for slicing.
 
         Returns:
-            NewAttributeCameras: sliced cameras.
+            MMCamerasBase: sliced cameras.
         """
         return super(cameras.OrthographicCameras, self).__getitem__(index)
 
@@ -1030,8 +1029,7 @@ class OrthographicCameras(cameras.OrthographicCameras, NewAttributeCameras):
 
 @CAMERAS.register_module(
     name=('FoVOrthographicCameras', 'FoVOrthographic', 'fovorthographic'))
-class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
-                             NewAttributeCameras):
+class FoVOrthographicCameras(cameras.FoVOrthographicCameras, MMCamerasBase):
     """Inherited from Pytorch3D `FoVOrthographicCameras`."""
 
     def __init__(
@@ -1098,7 +1096,7 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
             index for slicing.
 
         Returns:
-            NewAttributeCameras: sliced cameras.
+            MMCamerasBase: sliced cameras.
         """
         return super(cameras.FoVOrthographicCameras, self).__getitem__(index)
 
@@ -1188,15 +1186,14 @@ class FoVOrthographicCameras(cameras.FoVOrthographicCameras,
         return super().transform_points_screen(points, eps, **kwargs)
 
 
-def concat_cameras(
-        cameras_list: List[NewAttributeCameras]) -> NewAttributeCameras:
+def concat_cameras(cameras_list: List[MMCamerasBase]) -> MMCamerasBase:
     """Concat a list of cameras of the same type.
 
     Args:
         cameras_list (List[cameras.CamerasBase]): a list of cameras.
 
     Returns:
-        NewAttributeCameras: the returned cameras concated following the batch
+        MMCamerasBase: the returned cameras concated following the batch
             dim.
     """
     K = []

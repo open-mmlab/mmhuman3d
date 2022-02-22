@@ -20,7 +20,7 @@ from pytorch3d.renderer import (
 )
 from pytorch3d.structures import Meshes
 
-from mmhuman3d.core.cameras import NewAttributeCameras, build_cameras
+from mmhuman3d.core.cameras import MMCamerasBase, build_cameras
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER, build_lights, build_shader
@@ -156,10 +156,12 @@ class MeshBaseRenderer(nn.Module):
         elif rasterizer is None:
             self.rasterizer = MeshRasterizer(
                 raster_settings=RasterizationSettings(
+                    image_size=self.resolution,
                     bin_size=0,
                     blur_radius=0,
                     faces_per_pixel=1,
                     perspective_correct=False))
+
         else:
             raise TypeError(
                 f'Wrong type of rasterizer: {type(self.rasterizer)}.')
@@ -185,12 +187,15 @@ class MeshBaseRenderer(nn.Module):
         if isinstance(device, str):
             device = torch.device(device)
         self.device = device
-        if self.rasterizer.cameras is not None:
+        if getattr(self.rasterizer, 'cameras', None) is not None:
             self.rasterizer.cameras = self.rasterizer.cameras.to(device)
-        if self.shader.cameras is not None:
+
+        if getattr(self.shader, 'cameras', None) is not None:
             self.shader.cameras = self.shader.cameras.to(device)
-        self.shader.materials = self.shader.materials.to(device)
-        self.shader.lights = self.shader.lights.to(device)
+        if getattr(self.shader, 'materials', None) is not None:
+            self.shader.materials = self.shader.materials.to(device)
+        if getattr(self.shader, 'lights', None) is not None:
+            self.shader.lights = self.shader.lights.to(device)
         return self
 
     def _set_output_path(self, output_path):
@@ -205,7 +210,7 @@ class MeshBaseRenderer(nn.Module):
                 self.temp_path = output_path
 
     def _update_resolution(self, cameras, **kwargs):
-        if isinstance(cameras, NewAttributeCameras):
+        if isinstance(cameras, MMCamerasBase):
             self.resolution = (int(cameras.resolution[0][0]),
                                int(cameras.resolution[0][1]))
         if 'resolution' in kwargs:
@@ -316,7 +321,11 @@ class MeshBaseRenderer(nn.Module):
 
     def _write_images(self, rgba, images, indexes):
         """Write output/temp images."""
-        rgbs, valid_masks = rgba[..., :3], rgba[..., 3:]
+        if rgba.shape[-1] > 3:
+            rgbs, valid_masks = rgba[..., :3], rgba[..., 3:]
+        else:
+            rgbs = rgba[..., :3]
+            valid_masks = torch.ones_like(rgbs)[..., :1]
         rgbs = self._normalize(rgbs, origin_value_range=(0, 1), clip=True)
         bgrs = self.rgb2bgr(rgbs)
         if images is not None:
@@ -356,7 +365,7 @@ class MeshBaseRenderer(nn.Module):
                 K: Optional[torch.Tensor] = None,
                 R: Optional[torch.Tensor] = None,
                 T: Optional[torch.Tensor] = None,
-                cameras: Optional[NewAttributeCameras] = None,
+                cameras: Optional[MMCamerasBase] = None,
                 images: Optional[torch.Tensor] = None,
                 lights: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
@@ -403,6 +412,8 @@ class MeshBaseRenderer(nn.Module):
     def tensor2rgba(self, tensor: torch.Tensor):
         valid_masks = (tensor[..., 3:] > 0) * 1.0
         rgbs = tensor[..., :3]
-        rgbs = self._normalize(rgbs, out_value_range=[0, 1])
+
+        rgbs = self._normalize(
+            rgbs, origin_value_range=[0, 1], out_value_range=[0, 1])
         rgba = torch.cat([rgbs, valid_masks], -1)
         return rgba

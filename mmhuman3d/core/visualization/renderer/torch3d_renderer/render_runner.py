@@ -12,7 +12,7 @@ from pytorch3d.renderer.lighting import (
 from pytorch3d.structures.meshes import Meshes
 from tqdm import trange
 
-from mmhuman3d.core.cameras.cameras import NewAttributeCameras
+from mmhuman3d.core.cameras.cameras import MMCamerasBase
 
 osj = os.path.join
 
@@ -20,7 +20,7 @@ osj = os.path.join
 def render(output_path: Optional[str] = None,
            device: Union[str, torch.device, None] = None,
            meshes: Meshes = None,
-           cameras: Optional[NewAttributeCameras] = None,
+           cameras: Optional[MMCamerasBase] = None,
            lights: Union[AmbientLights, DirectionalLights, PointLights] = None,
            renderer: Optional[nn.Module] = None,
            batch_size: int = 5,

@@ -10,7 +10,7 @@ from pytorch3d.renderer import (
 )
 from pytorch3d.structures import Meshes, Pointclouds
 
-from mmhuman3d.core.cameras import NewAttributeCameras
+from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
 from .base_renderer import MeshBaseRenderer
 from .builder import RENDERER
@@ -81,11 +81,7 @@ class PointCloudRenderer(MeshBaseRenderer):
             **kwargs)
 
     def to(self, device):
-        if isinstance(device, str):
-            device = torch.device(device)
-        self.device = device
-        if self.rasterizer.cameras is not None:
-            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+        self = super().to(device)
         self.compositor = self.compositor.to(device)
         return self
 
@@ -125,7 +121,7 @@ class PointCloudRenderer(MeshBaseRenderer):
         K: Optional[torch.Tensor] = None,
         R: Optional[torch.Tensor] = None,
         T: Optional[torch.Tensor] = None,
-        cameras: Optional[NewAttributeCameras] = None,
+        cameras: Optional[MMCamerasBase] = None,
         images: Optional[torch.Tensor] = None,
         indexes: Optional[Iterable[int]] = None,
         **kwargs,

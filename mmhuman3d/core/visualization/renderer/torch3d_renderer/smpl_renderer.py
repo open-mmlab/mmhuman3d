@@ -10,7 +10,7 @@ from pytorch3d.renderer.lighting import DirectionalLights, PointLights
 from pytorch3d.structures import Meshes
 from torch.nn.functional import interpolate
 
-from mmhuman3d.core.cameras import NewAttributeCameras
+from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
 from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
@@ -138,19 +138,13 @@ class SMPLRenderer(MeshBaseRenderer):
             None
         """
 
-    def to(self, device):
-        if isinstance(device, str):
-            device = torch.device(device)
-        self.device = device
-        return super(MeshBaseRenderer, self).to(device)
-
     def forward(
         self,
         vertices: torch.Tensor,
         K: Optional[torch.Tensor] = None,
         R: Optional[torch.Tensor] = None,
         T: Optional[torch.Tensor] = None,
-        cameras: Optional[NewAttributeCameras] = None,
+        cameras: Optional[MMCamerasBase] = None,
         images: Optional[torch.Tensor] = None,
         joints: Optional[torch.Tensor] = None,
         joints_gt: Optional[torch.Tensor] = None,

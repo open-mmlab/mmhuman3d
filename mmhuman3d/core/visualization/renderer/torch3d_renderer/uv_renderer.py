@@ -17,7 +17,7 @@ from pytorch3d.structures.utils import padded_to_packed
 
 from mmhuman3d.core.cameras.cameras import (
     FoVOrthographicCameras,
-    NewAttributeCameras,
+    MMCamerasBase,
 )
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER
@@ -257,12 +257,11 @@ class UVRenderer(nn.Module):
         ).squeeze(-2)
         return maps_padded
 
-    def forward_normal_map(
-            self,
-            meshes: Meshes = None,
-            vertices: torch.Tensor = None,
-            resolution: Optional[Iterable[int]] = None,
-            cameras: NewAttributeCameras = None) -> torch.Tensor:
+    def forward_normal_map(self,
+                           meshes: Meshes = None,
+                           vertices: torch.Tensor = None,
+                           resolution: Optional[Iterable[int]] = None,
+                           cameras: MMCamerasBase = None) -> torch.Tensor:
         """Interpolate verts normals to a normal map.
 
         Args:
@@ -274,7 +273,7 @@ class UVRenderer(nn.Module):
             resolution (Optional[Iterable[int]], optional): resolution to
                 override self.resolution. If None, will use self.resolution.
                 Defaults to None.
-            cameras (NewAttributeCameras, optional):
+            cameras (MMCamerasBase, optional):
                 cameras to see the mesh.
                 Defaults to None.
         Returns:
@@ -301,7 +300,7 @@ class UVRenderer(nn.Module):
                         meshes: Meshes = None,
                         vertices: torch.Tensor = None,
                         resolution: Optional[Iterable[int]] = None,
-                        cameras: NewAttributeCameras = None) -> torch.Tensor:
+                        cameras: MMCamerasBase = None) -> torch.Tensor:
         """Interpolate the verts xyz value to a uvd map.
 
         Args:
@@ -313,7 +312,7 @@ class UVRenderer(nn.Module):
             resolution (Optional[Iterable[int]], optional): resolution to
                 override self.resolution. If None, will use self.resolution.
                 Defaults to None.
-            cameras (NewAttributeCameras, optional):
+            cameras (MMCamerasBase, optional):
                 cameras to see the mesh.
                 Defaults to None.
 
@@ -492,11 +491,11 @@ class UVRenderer(nn.Module):
         """
 
         batch_size = len(meshes)
+        assert texture_map.shape[-1] == 3
         if texture_map.ndim == 3:
             texture_map_padded = texture_map[None]
         else:
             texture_map_padded = texture_map
-        assert texture_map.shape[-1] == 3
         _, H, W, _ = texture_map_padded.shape
 
         resolution = resolution if resolution is not None else (H, W)
