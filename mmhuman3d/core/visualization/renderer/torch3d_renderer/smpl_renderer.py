@@ -88,6 +88,7 @@ class SMPLRenderer(MeshBaseRenderer):
                 resolution=resolution,
                 projection=projection,
                 in_ndc=in_ndc,
+                differentiable=False,
                 **kwargs))
 
         if plot_kps:

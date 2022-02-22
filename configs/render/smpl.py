@@ -22,7 +22,7 @@ base_ambient_light = {
 base_material = {
     'ambient_color': [[1, 1, 1]],
     'diffuse_color': [[0.5, 0.5, 0.5]],
-    'specular_color': [[0.5, 0.5, 0.5]],
+    'specular_color': [[0.15, 0.15, 0.15]],
     'shininess': 60.0,
 }
 
@@ -38,6 +38,7 @@ white_blend_params = {'background_color': (1.0, 1.0, 1.0)}
 black_blend_params = {'background_color': (0.0, 0.0, 0.0)}
 
 RENDER_CONFIGS = {
+    # low quality
     'lq': {
         'type': 'base',
         'shader': {
@@ -53,6 +54,7 @@ RENDER_CONFIGS = {
         },
         'blend_params': white_blend_params,
     },
+    # medium quality
     'mq': {
         'type': 'base',
         'shader': {
@@ -68,6 +70,7 @@ RENDER_CONFIGS = {
         },
         'blend_params': white_blend_params,
     },
+    # high quality
     'hq': {
         'type': 'base',
         'shader': {
@@ -85,9 +88,6 @@ RENDER_CONFIGS = {
     },
     'silhouette': {
         'type': 'silhouette',
-        'shader': {
-            'type': 'silhouette'
-        },
         'lights': None,
         'materials': silhouete_material,
         'rasterizer': {
@@ -100,9 +100,6 @@ RENDER_CONFIGS = {
     },
     'part_silhouette': {
         'type': 'segmentation',
-        'shader': {
-            'type': 'segmentation'
-        },
         'material': base_material,
         'rasterizer': {
             'bin_size': 0,
@@ -114,9 +111,6 @@ RENDER_CONFIGS = {
     },
     'depth': {
         'type': 'depth',
-        'shader': {
-            'type': 'depth'
-        },
         'rasterizer': {
             'bin_size': 0,
             'blur_radius': 0.0,
@@ -127,9 +121,6 @@ RENDER_CONFIGS = {
     },
     'normal': {
         'type': 'normal',
-        'shader': {
-            'type': 'normal'
-        },
         'rasterizer': {
             'bin_size': 0,
             'blur_radius': 0.0,

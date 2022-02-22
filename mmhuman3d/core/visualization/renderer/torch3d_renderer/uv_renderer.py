@@ -3,7 +3,6 @@ from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from pytorch3d.io.obj_io import load_objs_as_meshes
 from pytorch3d.ops import interpolate_face_attributes
@@ -19,12 +18,13 @@ from mmhuman3d.core.cameras.cameras import (
     FoVOrthographicCameras,
     MMCamerasBase,
 )
+from mmhuman3d.core.visualization.renderer import BaseRenderer
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER
 
 
 @RENDERER.register_module(name=['uv_renderer', 'uv', 'UV', 'UVRenderer'])
-class UVRenderer(nn.Module):
+class UVRenderer(BaseRenderer):
     """Renderer for SMPL(x) UV map.
 
     # TODO: test smplx support.
@@ -521,16 +521,3 @@ class UVRenderer(nn.Module):
             faces_uvs=faces_uvs, verts_uvs=verts_uvs, maps=texture_map_padded)
         meshes.textures = textures
         return meshes
-
-    @staticmethod
-    def rgb2bgr(rgbs) -> Union[torch.Tensor, np.ndarray]:
-        """Convert color channels."""
-        if isinstance(rgbs, torch.Tensor):
-            bgrs = torch.cat(
-                [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
-                -1)
-        elif isinstance(rgbs, np.ndarray):
-            bgrs = np.concatenate(
-                [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
-                -1)
-        return bgrs

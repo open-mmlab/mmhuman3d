@@ -1,10 +1,10 @@
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import torch
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from .base_renderer import MeshBaseRenderer
+from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
 try:
@@ -14,25 +14,25 @@ except ImportError:
 
 
 @RENDERER.register_module(
-    name=['Normal', 'normal', 'normal_renderer', 'NormalRenderer'])
-class NormalRenderer(MeshBaseRenderer):
-    """Render normal map with the help of camera system."""
-    shader_type = 'NormalShader'
+    name=['Mesh', 'mesh', 'mesh_renderer', 'MeshRenderer'])
+class MeshRenderer(BaseRenderer):
+    """Render RGBA image with the help of camera system."""
+    shader_type = 'SoftPhongShader'
 
     def __init__(
         self,
-        resolution: Iterable[int] = None,
+        resolution: Tuple[int, int] = None,
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         out_img_format: str = '%06d.png',
+        in_ndc: bool = True,
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
-        in_ndc: bool = True,
         differentiable: bool = True,
         **kwargs,
     ) -> None:
-        """Renderer for normal map of meshes.
+        """Renderer for RGBA image of meshes.
 
         Args:
             resolution (Iterable[int]):
@@ -46,25 +46,21 @@ class NormalRenderer(MeshBaseRenderer):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): Projection type of the cameras.
-                Defaults to 'weakperspective'.
             in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
+            projection (Literal[, optional): Projection type of the cameras.
+                Defaults to 'weakperspective'.
             differentiable (bool, optional): Some renderer need smplified
                 parameters if do not need differentiable.
                 Defaults to True.
-
-        Returns:
-            None
         """
         super().__init__(
             resolution=resolution,
             device=device,
             output_path=output_path,
-            obj_path=None,
             out_img_format=out_img_format,
-            projection=projection,
             in_ndc=in_ndc,
+            projection=projection,
             differentiable=differentiable,
             **kwargs)
 
@@ -77,8 +73,9 @@ class NormalRenderer(MeshBaseRenderer):
                 T: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
                 images: Optional[torch.Tensor] = None,
+                lights: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
-                **kwargs):
+                **kwargs) -> Union[torch.Tensor, None]:
         """Render Meshes.
 
         Args:
@@ -98,8 +95,7 @@ class NormalRenderer(MeshBaseRenderer):
                 Defaults to None.
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
-            indexes (Optional[Iterable[int]], optional): indexes for the
-                images.
+            indexes (Optional[Iterable[int]], optional): indexes for images.
                 Defaults to None.
 
         Returns:
@@ -107,22 +103,14 @@ class NormalRenderer(MeshBaseRenderer):
         """
 
         meshes = self._prepare_meshes(meshes, vertices, faces)
-
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
-        normal_map = self.shader(
-            fragments=fragments, meshes=meshes, cameras=cameras)
+        rendered_images = self.shader(
+            fragments=fragments, meshes=meshes, cameras=cameras, lights=lights)
 
         if self.output_path is not None:
-            rgba = self.tensor2rgba(normal_map)
-            self.write_images(rgba, images, indexes)
-
-        return normal_map
-
-    def tensor2rgba(self, tensor: torch.Tensor):
-        rgbs, valid_masks = tensor[..., :3], (tensor[..., 3:] > 0) * 1.0
-        rgbs = self._normalize(
-            rgbs, origin_value_range=(-1, 1), out_value_range=(0, 1))
-        return torch.cat([rgbs, valid_masks], -1)
+            rgba = self.tensor2rgba(rendered_images)
+            self._write_images(rgba, images, indexes)
+        return rendered_images

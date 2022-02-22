@@ -1,6 +1,6 @@
 from .matplotlib3d_renderer import Axes3dJointsRenderer
 from .torch3d_renderer import render_runner
-from .torch3d_renderer.base_renderer import MeshBaseRenderer
+from .torch3d_renderer.base_renderer import BaseRenderer
 from .torch3d_renderer.builder import (
     build_lights,
     build_renderer,
@@ -8,6 +8,7 @@ from .torch3d_renderer.builder import (
     build_textures,
 )
 from .torch3d_renderer.depth_renderer import DepthRenderer
+from .torch3d_renderer.mesh_renderer import MeshRenderer
 from .torch3d_renderer.normal_renderer import NormalRenderer
 from .torch3d_renderer.pointcloud_renderer import PointCloudRenderer
 from .torch3d_renderer.render_datasets import RenderDataset
@@ -25,10 +26,11 @@ from .torch3d_renderer.uv_renderer import UVRenderer
 from .vedo_render import VedoRenderer
 
 __all__ = [
-    'NoLightShader', 'RenderDataset', 'MeshBaseRenderer', 'TexturesNearest',
+    'NoLightShader', 'RenderDataset', 'BaseRenderer', 'TexturesNearest',
     'SMPLRenderer', 'SilhouetteRenderer', 'Axes3dJointsRenderer',
-    'VedoRenderer', 'DepthRenderer', 'NormalRenderer', 'SegmentationRenderer',
-    'PointCloudRenderer', 'UVRenderer', 'build_renderer', 'build_shader',
-    'build_textures', 'build_lights', 'DepthShader', 'SegmentationShader',
-    'NormalShader', 'NoLightShader', 'render_runner'
+    'VedoRenderer', 'MeshRenderer', 'DepthRenderer', 'NormalRenderer',
+    'SegmentationRenderer', 'PointCloudRenderer', 'UVRenderer',
+    'build_renderer', 'build_shader', 'build_textures', 'build_lights',
+    'DepthShader', 'SegmentationShader', 'NormalShader', 'NoLightShader',
+    'render_runner'
 ]

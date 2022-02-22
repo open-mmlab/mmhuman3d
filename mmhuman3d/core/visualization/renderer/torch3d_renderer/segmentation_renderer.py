@@ -6,7 +6,7 @@ from pytorch3d.structures import Meshes
 from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils import get_different_colors
 from .base_renderer import MeshBaseRenderer
-from .builder import RENDERER, build_shader
+from .builder import RENDERER
 
 try:
     from typing import Literal
@@ -20,6 +20,7 @@ except ImportError:
 ])
 class SegmentationRenderer(MeshBaseRenderer):
     """Render segmentation map into a segmentation index tensor."""
+    shader_type = 'SegmentationShader'
 
     def __init__(self,
                  resolution: Tuple[int, int] = None,
@@ -31,6 +32,7 @@ class SegmentationRenderer(MeshBaseRenderer):
                                      'fovorthographics'] = 'weakperspective',
                  in_ndc: bool = True,
                  num_class: int = 1,
+                 differentiable: bool = True,
                  **kwargs) -> None:
         """Render vertex-color mesh into a segmentation map of a (B, H, W)
         tensor. For visualization, the output rgba image will be (B, H, W, 4),
@@ -60,6 +62,9 @@ class SegmentationRenderer(MeshBaseRenderer):
                 Defaults to True.
             num_class (int, optional): number of segmentation parts.
                 Defaults to 1.
+            differentiable (bool, optional): Some renderer need smplified
+                parameters if do not need differentiable.
+                Defaults to True.
 
         Returns:
             None
@@ -72,20 +77,9 @@ class SegmentationRenderer(MeshBaseRenderer):
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
+            differentiable=differentiable,
             **kwargs)
         self.num_class = num_class
-
-    def _init_renderer(self,
-                       rasterizer=None,
-                       shader=None,
-                       materials=None,
-                       lights=None,
-                       blend_params=None,
-                       **kwargs):
-        shader = build_shader(dict(
-            type='SegmentationShader')) if shader is None else shader
-        return super()._init_renderer(rasterizer, shader, materials, lights,
-                                      blend_params, **kwargs)
 
     def forward(self,
                 meshes: Optional[Meshes] = None,

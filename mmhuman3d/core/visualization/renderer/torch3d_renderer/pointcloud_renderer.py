@@ -31,7 +31,6 @@ class PointCloudRenderer(MeshBaseRenderer):
                  resolution: Tuple[int, int] = None,
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
-                 return_type: Optional[List] = None,
                  out_img_format: str = '%06d.png',
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
@@ -50,13 +49,6 @@ class PointCloudRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_type (List, optional): the type of tensor to be
-                returned. 'tensor' denotes return the determined tensor. E.g.,
-                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
-                'rgba' denotes the colorful RGBA tensor to be written.
-                Will be same for MeshBaseRenderer.
-                Will return a pointcloud image for 'tensor' and for 'rgba'.
-                Defaults to None.
             out_img_format (str, optional): name format for temp images.
                 Defaults to '%06d.png'.
             projection (Literal[, optional): projection type of camera.
@@ -73,8 +65,6 @@ class PointCloudRenderer(MeshBaseRenderer):
             resolution=resolution,
             device=device,
             output_path=output_path,
-            obj_path=None,
-            return_type=return_type,
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
@@ -108,8 +98,6 @@ class PointCloudRenderer(MeshBaseRenderer):
         else:
             raise TypeError(
                 f'Wrong type of compositor: {type(self.compositor)}.')
-
-        self.shader_type = None
         self = self.to(self.device)
 
     def forward(

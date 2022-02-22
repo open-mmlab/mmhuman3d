@@ -5,7 +5,7 @@ from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
 from .base_renderer import MeshBaseRenderer
-from .builder import RENDERER, build_shader
+from .builder import RENDERER
 
 try:
     from typing import Literal
@@ -18,6 +18,7 @@ except ImportError:
 ])
 class SilhouetteRenderer(MeshBaseRenderer):
     """Silhouette renderer."""
+    shader_type = 'SilhouetteShader'
 
     def __init__(
         self,
@@ -29,6 +30,7 @@ class SilhouetteRenderer(MeshBaseRenderer):
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
         in_ndc: bool = True,
+        differentiable: bool = True,
         **kwargs,
     ) -> None:
         """SilhouetteRenderer for neural rendering and visualization.
@@ -50,6 +52,9 @@ class SilhouetteRenderer(MeshBaseRenderer):
                 Defaults to 'weakperspetive'.
             in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
+            differentiable (bool, optional): Some renderer need smplified
+                parameters if do not need differentiable.
+                Defaults to True.
 
         Returns:
             None
@@ -58,23 +63,11 @@ class SilhouetteRenderer(MeshBaseRenderer):
             resolution=resolution,
             device=device,
             output_path=output_path,
-            obj_path=None,
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
+            differentiable=differentiable,
             **kwargs)
-
-    def _init_renderer(self,
-                       rasterizer=None,
-                       shader=None,
-                       materials=None,
-                       lights=None,
-                       blend_params=None,
-                       **kwargs):
-        shader = build_shader(dict(
-            type='SilhouetteShader')) if shader is None else shader
-        return super()._init_renderer(rasterizer, shader, materials, lights,
-                                      blend_params, **kwargs)
 
     def forward(self,
                 meshes: Optional[Meshes] = None,

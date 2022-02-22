@@ -1,10 +1,10 @@
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import torch
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from .base_renderer import MeshBaseRenderer
+from .base_renderer import BaseRenderer
 from .builder import RENDERER, build_shader
 
 try:
@@ -15,20 +15,21 @@ except ImportError:
 
 @RENDERER.register_module(
     name=['Depth', 'depth', 'depth_renderer', 'DepthRenderer'])
-class DepthRenderer(MeshBaseRenderer):
+class DepthRenderer(BaseRenderer):
     """Render depth map with the help of camera system."""
+    shader_type = 'DepthShader'
 
     def __init__(
         self,
         resolution: Tuple[int, int] = None,
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
-        return_type: Optional[List] = None,
         out_img_format: str = '%06d.png',
         in_ndc: bool = True,
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
+        differentiable: bool = True,
         depth_max: Union[int, float, torch.Tensor] = None,
         **kwargs,
     ) -> None:
@@ -43,14 +44,6 @@ class DepthRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_type (List, optional): the type of tensor to be
-                returned. 'tensor' denotes return the determined tensor. E.g.,
-                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
-                'rgba' denotes the colorful RGBA tensor to be written.
-                Will be same for MeshBaseRenderer.
-                Will return a depth_map for 'tensor' and a normalize map for
-                'rgba'.
-                Defaults to None.
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
@@ -58,8 +51,12 @@ class DepthRenderer(MeshBaseRenderer):
                 Defaults to True.
             projection (Literal[, optional): Projection type of the cameras.
                 Defaults to 'weakperspective'.
+            differentiable (bool, optional): Some renderer need smplified
+                parameters if do not need differentiable.
+                Defaults to True.
             depth_max (Union[int, float, torch.Tensor], optional):
                 The max value for normalize depth range. Defaults to None.
+
         Returns:
             None
         """
@@ -67,11 +64,10 @@ class DepthRenderer(MeshBaseRenderer):
             resolution=resolution,
             device=device,
             output_path=output_path,
-            obj_path=None,
-            return_type=return_type,
             out_img_format=out_img_format,
-            projection=projection,
             in_ndc=in_ndc,
+            projection=projection,
+            differentiable=differentiable,
             **kwargs)
         self.depth_max = depth_max
 
