@@ -5,7 +5,7 @@ from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils import get_different_colors
-from .base_renderer import MeshBaseRenderer
+from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
 try:
@@ -18,7 +18,7 @@ except ImportError:
     'segmentation', 'segmentation_renderer', 'Segmentation',
     'SegmentationRenderer'
 ])
-class SegmentationRenderer(MeshBaseRenderer):
+class SegmentationRenderer(BaseRenderer):
     """Render segmentation map into a segmentation index tensor."""
     shader_type = 'SegmentationShader'
 

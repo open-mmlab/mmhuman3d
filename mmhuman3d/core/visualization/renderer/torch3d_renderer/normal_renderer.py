@@ -4,7 +4,7 @@ import torch
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from .base_renderer import MeshBaseRenderer
+from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
 try:
@@ -15,7 +15,7 @@ except ImportError:
 
 @RENDERER.register_module(
     name=['Normal', 'normal', 'normal_renderer', 'NormalRenderer'])
-class NormalRenderer(MeshBaseRenderer):
+class NormalRenderer(BaseRenderer):
     """Render normal map with the help of camera system."""
     shader_type = 'NormalShader'
 

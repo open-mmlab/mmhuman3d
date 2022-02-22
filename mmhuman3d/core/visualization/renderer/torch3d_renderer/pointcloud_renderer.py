@@ -12,7 +12,7 @@ from pytorch3d.structures import Meshes, Pointclouds
 
 from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
-from .base_renderer import MeshBaseRenderer
+from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
 try:
@@ -25,7 +25,7 @@ except ImportError:
     'PointCloud', 'pointcloud', 'point_cloud', 'pointcloud_renderer',
     'PointCloudRenderer'
 ])
-class PointCloudRenderer(MeshBaseRenderer):
+class PointCloudRenderer(BaseRenderer):
 
     def __init__(self,
                  resolution: Tuple[int, int] = None,

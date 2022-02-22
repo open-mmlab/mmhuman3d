@@ -4,7 +4,7 @@ import torch
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from .base_renderer import MeshBaseRenderer
+from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
 try:
@@ -16,7 +16,7 @@ except ImportError:
 @RENDERER.register_module(name=[
     'silhouette', 'silhouette_renderer', 'Silhouette', 'SilhouetteRenderer'
 ])
-class SilhouetteRenderer(MeshBaseRenderer):
+class SilhouetteRenderer(BaseRenderer):
     """Silhouette renderer."""
     shader_type = 'SilhouetteShader'
 
@@ -80,7 +80,7 @@ class SilhouetteRenderer(MeshBaseRenderer):
                 images: Optional[torch.Tensor] = None,
                 indexes: Iterable[str] = None,
                 **kwargs):
-        """The params are the same as MeshBaseRenderer."""
+        """The params are the same as BaseRenderer."""
         meshes = self._prepare_meshes(meshes, vertices, faces)
         cameras = self._init_cameras(
             K=K, R=R, T=T) if cameras is None else cameras

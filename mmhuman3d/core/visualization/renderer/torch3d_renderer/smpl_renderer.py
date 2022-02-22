@@ -15,7 +15,7 @@ from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
 from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
 from mmhuman3d.utils.path_utils import check_path_suffix
-from .base_renderer import MeshBaseRenderer
+from .base_renderer import BaseRenderer
 from .builder import build_renderer, build_textures
 
 try:
@@ -24,7 +24,7 @@ except ImportError:
     from typing_extensions import Literal
 
 
-class SMPLRenderer(MeshBaseRenderer):
+class SMPLRenderer(BaseRenderer):
     """Render SMPL(X) with different render choices."""
 
     def __init__(self,
@@ -49,7 +49,7 @@ class SMPLRenderer(MeshBaseRenderer):
                  in_ndc: bool = True,
                  final_resolution: Tuple[int, int] = None,
                  **kwargs) -> None:
-        super(MeshBaseRenderer, self).__init__()
+        super(BaseRenderer, self).__init__()
 
         self.device = device
         self.projection = projection
