@@ -1,4 +1,4 @@
-cdflib
+cdflib<0.4.0
 chumpy
 colormap
 easydev
