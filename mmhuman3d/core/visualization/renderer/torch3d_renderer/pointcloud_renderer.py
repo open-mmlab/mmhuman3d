@@ -71,7 +71,12 @@ class PointCloudRenderer(BaseRenderer):
             **kwargs)
 
     def to(self, device):
-        self = super().to(device)
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
+        if getattr(self.rasterizer, 'cameras', None) is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+
         self.compositor = self.compositor.to(device)
         return self
 

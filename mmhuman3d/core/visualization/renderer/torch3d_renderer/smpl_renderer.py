@@ -139,6 +139,9 @@ class SMPLRenderer(BaseRenderer):
             None
         """
 
+    def to(self, device):
+        return super(BaseRenderer, self).to(device)
+
     def forward(
         self,
         vertices: torch.Tensor,

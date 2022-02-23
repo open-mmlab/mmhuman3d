@@ -157,9 +157,9 @@ class BaseRenderer(nn.Module):
                 rasterizer['image_size'] = self.resolution
             raster_settings = RasterizationSettings(**rasterizer)
             self.rasterizer = MeshRasterizer(raster_settings=raster_settings)
-        elif rasterizer is None and not self.differentiable:
-            rasterizer = MeshRasterizer(
-                RasterizationSettings(
+        elif rasterizer is None:
+            self.rasterizer = MeshRasterizer(
+                raster_settings=RasterizationSettings(
                     image_size=self.resolution,
                     bin_size=0,
                     blur_radius=0,
@@ -171,8 +171,9 @@ class BaseRenderer(nn.Module):
 
         if self.resolution is None:
             self.resolution = self.rasterizer.raster_settings.image_size
-            self.resolution = (self.resolution, self.resolution) if isinstance(
-                self.resolution, int) else tuple(self.resolution)
+        assert self.resolution is not None
+        self.resolution = (self.resolution, self.resolution) if isinstance(
+            self.resolution, int) else tuple(self.resolution)
         if isinstance(shader, nn.Module):
             self.shader = shader
         elif isinstance(shader, dict):

@@ -3,6 +3,7 @@ from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from pytorch3d.io.obj_io import load_objs_as_meshes
 from pytorch3d.ops import interpolate_face_attributes
@@ -24,7 +25,7 @@ from .builder import RENDERER
 
 
 @RENDERER.register_module(name=['uv_renderer', 'uv', 'UV', 'UVRenderer'])
-class UVRenderer(BaseRenderer):
+class UVRenderer(nn.Module):
     """Renderer for SMPL(x) UV map.
 
     # TODO: test smplx support.
@@ -39,7 +40,7 @@ class UVRenderer(BaseRenderer):
         device: Union[torch.device, str] = 'cpu',
         threshold_size: int = 512,
     ):
-        super(BaseRenderer, self).__init__()
+        super().__init__()
         self.threshold_size = threshold_size
         num_verts = {'smpl': 6890, 'smplx': 10475}
         self.NUM_VERTS = num_verts[model_type]
@@ -510,7 +511,7 @@ class UVRenderer(BaseRenderer):
             texture_map_padded = self.array2tensor(texture_map_padded)
             is_bgr = True
         if is_bgr:
-            texture_map_padded = self.rgb2bgr(texture_map_padded)
+            texture_map_padded = BaseRenderer.rgb2bgr(texture_map_padded)
 
         if texture_map_padded.shape[0] == 1:
             texture_map_padded = texture_map_padded.repeat(batch_size, 1, 1, 1)

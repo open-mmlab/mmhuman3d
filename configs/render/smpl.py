@@ -40,7 +40,7 @@ black_blend_params = {'background_color': (0.0, 0.0, 0.0)}
 RENDER_CONFIGS = {
     # low quality
     'lq': {
-        'type': 'base',
+        'type': 'mesh',
         'shader': {
             'type': 'hard_flat'
         },
@@ -56,7 +56,7 @@ RENDER_CONFIGS = {
     },
     # medium quality
     'mq': {
-        'type': 'base',
+        'type': 'mesh',
         'shader': {
             'type': 'soft_gouraud'
         },
@@ -72,7 +72,7 @@ RENDER_CONFIGS = {
     },
     # high quality
     'hq': {
-        'type': 'base',
+        'type': 'mesh',
         'shader': {
             'type': 'soft_phong'
         },

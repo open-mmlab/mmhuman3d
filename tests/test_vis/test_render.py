@@ -19,11 +19,13 @@ def test_render_runner():
     meshes.textures = TexturesVertex(
         verts_features=torch.ones_like(meshes.verts_padded()).to(device))
     K, R, T = compute_orbit_cameras(orbit_speed=1.0, batch_size=2)
+    resolution = 128
     cameras = build_cameras(
-        dict(type='fovperspective', K=K, R=R, T=T, resolution=(128, 128)))
+        dict(type='fovperspective', K=K, R=R, T=T, resolution=resolution))
     renderer = build_renderer(
         dict(
-            type='base',
+            type='mesh',
+            resolution=resolution,
             shader=dict(type='soft_phong'),
             lights=dict(type='ambient')))
     tensor = render_runner.render(
