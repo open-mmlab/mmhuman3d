@@ -1,4 +1,4 @@
-cdflib
+cdflib==0.3.20
 chumpy
 colormap
 easydev
