@@ -39,7 +39,7 @@ class UVRenderer(BaseRenderer):
         device: Union[torch.device, str] = 'cpu',
         threshold_size: int = 512,
     ):
-        super().__init__()
+        super(BaseRenderer, self).__init__()
         self.threshold_size = threshold_size
         num_verts = {'smpl': 6890, 'smplx': 10475}
         self.NUM_VERTS = num_verts[model_type]
