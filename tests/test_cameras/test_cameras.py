@@ -38,7 +38,13 @@ def check_camera_slice(cam1):
     cam2 = cam1[0]
     cam2 = cam2.extend(len(cam1))
     check_camera_close(cam1, cam2)
-    print(cam1.__repr__)
+
+
+def check_camera_concat(cam):
+    cam0 = cam[0]
+    cam1 = cam[1]
+    cam2 = cam0.concat(cam1)
+    check_camera_close(cam[:2], cam2)
 
 
 def test_cameras_parameter():
@@ -91,6 +97,8 @@ def test_cameras():
 
             check_camera_close(cam1, cam2)
             check_camera_slice(cam1)
+            if len(cam1) > 1:
+                check_camera_concat(cam1)
 
             cam3 = build_cameras(
                 dict(

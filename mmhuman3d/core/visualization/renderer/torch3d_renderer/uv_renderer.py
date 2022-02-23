@@ -63,14 +63,6 @@ class UVRenderer(nn.Module):
 
             self.NUM_VT = self.verts_uv.shape[0]
 
-            if resolution == (256, 256):
-                self.bary_coords = torch.Tensor(param_dict['bary_coords']).to(
-                    self.device)
-                self.pix_to_face = torch.LongTensor(
-                    param_dict['pix_to_face']).to(self.device)
-            else:
-                self.update_fragments()
-                self.update_face_uv_pixel()
             self.faces_tensor = torch.LongTensor(param_dict['faces'].astype(
                 np.int64)).to(self.device)
             self.num_faces = self.faces_uv.shape[0]
@@ -84,8 +76,8 @@ class UVRenderer(nn.Module):
             self.NUM_VT = self.verts_uv.shape[0]
             self.faces_tensor = mesh_template.faces_padded()[0].to(self.device)
             self.num_faces = self.faces_uv.shape[0]
-            self.update_fragments()
-            self.update_face_uv_pixel()
+        self.update_fragments()
+        self.update_face_uv_pixel()
 
         self = self.to(self.device)
 
@@ -445,8 +437,9 @@ class UVRenderer(nn.Module):
             displacement = self.vertex_resample(displacement_map)
         elif displacement_map is not None and displacement is not None:
             displacement_map = None
-        elif displacement_map is None and displacement is None:
             warnings.warn('Redundant input, will only take displacement.')
+        elif displacement_map is None and displacement is None:
+            raise ValueError('No valid input.')
         batch_size = len(meshes)
         if displacement.ndim == 2:
             displacement = displacement[None]

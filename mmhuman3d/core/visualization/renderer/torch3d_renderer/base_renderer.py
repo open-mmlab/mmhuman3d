@@ -210,12 +210,13 @@ class BaseRenderer(nn.Module):
 
     def _set_output_path(self, output_path):
         if output_path is not None:
+            self.output_path = output_path
             if check_path_suffix(output_path, ['.mp4', '.gif']):
                 self.temp_path = osp.join(
                     Path(output_path).parent,
                     Path(output_path).name + '_output_temp')
                 mmcv.mkdir_or_exist(self.temp_path)
-                print('make dir', self.temp_path)
+                print('Make dir', self.temp_path)
             else:
                 self.temp_path = output_path
 
@@ -369,7 +370,7 @@ class BaseRenderer(nn.Module):
         return meshes
 
     def forward(self):
-        """"Should be call by each sub renderer class."""
+        """"Should be called by each sub renderer class."""
         raise NotImplementedError()
 
     def tensor2rgba(self, tensor: torch.Tensor):

@@ -49,6 +49,7 @@ def test_visualize_smpl_pose():
             resolution=(128, 128),
             render_choice='hq',
             overwrite=True,
+            return_tensor=True,
             device=device_name)
     # wrong input tensor shape for smpl dict
     with pytest.raises(RuntimeError):
@@ -64,6 +65,8 @@ def test_visualize_smpl_pose():
             resolution=(128, 128),
             render_choice='hq',
             overwrite=True,
+            plot_kps=True,
+            vis_kp_index=True,
             device=device_name)
     # wrong input tensor shape for smplx dict
     with pytest.raises(RuntimeError):
