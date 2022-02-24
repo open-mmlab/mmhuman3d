@@ -546,6 +546,7 @@ def test_visualize_smpl_pose():
         model_type='smplx',
         body_model_config=body_model_config,
         bbox=bbox,
+        end=2,
         cam_transl=cam_transl,
         origin_frames='/tmp/1.mp4',
         read_frames_batch=True,

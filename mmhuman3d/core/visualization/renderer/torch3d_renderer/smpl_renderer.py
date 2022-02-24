@@ -202,6 +202,7 @@ class SMPLRenderer(BaseRenderer):
         num_frames, num_person, _, _ = vertices.shape
         faces = self.raw_faces[None].repeat(num_frames, 1, 1)
         if self.frames_folder is not None and images is None:
+
             images = images_to_array(
                 self.frames_folder,
                 resolution=self.resolution,
@@ -210,6 +211,12 @@ class SMPLRenderer(BaseRenderer):
                 end=indexes[-1],
                 disable_log=True).astype(np.float64)
             images = torch.Tensor(images).to(self.device)
+            if images.shape[0] < num_frames:
+                images = torch.cat([
+                    images,
+                    torch.ones_like(images[:1]).repeat(
+                        num_frames - images.shape[0], 1, 1, 1)
+                ], 0)
 
         if images is not None:
             images = images.to(self.device)

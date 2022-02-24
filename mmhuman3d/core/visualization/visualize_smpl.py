@@ -106,7 +106,11 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
                             Path(output_path).name + '_input_temp')
                         os.makedirs(frames_folder, exist_ok=True)
                         video_to_images(
-                            origin_frames, frames_folder, start=start, end=end)
+                            origin_frames,
+                            frames_folder,
+                            img_format=img_format,
+                            start=start,
+                            end=end)
                         remove_folder = True
                     else:
                         remove_folder = False

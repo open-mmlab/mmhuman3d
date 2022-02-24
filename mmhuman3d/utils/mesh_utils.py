@@ -147,6 +147,7 @@ def save_meshes_as_plys(meshes: Meshes = None,
     else:
         if verts is not None or faces is not None or verts_rgb is not None:
             warnings.warn('Redundant input, will use meshes only.')
+    assert files is not None
     if not isinstance(files, list):
         files = [files]
     assert len(files) >= len(meshes), 'Not enough output files.'

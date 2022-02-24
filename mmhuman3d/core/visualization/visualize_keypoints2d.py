@@ -588,7 +588,9 @@ def visualize_kp2d(
                     np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
         if output_path is not None:
             # write the frame with opencv
-            if frame_list is not None and check_path_suffix(output_path, ['']):
+            if frame_list is not None and check_path_suffix(
+                    output_path,
+                    '') and len(frame_list) >= len(canvas_producer):
                 frame_path = os.path.join(output_temp_folder,
                                           Path(frame_list[frame_index]).name)
                 img_format = None
