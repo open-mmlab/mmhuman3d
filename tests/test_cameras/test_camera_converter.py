@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 import torch
 
+from mmhuman3d.core.cameras.cameras import FoVPerspectiveCameras
 from mmhuman3d.core.conventions.cameras import (
     CAMERA_CONVENTIONS,
     convert_cameras,
@@ -241,7 +242,16 @@ def test_camera_utils():
     T = torch.zeros(1, 3)
     resolution = (1080, 1920)
     transl = torch.zeros(10, 3)
-    poses, orig_cam = convert_smpl_from_opencv_calibration(
+    _, _ = convert_smpl_from_opencv_calibration(
+        R=R,
+        T=T,
+        transl=transl,
+        poses=poses,
+        resolution=resolution,
+        model_path=model_path)
+
+    _, _ = convert_smpl_from_opencv_calibration(
+        K=FoVPerspectiveCameras.get_default_projection_matrix(),
         R=R,
         T=T,
         transl=transl,

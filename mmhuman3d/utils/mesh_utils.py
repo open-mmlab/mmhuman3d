@@ -2,7 +2,9 @@ import warnings
 from typing import List, Optional, Union
 
 import torch
-from pytorch3d.io import IO, save_obj
+from pytorch3d.io import IO
+from pytorch3d.io import load_objs_as_meshes as _load_objs_as_meshes
+from pytorch3d.io import save_obj
 from pytorch3d.renderer import TexturesUV, TexturesVertex
 from pytorch3d.structures import (
     Meshes,
@@ -19,13 +21,13 @@ def join_batch_meshes_as_scene(
     meshes: List[Meshes],
     include_textures: bool = True,
 ) -> Meshes:
-    """Join meshes as a scene each batch. Only for pytorch3d meshes. The Meshes
-    must share the same batch size, and arbitrary topology. They must all be on
-    the same device. If include_textures is true, they must all be compatible,
-    either all or none having textures, and all the Textures objects being the
-    same type. If include_textures is False, textures are ignored. If not,
-    ValueError would be raised in join_meshes_as_batch and
-    join_meshes_as_scene.
+    """Join `meshes` as a scene each batch. Only for Pytorch3D `meshes`. The
+    Meshes must share the same batch size, and arbitrary topology. They must
+    all be on the same device. If `include_textures` is true, they must all be
+    compatible, either all or none having textures, and all the Textures
+    objects being the same type. If `include_textures` is False, textures are
+    ignored. If not, `ValueError` would be raised in `join_meshes_as_batch` and
+    `join_meshes_as_scene`.
 
     Args:
         meshes (List[Meshes]): A `list` of `Meshes` with the same batches.
@@ -60,7 +62,7 @@ def mesh_to_pointcloud_vc(
     include_textures: bool = True,
     alpha: float = 1.0,
 ) -> Pointclouds:
-    """Convert pytorch3d `Meshes` to `PointClouds`.
+    """Convert PyTorch3D vertex color `Meshes` to `PointClouds`.
 
     Args:
         meshes (Meshes): input meshes.
@@ -88,26 +90,39 @@ def mesh_to_pointcloud_vc(
     return pointclouds
 
 
+def load_objs_as_meshes(files: List[str],
+                        device: Optional[Union[torch.device, str]] = None,
+                        load_textures: bool = True,
+                        **kwargs) -> Meshes:
+    if not isinstance(files, list):
+        files = [files]
+    return _load_objs_as_meshes(
+        files=files, device=device, load_textures=load_textures, **kwargs)
+
+
 def load_plys_as_meshes(
     files: List[str],
     device: Optional[Union[torch.device, str]] = None,
-    include_textures: bool = True,
-):
+    load_textures: bool = True,
+) -> Meshes:
     writer = IO()
+    meshes = []
     if not isinstance(files, list):
         files = [files]
     for idx in range(len(files)):
         assert files[idx].endswith('.ply'), 'Please input .ply files.'
         mesh = writer.load_mesh(
-            path=files[idx], include_textures=include_textures, device=device)
-    return mesh
+            path=files[idx], include_textures=load_textures, device=device)
+        meshes.append(mesh)
+    meshes = join_meshes_as_batch(meshes, include_textures=load_textures)
+    return meshes
 
 
 def save_meshes_as_plys(meshes: Meshes = None,
                         verts: torch.Tensor = None,
                         faces: torch.Tensor = None,
                         verts_rgb: torch.Tensor = None,
-                        files: List[str] = []) -> None:
+                        files: List[str] = None) -> None:
     """Save meshes as .ply files. Mainly for vertex color meshes.
 
     Args:
@@ -120,7 +135,7 @@ def save_meshes_as_plys(meshes: Meshes = None,
         verts_rgb (torch.Tensor, optional): lower priority than meshes.
             Defaults to None.
         files (List[str], optional): Output .ply file list.
-            Defaults to [].
+            Defaults to None.
     """
     if meshes is None:
         assert verts is not None and faces is not None, 'Not mesh input.'
@@ -142,14 +157,15 @@ def save_meshes_as_plys(meshes: Meshes = None,
             meshes[idx], files[idx], colors_as_uint8=True, binary=False)
 
 
-def save_meshes_as_objs(meshes: Meshes = None, files: List[str] = []) -> None:
+def save_meshes_as_objs(meshes: Meshes = None,
+                        files: List[str] = None) -> None:
     """Save meshes as .obj files. Mainly for uv texture meshes.
 
     Args:
         meshes (Meshes, optional):
             Defaults to None.
         files (List[str], optional): Output .obj file list.
-            Defaults to [].
+            Defaults to None.
     """
     if not isinstance(files, list):
         files = [files]

@@ -65,7 +65,6 @@ def test_visualize_smpl_pose():
             resolution=(128, 128),
             render_choice='hq',
             overwrite=True,
-            plot_kps=True,
             vis_kp_index=True,
             device=device_name)
     # wrong input tensor shape for smplx dict
@@ -177,6 +176,7 @@ def test_visualize_smpl_pose():
         output_path='/tmp/1.mp4',
         resolution=(48, 48),
         overwrite=True,
+        plot_kps=True,
         device=device_name)
     assert video_to_array('/tmp/1.mp4').shape == (1, 48, 48, 3)
 
@@ -548,6 +548,7 @@ def test_visualize_smpl_pose():
         bbox=bbox,
         cam_transl=cam_transl,
         origin_frames='/tmp/1.mp4',
+        read_frames_batch=True,
         output_path='/tmp/2.mp4',
         resolution=(48, 48),
         overwrite=True,
@@ -583,7 +584,7 @@ def test_visualize_smpl_pose():
         cam_transl=cam_transl,
         output_path='/tmp/1.mp4',
         img_format='%06d.png',
-        origin_frames='/tmp/temp_images',
+        image_array=image_array,
         resolution=(48, 48),
         overwrite=True,
         device=device_name)

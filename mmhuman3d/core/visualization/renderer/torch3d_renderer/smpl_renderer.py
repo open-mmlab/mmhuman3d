@@ -261,6 +261,7 @@ class SMPLRenderer(BaseRenderer):
                 output_images = bgrs
 
             if self.plot_kps:
+
                 joints = joints.to(self.device)
                 joints_2d = cameras.transform_points_screen(
                     joints, image_size=self.resolution)[..., :2]

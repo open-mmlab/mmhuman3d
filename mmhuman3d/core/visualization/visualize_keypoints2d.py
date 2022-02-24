@@ -315,15 +315,17 @@ class _CavasProducer:
                     int(np.max(kp2d) * default_scale),
                     int(np.max(kp2d) * default_scale)
                 ]
+        self.len = kp2d.shape[0]
+
         if self.image_array is None:
-            self.len = len(self.frame_list)
+            self.len_frame = len(self.frame_list)
         else:
-            self.len = self.image_array.shape[0]
+            self.len_frame = self.image_array.shape[0]
 
     def __getitem__(self, frame_index):
         """Get frame data from frame_list of image_array."""
         # frame file exists, resolution not set
-        if frame_index < self.len and self.resolution is None:
+        if frame_index < self.len_frame and self.resolution is None:
             if self.image_array is not None:
                 canvas = self.image_array[frame_index]
             else:
@@ -333,7 +335,7 @@ class _CavasProducer:
             else:
                 kp2d_frame = self.kp2d[frame_index]
         # no frame file, resolution has been set
-        elif frame_index >= self.len and self.resolution is not None:
+        elif frame_index >= self.len_frame and self.resolution is not None:
             canvas = np.ones((self.resolution[0], self.resolution[1], 3),
                              dtype=np.uint8) * 255
             if self.kp2d is None:
@@ -341,7 +343,7 @@ class _CavasProducer:
             else:
                 kp2d_frame = self.kp2d[frame_index]
         # frame file exists, resolution has been set
-        elif frame_index < self.len and self.resolution is not None:
+        elif frame_index < self.len_frame - 1 and self.resolution is not None:
             if self.image_array is not None:
                 canvas = self.image_array[frame_index]
             else:
@@ -523,8 +525,8 @@ def visualize_kp2d(
         frame_list, input_temp_folder = update_frame_list(
             frame_list, origin_frames, img_format, start, end)
 
-    if frame_list is not None:
-        num_frames = min(len(frame_list), num_frames)
+    # if frame_list is not None:
+    #     num_frames = min(len(frame_list), num_frames)
     kp2d = kp2d[:num_frames]
     # check output path
     if output_path is not None:

@@ -80,7 +80,7 @@ class PointCloudRenderer(BaseRenderer):
         self.compositor = self.compositor.to(device)
         return self
 
-    def _init_renderer(self, rasterizer, compositor, **kwargs):
+    def _init_renderer(self, rasterizer=None, compositor=None, **kwargs):
         """Set render params."""
 
         if isinstance(rasterizer, nn.Module):
@@ -92,6 +92,12 @@ class PointCloudRenderer(BaseRenderer):
                 rasterizer.update(radius=self.radius)
             raster_settings = PointsRasterizationSettings(**rasterizer)
             self.rasterizer = PointsRasterizer(raster_settings=raster_settings)
+        elif rasterizer is None:
+            self.rasterizer = PointsRasterizer(
+                raster_settings=PointsRasterizationSettings(
+                    radius=self.radius,
+                    image_size=self.resolution,
+                    points_per_pixel=10))
         else:
             raise TypeError(
                 f'Wrong type of rasterizer: {type(self.rasterizer)}.')
@@ -100,6 +106,8 @@ class PointCloudRenderer(BaseRenderer):
             self.compositor = AlphaCompositor(**compositor)
         elif isinstance(compositor, nn.Module):
             self.compositor = compositor
+        elif compositor is None:
+            self.compositor = AlphaCompositor()
         else:
             raise TypeError(
                 f'Wrong type of compositor: {type(self.compositor)}.')
