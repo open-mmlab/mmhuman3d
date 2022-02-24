@@ -89,17 +89,17 @@ def mesh_to_pointcloud_vc(
 
 
 def load_plys_as_meshes(
-    paths: List[str],
+    files: List[str],
     device: Optional[Union[torch.device, str]] = None,
     include_textures: bool = True,
 ):
     writer = IO()
-    if not isinstance(paths, list):
-        paths = [paths]
-    for idx in range(len(paths)):
-        assert paths[idx].endswith('.ply'), 'Please input .ply files.'
+    if not isinstance(files, list):
+        files = [files]
+    for idx in range(len(files)):
+        assert files[idx].endswith('.ply'), 'Please input .ply files.'
         mesh = writer.load_mesh(
-            path=paths[idx], include_textures=include_textures, device=device)
+            path=files[idx], include_textures=include_textures, device=device)
     return mesh
 
 
@@ -107,7 +107,7 @@ def save_meshes_as_plys(meshes: Meshes = None,
                         verts: torch.Tensor = None,
                         faces: torch.Tensor = None,
                         verts_rgb: torch.Tensor = None,
-                        paths: List[str] = []) -> None:
+                        files: List[str] = []) -> None:
     """Save meshes as .ply files. Mainly for vertex color meshes.
 
     Args:
@@ -119,7 +119,7 @@ def save_meshes_as_plys(meshes: Meshes = None,
             Defaults to None.
         verts_rgb (torch.Tensor, optional): lower priority than meshes.
             Defaults to None.
-        paths (List[str], optional): Output .ply file list.
+        files (List[str], optional): Output .ply file list.
             Defaults to [].
     """
     if meshes is None:
@@ -132,33 +132,33 @@ def save_meshes_as_plys(meshes: Meshes = None,
     else:
         if verts is not None or faces is not None or verts_rgb is not None:
             warnings.warn('Redundant input, will use meshes only.')
-    if not isinstance(paths, list):
-        paths = [paths]
-    assert len(paths) >= len(meshes), 'Not enough output paths.'
+    if not isinstance(files, list):
+        files = [files]
+    assert len(files) >= len(meshes), 'Not enough output files.'
     writer = IO()
     for idx in range(len(meshes)):
-        assert paths[idx].endswith('.ply'), 'Please save as .ply files.'
+        assert files[idx].endswith('.ply'), 'Please save as .ply files.'
         writer.save_mesh(
-            meshes[idx], paths[idx], colors_as_uint8=True, binary=False)
+            meshes[idx], files[idx], colors_as_uint8=True, binary=False)
 
 
-def save_meshes_as_objs(meshes: Meshes = None, paths: List[str] = []) -> None:
+def save_meshes_as_objs(meshes: Meshes = None, files: List[str] = []) -> None:
     """Save meshes as .obj files. Mainly for uv texture meshes.
 
     Args:
         meshes (Meshes, optional):
             Defaults to None.
-        paths (List[str], optional): Output .obj file list.
+        files (List[str], optional): Output .obj file list.
             Defaults to [].
     """
-    if not isinstance(paths, list):
-        paths = [paths]
+    if not isinstance(files, list):
+        files = [files]
 
-    assert len(paths) >= len(meshes), 'Not enough output paths.'
+    assert len(files) >= len(meshes), 'Not enough output files.'
 
     for idx in range(len(meshes)):
         prepare_output_path(
-            paths[idx], allowed_suffix=['.obj'],
+            files[idx], allowed_suffix=['.obj'],
             path_type='file'), 'Please save as .obj files.'
         if isinstance(meshes.textures, TexturesUV):
             verts_uvs = meshes.textures.verts_uvs_padded()[idx]
@@ -169,7 +169,7 @@ def save_meshes_as_objs(meshes: Meshes = None, paths: List[str] = []) -> None:
             faces_uvs = None
             texture_map = None
         save_obj(
-            f=paths[idx],
+            f=files[idx],
             verts=meshes.verts_padded()[idx],
             faces=meshes.faces_padded()[idx],
             verts_uvs=verts_uvs,

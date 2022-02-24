@@ -834,7 +834,7 @@ def render_smpl(
                 verts=vertices[frame_idx],
                 faces=faces[None].repeat(num_person, 1, 1),
                 verts_rgb=colors,
-                paths=ply_paths)
+                files=ply_paths)
 
     # prepare camera matrixs
     if Ks is not None:

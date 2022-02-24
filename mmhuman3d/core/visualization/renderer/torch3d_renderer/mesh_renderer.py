@@ -108,7 +108,10 @@ class MeshRenderer(BaseRenderer):
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         rendered_images = self.shader(
-            fragments=fragments, meshes=meshes, cameras=cameras, lights=lights)
+            fragments=fragments,
+            meshes=meshes,
+            cameras=cameras,
+            lights=self.lights if lights is None else lights)
 
         if self.output_path is not None:
             rgba = self.tensor2rgba(rendered_images)

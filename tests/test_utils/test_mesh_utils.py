@@ -28,7 +28,7 @@ def test_save_meshes():
         Torus,
         verts=Torus.verts_padded(),
         faces=Torus.faces_packed(),
-        paths='1.ply')
+        files='1.ply')
 
 
 def test_mesh2pointcloud():
