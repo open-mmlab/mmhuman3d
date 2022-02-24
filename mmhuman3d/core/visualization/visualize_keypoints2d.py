@@ -343,7 +343,7 @@ class _CavasProducer:
             else:
                 kp2d_frame = self.kp2d[frame_index]
         # frame file exists, resolution has been set
-        elif frame_index < self.len_frame - 1 and self.resolution is not None:
+        elif frame_index < self.len_frame and self.resolution is not None:
             if self.image_array is not None:
                 canvas = self.image_array[frame_index]
             else:
