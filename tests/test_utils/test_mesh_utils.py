@@ -9,7 +9,7 @@ from mmhuman3d.utils.mesh_utils import (
 
 def test_save_meshes():
     Torus = torus(r=10, R=20, sides=100, rings=100)
-    # wrong paths
+    # wrong files
     with pytest.raises(AssertionError):
         save_meshes_as_plys(meshes=Torus)
 
@@ -19,11 +19,11 @@ def test_save_meshes():
 
     # File suffix wrong
     with pytest.raises(AssertionError):
-        save_meshes_as_plys(Torus, paths=['1.obj'])
+        save_meshes_as_plys(Torus, files=['1.obj'])
 
-    save_meshes_as_plys(Torus, paths=['1.ply'])
+    save_meshes_as_plys(Torus, files=['1.ply'])
     save_meshes_as_plys(
-        verts=Torus.verts_padded(), faces=Torus.faces_padded(), paths='1.ply')
+        verts=Torus.verts_padded(), faces=Torus.faces_padded(), files='1.ply')
     save_meshes_as_plys(
         Torus,
         verts=Torus.verts_padded(),
