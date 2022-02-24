@@ -149,9 +149,10 @@ def convert_smpl_from_opencv_calibration(
 
         orig_cam = convert_perspective_to_weakperspective(
             K=K, zmean=zmean, in_ndc=True, resolution=resolution)
+
         if poses is not None:
-            orig_cam[:, 2] += transl[:, 0]
-            orig_cam[:, 3] += transl[:, 1]
+            orig_cam[:, 0, 3] += transl[:, 0]
+            orig_cam[:, 1, 3] += transl[:, 1]
     if poses is not None:
         return rotated_pose, orig_cam
     else:
