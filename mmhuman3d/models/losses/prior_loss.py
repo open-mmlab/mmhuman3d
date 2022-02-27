@@ -1,3 +1,4 @@
+import itertools
 import os
 import pickle
 import sys
@@ -76,17 +77,24 @@ class LimbLengthLoss(nn.Module):
         loss_weight (float, optional): The weight of the loss. Defaults to 1.0
     """
 
-    def __init__(self, reduction='mean', loss_weight=1.0):
+    def __init__(self,
+                 limb_convention,
+                 reduction='mean',
+                 loss_weight=1.0,
+                 eps=1e-4):
         super().__init__()
         assert reduction in (None, 'none', 'mean', 'sum')
         self.reduction = reduction
         self.loss_weight = loss_weight
+        self.eps = eps
         self.limb_conf = None
         self.limb_length = None
-        self.eps = 1e-4
-        # limb_idxs, _ = search_limbs(data_source='smpl_45')
-        limb_idxs, _ = search_limbs(data_source='smpl')
-        self.limb_idxs = np.array(limb_idxs['body'])
+        limb_idxs, _ = search_limbs(data_source=limb_convention)
+        limb_idxs = sorted(limb_idxs['body'])
+        self.limb_idxs = np.array(
+            list(x for x, _ in itertools.groupby(limb_idxs)))
+        # print('limbs.shape', self.limb_idxs.shape)
+        # print('limbs.val', self.limb_idxs)
 
     def _get_limb_vec(self, keypoints3d):
         kp_src = keypoints3d[:, self.limb_idxs[:, 0], :3]
@@ -120,29 +128,50 @@ class LimbLengthLoss(nn.Module):
             torch.Tensor: The calculated loss
         """
         assert reduction_override in (None, 'none', 'mean', 'sum')
-        # reduction = (
-        #     reduction_override if reduction_override else self.reduction)
+        reduction = (
+            reduction_override if reduction_override else self.reduction)
         loss_weight = (
             loss_weight_override
             if loss_weight_override is not None else self.loss_weight)
 
+        # shape_prior_loss = loss_weight * betas**2
+
+        # TODO: use reduction
+        if reduction == 'mean':
+            pass
+        # if reduction == 'mean':
+        #     shape_prior_loss = shape_prior_loss.mean()
+        # elif reduction == 'sum':
+        #     shape_prior_loss = shape_prior_loss.sum()
+
+        print('k3d_pred', keypoints3d_pred.shape)
+        print('k3d_pred conf', keypoints3d_pred_conf.shape)
+        print('k3d_target', keypoints3d_target.shape)
+        print('k3d_target_conf', keypoints3d_target_conf.shape)
+        # print(limbs)
+        # print(limbs.shape)
+
         if self.limb_conf is None:
+            # calculate bone length
             _, _, self.limb_length = self._compute_normed_limb(
                 keypoints3d_target)
-            print('limb_length 1', self.limb_length.shape)
+            print('limb_length shape', self.limb_length.shape)
+            print('limb_length val', self.limb_length[0])
             self.limb_conf = torch.min(
                 keypoints3d_target_conf[:, self.limb_idxs[:, 1]],
                 keypoints3d_target_conf[:,
                                         self.limb_idxs[:,
                                                        0]]).unsqueeze(dim=-1)
-            print('limb_conf', self.limb_conf.shape)
+            print('pred_conf', keypoints3d_pred_conf[0])
+            print('target_conf', keypoints3d_target_conf[0])
+            print('limb_conf shape', self.limb_conf.shape)
+            print('limb_conf val', self.limb_conf[0])
 
         pred_limb_vec, pred_limb_vec_normed, _ = self._compute_normed_limb(
             keypoints3d_pred)
         # TODO: use keypoints3d_pred_conf
 
         loss = pred_limb_vec - pred_limb_vec_normed * self.limb_length
-        print(loss.shape)
         loss = loss_weight * torch.sum(
             loss**2 * self.limb_conf) / keypoints3d_pred.shape[0]
 
