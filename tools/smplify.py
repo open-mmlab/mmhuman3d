@@ -7,6 +7,8 @@ import numpy as np
 import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.core.evaluation import keypoint_mpjpe
+from mmhuman3d.core.visualization.visualize_keypoints3d import visualize_kp3d
 from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_pose
 from mmhuman3d.data.data_structures import HumanData
 from mmhuman3d.models.builder import build_registrant
@@ -38,7 +40,7 @@ def parse_args():
     parser.add_argument('--body_model_dir', help='body models file path')
     parser.add_argument('--batch_size', type=int, default=None)
     parser.add_argument('--num_betas', type=int, default=10)
-    parser.add_argument('--num_epochs', type=int, default=20)
+    parser.add_argument('--num_epochs', type=int, default=1)
     parser.add_argument(
         '--use_one_betas_per_video',
         action='store_true',
@@ -77,11 +79,9 @@ def main():
 
     device = torch.device(args.device)
 
-    # keypoints_src = pickle.load(f, encoding='latin1')
-    # data = np.load(args.input, allow_pickle=True)
-    data = HumanData.fromfile(args.input)
-    keypoints_src = data[args.input_type]
-    keypoints_src_mask = data[args.input_type + '_mask']
+    human_data = HumanData.fromfile(args.input)
+    keypoints_src = human_data[args.input_type]
+    keypoints_src_mask = human_data[args.input_type + '_mask']
     if args.input_type == 'keypoints2d':
         assert keypoints_src.shape[-1] in {2, 3}
     elif args.input_type == 'keypoints3d':
@@ -89,14 +89,55 @@ def main():
         keypoints_src = keypoints_src[..., :3]
     else:
         raise KeyError('Only support keypoints2d and keypoints3d')
-    # with open(args.input, 'rb') as f:
-    #     keypoints_src = pickle.load(f, encoding='latin1')
-    #     if args.input_type == 'keypoints2d':
-    #         assert keypoints_src.shape[-1] == 2
-    #     elif args.input_type == 'keypoints3d':
-    #         assert keypoints_src.shape[-1] == 3
-    #     else:
-    #         raise KeyError('Only support keypoints2d and keypoints3d')
+
+    debug = False
+    if debug:
+        keypoints, mask = convert_kps(
+            keypoints_src,
+            mask=keypoints_src_mask,
+            src=args.keypoint_type,
+            dst='smpl')
+        visualize_kp3d(
+            keypoints,
+            output_path='smpl_24.mp4',
+            mask=mask,
+            data_source='smpl',
+            start=0,
+            end=1)
+        keypoints, mask = convert_kps(
+            keypoints,
+            mask=mask,
+            src='smpl',
+            dst='openpose_25',
+            approximate=True)
+        print(keypoints.shape)
+        print(mask)
+        openpose_13_limbs = np.array(
+            [
+                # [ 2,  1],
+                [3, 2],
+                [4, 3],
+                # [ 5,  1],
+                [6, 5],
+                [7, 6],
+                # [ 8,  1],
+                # [ 9,  8],
+                [10, 9],
+                [11, 10],
+                # [12,  8],
+                [13, 12],
+                [14, 13],
+            ],
+            dtype=np.int32)
+        visualize_kp3d(
+            keypoints,
+            output_path='openpose_13.mp4',
+            mask=mask,
+            limbs=openpose_13_limbs,
+            data_source='openpose_25',
+            start=0,
+            end=1)
+        exit()
 
     keypoints, mask = convert_kps(
         keypoints_src,
@@ -108,6 +149,7 @@ def main():
     batch_size = args.batch_size if args.batch_size else keypoints.shape[0]
 
     print('keypoints.shape', keypoints.shape)
+    print('mask', mask)
     keypoints = torch.tensor(keypoints, dtype=torch.float32, device=device)
     keypoints_conf = torch.tensor(
         keypoints_conf, dtype=torch.float32, device=device)
@@ -119,7 +161,7 @@ def main():
 
     # create body model
     body_model_config = dict(
-        type=smplify_config.body_model.type,
+        type=smplify_config.body_model.type.lower(),
         gender=args.gender,
         num_betas=args.num_betas,
         model_path=args.body_model_dir,
@@ -146,9 +188,15 @@ def main():
 
     # run SMPLify(X)
     t0 = time.time()
-    smplify_output = smplify(**human_data)
+    smplify_output = smplify(**human_data, return_joints=True)
     t1 = time.time()
     print(f'{t1 - t0} s')
+
+    # test MPJPE
+    pred = smplify_output['joints'].cpu().numpy()
+    gt = keypoints.cpu().numpy()
+    mpjpe = keypoint_mpjpe(pred=pred, gt=gt, mask=mask)
+    print(f'SMPLify MPJPE: {mpjpe:.2f}')
 
     # get smpl parameters directly from smplify output
     poses = {k: v.detach().cpu() for k, v in smplify_output.items()}
@@ -158,16 +206,16 @@ def main():
     if args.output is not None:
         print(f'Dump results to {args.output}')
         smplify_results.dump(args.output, overwrite=args.overwrite)
-        # np.savez_compressed(args.output, **poses)
 
     if args.show_path is not None:
         # visualize mesh
         body_model_dir = os.path.dirname(args.body_model_dir.rstrip('/'))
-        body_model_config = dict(model_path=body_model_dir, model_type='smpl')
+        body_model_config.update(
+            model_path=body_model_dir,
+            model_type=smplify_config.body_model.type.lower())
         print(body_model_config)
         visualize_smpl_pose(
             poses=poses,
-            # model_path=args.body_model_dir,
             body_model_config=body_model_config,
             output_path=args.show_path,
             model_type=smplify_config.body_model.type.lower(),
