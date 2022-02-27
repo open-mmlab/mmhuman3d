@@ -186,10 +186,19 @@ class PoseRegLoss(nn.Module):
             if loss_weight_override is not None else self.loss_weight)
 
         'regulizer for body poses'
-        # if self.cfg.model in ['smplh', 'smplx']:
-        #     poses = poses[:, :66]
         loss = loss_weight * self._func_l2(body_pose)
         loss /= body_pose.shape[0]
+
+        # tmp smooth body pose
+        debug = True
+        if debug:
+            nframe = body_pose.shape[0]
+            poses_interp = body_pose.clone().detach()
+            poses_interp[1:-1] = (poses_interp[1:-1] + poses_interp[:-2] +
+                                  poses_interp[2:]) / 3
+            accel_loss = self._func_l2(body_pose[1:-1] - poses_interp[1:-1])
+            loss += 1.0 * accel_loss / (nframe - 2)
+
         return loss
 
     def __str__(self) -> str:
