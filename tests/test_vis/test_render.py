@@ -16,6 +16,7 @@ def test_render_runner():
 
     device = torch.device(device_name)
     meshes = ico_sphere(3, device)
+
     meshes.textures = TexturesVertex(
         verts_features=torch.ones_like(meshes.verts_padded()).to(device))
     K, R, T = compute_orbit_cameras(orbit_speed=1.0, batch_size=2)
