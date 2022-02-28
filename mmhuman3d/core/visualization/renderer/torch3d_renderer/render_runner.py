@@ -27,20 +27,19 @@ def render(output_path: Optional[str] = None,
            return_tensor=False,
            no_grad: bool = False):
 
-    renderer = renderer.to(device)
+    if device is not None:
+        renderer = renderer.to(device)
 
     cameras = cameras.to(device)
     lights = AmbientLights() if lights is None else lights
     lights = lights.to(device)
     if output_path is not None:
         renderer._set_output_path(output_path)
-    if device is not None:
-        renderer.device = device
 
     num_frames = len(meshes)
     if len(cameras) == 1:
         cameras = cameras.extend(num_frames)
-
+    batch_size = min(batch_size, num_frames)
     tensors = []
     for i in trange(math.ceil(num_frames // batch_size)):
         indexes = list(
@@ -60,7 +59,9 @@ def render(output_path: Optional[str] = None,
                 indexes=indexes)
         if return_tensor:
             tensors.append(images_batch)
+
     renderer.export()
+
     if return_tensor:
         tensors = torch.cat(tensors)
         return tensors

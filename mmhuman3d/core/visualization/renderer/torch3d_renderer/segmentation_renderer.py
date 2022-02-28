@@ -32,7 +32,6 @@ class SegmentationRenderer(BaseRenderer):
                                      'fovorthographics'] = 'weakperspective',
                  in_ndc: bool = True,
                  num_class: int = 1,
-                 differentiable: bool = True,
                  **kwargs) -> None:
         """Render vertex-color mesh into a segmentation map of a (B, H, W)
         tensor. For visualization, the output rgba image will be (B, H, W, 4),
@@ -62,9 +61,6 @@ class SegmentationRenderer(BaseRenderer):
                 Defaults to True.
             num_class (int, optional): number of segmentation parts.
                 Defaults to 1.
-            differentiable (bool, optional): Some renderer need smplified
-                parameters if do not need differentiable.
-                Defaults to True.
 
         Returns:
             None
@@ -77,7 +73,6 @@ class SegmentationRenderer(BaseRenderer):
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
-            differentiable=differentiable,
             **kwargs)
         self.num_class = num_class
 

@@ -29,7 +29,6 @@ class DepthRenderer(BaseRenderer):
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
-        differentiable: bool = True,
         depth_max: Union[int, float, torch.Tensor] = None,
         **kwargs,
     ) -> None:
@@ -51,9 +50,7 @@ class DepthRenderer(BaseRenderer):
                 Defaults to True.
             projection (Literal[, optional): Projection type of the cameras.
                 Defaults to 'weakperspective'.
-            differentiable (bool, optional): Some renderer need smplified
-                parameters if do not need differentiable.
-                Defaults to True.
+
             depth_max (Union[int, float, torch.Tensor], optional):
                 The max value for normalize depth range. Defaults to None.
 
@@ -67,7 +64,6 @@ class DepthRenderer(BaseRenderer):
             out_img_format=out_img_format,
             in_ndc=in_ndc,
             projection=projection,
-            differentiable=differentiable,
             **kwargs)
         self.depth_max = depth_max
 

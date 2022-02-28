@@ -44,7 +44,6 @@ class BaseRenderer(nn.Module):
                  projection: Literal['weakperspective', 'fovperspective',
                                      'orthographics', 'perspective',
                                      'fovorthographics'] = 'weakperspective',
-                 differentiable: bool = True,
                  **kwargs) -> None:
         """BaseRenderer for differentiable rendering and visualization.
 
@@ -64,9 +63,6 @@ class BaseRenderer(nn.Module):
                 Defaults to True.
             projection (Literal[, optional): Projection type of the cameras.
                 Defaults to 'weakperspective'.
-            differentiable (bool, optional): Some renderer need smplified
-                parameters if do not need differentiable.
-                Defaults to True.
 
         **kwargs is used for render setting.
         You can set up your render kwargs like:
@@ -111,7 +107,6 @@ class BaseRenderer(nn.Module):
         self.projection = projection
         self.out_img_format = out_img_format
         self._set_output_path(output_path)
-        self.differentiable = differentiable
         self._init_renderer(**kwargs)
 
     def _init_renderer(self,
@@ -215,10 +210,10 @@ class BaseRenderer(nn.Module):
                 self.temp_path = osp.join(
                     Path(output_path).parent,
                     Path(output_path).name + '_output_temp')
-                mmcv.mkdir_or_exist(self.temp_path)
-                print('Make dir', self.temp_path)
             else:
                 self.temp_path = output_path
+            mmcv.mkdir_or_exist(self.temp_path)
+            print('Make dir', self.temp_path)
 
     def _update_resolution(self, cameras, **kwargs):
         if isinstance(cameras, MMCamerasBase):

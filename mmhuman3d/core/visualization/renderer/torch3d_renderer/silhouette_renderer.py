@@ -30,7 +30,6 @@ class SilhouetteRenderer(BaseRenderer):
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
         in_ndc: bool = True,
-        differentiable: bool = True,
         **kwargs,
     ) -> None:
         """SilhouetteRenderer for neural rendering and visualization.
@@ -52,9 +51,6 @@ class SilhouetteRenderer(BaseRenderer):
                 Defaults to 'weakperspetive'.
             in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
-            differentiable (bool, optional): Some renderer need smplified
-                parameters if do not need differentiable.
-                Defaults to True.
 
         Returns:
             None
@@ -66,7 +62,6 @@ class SilhouetteRenderer(BaseRenderer):
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
-            differentiable=differentiable,
             **kwargs)
 
     def forward(self,

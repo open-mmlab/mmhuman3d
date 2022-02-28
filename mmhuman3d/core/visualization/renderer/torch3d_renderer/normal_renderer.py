@@ -29,7 +29,6 @@ class NormalRenderer(BaseRenderer):
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
         in_ndc: bool = True,
-        differentiable: bool = True,
         **kwargs,
     ) -> None:
         """Renderer for normal map of meshes.
@@ -50,9 +49,6 @@ class NormalRenderer(BaseRenderer):
                 Defaults to 'weakperspective'.
             in_ndc (bool, optional): Whether defined in NDC.
                 Defaults to True.
-            differentiable (bool, optional): Some renderer need smplified
-                parameters if do not need differentiable.
-                Defaults to True.
 
         Returns:
             None
@@ -65,7 +61,6 @@ class NormalRenderer(BaseRenderer):
             out_img_format=out_img_format,
             projection=projection,
             in_ndc=in_ndc,
-            differentiable=differentiable,
             **kwargs)
 
     def forward(self,

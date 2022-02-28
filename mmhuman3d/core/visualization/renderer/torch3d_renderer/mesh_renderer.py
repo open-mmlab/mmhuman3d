@@ -29,7 +29,6 @@ class MeshRenderer(BaseRenderer):
         projection: Literal['weakperspective', 'fovperspective',
                             'orthographics', 'perspective',
                             'fovorthographics'] = 'weakperspective',
-        differentiable: bool = True,
         **kwargs,
     ) -> None:
         """Renderer for RGBA image of meshes.
@@ -50,9 +49,6 @@ class MeshRenderer(BaseRenderer):
                 Defaults to True.
             projection (Literal[, optional): Projection type of the cameras.
                 Defaults to 'weakperspective'.
-            differentiable (bool, optional): Some renderer need smplified
-                parameters if do not need differentiable.
-                Defaults to True.
         """
         super().__init__(
             resolution=resolution,
@@ -61,7 +57,6 @@ class MeshRenderer(BaseRenderer):
             out_img_format=out_img_format,
             in_ndc=in_ndc,
             projection=projection,
-            differentiable=differentiable,
             **kwargs)
 
     def forward(self,
@@ -107,6 +102,7 @@ class MeshRenderer(BaseRenderer):
             K=K, R=R, T=T) if cameras is None else cameras
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
+
         rendered_images = self.shader(
             fragments=fragments,
             meshes=meshes,
