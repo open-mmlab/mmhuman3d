@@ -69,6 +69,11 @@ renderer = build_renderer(dict(type='mesh', device=device, resolution=resolution
  ```python
  ```
 
+We provide `tensor2rgba` function for visualization, the returned tensor will be a colorful image for visualization.
+
+ ```python
+ ```
+
  We provide different type of renderers with different forward functions and visualization functions.
 
  ```python
@@ -79,4 +84,26 @@ renderer = build_renderer(dict(type='mesh', device=device, resolution=resolution
 
 You could pass your renderer, cameras, lights by our `render_runner` to run a series batch of render. You could also use `DataParallel` for the renderers to run multi-GPU render.
 
+
+## Explanation for the rendered results
+
+### MeshRenderer
+
+### DepthRenderer
+
+### NormalRenderer
+
+### PointCloudRenderer
+
+### SegmentationRenderer
+
+### SilhouetteRenderer
+
+
 ## UVRenderer
+
+Our `UVRenderer` is different from the above renderers. It is actually a smpl uv topology defined wrapper and sampler. It has two main functions: wrapping vertex attributes to a map, sampling vertex attributes from a map.
+
+#### warping
+
+#### sampling

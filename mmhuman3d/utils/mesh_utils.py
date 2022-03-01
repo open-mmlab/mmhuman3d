@@ -1,7 +1,9 @@
 import warnings
-from typing import List, Optional, Union
+from typing import Iterable, List, Optional, Union
 
+import numpy as np
 import torch
+import torch.nn as nn
 from pytorch3d.io import IO
 from pytorch3d.io import load_objs_as_meshes as _load_objs_as_meshes
 from pytorch3d.io import save_obj
@@ -14,7 +16,7 @@ from pytorch3d.structures import (
     padded_to_list,
 )
 
-from mmhuman3d.utils.path_utils import prepare_output_path
+from .path_utils import prepare_output_path
 
 
 def join_batch_meshes_as_scene(
@@ -192,3 +194,24 @@ def save_meshes_as_objs(meshes: Meshes = None,
             verts_uvs=verts_uvs,
             faces_uvs=faces_uvs,
             texture_map=texture_map)
+
+
+def export_smpl_mesh(vertices: torch.Tensor,
+                     body_model: Union[dict, nn.Module],
+                     color: Union[Iterable[float], torch.Tensor,
+                                  np.ndarray] = ((1, 1, 1), ),
+                     **poses):
+    if vertices is None:
+        vertices = body_model(**poses)['vertices']
+    if vertices.ndim == 2:
+        vertices = vertices[None]
+
+    device = body_model.device
+    faces = body_model.faces_tensor[None]
+    N, V, _ = vertices.shape
+    textures = TexturesVertex(
+        verts_features=torch.Tensor(color).view(1, 1, 3).repeat(N, V, 1)).to(
+            device)
+    mesh = Meshes(
+        verts=vertices, faces=faces.repeat(N, 1, 1), textures=textures)
+    return mesh

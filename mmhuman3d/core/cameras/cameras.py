@@ -1368,6 +1368,9 @@ def compute_direction_cameras(
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: computed K, R, T.
     """
 
+    def norm_vec(vec):
+        return vec / torch.sqrt((vec * vec).sum())
+
     if z_vec is None:
         assert at is not None
         at = torch.Tensor(at).view(-1, 3)
@@ -1375,20 +1378,22 @@ def compute_direction_cameras(
             assert plane is not None
             dist = torch.linspace(dist, dist + batch_size * dist_speed,
                                   batch_size)
-            norm_vec1 = torch.Tensor(plane[0]).view(-1, 3)
-            norm_vec2 = torch.Tensor(plane[1]).view(-1, 3)
+            vec1 = torch.Tensor(plane[0]).view(-1, 3)
+            norm_vec1 = norm_vec(vec1)
+            vec2 = torch.Tensor(plane[1]).view(-1, 3)
+            norm_vec2 = norm_vec(vec2)
             norm = torch.cross(norm_vec1, norm_vec2)
-            normed_norm = norm / torch.sqrt((norm * norm).sum())
+            normed_norm = norm_vec(norm)
             eye = at + normed_norm * dist
         else:
             eye = torch.Tensor(eye).view(-1, 3)
             norm = eye - at
-            normed_norm = norm / torch.sqrt((norm * norm).sum())
+            normed_norm = norm_vec(norm)
 
         z_vec = -normed_norm
     else:
         z_vec = torch.Tensor(z_vec).view(-1, 3)
-        z_vec = z_vec / torch.sqrt((z_vec * z_vec).sum())
+        z_vec = norm_vec(z_vec)
         if eye is None:
             assert at is not None
             at = torch.Tensor(at).view(-1, 3)
@@ -1402,16 +1407,18 @@ def compute_direction_cameras(
 
     z_vec = z_vec.view(-1, 3)
     y_vec = torch.Tensor(y_vec).view(-1, 3)
-    y_vec = y_vec - torch.bmm(
-        y_vec.view(-1, 1, 3), normed_norm.view(-1, 3, 1)).view(-1,
-                                                               1) * normed_norm
-    y_vec = y_vec / torch.sqrt((y_vec * y_vec).sum())
+
+    y_vec = y_vec - torch.bmm(y_vec.view(-1, 1, 3), z_vec.view(-1, 3, 1)).view(
+        -1, 1) * z_vec
+    y_vec = norm_vec(y_vec)
     x_vec = torch.cross(y_vec, z_vec)
     R = torch.cat(
         [x_vec.view(-1, 3, 1),
          y_vec.view(-1, 3, 1),
          z_vec.view(-1, 3, 1)], 1).view(-1, 3, 3)
     T = eye
+
+    R = R.permute(0, 2, 1)
     _, T = convert_world_view(R=R, T=T)
 
     if K is None:

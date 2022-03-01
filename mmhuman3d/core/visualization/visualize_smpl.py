@@ -164,19 +164,18 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
     return image_array, remove_folder, frames_folder
 
 
-def _prepare_body_model(model_type, body_model, body_model_config):
+def _prepare_body_model(body_model, body_model_config):
     """Prepare `body_model` from `body_model_config` or existing
     `body_model`."""
-    if model_type not in ['smpl', 'smplx']:
-        raise ValueError(
-            f'Do not support {model_type}, please choose in `smpl` or `smplx.')
     if body_model is None:
         if body_model_config is not None:
             body_model_config = copy.deepcopy(body_model_config)
             model_path = body_model_config.get('model_path', None)
 
-            model_type = body_model_config.get('type', model_type)
-            body_model_config.update(type=model_type.lower())
+            model_type = body_model_config.get('type').lower()
+            if model_type not in ['smpl', 'smplx']:
+                raise ValueError(f'Do not support {model_type}, please choose'
+                                 f' in `smpl` or `smplx.')
 
             if model_path and osp.isdir(model_path):
                 model_path = osp.join(model_path, model_type)
@@ -432,7 +431,6 @@ def render_smpl(
     betas: Optional[Union[torch.Tensor, np.ndarray]] = None,
     transl: Optional[Union[torch.Tensor, np.ndarray]] = None,
     verts: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    model_type: Literal['smpl', 'smplx'] = 'smpl',
     body_model: Optional[nn.Module] = None,
     body_model_config: Optional[dict] = None,
     # camera parameters
@@ -525,14 +523,9 @@ def render_smpl(
             Higher priority over `poses` & `betas` & `transl`.
 
             Defaults to None.
-        model_type (Literal[, optional): choose in 'smpl' or 'smplx'.
-
-            Defaults to 'smpl'.
-
-            Defaults to None.
         body_model (nn.Module, optional): body_model created from smplx.create.
             Higher priority than `body_model_config`. If `body_model` is not
-            None, it will override `body_model_config` and `model_type`.
+            None, it will override `body_model_config`.
             Should not both be None.
 
             Defaults to None.
@@ -735,7 +728,7 @@ def render_smpl(
     verts, poses, betas, transl = _prepare_input_pose(verts, poses, betas,
                                                       transl)
 
-    body_model = _prepare_body_model(model_type, body_model, body_model_config)
+    body_model = _prepare_body_model(body_model, body_model_config)
     model_type = body_model.name().replace('-', '').lower()
     assert model_type in ['smpl', 'smplx']
 
