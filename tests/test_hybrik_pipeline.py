@@ -397,10 +397,12 @@ def test_human_hybrik_dataset():
     dataset = 'HybrIKHumanImageDataset'
     dataset_class = DATASETS.get(dataset)
 
+    body_model = dict(type='SMPL', model_path='data/body_models/smpl')
     # train mode
     custom_dataset = dataset_class(
         dataset_name='h36m',
         data_prefix='tests/data',
+        body_model=body_model,
         pipeline=[],
         ann_file='h36m_hybrik_train.npz')
 
@@ -415,23 +417,50 @@ def test_human_hybrik_dataset():
     sample_item = custom_dataset[0]
     for k in keys:
         assert k in sample_item
-
+    body_model = dict(type='SMPL', model_path='data/body_models/smpl')
     # test mode
+    num_data = 1
     custom_dataset = dataset_class(
         dataset_name='h36m',
         data_prefix='tests/data',
+        body_model=body_model,
         pipeline=[],
         ann_file='h36m_hybrik_train.npz',
         test_mode=True)
-
+    custom_dataset.num_data = num_data
     # test evaluation
-    outputs = []
-    for item in custom_dataset:
-        pred = dict(
-            xyz_17=item['joint_relative_17'][None, ...],
-            image_idx=[item['sample_idx']])
-        outputs.append(pred)
+    outputs = [{
+        'xyz_17': np.random.rand(num_data, 17, 3),
+        'smpl_pose': np.random.rand(num_data, 24, 3, 3),
+        'smpl_beta': np.random.rand(num_data, 10),
+        'image_idx': np.arange(num_data)
+    }]
     with tempfile.TemporaryDirectory() as tmpdir:
         eval_result = custom_dataset.evaluate(outputs, tmpdir)
-    assert 'MPJPE' in eval_result
-    assert 'MPJPE-PA' in eval_result
+        assert 'PA-MPJPE' in eval_result
+        assert eval_result['PA-MPJPE'] > 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='mpjpe')
+        assert 'MPJPE' in res
+        assert res['MPJPE'] > 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='pa-3dpck')
+        assert 'PA-3DPCK' in res
+        assert res['PA-3DPCK'] >= 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='3dpck')
+        assert '3DPCK' in res
+        assert res['3DPCK'] >= 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='pa-3dauc')
+        assert 'PA-3DAUC' in res
+        assert res['PA-3DAUC'] >= 0
+
+        res = custom_dataset.evaluate(
+            outputs, res_folder=tmpdir, metric='3dauc')
+        assert '3DAUC' in res
+        assert res['3DAUC'] >= 0

@@ -241,6 +241,8 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
         pred_xyz_jts_17 = pred_xyz_jts_17.cpu().data.numpy()
         pred_uvd_jts = pred_uvd_jts.cpu().data
         pred_mesh = pred_mesh.cpu().data.numpy()
+        pred_pose = output['pred_pose'].cpu().data.numpy()
+        pred_beta = output['pred_shape'].cpu().data.numpy()
 
         assert pred_xyz_jts_17.ndim in [2, 3]
         pred_xyz_jts_17 = pred_xyz_jts_17.reshape(pred_xyz_jts_17.shape[0], 17,
@@ -264,6 +266,8 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
 
         all_preds = {}
         all_preds['vertices'] = pred_mesh
+        all_preds['smpl_pose'] = pred_pose
+        all_preds['smpl_beta'] = pred_beta
         all_preds['xyz_17'] = pred_xyz_jts_17
         all_preds['uvd_jts'] = pose_coords
         all_preds['xyz_24'] = pred_xyz_jts_24_struct

@@ -1,6 +1,9 @@
 _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
+# evaluate
+evaluation = dict(metric=['pa-mpjpe', 'mpjpe'])
+
 # optimizer
 optimizer = dict(
     neck=dict(type='Adam', lr=2.5e-4), head=dict(type='Adam', lr=2.5e-4))
@@ -54,7 +57,7 @@ extractor = dict(
         out_indices=[3],
         norm_eval=False,
         norm_cfg=dict(type='SyncBN', requires_grad=True)),
-    checkpoint='data/vibe_backbone.pth')
+    checkpoint='data/pretrained/spin.pth')
 # dataset settings
 dataset_type = 'HumanVideoDataset'
 data_keys = [

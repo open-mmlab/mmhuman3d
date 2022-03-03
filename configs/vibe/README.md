@@ -21,7 +21,7 @@ We provide the config files for VIBE: [VIBE: Video Inference for Human Body Pose
 - [J_regressor_extra.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_extra.npy?versionId=CAEQHhiBgIDD6c3V6xciIGIwZDEzYWI5NTBlOTRkODU4OTE1M2Y4YTI0NTVlZGM1)
 - [J_regressor_h36m.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_h36m.npy?versionId=CAEQHhiBgIDE6c3V6xciIDdjYzE3MzQ4MmU4MzQyNmRiZDA5YTg2YTI5YWFkNjRi)
 - [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
-- The pretrained frame feature extractor [spin.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/vibe/spin.pth?versionId=CAEQHhiBgIDrxqbU6xciIGIzOWFkMWYyNzMwMjRhMzBiYzM3NDFiMmVkY2JkZTVh)
+- The pretrained frame feature extractor [spin.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/vibe/spin.pth?versionId=CAEQKhiBgMD9hdub9xciIDIxMGI4NmMxMGIyNzQxOGM5YzYxZjMyYTVmMjllOTAy)
 
 Download the above resources and arrange them in the following file structure:
 

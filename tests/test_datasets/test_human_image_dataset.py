@@ -36,16 +36,45 @@ def test_human_image_dataset():
             keypoint_dst='h36m',
             model_path='data/body_models/smpl'),
         ann_file='sample_3dpw_test.npz')
-    test_dataset.num_data = 1
+    test_dataset.num_data = num_data
     outputs = [{
         'keypoints_3d': np.random.rand(num_data, 17, 3),
+        'smpl_pose': np.random.rand(num_data, 24, 3, 3),
+        'smpl_beta': np.random.rand(num_data, 10),
         'image_idx': np.arange(num_data)
     }]
     res = test_dataset.evaluate(outputs, res_folder='tests/data')
+    assert 'PA-MPJPE' in res
+    assert res['PA-MPJPE'] > 0
+
+    res = test_dataset.evaluate(
+        outputs, res_folder='tests/data', metric='mpjpe')
     assert 'MPJPE' in res
-    assert 'MPJPE-PA' in res
     assert res['MPJPE'] > 0
-    assert res['MPJPE-PA'] > 0
+
+    res = test_dataset.evaluate(outputs, res_folder='tests/data', metric='pve')
+    assert 'PVE' in res
+    assert res['PVE'] > 0
+
+    res = test_dataset.evaluate(
+        outputs, res_folder='tests/data', metric='pa-3dpck')
+    assert 'PA-3DPCK' in res
+    assert res['PA-3DPCK'] >= 0
+
+    res = test_dataset.evaluate(
+        outputs, res_folder='tests/data', metric='3dpck')
+    assert '3DPCK' in res
+    assert res['3DPCK'] >= 0
+
+    res = test_dataset.evaluate(
+        outputs, res_folder='tests/data', metric='pa-3dauc')
+    assert 'PA-3DAUC' in res
+    assert res['PA-3DAUC'] >= 0
+
+    res = test_dataset.evaluate(
+        outputs, res_folder='tests/data', metric='3dauc')
+    assert '3DAUC' in res
+    assert res['3DAUC'] >= 0
 
     test_dataset = HumanImageDataset(
         data_prefix='tests/data',
@@ -60,13 +89,13 @@ def test_human_image_dataset():
     test_dataset.num_data = 1
     outputs = [{
         'keypoints_3d': np.random.rand(num_data, 24, 3),
+        'smpl_pose': np.random.rand(num_data, 24, 3, 3),
+        'smpl_beta': np.random.rand(num_data, 10),
         'image_idx': np.arange(num_data)
     }]
     res = test_dataset.evaluate(outputs, res_folder='tests/data')
-    assert 'MPJPE' in res
-    assert 'MPJPE-PA' in res
-    assert res['MPJPE'] > 0
-    assert res['MPJPE-PA'] > 0
+    assert 'PA-MPJPE' in res
+    assert res['PA-MPJPE'] > 0
 
     test_dataset = HumanImageDataset(
         data_prefix='tests/data',
@@ -81,13 +110,13 @@ def test_human_image_dataset():
     test_dataset.num_data = 1
     outputs = [{
         'keypoints_3d': np.random.rand(num_data, 49, 3),
+        'smpl_pose': np.random.rand(num_data, 24, 3, 3),
+        'smpl_beta': np.random.rand(num_data, 10),
         'image_idx': np.arange(num_data)
     }]
     res = test_dataset.evaluate(outputs, res_folder='tests/data')
-    assert 'MPJPE' in res
-    assert 'MPJPE-PA' in res
-    assert res['MPJPE'] > 0
-    assert res['MPJPE-PA'] > 0
+    assert 'PA-MPJPE' in res
+    assert res['PA-MPJPE'] > 0
 
 
 def test_pipeline():
