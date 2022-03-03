@@ -1,11 +1,8 @@
 from mmcv.utils import Registry
 from pytorch3d.renderer import (
-    AmbientLights,
-    DirectionalLights,
     HardFlatShader,
     HardGouraudShader,
     HardPhongShader,
-    PointLights,
     SoftGouraudShader,
     SoftPhongShader,
     TexturesAtlas,
@@ -13,6 +10,7 @@ from pytorch3d.renderer import (
     TexturesVertex,
 )
 
+from .lights import AmbientLights, DirectionalLights, PointLights
 from .shader import (
     DepthShader,
     NoLightShader,

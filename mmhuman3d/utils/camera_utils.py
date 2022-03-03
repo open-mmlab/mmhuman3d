@@ -8,7 +8,7 @@ from pytorch3d.renderer.cameras import CamerasBase
 
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.cameras import (
-    convert_cameras,
+    convert_camera_matrix,
     convert_perspective_to_weakperspective,
     convert_world_view,
 )
@@ -137,7 +137,7 @@ def convert_smpl_from_opencv_calibration(
     if K is not None:
         zmean = torch.mean(verts_converted, dim=1)[:, 2]
 
-        K, _, _ = convert_cameras(
+        K, _, _ = convert_camera_matrix(
             K,
             is_perspective=True,
             convention_dst='opencv',

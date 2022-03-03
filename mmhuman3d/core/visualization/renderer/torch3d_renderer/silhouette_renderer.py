@@ -7,11 +7,6 @@ from mmhuman3d.core.cameras import MMCamerasBase
 from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 
 @RENDERER.register_module(name=[
     'silhouette', 'silhouette_renderer', 'Silhouette', 'SilhouetteRenderer'
@@ -26,10 +21,6 @@ class SilhouetteRenderer(BaseRenderer):
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         out_img_format: str = '%06d.png',
-        projection: Literal['weakperspective', 'fovperspective',
-                            'orthographics', 'perspective',
-                            'fovorthographics'] = 'weakperspective',
-        in_ndc: bool = True,
         **kwargs,
     ) -> None:
         """SilhouetteRenderer for neural rendering and visualization.
@@ -46,11 +37,6 @@ class SilhouetteRenderer(BaseRenderer):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
-            projection (str, optional):
-                Projection type of camera.
-                Defaults to 'weakperspetive'.
-            in_ndc (bool, optional): Whether defined in NDC.
-                Defaults to True.
 
         Returns:
             None
@@ -60,25 +46,19 @@ class SilhouetteRenderer(BaseRenderer):
             device=device,
             output_path=output_path,
             out_img_format=out_img_format,
-            projection=projection,
-            in_ndc=in_ndc,
             **kwargs)
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
                 faces: Optional[torch.Tensor] = None,
-                K: Optional[torch.Tensor] = None,
-                R: Optional[torch.Tensor] = None,
-                T: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Iterable[str] = None,
                 **kwargs):
         """The params are the same as BaseRenderer."""
-        meshes = self._prepare_meshes(meshes, vertices, faces)
-        cameras = self._init_cameras(
-            K=K, R=R, T=T) if cameras is None else cameras
+        meshes = self._prepare_meshes(
+            meshes, vertices, faces, device=self.device)
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         silhouette_map = self.shader(

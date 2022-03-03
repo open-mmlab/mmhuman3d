@@ -20,15 +20,10 @@ from pytorch3d.renderer import (
 )
 from pytorch3d.structures import Meshes
 
-from mmhuman3d.core.cameras import MMCamerasBase, build_cameras
+from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER, build_lights, build_shader
-
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
 
 
 @RENDERER.register_module(
@@ -40,10 +35,6 @@ class BaseRenderer(nn.Module):
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  out_img_format: str = '%06d.png',
-                 in_ndc: bool = True,
-                 projection: Literal['weakperspective', 'fovperspective',
-                                     'orthographics', 'perspective',
-                                     'fovorthographics'] = 'weakperspective',
                  **kwargs) -> None:
         """BaseRenderer for differentiable rendering and visualization.
 
@@ -59,10 +50,6 @@ class BaseRenderer(nn.Module):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
-            in_ndc (bool, optional): Whether defined in NDC.
-                Defaults to True.
-            projection (Literal[, optional): Projection type of the cameras.
-                Defaults to 'weakperspective'.
 
         **kwargs is used for render setting.
         You can set up your render kwargs like:
@@ -103,8 +90,6 @@ class BaseRenderer(nn.Module):
         self.output_path = output_path
         self.resolution = resolution
         self.temp_path = None
-        self.in_ndc = in_ndc
-        self.projection = projection
         self.out_img_format = out_img_format
         self._set_output_path(output_path)
         self._init_renderer(**kwargs)
@@ -251,18 +236,6 @@ class BaseRenderer(nn.Module):
             if osp.exists(self.temp_path) and osp.isdir(self.temp_path):
                 shutil.rmtree(self.temp_path)
 
-    def _init_cameras(self, K, R, T):
-        """Build cameras."""
-        cameras = build_cameras(
-            dict(
-                type=self.projection,
-                K=K,
-                R=R,
-                T=T,
-                image_size=self.resolution,
-                in_ndc=self.in_ndc)).to(self.device)
-        return cameras
-
     @staticmethod
     def rgb2bgr(rgbs) -> Union[torch.Tensor, np.ndarray]:
         """Convert color channels."""
@@ -352,16 +325,20 @@ class BaseRenderer(nn.Module):
                 osp.join(folder, self.out_img_format % real_idx),
                 output_images[idx])
 
-    def _prepare_meshes(self, meshes, vertices, faces):
+    @staticmethod
+    def _prepare_meshes(meshes=None,
+                        vertices=None,
+                        faces=None,
+                        device='cpu',
+                        **kwargs):
         if meshes is None:
             assert (vertices is not None) and (faces is not None),\
                 'No mesh data input.'
-            meshes = Meshes(
-                verts=vertices.to(self.device), faces=faces.to(self.device))
+            meshes = Meshes(verts=vertices.to(device), faces=faces.to(device))
         else:
             if (vertices is not None) or (faces is not None):
                 warnings.warn('Redundant input, will only use meshes.')
-            meshes = meshes.to(self.device)
+            meshes = meshes.to(device)
         return meshes
 
     def forward(self):

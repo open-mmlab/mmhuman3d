@@ -7,7 +7,7 @@ import torch
 from mmhuman3d.core.cameras.cameras import FoVPerspectiveCameras
 from mmhuman3d.core.conventions.cameras import (
     CAMERA_CONVENTIONS,
-    convert_cameras,
+    convert_camera_matrix,
     convert_K_3x3_to_4x4,
     convert_K_4x4_to_3x3,
     convert_ndc_to_screen,
@@ -34,7 +34,7 @@ def check_isclose(K,
                   resolution_dst=None,
                   use_numpy=True,
                   eps=1e-2):
-    K1, R1, T1 = convert_cameras(
+    K1, R1, T1 = convert_camera_matrix(
         K=K,
         R=R,
         T=T,
@@ -45,7 +45,7 @@ def check_isclose(K,
         in_ndc_dst=in_ndc_dst,
         resolution_src=resolution_src,
         resolution_dst=resolution_dst)
-    K2, R2, T2 = convert_cameras(
+    K2, R2, T2 = convert_camera_matrix(
         K=K1,
         R=R1,
         T=T1,

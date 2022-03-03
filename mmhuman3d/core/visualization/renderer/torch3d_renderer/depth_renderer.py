@@ -7,11 +7,6 @@ from mmhuman3d.core.cameras import MMCamerasBase
 from .base_renderer import BaseRenderer
 from .builder import RENDERER, build_shader
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 
 @RENDERER.register_module(
     name=['Depth', 'depth', 'depth_renderer', 'DepthRenderer'])
@@ -25,10 +20,6 @@ class DepthRenderer(BaseRenderer):
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         out_img_format: str = '%06d.png',
-        in_ndc: bool = True,
-        projection: Literal['weakperspective', 'fovperspective',
-                            'orthographics', 'perspective',
-                            'fovorthographics'] = 'weakperspective',
         depth_max: Union[int, float, torch.Tensor] = None,
         **kwargs,
     ) -> None:
@@ -46,10 +37,6 @@ class DepthRenderer(BaseRenderer):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
-            in_ndc (bool, optional): Whether defined in NDC.
-                Defaults to True.
-            projection (Literal[, optional): Projection type of the cameras.
-                Defaults to 'weakperspective'.
 
             depth_max (Union[int, float, torch.Tensor], optional):
                 The max value for normalize depth range. Defaults to None.
@@ -62,8 +49,6 @@ class DepthRenderer(BaseRenderer):
             device=device,
             output_path=output_path,
             out_img_format=out_img_format,
-            in_ndc=in_ndc,
-            projection=projection,
             **kwargs)
         self.depth_max = depth_max
 
@@ -83,9 +68,6 @@ class DepthRenderer(BaseRenderer):
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
                 faces: Optional[torch.Tensor] = None,
-                K: Optional[torch.Tensor] = None,
-                R: Optional[torch.Tensor] = None,
-                T: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
@@ -101,12 +83,6 @@ class DepthRenderer(BaseRenderer):
             faces (Optional[torch.Tensor], optional): faces of the meshes,
                 should be passed together with the vertices.
                 Defaults to None.
-            K (Optional[torch.Tensor], optional): Camera intrinsic matrixs.
-                Defaults to None.
-            R (Optional[torch.Tensor], optional): Camera rotation matrixs.
-                Defaults to None.
-            T (Optional[torch.Tensor], optional): Camera tranlastion matrixs.
-                Defaults to None.
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for the
@@ -117,9 +93,8 @@ class DepthRenderer(BaseRenderer):
             Union[torch.Tensor, None]: return tensor or None.
         """
 
-        cameras = self._init_cameras(
-            K=K, R=R, T=T) if cameras is None else cameras
-        meshes = self._prepare_meshes(meshes, vertices, faces)
+        meshes = self._prepare_meshes(
+            meshes, vertices, faces, device=self.device)
         self._update_resolution(cameras, **kwargs)
         vertices = meshes.verts_padded()
 

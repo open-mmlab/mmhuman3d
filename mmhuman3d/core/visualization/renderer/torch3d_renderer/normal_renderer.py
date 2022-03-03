@@ -7,11 +7,6 @@ from mmhuman3d.core.cameras import MMCamerasBase
 from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 
 @RENDERER.register_module(
     name=['Normal', 'normal', 'normal_renderer', 'NormalRenderer'])
@@ -25,10 +20,6 @@ class NormalRenderer(BaseRenderer):
         device: Union[torch.device, str] = 'cpu',
         output_path: Optional[str] = None,
         out_img_format: str = '%06d.png',
-        projection: Literal['weakperspective', 'fovperspective',
-                            'orthographics', 'perspective',
-                            'fovorthographics'] = 'weakperspective',
-        in_ndc: bool = True,
         **kwargs,
     ) -> None:
         """Renderer for normal map of meshes.
@@ -45,10 +36,6 @@ class NormalRenderer(BaseRenderer):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): Projection type of the cameras.
-                Defaults to 'weakperspective'.
-            in_ndc (bool, optional): Whether defined in NDC.
-                Defaults to True.
 
         Returns:
             None
@@ -59,17 +46,12 @@ class NormalRenderer(BaseRenderer):
             output_path=output_path,
             obj_path=None,
             out_img_format=out_img_format,
-            projection=projection,
-            in_ndc=in_ndc,
             **kwargs)
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
                 faces: Optional[torch.Tensor] = None,
-                K: Optional[torch.Tensor] = None,
-                R: Optional[torch.Tensor] = None,
-                T: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
@@ -85,12 +67,7 @@ class NormalRenderer(BaseRenderer):
             faces (Optional[torch.Tensor], optional): faces of the meshes,
                 should be passed together with the vertices.
                 Defaults to None.
-            K (Optional[torch.Tensor], optional): Camera intrinsic matrixs.
-                Defaults to None.
-            R (Optional[torch.Tensor], optional): Camera rotation matrixs.
-                Defaults to None.
-            T (Optional[torch.Tensor], optional): Camera tranlastion matrixs.
-                Defaults to None.
+
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for the
@@ -101,10 +78,8 @@ class NormalRenderer(BaseRenderer):
             Union[torch.Tensor, None]: return tensor or None.
         """
 
-        meshes = self._prepare_meshes(meshes, vertices, faces)
-
-        cameras = self._init_cameras(
-            K=K, R=R, T=T) if cameras is None else cameras
+        meshes = self._prepare_meshes(
+            meshes, vertices, faces, device=self.device)
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         normal_map = self.shader(

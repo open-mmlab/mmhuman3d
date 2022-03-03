@@ -7,7 +7,7 @@ from pytorch3d.renderer import cameras
 from pytorch3d.structures import Meshes
 from pytorch3d.transforms import Transform3d
 
-from mmhuman3d.core.conventions.cameras import convert_cameras
+from mmhuman3d.core.conventions.cameras import convert_camera_matrix
 from mmhuman3d.core.conventions.cameras.convert_convention import (
     convert_ndc_to_screen,
     convert_screen_to_ndc,
@@ -23,7 +23,8 @@ class MMCamerasBase(cameras.CamerasBase):
     def __init__(self, **kwargs) -> None:
         """Initialize your cameras with `build_cameras` following:
 
-        1): provide `K`, `R`, `T`, `resolution`/`image_size` directly.
+        1): provide `K`, `R`, `T`, `resolution`/`image_size`, `in_ndc`
+            directly.
             `K` should be shape of (N, 3, 3) or (N, 4, 4).
             `R` should be shape of (N, 3, 3).
             `T` should be shape of (N, 3).
@@ -31,7 +32,7 @@ class MMCamerasBase(cameras.CamerasBase):
             to generate K from camera intrinsic parameters.
             E.g., you can pass `focal_length`, `principal_point` for
             perspective camers.
-            If these args are not provided, will use default args.
+            If these args are not provided, will use default values.
         3): if `R` is not provided, will use Identity matrix as default.
         4): if `T` is not provided, will use zeros matrix as default.
         5): `convention` means your source parameter camera convention.
@@ -42,13 +43,14 @@ class MMCamerasBase(cameras.CamerasBase):
             For projection and rendering, the matrixs will be converted to
             `pytorch3d` finally since the `transforms3d` called in rendering
             and projection are defined as `pytorch3d` convention.
-        6): `image_size` euals `resolution`.
+        6): `image_size` equals `resolution`.
         7): `in_ndc` could be set for 'PerspectiveCameras' and
             'OrthographicCameras', other cameras are fixed for this arg.
             `in_ndc = True` means your projection matrix is defined as `camera
             space to NDC space`. Under this cirecumstance you need to set
             `image_size` or `resolution` (they are equal) when you need to do
-            `transform_points_screen`.
+            `transform_points_screen`. You can also override resolution
+            in `transform_points_screen` function.
             `in_ndc = False` means your projections matrix is defined as
             `cameras space to screen space`. Under this cirecumstance you do
             not need to set `image_size` or `resolution` (they are equal) when
@@ -96,7 +98,7 @@ class MMCamerasBase(cameras.CamerasBase):
 
             K = self.get_default_projection_matrix(**kwargs)
 
-            K, _, _ = convert_cameras(
+            K, _, _ = convert_camera_matrix(
                 K=K,
                 is_perspective=is_perspective,
                 convention_src='pytorch3d',
@@ -107,7 +109,7 @@ class MMCamerasBase(cameras.CamerasBase):
                 resolution_src=image_size)
             kwargs.update(K=K)
 
-        K, R, T = convert_cameras(
+        K, R, T = convert_camera_matrix(
             K=kwargs.get('K'),
             R=kwargs.get('R', None),
             T=kwargs.get('T', None),
@@ -196,7 +198,9 @@ class MMCamerasBase(cameras.CamerasBase):
 
         return image_size
 
-    def __getitem__(self, index: Union[slice, int, torch.Tensor, List, Tuple]):
+    def __getitem__(
+        self, index: Union[slice, int, torch.Tensor, List,
+                           Tuple]) -> 'MMCamerasBase':
         """Slice the cameras by batch dim.
 
         Args:
@@ -219,7 +223,7 @@ class MMCamerasBase(cameras.CamerasBase):
             convention='pytorch3d',
             device=self.device)
 
-    def extend(self, N):
+    def extend(self, N) -> 'MMCamerasBase':
         """Create new camera class which contains each input camera N times.
 
         Args:
@@ -260,7 +264,7 @@ class MMCamerasBase(cameras.CamerasBase):
         """
         raise NotImplementedError()
 
-    def to_screen_(self, **kwargs):
+    def to_screen_(self, **kwargs) -> 'MMCamerasBase':
         """Convert to screen inplace."""
         if self.in_ndc():
             if self.get_image_size() is None:
@@ -275,7 +279,7 @@ class MMCamerasBase(cameras.CamerasBase):
         else:
             print('Redundant operation, already in screen.')
 
-    def to_ndc_(self, **kwargs):
+    def to_ndc_(self, **kwargs) -> 'MMCamerasBase':
         """Convert to ndc inplace."""
         if self.in_ndc():
             print('Redundant operation, already in ndc.')
@@ -290,7 +294,7 @@ class MMCamerasBase(cameras.CamerasBase):
                 is_perspective=self._is_perspective)
             self._in_ndc = True
 
-    def to_screen(self, **kwargs):
+    def to_screen(self, **kwargs) -> 'MMCamerasBase':
         """Convert to screen."""
         if self.in_ndc():
             if self.get_image_size() is None:
@@ -312,7 +316,7 @@ class MMCamerasBase(cameras.CamerasBase):
         else:
             print('Redundant operation, already in screen.')
 
-    def to_ndc(self, **kwargs):
+    def to_ndc(self, **kwargs) -> 'MMCamerasBase':
         """Convert to ndc."""
         if self.in_ndc():
             print('Redundant operation, already in ndc.')
@@ -333,7 +337,19 @@ class MMCamerasBase(cameras.CamerasBase):
                 resolution=self.image_size,
                 is_perspective=self._is_perspective)
 
-    def concat(self, others):
+    def detach(self) -> 'MMCamerasBase':
+        image_size = self.image_size.detach(
+        ) if self.image_size is not None else None
+        return self.__class__(
+            K=self.K.detach(),
+            R=self.R.detach(),
+            T=self.T.detach(),
+            in_ndc=self.in_ndc(),
+            device=self.device,
+            resolution=image_size,
+            is_perspective=self._is_perspective)
+
+    def concat(self, others) -> 'MMCamerasBase':
         if isinstance(others, type(self)):
             others = [others]
         else:
@@ -1424,7 +1440,7 @@ def compute_direction_cameras(
     if K is None:
         K = FoVPerspectiveCameras.get_default_projection_matrix(
             batch_size=batch_size)
-    K, R, T = convert_cameras(
+    K, R, T = convert_camera_matrix(
         K=K,
         R=R,
         T=T,

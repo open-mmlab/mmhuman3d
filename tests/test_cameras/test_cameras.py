@@ -12,7 +12,7 @@ from mmhuman3d.core.cameras import (
     compute_direction_cameras,
 )
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
-from mmhuman3d.core.conventions.cameras import convert_cameras
+from mmhuman3d.core.conventions.cameras import convert_camera_matrix
 
 
 def check_camera_close(cam1, cam2, points=None, eps=1e-3):
@@ -108,7 +108,7 @@ def test_cameras():
                     T=T_list[idx],
                     convention='opencv',
                     image_size=image_size))
-            K, R, T = convert_cameras(
+            K, R, T = convert_camera_matrix(
                 K=K_list[idx],
                 R=R_list[idx],
                 T=T_list[idx],

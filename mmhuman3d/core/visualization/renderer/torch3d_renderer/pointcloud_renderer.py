@@ -15,11 +15,6 @@ from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
 from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 
 @RENDERER.register_module(name=[
     'PointCloud', 'pointcloud', 'point_cloud', 'pointcloud_renderer',
@@ -32,10 +27,6 @@ class PointCloudRenderer(BaseRenderer):
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  out_img_format: str = '%06d.png',
-                 projection: Literal['weakperspective', 'fovperspective',
-                                     'orthographics', 'perspective',
-                                     'fovorthographics'] = 'weakperspective',
-                 in_ndc: bool = True,
                  radius: Optional[float] = None,
                  **kwargs) -> None:
         """Point cloud renderer.
@@ -51,10 +42,6 @@ class PointCloudRenderer(BaseRenderer):
                 Defaults to None.
             out_img_format (str, optional): name format for temp images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): projection type of camera.
-                Defaults to 'weakperspective'.
-            in_ndc (bool, optional): cameras whether defined in NDC.
-                Defaults to True.
             radius (float, optional): radius of points. Defaults to None.
 
         Returns:
@@ -66,8 +53,6 @@ class PointCloudRenderer(BaseRenderer):
             device=device,
             output_path=output_path,
             out_img_format=out_img_format,
-            projection=projection,
-            in_ndc=in_ndc,
             **kwargs)
 
     def to(self, device):
@@ -119,9 +104,6 @@ class PointCloudRenderer(BaseRenderer):
         vertices: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         verts_rgba: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         meshes: Meshes = None,
-        K: Optional[torch.Tensor] = None,
-        R: Optional[torch.Tensor] = None,
-        T: Optional[torch.Tensor] = None,
         cameras: Optional[MMCamerasBase] = None,
         images: Optional[torch.Tensor] = None,
         indexes: Optional[Iterable[int]] = None,
@@ -170,8 +152,6 @@ class PointCloudRenderer(BaseRenderer):
                 warnings.warn(
                     'Redundant input, will ignore `vertices` and `verts_rgb`.')
         pointclouds = pointclouds.to(self.device)
-        cameras = self._init_cameras(
-            K=K, R=R, T=T) if cameras is None else cameras
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(pointclouds, cameras=cameras)
         r = self.rasterizer.raster_settings.radius

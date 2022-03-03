@@ -12,6 +12,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_num,
 )
 from mmhuman3d.core.conventions.segmentation import body_segmentation
+from mmhuman3d.core.visualization.renderer import UVRenderer
 from mmhuman3d.models.utils import batch_inverse_kinematics_transform
 from mmhuman3d.utils.transforms import quat_to_rotmat
 from ..builder import BODY_MODELS
@@ -39,6 +40,8 @@ class SMPL(_SMPL):
                  keypoint_approximate: bool = False,
                  joints_regressor: str = None,
                  extra_joints_regressor: str = None,
+                 uv_param_path: str = None,
+                 uv_res: int = 1024,
                  **kwargs) -> None:
         """
         Args:
@@ -67,7 +70,12 @@ class SMPL(_SMPL):
         self.keypoint_src = keypoint_src
         self.keypoint_dst = keypoint_dst
         self.keypoint_approximate = keypoint_approximate
-
+        # initialize the uv_renderer
+        if uv_param_path is not None:
+            self.uv_renderer = UVRenderer(
+                uv_param_path=uv_param_path, resolution=uv_res)
+        else:
+            self.uv_renderer = None
         # override the default SMPL joint regressor if available
         if joints_regressor is not None:
             joints_regressor = torch.tensor(

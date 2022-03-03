@@ -1,74 +1,51 @@
 import os.path as osp
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import cv2
 import mmcv
 import numpy as np
 import torch
-from pytorch3d.renderer.lighting import DirectionalLights, PointLights
 from pytorch3d.structures import Meshes
 from torch.nn.functional import interpolate
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
-from mmhuman3d.utils.mesh_utils import join_batch_meshes_as_scene
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .base_renderer import BaseRenderer
-from .builder import build_renderer, build_textures
-
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
+from .builder import build_renderer
+from .lights import DirectionalLights, PointLights
 
 
 class SMPLRenderer(BaseRenderer):
     """Render SMPL(X) with different render choices."""
 
     def __init__(self,
-                 faces: Union[np.ndarray, torch.LongTensor],
                  resolution: Tuple[int, int] = None,
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
-                 colors: Optional[Union[List[str], np.ndarray,
-                                        torch.Tensor]] = None,
                  return_tensor: bool = False,
                  alpha: float = 1.0,
-                 model_type='smpl',
                  out_img_format: str = '%06d.png',
                  read_img_format: str = None,
                  render_choice='mq',
-                 projection: Literal['weakperspective', 'fovperspective',
-                                     'orthographics', 'perspective',
-                                     'fovorthographics'] = 'weakperspective',
                  frames_folder: Optional[str] = None,
                  plot_kps: bool = False,
                  vis_kp_index: bool = False,
-                 in_ndc: bool = True,
                  final_resolution: Tuple[int, int] = None,
                  **kwargs) -> None:
         super(BaseRenderer, self).__init__()
 
         self.device = device
-        self.projection = projection
         self.resolution = resolution
-        self.model_type = model_type
-        self.in_ndc = in_ndc
         self.render_choice = render_choice
         self.output_path = output_path
-        self.raw_faces = torch.LongTensor(faces.astype(
-            np.int32)) if isinstance(faces, np.ndarray) else faces
-        self.colors = torch.Tensor(colors) if isinstance(
-            colors, np.ndarray) else colors
         self.frames_folder = frames_folder
         self.plot_kps = plot_kps
         self.vis_kp_index = vis_kp_index
         self.read_img_format = read_img_format
         self.out_img_format = out_img_format
         self.final_resolution = final_resolution
-        self.segmentation = body_segmentation(self.model_type)
         self.return_tensor = return_tensor
         if output_path is not None:
             if check_path_suffix(output_path, ['.mp4', '.gif']):
@@ -80,15 +57,8 @@ class SMPLRenderer(BaseRenderer):
             else:
                 self.temp_path = output_path
 
-        self.texture_type = kwargs.pop('texture_type', 'vertex')
-
         self.image_renderer = build_renderer(
-            dict(
-                device=device,
-                resolution=resolution,
-                projection=projection,
-                in_ndc=in_ndc,
-                **kwargs))
+            dict(device=device, resolution=resolution, **kwargs))
 
         if plot_kps:
             self.alpha = max(min(0.8, alpha), 0.1)
@@ -97,9 +67,6 @@ class SMPLRenderer(BaseRenderer):
                     type='pointcloud',
                     resolution=resolution,
                     device=device,
-                    return_type=['rgba'],
-                    projection=projection,
-                    in_ndc=in_ndc,
                     radius=0.008))
         else:
             self.alpha = max(min(1.0, alpha), 0.1)
@@ -143,15 +110,13 @@ class SMPLRenderer(BaseRenderer):
 
     def forward(
         self,
-        vertices: torch.Tensor,
-        K: Optional[torch.Tensor] = None,
-        R: Optional[torch.Tensor] = None,
-        T: Optional[torch.Tensor] = None,
+        meshes: Meshes,
         cameras: Optional[MMCamerasBase] = None,
         images: Optional[torch.Tensor] = None,
         joints: Optional[torch.Tensor] = None,
         joints_gt: Optional[torch.Tensor] = None,
         indexes: Optional[Iterable[int]] = None,
+        **kwargs,
     ) -> Union[None, torch.Tensor]:
         """Forward render procedure.
 
@@ -159,20 +124,6 @@ class SMPLRenderer(BaseRenderer):
             vertices (torch.Tensor): shape should be (frame, num_V, 3) or
                 (frame, num_people, num_V, 3). Num people Would influence
                 the visualization.
-            K (Optional[torch.Tensor], optional):
-                shape should be (f * 4 * 4)/perspective/orthographics or
-                (f * P * 4)/weakperspective, f could be 1.
-                P is person number, should be 1 if single person. Usually for
-                HMR, VIBE predicted cameras.
-                Defaults to None.
-            R (Optional[torch.Tensor], optional):
-                shape should be (f * 3 * 3).
-                Will be look_at_view if None.
-                Defaults to None.
-            T (Optional[torch.Tensor], optional):
-                shape should be (f * 3).
-                Will be look_at_view if None.
-                Defaults to None.
             images (Optional[torch.Tensor], optional): Tensor of background
                 images. If None, no background.
                 Defaults to None.
@@ -198,8 +149,7 @@ class SMPLRenderer(BaseRenderer):
                 be (frame, h, w, 1) or (frame, num_people, h, w, 1
                 ).
         """
-        num_frames, num_person, _, _ = vertices.shape
-        faces = self.raw_faces[None].repeat(num_frames, 1, 1)
+        num_frames, _, _ = meshes.verts_padded().shape
         if self.frames_folder is not None and images is None:
 
             images = images_to_array(
@@ -220,22 +170,6 @@ class SMPLRenderer(BaseRenderer):
         if images is not None:
             images = images.to(self.device)
 
-        mesh_list = []
-        for person_idx in range(num_person):
-            color = self.colors[person_idx]
-            verts_rgb = color[None].repeat(num_frames, 1, 1)
-            mesh = Meshes(
-                verts=vertices[:, person_idx].to(self.device),
-                faces=faces.to(self.device),
-                textures=build_textures(
-                    dict(
-                        type=self.texture_type,
-                        verts_features=verts_rgb.to(self.device))))
-            mesh_list.append(mesh)
-        meshes = join_batch_meshes_as_scene(mesh_list)
-
-        cameras = self._init_cameras(K, R, T) if cameras is None else cameras
-
         lights = getattr(self.image_renderer, 'lights', None)
         if isinstance(lights, DirectionalLights):
             lights = lights.clone()
@@ -245,13 +179,18 @@ class SMPLRenderer(BaseRenderer):
             lights.location = -cameras.get_camera_plane_normals(
             ) - cameras.get_camera_center()
 
-        render_tensor = self.image_renderer(
-            meshes=meshes, K=K, R=R, T=T, lights=lights, indexes=indexes)
-        rendered_images = self.image_renderer.tensor2rgba(render_tensor)
+        rendered_tensor = self.image_renderer(
+            meshes=meshes, cameras=cameras, lights=lights, indexes=indexes)
+
+        rendered_images = self.image_renderer.tensor2rgba(rendered_tensor)
 
         rgbs = rendered_images[..., :3]
         valid_masks = rendered_images[..., 3:]
-        images = images / 255. if images is not None else None
+        images = self._normalize(
+            images,
+            origin_value_range=[0, 255],
+            out_value_range=[0, 1],
+            dtype=torch.float32) if images is not None else None
 
         bgrs = self.rgb2bgr(rgbs)
 
@@ -293,9 +232,7 @@ class SMPLRenderer(BaseRenderer):
                 pointcloud_images = self.joints_renderer(
                     vertices=joints_padded,
                     verts_rgba=joints_rgb_padded.to(self.device),
-                    K=K,
-                    R=R,
-                    T=T)
+                    cameras=cameras)
 
                 pointcloud_rgb, = pointcloud_images[..., :3]
                 pointcloud_bgr = self.rgb2bgr(pointcloud_rgb)
@@ -326,7 +263,7 @@ class SMPLRenderer(BaseRenderer):
 
         # return
         if self.return_tensor:
-            rendered_map = render_tensor
+            rendered_map = rendered_tensor
 
             if self.final_resolution != self.resolution:
                 rendered_map = interpolate(

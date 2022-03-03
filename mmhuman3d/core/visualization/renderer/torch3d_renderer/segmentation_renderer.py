@@ -8,11 +8,6 @@ from mmhuman3d.utils import get_different_colors
 from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 
 @RENDERER.register_module(name=[
     'segmentation', 'segmentation_renderer', 'Segmentation',
@@ -27,10 +22,6 @@ class SegmentationRenderer(BaseRenderer):
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  out_img_format: str = '%06d.png',
-                 projection: Literal['weakperspective', 'fovperspective',
-                                     'orthographics', 'perspective',
-                                     'fovorthographics'] = 'weakperspective',
-                 in_ndc: bool = True,
                  num_class: int = 1,
                  **kwargs) -> None:
         """Render vertex-color mesh into a segmentation map of a (B, H, W)
@@ -55,10 +46,6 @@ class SegmentationRenderer(BaseRenderer):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): Projection type of the cameras.
-                Defaults to 'weakperspective'.
-            in_ndc (bool, optional): Whether defined in NDC.
-                Defaults to True.
             num_class (int, optional): number of segmentation parts.
                 Defaults to 1.
 
@@ -71,8 +58,6 @@ class SegmentationRenderer(BaseRenderer):
             output_path=output_path,
             obj_path=None,
             out_img_format=out_img_format,
-            projection=projection,
-            in_ndc=in_ndc,
             **kwargs)
         self.num_class = num_class
 
@@ -80,9 +65,6 @@ class SegmentationRenderer(BaseRenderer):
                 meshes: Optional[Meshes] = None,
                 vertices: Optional[torch.Tensor] = None,
                 faces: Optional[torch.Tensor] = None,
-                K: Optional[torch.Tensor] = None,
-                R: Optional[torch.Tensor] = None,
-                T: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
@@ -100,12 +82,6 @@ class SegmentationRenderer(BaseRenderer):
             faces (Optional[torch.Tensor], optional): faces of the meshes,
                 should be passed together with the vertices.
                 Defaults to None.
-            K (Optional[torch.Tensor], optional): Camera intrinsic matrixs.
-                Defaults to None.
-            R (Optional[torch.Tensor], optional): Camera rotation matrixs.
-                Defaults to None.
-            T (Optional[torch.Tensor], optional): Camera tranlastion matrixs.
-                Defaults to None.
             images (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for images.
@@ -115,9 +91,8 @@ class SegmentationRenderer(BaseRenderer):
             Union[torch.Tensor, None]: return tensor or None.
         """
 
-        cameras = self._init_cameras(
-            K=K, R=R, T=T) if cameras is None else cameras
-        meshes = self._prepare_meshes(meshes, vertices, faces)
+        meshes = self._prepare_meshes(
+            meshes, vertices, faces, device=self.device)
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         segmentation_map = self.shader(

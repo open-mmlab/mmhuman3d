@@ -33,7 +33,7 @@ class UVRenderer(nn.Module):
 
     def __init__(
         self,
-        resolution: Tuple[int] = None,
+        resolution: Tuple[int] = 1024,
         model_type: Optional[str] = 'smpl',
         uv_param_path: Optional[str] = None,
         obj_path: Optional[str] = None,
