@@ -1172,4 +1172,4 @@ def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    return func(poses=poses, **kwargs)
+    return func(poses=poses, verts=verts, **kwargs)
