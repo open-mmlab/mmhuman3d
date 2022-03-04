@@ -48,7 +48,6 @@ from mmhuman3d.utils.geometry import (
 from mmhuman3d.utils.keypoint_utils import search_limbs
 from mmhuman3d.utils.logger import get_root_logger
 from mmhuman3d.utils.mesh_utils import (
-    export_smpl_mesh,
     join_batch_meshes_as_scene,
     load_objs_as_meshes,
     load_plys_as_meshes,
@@ -173,5 +172,4 @@ __all__ = [
     'texture_uv2vc',
     'load_objs_as_meshes',
     'load_plys_as_meshes',
-    'export_smpl_mesh',
 ]

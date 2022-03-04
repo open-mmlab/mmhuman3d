@@ -1,9 +1,7 @@
 import warnings
-from typing import Iterable, List, Optional, Union
+from typing import List, Optional, Union
 
-import numpy as np
 import torch
-import torch.nn as nn
 from pytorch3d.io import IO
 from pytorch3d.io import load_objs_as_meshes as _load_objs_as_meshes
 from pytorch3d.io import save_obj
@@ -16,8 +14,6 @@ from pytorch3d.structures import (
     padded_to_list,
 )
 
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.textures import \
-    TexturesNearest  # noqa:E501
 from .path_utils import prepare_output_path
 
 
@@ -237,73 +233,3 @@ def save_meshes_as_objs(meshes: Meshes = None,
             verts_uvs=verts_uvs,
             faces_uvs=faces_uvs,
             texture_map=texture_map)
-
-
-def export_smpl_mesh(body_model: Union[dict, nn.Module],
-                     vertices: Union[torch.Tensor, np.ndarray] = None,
-                     color: Union[Iterable[float], torch.Tensor,
-                                  np.ndarray] = ((1, 1, 1), ),
-                     use_nearest: bool = False,
-                     texture_image: Union[torch.Tensor, None] = None,
-                     **poses) -> Meshes:
-    """Save smpl(x) body_model output vertices to Pytorch3D `Meshes` structure.
-
-    Args:
-        body_model (Union[dict, nn.Module]): body_model, required.
-        vertices (Union[torch.Tensor, np.ndarray], optional):
-            Vertices that output by the body_model. Will override other params
-            like `body_pose`, `transl`, `betas`, `global_orient`, etc.
-            Defaults to None.
-        color (Union[Iterable[float], torch.Tensor, np.ndarray], optional):
-            The color for the whole mesh or each vertex.
-            The value should be in the range of [0, 1].
-            If tuple or list, should be ((r, g, b),) or [[r, g, b]].
-            If torch.Tensor or np.ndarray, could be shape of
-                (1, 1, 3): all the same color.
-                (N, 1, 3): each mesh one color.
-                (1, V, 3): each vertex one color for all the meshes.
-                (N, V, 3): each mesh each vertex one color.
-            Defaults to ((1, 1, 1), ).
-        use_nearest: bool: whether use nearest interpolated vertex color.
-            Defaults to False.
-        texture_image (Union[torch.Tensor, None], optional):
-            The tensor of texture_image. Shape should be (N, H, W, 3).
-            Defaults to None.
-
-    Returns:
-        Meshes: the returned meshes.
-    """
-    if vertices is None:
-        vertices = body_model(**poses)['vertices']
-    elif isinstance(vertices, np.ndarray):
-        vertices = torch.Tensor(np.ndarray)
-
-    if vertices.ndim == 2:
-        vertices = vertices[None]
-
-    device = body_model.faces_tensor.device
-    faces = body_model.faces_tensor[None]
-    N, V, _ = vertices.shape
-    mesh = Meshes(verts=vertices, faces=faces.repeat(N, 1, 1))
-    if texture_image is None:
-        if isinstance(color, (tuple, list)):
-            color = torch.Tensor(color).view(1, 1, 3).repeat(N, V, 1)
-        elif isinstance(color, (torch.Tensor, np.ndarray)):
-            color = torch.Tensor(color)
-            if color.numel() == 3:
-                color = color.view(1, 1, 3).repeat(N, V, 1)
-            else:
-                if color.shape[0] == 1:
-                    color = color.repeat(N, 1, 1)
-                if color.shape[1] == 1:
-                    color = color.repeat(1, V, 1)
-        if use_nearest:
-            textures = TexturesNearest(verts_features=color).to(device)
-        else:
-            textures = TexturesVertex(verts_features=color).to(device)
-        mesh.textures = textures
-    else:
-        assert body_model.uv_renderer is not None
-        mesh = body_model.uv_renderer.wrap_texture(mesh, texture_image)
-
-    return mesh

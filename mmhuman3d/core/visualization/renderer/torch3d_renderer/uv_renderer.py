@@ -459,7 +459,6 @@ class UVRenderer(nn.Module):
         return meshes
 
     def wrap_texture(self,
-                     meshes: Meshes,
                      texture_map: torch.Tensor,
                      resolution: Optional[Iterable[int]] = None,
                      mode: Optional[str] = 'bicubic',
@@ -467,7 +466,6 @@ class UVRenderer(nn.Module):
         """Wrap a texture map to the input meshes.
 
         Args:
-            meshes (Meshes): the input meshes.
             texture_map (torch.Tensor): the texture map to be wrapped.
                 Shape should be (N, H, W, 3)
             resolution (Optional[Iterable[int]], optional): resolution to
@@ -484,13 +482,12 @@ class UVRenderer(nn.Module):
             Meshes: returned meshes.
         """
 
-        batch_size = len(meshes)
         assert texture_map.shape[-1] == 3
         if texture_map.ndim == 3:
             texture_map_padded = texture_map[None]
         else:
             texture_map_padded = texture_map
-        _, H, W, _ = texture_map_padded.shape
+        N, H, W, _ = texture_map_padded.shape
 
         resolution = resolution if resolution is not None else (H, W)
 
@@ -498,7 +495,7 @@ class UVRenderer(nn.Module):
             texture_map_padded = F.interpolate(
                 texture_map_padded.view(0, 3, 1, 2), resolution,
                 mode=mode).view(0, 2, 3, 1)
-        assert texture_map_padded.shape[0] in [batch_size, 1]
+        assert texture_map_padded.shape[0] in [N, 1]
 
         if isinstance(texture_map_padded, np.ndarray):
             texture_map_padded = self.array2tensor(texture_map_padded)
@@ -507,11 +504,10 @@ class UVRenderer(nn.Module):
             texture_map_padded = BaseRenderer.rgb2bgr(texture_map_padded)
 
         if texture_map_padded.shape[0] == 1:
-            texture_map_padded = texture_map_padded.repeat(batch_size, 1, 1, 1)
+            texture_map_padded = texture_map_padded.repeat(N, 1, 1, 1)
 
-        faces_uvs = self.faces_uv[None].repeat(batch_size, 1, 1)
-        verts_uvs = self.verts_uv[None].repeat(batch_size, 1, 1)
+        faces_uvs = self.faces_uv[None].repeat(N, 1, 1)
+        verts_uvs = self.verts_uv[None].repeat(N, 1, 1)
         textures = TexturesUV(
             faces_uvs=faces_uvs, verts_uvs=verts_uvs, maps=texture_map_padded)
-        meshes.textures = textures
-        return meshes
+        return textures
