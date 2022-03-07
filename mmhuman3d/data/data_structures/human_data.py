@@ -567,6 +567,7 @@ class HumanData(dict):
                             HumanData.__get_sliced_result__(
                                 sub_value, sub_dim, slice_index)
                         sliced_dict[sub_key] = sliced_sub_value
+                ret_human_data[key] = sliced_dict
             else:
                 value = self[key]
                 sliced_value = \
@@ -1183,10 +1184,6 @@ class HumanData(dict):
             dim_1 (Union[None, int]):
                 The dim for concat and slice. None for N/A.
 
-        Raises:
-            TypeError:
-                Both values have dim for concat but type not supported.
-
         Returns:
             dict:
                 Dict for concatenated result.
@@ -1197,10 +1194,9 @@ class HumanData(dict):
             ret_dict[f'{key}_1'] = value_1
         elif isinstance(value_0, list):
             ret_dict[key] = value_0 + value_1
-        elif isinstance(value_0, np.ndarray):
-            ret_dict[key] = np.concatenate((value_0, value_1), axis=dim_0)
+        # elif isinstance(value_0, np.ndarray):
         else:
-            raise TypeError
+            ret_dict[key] = np.concatenate((value_0, value_1), axis=dim_0)
         return ret_dict
 
     @classmethod

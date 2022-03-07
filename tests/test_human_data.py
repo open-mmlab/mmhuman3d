@@ -233,7 +233,7 @@ def test_slice():
         sliced_human_data.get_raw_value('keypoints2d')[1, 0, 0] == \
         raw_value[2, 0, 0]
     # do not slice image_path when it has a wrong length
-    human_data.__temporal_len__ = 199
+    human_data.__data_len__ = 199
     human_data['image_path'] = ['1.jpg', '2.jpg']
     sliced_human_data = human_data.get_slice(1)
     assert len(sliced_human_data['image_path']) == 2
@@ -242,6 +242,29 @@ def test_slice():
     human_data['image_path'] = image_list
     sliced_human_data = human_data.get_slice(0, 5, 2)
     assert len(sliced_human_data['image_path']) == 3
+    # slice when there's a value without __len__ method
+    human_data['some_id'] = 4
+    human_data['misc'] = {'hd_id_plus_1': 5}
+    sliced_human_data = human_data.get_slice(0, 5, 2)
+    assert sliced_human_data['some_id'] == human_data['some_id']
+    assert sliced_human_data['misc']['hd_id_plus_1'] == \
+        human_data['misc']['hd_id_plus_1']
+
+
+def test_missing_attr():
+    dump_hd_path = 'tests/data/human_data/human_data_missing_len.npz'
+    human_data = HumanData()
+    human_data['smpl'] = {
+        'body_pose': np.ones((1, 21, 3)),
+        'transl': np.ones((1, 3)),
+        'betas': np.ones((1, 10)),
+    }
+    # human_data.__delattr__('__data_len__')
+    human_data.__data_len__ = -1
+    human_data.dump(dump_hd_path)
+    human_data = HumanData()
+    human_data.load(dump_hd_path)
+    assert human_data.data_len == 1
 
 
 def test_load():
@@ -433,6 +456,12 @@ def test_concat():
     assert 'keypoints2d' in cat_human_data
     assert 'keypoints3d' not in cat_human_data
     assert 'keypoints3d_1' in cat_human_data
+    # test different definition of the same key
+    human_data_0['names'] = 'John Cena'
+    human_data_1['names'] = 'John_Xina'
+    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    assert 'names_0' in cat_human_data
+    assert cat_human_data['names_1'] == human_data_1['names']
     # test sub-dict by smpl
     human_data_0['smpl'] = {
         'body_pose': np.zeros((2, 21, 3)),
@@ -473,6 +502,3 @@ def shape_equal(ndarray_0, ndarray_1):
             return True
         else:
             return False
-
-
-test_concat()
