@@ -398,6 +398,70 @@ def test_to_device():
     assert tensor_dict['keypoints2d'].is_cuda is False
 
 
+def test_concat():
+    human_data_0 = HumanData()
+    human_data_0['image_path'] = ['path_0', 'path_1']
+    human_data_0['keypoints2d'] = np.zeros(shape=(2, 190, 3))
+    human_data_0['keypoints2d_convention'] = 'human_data'
+    human_data_0['keypoints2d_mask'] = np.ones(shape=(190))
+    # test list and np
+    human_data_1 = HumanData()
+    human_data_1['image_path'] = ['path_2']
+    human_data_1['keypoints2d'] = np.ones(shape=(1, 190, 3))
+    human_data_1['keypoints2d_convention'] = 'human_data'
+    human_data_1['keypoints2d_mask'] = np.ones(shape=(190))
+    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    assert cat_human_data['image_path'][2] == \
+        human_data_1['image_path'][0]
+    assert cat_human_data['keypoints2d'][2, 0, 0] == \
+        human_data_1['keypoints2d'][0, 0, 0]
+    # test different mask
+    human_data_1 = HumanData()
+    human_data_1['image_path'] = ['path_2']
+    human_data_1['keypoints2d'] = np.ones(shape=(1, 190, 3))
+    human_data_1['keypoints2d_convention'] = 'human_data'
+    human_data_1['keypoints2d_mask'] = np.ones(shape=(190))
+    human_data_1['keypoints2d_mask'][0:10] = 0
+    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    assert cat_human_data['keypoints2d_mask'][9] == 0
+    # test keys only mentioned once
+    human_data_0['bbox_xywh'] = np.zeros((2, 5))
+    human_data_1['keypoints3d'] = np.ones(shape=(1, 190, 4))
+    human_data_1['keypoints3d_convention'] = 'human_data'
+    human_data_1['keypoints3d_mask'] = np.ones(shape=(190))
+    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    assert 'keypoints2d' in cat_human_data
+    assert 'keypoints3d' not in cat_human_data
+    assert 'keypoints3d_1' in cat_human_data
+    # test sub-dict by smpl
+    human_data_0['smpl'] = {
+        'body_pose': np.zeros((2, 21, 3)),
+        'transl': np.zeros((2, 3)),
+        'betas': np.zeros((2, 10)),
+    }
+    human_data_1 = HumanData()
+    human_data_1['smpl'] = {
+        'body_pose': np.ones((1, 21, 3)),
+        'transl': np.ones((1, 3)),
+        'betas': np.ones((1, 10)),
+    }
+    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    assert cat_human_data['smpl']['body_pose'][2, 0, 0] == \
+        human_data_1['smpl']['body_pose'][0, 0, 0]
+    assert cat_human_data['smpl']['transl'][1, 0] == \
+        human_data_0['smpl']['transl'][1, 0]
+    assert cat_human_data['smpl']['betas'][2, 1] == \
+        human_data_1['smpl']['betas'][0, 1]
+    # test sub-keys only mentioned once
+    human_data_0['smpl']['gender'] = 'male'
+    human_data_0['smpl'].pop('betas')
+    human_data_1['smpl']['expresssion'] = np.ones((1, 10))
+    human_data_1['smpl'].pop('transl')
+    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    assert 'gender' in cat_human_data['smpl']
+    assert 'expresssion' in cat_human_data['smpl']
+
+
 def shape_equal(ndarray_0, ndarray_1):
     shape_0 = np.asarray(ndarray_0.shape)
     shape_1 = np.asarray(ndarray_1.shape)
@@ -409,3 +473,6 @@ def shape_equal(ndarray_0, ndarray_1):
             return True
         else:
             return False
+
+
+test_concat()
