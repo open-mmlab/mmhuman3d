@@ -169,10 +169,11 @@ class SMPL(_SMPL):
         global_orient = full_pose[:, :3]
         batch_size = full_pose.shape[0]
         if betas is not None:
-            if betas.shape[0] == 1:
-                betas = betas.repeat(full_pose.shape[0], 1)
-            else:
+            try:
                 betas = betas.view(batch_size, -1)
+            # if betas not divided by batch_size, repeat it
+            except RuntimeError:
+                betas = betas.view(1, -1).repeat(batch_size, 1)
         else:
             betas = betas
         transl = transl.view(batch_size, -1) if transl is not None else transl
