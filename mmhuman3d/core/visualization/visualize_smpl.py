@@ -23,6 +23,8 @@ from mmhuman3d.core.cameras.builder import build_cameras
 from mmhuman3d.core.conventions.cameras import convert_camera_matrix
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.core.visualization.renderer import render_runner
+from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import \
+    ParametricMeshes  # noqa:E501
 from mmhuman3d.models.builder import build_body_model
 from mmhuman3d.utils import (
     check_input_path,
@@ -30,11 +32,9 @@ from mmhuman3d.utils import (
     convert_bbox_to_intrinsic,
     convert_crop_cam_to_orig_img,
     convert_kp2d_to_bbox,
-    export_smpl_mesh,
     get_default_hmr_intrinsic,
     get_different_colors,
     images_to_array,
-    join_batch_meshes_as_scene,
     prepare_output_path,
     save_meshes_as_objs,
     save_meshes_as_plys,
@@ -839,24 +839,28 @@ def render_smpl(
         if texture_image.shape[0] == 1:
             texture_image = texture_image.repeat(num_person, 1, 1, 1)
 
-    mesh_list = []
-    for person_idx in range(num_person):
-        if texture_image is not None:
-            color = None
-        else:
-            color = colors_all[person_idx:person_idx + 1]
-        meshes_person = export_smpl_mesh(
-            body_model=body_model,
-            vertices=vertices[:, person_idx],
-            texture_image=texture_image,
-            color=color)
-        mesh_list.append(meshes_person)
-    meshes = join_batch_meshes_as_scene(mesh_list)
+    # mesh_list = []
+    # for person_idx in range(num_person):
+    #     if texture_image is not None:
+    #         color = None
+    #     else:
+    #         color = colors_all[person_idx:person_idx + 1]
+
+    #     mesh_list.append(meshes_person)
+    # meshes = join_batch_meshes_as_scene(mesh_list)
+    meshes = ParametricMeshes(
+        body_model=body_model,
+        verts=vertices,
+        texture_image=texture_image,
+        use_nearest=bool(palette == 'segmentation'),
+        color=colors_all)
 
     # write .ply files
     if mesh_file_path is not None:
         mmcv.mkdir_or_exist(mesh_file_path)
-        for mesh_person in mesh_list:
+
+        for person_idx in range(meshes.shape[1]):
+            mesh_person = meshes[:, person_idx]
             if texture_image is None:
                 ply_paths = [
                     f'{mesh_file_path}/frame{frame_idx}_'

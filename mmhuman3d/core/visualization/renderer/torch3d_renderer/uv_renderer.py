@@ -485,8 +485,10 @@ class UVRenderer(nn.Module):
         assert texture_map.shape[-1] == 3
         if texture_map.ndim == 3:
             texture_map_padded = texture_map[None]
-        else:
+        elif texture_map.ndim == 4:
             texture_map_padded = texture_map
+        else:
+            raise ValueError(f'Wrong texture_map shape: {texture_map.shape}.')
         N, H, W, _ = texture_map_padded.shape
 
         resolution = resolution if resolution is not None else (H, W)
