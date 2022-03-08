@@ -47,7 +47,9 @@ class MMLights(TensorProperties):
                 'direction'
         ]:
             if hasattr(self, k):
+
                 kwargs[k] = getattr(self, k)[index]
+
         return self.__class__(device=self.device, **kwargs)
 
     def extend(self, N):

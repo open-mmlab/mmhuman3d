@@ -6,6 +6,7 @@ from pytorch3d.structures import Meshes
 from mmhuman3d.core.cameras import MMCamerasBase
 from .base_renderer import BaseRenderer
 from .builder import RENDERER, build_shader
+from .utils import normalize
 
 
 @RENDERER.register_module(
@@ -66,37 +67,28 @@ class DepthRenderer(BaseRenderer):
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
-                vertices: Optional[torch.Tensor] = None,
-                faces: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
-                images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
+                backgrounds: Optional[torch.Tensor] = None,
                 **kwargs):
         """Render depth map.
 
         Args:
             meshes (Optional[Meshes], optional): meshes to be rendered.
                 Defaults to None.
-            vertices (Optional[torch.Tensor], optional): vertices to be
-                rendered. Should be passed together with faces.
-                Defaults to None.
-            faces (Optional[torch.Tensor], optional): faces of the meshes,
-                should be passed together with the vertices.
-                Defaults to None.
-            images (Optional[torch.Tensor], optional): background images.
+            cameras (Optional[MMCamerasBase], optional): cameras for rendering.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for the
                 images.
+                Defaults to None.
+            backgrounds (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
 
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-
-        meshes = self._prepare_meshes(
-            meshes, vertices, faces, device=self.device)
+        meshes = meshes.to(self.device)
         self._update_resolution(cameras, **kwargs)
-        vertices = meshes.verts_padded()
 
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         depth_map = self.shader(
@@ -105,7 +97,7 @@ class DepthRenderer(BaseRenderer):
         if self.output_path is not None:
             rgba = self.tensor2rgba(depth_map)
             if self.output_path is not None:
-                self.write_images(rgba, images, indexes)
+                self._write_images(rgba, backgrounds, indexes)
 
         return depth_map
 
@@ -113,6 +105,6 @@ class DepthRenderer(BaseRenderer):
         rgbs, valid_masks = tensor.repeat(1, 1, 1, 3), (tensor > 0) * 1.0
         depth_max = self.depth_max if self.depth_max is not None else rgbs.max(
         )
-        rgbs = self._normalize(
+        rgbs = normalize(
             rgbs, origin_value_range=(0, depth_max), out_value_range=(0, 1))
         return torch.cat([rgbs, valid_masks], -1)

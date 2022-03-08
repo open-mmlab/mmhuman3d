@@ -6,6 +6,7 @@ from pytorch3d.structures import Meshes
 from mmhuman3d.core.cameras import MMCamerasBase
 from .base_renderer import BaseRenderer
 from .builder import RENDERER
+from .utils import normalize
 
 
 @RENDERER.register_module(name=[
@@ -50,15 +51,29 @@ class SilhouetteRenderer(BaseRenderer):
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
-                vertices: Optional[torch.Tensor] = None,
-                faces: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
                 images: Optional[torch.Tensor] = None,
                 indexes: Iterable[str] = None,
+                backgrounds: Optional[torch.Tensor] = None,
                 **kwargs):
-        """The params are the same as BaseRenderer."""
-        meshes = self._prepare_meshes(
-            meshes, vertices, faces, device=self.device)
+        """Render silhouette map.
+
+        Args:
+            meshes (Optional[Meshes], optional): meshes to be rendered.
+                Require the textures type is `TexturesClosest`.
+                The color indicates the class index of the triangle.
+                Defaults to None.
+            cameras (Optional[MMCamerasBase], optional): cameras for render.
+                Defaults to None.
+            indexes (Optional[Iterable[int]], optional): indexes for images.
+                Defaults to None.
+            backgrounds (Optional[torch.Tensor], optional): background images.
+                Defaults to None.
+
+        Returns:
+            Union[torch.Tensor, None]: return tensor or None.
+        """
+        meshes = meshes.to(self.device)
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         silhouette_map = self.shader(
@@ -66,7 +81,7 @@ class SilhouetteRenderer(BaseRenderer):
 
         if self.output_path is not None:
             rgba = self.tensor2rgba(silhouette_map)
-            self.write_images(rgba, images, indexes)
+            self._write_images(rgba, backgrounds, indexes)
 
         return silhouette_map
 
@@ -74,5 +89,5 @@ class SilhouetteRenderer(BaseRenderer):
         silhouette = tensor[..., 3:]
         rgbs = silhouette.repeat(1, 1, 1, 3)
         valid_masks = (silhouette > 0) * 1.0
-        rgbs = self._normalize(rgbs, out_value_range=(0, 1))
+        rgbs = normalize(rgbs, out_value_range=(0, 1))
         return torch.cat([rgbs, valid_masks], -1)

@@ -6,6 +6,7 @@ from pytorch3d.structures import Meshes
 from mmhuman3d.core.cameras import MMCamerasBase
 from .base_renderer import BaseRenderer
 from .builder import RENDERER
+from .utils import normalize
 
 
 @RENDERER.register_module(
@@ -50,36 +51,28 @@ class NormalRenderer(BaseRenderer):
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
-                vertices: Optional[torch.Tensor] = None,
-                faces: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
-                images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
+                backgrounds: Optional[torch.Tensor] = None,
                 **kwargs):
         """Render Meshes.
 
         Args:
             meshes (Optional[Meshes], optional): meshes to be rendered.
                 Defaults to None.
-            vertices (Optional[torch.Tensor], optional): vertices to be
-                rendered. Should be passed together with faces.
-                Defaults to None.
-            faces (Optional[torch.Tensor], optional): faces of the meshes,
-                should be passed together with the vertices.
-                Defaults to None.
-
-            images (Optional[torch.Tensor], optional): background images.
+            cameras (Optional[MMCamerasBase], optional): cameras for render.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for the
                 images.
+                Defaults to None.
+            backgrounds (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
 
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
 
-        meshes = self._prepare_meshes(
-            meshes, vertices, faces, device=self.device)
+        meshes = meshes.to(self.device)
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         normal_map = self.shader(
@@ -87,12 +80,12 @@ class NormalRenderer(BaseRenderer):
 
         if self.output_path is not None:
             rgba = self.tensor2rgba(normal_map)
-            self.write_images(rgba, images, indexes)
+            self._write_images(rgba, backgrounds, indexes)
 
         return normal_map
 
     def tensor2rgba(self, tensor: torch.Tensor):
         rgbs, valid_masks = tensor[..., :3], (tensor[..., 3:] > 0) * 1.0
-        rgbs = self._normalize(
+        rgbs = normalize(
             rgbs, origin_value_range=(-1, 1), out_value_range=(0, 1))
         return torch.cat([rgbs, valid_masks], -1)

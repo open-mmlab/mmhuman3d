@@ -105,8 +105,8 @@ class PointCloudRenderer(BaseRenderer):
         verts_rgba: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         meshes: Meshes = None,
         cameras: Optional[MMCamerasBase] = None,
-        images: Optional[torch.Tensor] = None,
         indexes: Optional[Iterable[int]] = None,
+        backgrounds: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> Union[None, torch.Tensor]:
         """Render pointclouds.
@@ -120,16 +120,10 @@ class PointCloudRenderer(BaseRenderer):
                 optional): coordinate tensor of points. Defaults to None.
             verts_rgba (Optional[Union[torch.Tensor, List[torch.Tensor]]],
                 optional): color tensor of points. Defaults to None.
-            K (Optional[torch.Tensor], optional): Camera intrinsic matrix.
-                Defaults to None.
-            R (Optional[torch.Tensor], optional): Camera rotation matrix.
-                Defaults to None.
-            T (Optional[torch.Tensor], optional): Camera translation matrix.
-                Defaults to None.
-            images (Optional[torch.Tensor], optional): background images.
-                Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for the
                 images.
+                Defaults to None.
+            backgrounds (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
 
         Returns:
@@ -169,6 +163,6 @@ class PointCloudRenderer(BaseRenderer):
         if self.output_path is not None:
             rgba = self.tensor2rgba(rendered_images)
             if self.output_path is not None:
-                self.write_images(rgba, images, indexes)
+                self.write_images(rgba, backgrounds, indexes)
 
         return rendered_images

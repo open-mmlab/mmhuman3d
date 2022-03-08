@@ -1,12 +1,10 @@
 import os.path as osp
 import shutil
-import warnings
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import cv2
 import mmcv
-import numpy as np
 import torch
 import torch.nn as nn
 from pytorch3d.renderer import (
@@ -18,12 +16,12 @@ from pytorch3d.renderer import (
     PointLights,
     RasterizationSettings,
 )
-from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER, build_lights, build_shader
+from .utils import normalize, rgb2bgr, tensor2array
 
 
 @RENDERER.register_module(
@@ -236,110 +234,33 @@ class BaseRenderer(nn.Module):
             if osp.exists(self.temp_path) and osp.isdir(self.temp_path):
                 shutil.rmtree(self.temp_path)
 
-    @staticmethod
-    def rgb2bgr(rgbs) -> Union[torch.Tensor, np.ndarray]:
-        """Convert color channels."""
-        if isinstance(rgbs, torch.Tensor):
-            bgrs = torch.cat(
-                [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
-                -1)
-        elif isinstance(rgbs, np.ndarray):
-            bgrs = np.concatenate(
-                [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]],
-                -1)
-        return bgrs
-
-    @staticmethod
-    def _normalize(value,
-                   origin_value_range=None,
-                   out_value_range=(0, 1),
-                   dtype=None,
-                   clip=False) -> Union[torch.Tensor, np.ndarray]:
-        """Normalize the tensor or array and convert dtype."""
-        if origin_value_range is not None:
-            value = (value - origin_value_range[0]) / (
-                origin_value_range[1] - origin_value_range[0] + 1e-9)
-
-        else:
-            value = (value - value.min()) / (value.max() - value.min())
-        value = value * (out_value_range[1] -
-                         out_value_range[0]) + out_value_range[0]
-        if clip:
-            value = torch.clip(
-                value, min=out_value_range[0], max=out_value_range[1])
-        if isinstance(value, torch.Tensor):
-            if dtype is not None:
-                return value.type(dtype)
-            else:
-                return value
-        elif isinstance(value, np.ndarray):
-            if dtype is not None:
-                return value.astype(dtype)
-            else:
-                return value
-
-    def _tensor2array(self, image) -> np.ndarray:
-        """Convert image tensor to array."""
-        image = image.detach().cpu().numpy()
-        image = self._normalize(
-            image,
-            origin_value_range=(0, 1),
-            out_value_range=(0, 255),
-            dtype=np.uint8)
-        return image
-
-    def _array2tensor(self, image) -> torch.Tensor:
-        """Convert image array to tensor."""
-        image = torch.Tensor(image)
-        image = self._normalize(
-            image,
-            origin_value_range=(0, 255),
-            out_value_range=(0, 1),
-            dtype=torch.float32)
-        return image
-
-    def _write_images(self, rgba, images, indexes):
+    def _write_images(self, rgba, backgrounds, indexes):
         """Write output/temp images."""
         if rgba.shape[-1] > 3:
             rgbs, valid_masks = rgba[..., :3], rgba[..., 3:]
         else:
             rgbs = rgba[..., :3]
             valid_masks = torch.ones_like(rgbs)[..., :1]
-        rgbs = self._normalize(rgbs, origin_value_range=(0, 1), clip=True)
-        bgrs = self.rgb2bgr(rgbs)
-        if images is not None:
-            image_max = 1.0 if images.max() <= 1.0 else 255
-            images = self._normalize(
-                images,
+        rgbs = normalize(rgbs, origin_value_range=(0, 1), clip=True)
+        bgrs = rgb2bgr(rgbs)
+        if backgrounds is not None:
+            image_max = 1.0 if backgrounds.max() <= 1.0 else 255
+            backgrounds = normalize(
+                backgrounds,
                 origin_value_range=(0, image_max),
                 out_value_range=(0, 1))
-            output_images = bgrs * valid_masks + (1 - valid_masks) * images
-            output_images = self._tensor2array(output_images)
+            output_images = bgrs * valid_masks + (1 -
+                                                  valid_masks) * backgrounds
+            output_images = tensor2array(output_images)
 
         else:
-            output_images = self._tensor2array(bgrs)
+            output_images = tensor2array(bgrs)
         for idx, real_idx in enumerate(indexes):
             folder = self.temp_path if self.temp_path is not None else\
                 self.output_path
             cv2.imwrite(
                 osp.join(folder, self.out_img_format % real_idx),
                 output_images[idx])
-
-    @staticmethod
-    def _prepare_meshes(meshes=None,
-                        vertices=None,
-                        faces=None,
-                        device='cpu',
-                        **kwargs):
-        if meshes is None:
-            assert (vertices is not None) and (faces is not None),\
-                'No mesh data input.'
-            meshes = Meshes(verts=vertices.to(device), faces=faces.to(device))
-        else:
-            if (vertices is not None) or (faces is not None):
-                warnings.warn('Redundant input, will only use meshes.')
-            meshes = meshes.to(device)
-        return meshes
 
     def forward(self):
         """"Should be called by each sub renderer class."""
@@ -349,7 +270,7 @@ class BaseRenderer(nn.Module):
         valid_masks = (tensor[..., 3:] > 0) * 1.0
         rgbs = tensor[..., :3]
 
-        rgbs = self._normalize(
+        rgbs = normalize(
             rgbs, origin_value_range=[0, 1], out_value_range=[0, 1])
         rgba = torch.cat([rgbs, valid_masks], -1)
         return rgba

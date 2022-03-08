@@ -7,6 +7,7 @@ from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils import get_different_colors
 from .base_renderer import BaseRenderer
 from .builder import RENDERER
+from .utils import normalize
 
 
 @RENDERER.register_module(name=[
@@ -63,11 +64,9 @@ class SegmentationRenderer(BaseRenderer):
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
-                vertices: Optional[torch.Tensor] = None,
-                faces: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
-                images: Optional[torch.Tensor] = None,
                 indexes: Optional[Iterable[int]] = None,
+                backgrounds: Optional[torch.Tensor] = None,
                 **kwargs):
         """Render segmentation map.
 
@@ -76,23 +75,18 @@ class SegmentationRenderer(BaseRenderer):
                 Require the textures type is `TexturesClosest`.
                 The color indicates the class index of the triangle.
                 Defaults to None.
-            vertices (Optional[torch.Tensor], optional): vertices to be
-                rendered. Should be passed together with faces.
-                Defaults to None.
-            faces (Optional[torch.Tensor], optional): faces of the meshes,
-                should be passed together with the vertices.
-                Defaults to None.
-            images (Optional[torch.Tensor], optional): background images.
+            cameras (Optional[MMCamerasBase], optional): cameras for render.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for images.
+                Defaults to None.
+            backgrounds (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
 
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
 
-        meshes = self._prepare_meshes(
-            meshes, vertices, faces, device=self.device)
+        meshes = meshes.to(self.device)
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
         segmentation_map = self.shader(
@@ -101,7 +95,7 @@ class SegmentationRenderer(BaseRenderer):
         if self.output_path is not None:
             rgba = self.tensor2rgba(segmentation_map)
             if self.output_path is not None:
-                self.write_images(rgba, images, indexes)
+                self._write_images(rgba, backgrounds, indexes)
 
         return segmentation_map
 
@@ -111,7 +105,7 @@ class SegmentationRenderer(BaseRenderer):
         color = torch.cat([torch.zeros(1, 3), color]).to(self.device)
         B, H, W, _ = tensor.shape
         rgbs = color[tensor.view(-1)].view(B, H, W, 3) * valid_masks
-        rgbs = self._normalize(
+        rgbs = normalize(
             rgbs.float(), origin_value_range=(0, 255), out_value_range=(0, 1))
         rgba = torch.cat([rgbs, valid_masks], -1)
         return rgba

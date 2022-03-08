@@ -10,11 +10,14 @@ from pytorch3d.structures import Meshes
 from torch.nn.functional import interpolate
 
 from mmhuman3d.core.cameras import MMCamerasBase
+from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import \
+    align_input_to_padded  # noqa: E501
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .base_renderer import BaseRenderer
 from .builder import build_renderer
 from .lights import DirectionalLights, PointLights
+from .utils import normalize, rgb2bgr, tensor2array
 
 
 class SMPLRenderer(BaseRenderer):
@@ -149,7 +152,7 @@ class SMPLRenderer(BaseRenderer):
                 be (frame, h, w, 1) or (frame, num_people, h, w, 1
                 ).
         """
-        num_frames, _, _ = meshes.verts_padded().shape
+        num_frames = len(meshes)
         if self.frames_folder is not None and images is None:
 
             images = images_to_array(
@@ -160,13 +163,12 @@ class SMPLRenderer(BaseRenderer):
                 end=indexes[-1],
                 disable_log=True).astype(np.float64)
             images = torch.Tensor(images).to(self.device)
-            if images.shape[0] < num_frames:
-                images = torch.cat([
-                    images,
-                    torch.ones_like(images[:1]).repeat(
-                        num_frames - images.shape[0], 1, 1, 1)
-                ], 0)
-
+            images = align_input_to_padded(
+                images,
+                ndim=4,
+                batch_size=num_frames,
+                padding_mode='ones',
+            )
         if images is not None:
             images = images.to(self.device)
 
@@ -186,13 +188,13 @@ class SMPLRenderer(BaseRenderer):
 
         rgbs = rendered_images[..., :3]
         valid_masks = rendered_images[..., 3:]
-        images = self._normalize(
+        images = normalize(
             images,
             origin_value_range=[0, 255],
             out_value_range=[0, 1],
             dtype=torch.float32) if images is not None else None
 
-        bgrs = self.rgb2bgr(rgbs)
+        bgrs = rgb2bgr(rgbs)
 
         # write temp images for the output video
         if self.output_path is not None:
@@ -235,12 +237,12 @@ class SMPLRenderer(BaseRenderer):
                     cameras=cameras)
 
                 pointcloud_rgb, = pointcloud_images[..., :3]
-                pointcloud_bgr = self.rgb2bgr(pointcloud_rgb)
+                pointcloud_bgr = rgb2bgr(pointcloud_rgb)
                 pointcloud_mask = (pointcloud_images[..., 3:] > 0) * 1.0
                 output_images = output_images * (
                     1 - pointcloud_mask) + pointcloud_mask * pointcloud_bgr
 
-            output_images = self._tensor2array(output_images)
+            output_images = tensor2array(output_images)
 
             for frame_idx, real_idx in enumerate(indexes):
                 folder = self.temp_path if self.temp_path is not None else\

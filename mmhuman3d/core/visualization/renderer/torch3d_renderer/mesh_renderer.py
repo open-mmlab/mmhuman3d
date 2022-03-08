@@ -4,6 +4,8 @@ import torch
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
+from mmhuman3d.core.visualization.renderer.torch3d_renderer.lights import \
+    MMLights  # noqa: E501
 from .base_renderer import BaseRenderer
 from .builder import RENDERER
 
@@ -46,35 +48,30 @@ class MeshRenderer(BaseRenderer):
 
     def forward(self,
                 meshes: Optional[Meshes] = None,
-                vertices: Optional[torch.Tensor] = None,
-                faces: Optional[torch.Tensor] = None,
                 cameras: Optional[MMCamerasBase] = None,
-                images: Optional[torch.Tensor] = None,
-                lights: Optional[torch.Tensor] = None,
+                lights: Optional[MMLights] = None,
                 indexes: Optional[Iterable[int]] = None,
+                backgrounds: Optional[torch.Tensor] = None,
                 **kwargs) -> Union[torch.Tensor, None]:
         """Render Meshes.
 
         Args:
             meshes (Optional[Meshes], optional): meshes to be rendered.
                 Defaults to None.
-            vertices (Optional[torch.Tensor], optional): vertices to be
-                rendered. Should be passed together with faces.
+            cameras (Optional[MMCamerasBase], optional): cameras for render.
                 Defaults to None.
-            faces (Optional[torch.Tensor], optional): faces of the meshes,
-                should be passed together with the vertices.
-                Defaults to None.
-            images (Optional[torch.Tensor], optional): background images.
+            lights (Optional[MMLights], optional): lights for render.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for images.
+                Defaults to None.
+            backgrounds (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
 
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
 
-        meshes = self._prepare_meshes(
-            meshes, vertices, faces, device=self.device)
+        meshes = meshes.to(self.device)
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
 
@@ -86,5 +83,5 @@ class MeshRenderer(BaseRenderer):
 
         if self.output_path is not None:
             rgba = self.tensor2rgba(rendered_images)
-            self._write_images(rgba, images, indexes)
+            self._write_images(rgba, backgrounds, indexes)
         return rendered_images
