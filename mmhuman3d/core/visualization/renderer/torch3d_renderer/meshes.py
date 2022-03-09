@@ -12,6 +12,7 @@ from mmhuman3d.utils.mesh_utils import \
     join_meshes_as_batch as _join_meshes_as_batch
 from mmhuman3d.utils.mesh_utils import \
     join_meshes_as_scene as _join_meshes_as_scene
+from .builder import build_renderer
 from .textures import TexturesNearest
 from .utils import align_input_to_padded
 
@@ -50,6 +51,7 @@ class ParametricMeshes(Meshes):
                  textures: TexturesBase = None,
                  meshes: Meshes = None,
                  body_model: Union[nn.Module, dict] = None,
+                 uv_renderer: Union[nn.Module, dict] = None,
                  vertex_color: Union[Iterable[float], torch.Tensor,
                                      np.ndarray] = ((1, 1, 1), ),
                  use_nearest: bool = False,
@@ -141,10 +143,11 @@ class ParametricMeshes(Meshes):
                 texture_images = align_input_to_padded(
                     texture_images, ndim=4, batch_size=N)
 
-                assert body_model.uv_renderer is not None
-
-                textures = body_model.uv_renderer.wrap_texture(
-                    texture_images).to(device)
+                assert uv_renderer is not None
+                if isinstance(uv_renderer, dict):
+                    uv_renderer = build_renderer(uv_renderer)
+                uv_renderer = uv_renderer.to(device)
+                textures = uv_renderer.wrap_texture(texture_images).to(device)
                 textures = textures.join_scene()
                 textures = textures.extend(N)
         num_verts_per_mesh = [V for _ in range(N)]
@@ -396,7 +399,7 @@ class ParametricMeshes(Meshes):
         return (len(self), self._N_individual)
 
 
-def join_meshes_as_batch(meshes: List[ParametricMeshes, Meshes],
+def join_meshes_as_batch(meshes: Union[List[ParametricMeshes], List[Meshes]],
                          include_textures: bool = True,
                          model_type: str = None) -> ParametricMeshes:
     """Join the meshes along the batch dim.
@@ -431,11 +434,11 @@ def join_meshes_as_batch(meshes: List[ParametricMeshes, Meshes],
 
 
 def join_meshes_as_scene(meshes: Union[ParametricMeshes,
-                                       List[ParametricMeshes, Meshes,
-                                            List[Meshes]]],
+                                       List[ParametricMeshes], Meshes,
+                                       List[Meshes]],
                          include_textures: bool = True,
                          model_type: str = None) -> ParametricMeshes:
-    """_summary_
+    """Join the meshes along the scene dim.
 
     Args:
         meshes (Union[ParametricMeshes, List[ParametricMeshes, Meshes,
@@ -466,7 +469,7 @@ def join_meshes_as_scene(meshes: Union[ParametricMeshes,
         model_type=getattr(first, 'model_type', model_type), meshes=meshes)
 
 
-def join_batch_meshes_as_scene(meshes: List[ParametricMeshes, Meshes],
+def join_batch_meshes_as_scene(meshes: Union[List[ParametricMeshes], Meshes],
                                include_textures: bool = True,
                                model_type: str = None) -> ParametricMeshes:
     """Join `meshes` as a scene each batch. For ParametricMeshes. The Meshes

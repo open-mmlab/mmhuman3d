@@ -25,10 +25,12 @@ def test_set():
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
     sample_keypoints2d_mask = np.ones(shape=[144])
     human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = sample_keypoints2d
     # set item without mask
     human_data = HumanData()
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
+    human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = sample_keypoints2d
     # strict==True does not allow unsupported keys
     human_data.set_key_strict(True)
@@ -36,12 +38,14 @@ def test_set():
         human_data['keypoints4d_mask'] = np.ones(shape=[
             144,
         ])
+        human_data['keypoints4d_convention'] = 'smplx'
         human_data['keypoints4d'] = np.zeros(shape=[3, 144, 5])
     # strict==False allows unsupported keys
     human_data = HumanData.new(key_strict=False)
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
+    human_data['keypoints4d_convention'] = 'smplx'
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     # test wrong value type
     with pytest.raises(ValueError):
@@ -64,13 +68,14 @@ def test_set():
             2,
         ])
         human_data['bbox_xywh'] = bbox_np
-    # test wrong value temporal len
+    # test wrong value data len
     human_data = HumanData()
     human_data['bbox_xywh'] = np.zeros(shape=[2, 5])
     with pytest.raises(ValueError):
         human_data['keypoints2d_mask'] = np.ones(shape=[
             144,
         ])
+        human_data['keypoints2d_convention'] = 'smplx'
         human_data['keypoints2d'] = np.zeros(shape=[3, 144, 3])
     # test everything is right
     human_data = HumanData()
@@ -78,6 +83,7 @@ def test_set():
     human_data['keypoints2d_mask'] = np.ones(shape=[
         144,
     ])
+    human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = np.zeros(shape=[2, 144, 3])
 
 
@@ -88,6 +94,7 @@ def test_compression():
     sample_keypoints2d_mask = np.zeros(shape=[144], dtype=np.uint8)
     sample_keypoints2d_mask[:5] += 1
     human_data['keypoints2d_mask'] = sample_keypoints2d_mask
+    human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = sample_keypoints2d
     assert shape_equal(human_data['keypoints2d'], sample_keypoints2d)
     assert shape_equal(
@@ -144,6 +151,7 @@ def test_pop_unsupported_items():
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
+    human_data['keypoints4d_convention'] = 'smplx'
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     human_data.pop_unsupported_items()
     assert 'keypoints4d' not in human_data
@@ -152,6 +160,7 @@ def test_pop_unsupported_items():
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
+    human_data['keypoints4d_convention'] = 'smplx'
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     human_data.set_key_strict(True)
     assert 'keypoints4d' not in human_data
@@ -198,7 +207,7 @@ def test_padding_and_slice():
     assert raw_value.shape[0] == target_value.shape[0]
 
 
-def test_temporal_slice():
+def test_slice():
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
     human_data = HumanData()
     human_data.load(human_data_load_path)
@@ -206,19 +215,19 @@ def test_temporal_slice():
     # raw shape: 199, 18, 3
     raw_value = human_data.get_raw_value('keypoints2d')
     # slice with stop
-    sliced_human_data = human_data.get_temporal_slice(1)
+    sliced_human_data = human_data.get_slice(1)
     assert sliced_human_data['keypoints2d'].shape[0] == 1
     assert \
         sliced_human_data.get_raw_value('keypoints2d')[0, 0, 0] == \
         raw_value[0, 0, 0]
     # slice with start and stop
-    sliced_human_data = human_data.get_temporal_slice(1, 3)
+    sliced_human_data = human_data.get_slice(1, 3)
     assert sliced_human_data['keypoints2d'].shape[0] == 2
     assert \
         sliced_human_data.get_raw_value('keypoints2d')[0, 0, 0] == \
         raw_value[1, 0, 0]
     # slice with start, stop and step
-    sliced_human_data = human_data.get_temporal_slice(0, 5, 2)
+    sliced_human_data = human_data.get_slice(0, 5, 2)
     assert sliced_human_data['keypoints2d'].shape[0] == 3
     assert \
         sliced_human_data.get_raw_value('keypoints2d')[1, 0, 0] == \
@@ -226,12 +235,12 @@ def test_temporal_slice():
     # do not slice image_path when it has a wrong length
     human_data.__temporal_len__ = 199
     human_data['image_path'] = ['1.jpg', '2.jpg']
-    sliced_human_data = human_data.get_temporal_slice(1)
+    sliced_human_data = human_data.get_slice(1)
     assert len(sliced_human_data['image_path']) == 2
     # slice image_path when it is correct
     image_list = [f'{index:04d}.jpg' for index in range(199)]
     human_data['image_path'] = image_list
-    sliced_human_data = human_data.get_temporal_slice(0, 5, 2)
+    sliced_human_data = human_data.get_slice(0, 5, 2)
     assert len(sliced_human_data['image_path']) == 3
 
 
@@ -281,7 +290,7 @@ def test_dump():
     human_data['keypoints2d_mask'] = sample_keypoints2d_mask
     human_data['keypoints2d'] = sample_keypoints2d
     # 3 frames before dump
-    assert human_data.__temporal_len__ == 3
+    assert human_data.data_len == 3
 
     human_data_dump_path = 'tests/data/human_data/human_data_00_dump.npz'
     if check_path_existence(human_data_dump_path,
@@ -293,7 +302,7 @@ def test_dump():
     human_data_load = HumanData()
     human_data_load.load(human_data_dump_path)
     # 3 frames after load
-    assert human_data_load.__temporal_len__ == 3
+    assert human_data_load.data_len == 3
 
     # compatibility for old bbox
     old_version_dict = {
@@ -327,7 +336,7 @@ def test_dump_by_pickle():
     human_data['keypoints2d'] = sample_keypoints2d
     human_data.compress_keypoints_by_mask()
     # 3 frames before dump
-    assert human_data.__temporal_len__ == 3
+    assert human_data.data_len == 3
 
     human_data_dump_path = 'tests/data/human_data/human_data_00_dump.pkl'
     if check_path_existence(human_data_dump_path,
@@ -339,7 +348,7 @@ def test_dump_by_pickle():
     human_data_load = HumanData()
     human_data_load.load_by_pickle(human_data_dump_path)
     # 3 frames after load
-    assert human_data_load.__temporal_len__ == 3
+    assert human_data_load.data_len == 3
 
     # compatibility for old bbox
     old_version_dict = {

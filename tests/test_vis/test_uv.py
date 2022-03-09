@@ -41,7 +41,8 @@ def test_uv_resample():
         mesh.verts_padded(), mesh1.verts_padded() - 1, atol=1e-3).all()
     mesh2 = uv_renderer.wrap_normal(mesh, normal_map=normal_map)
     assert (mesh2.verts_normals_padded() == 1).all()
-    mesh3 = uv_renderer.wrap_texture(mesh, texture_map=texture_map)
+    mesh3 = mesh2.clone()
+    mesh3.textures = uv_renderer.wrap_texture(texture_map=texture_map)
     assert mesh3.textures.maps_padded().shape == (1, 600, 600, 3)
 
     normal_map_small = torch.ones(1, 200, 200, 3).to(device)

@@ -19,10 +19,9 @@ from mmhuman3d.core.cameras.cameras import (
     FoVOrthographicCameras,
     MMCamerasBase,
 )
-from mmhuman3d.core.visualization.renderer import BaseRenderer
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER
-from .utils import array2tensor
+from .utils import array2tensor, rgb2bgr
 
 
 @RENDERER.register_module(name=['uv_renderer', 'uv', 'UV', 'UVRenderer'])
@@ -504,7 +503,7 @@ class UVRenderer(nn.Module):
             texture_map_padded = array2tensor(texture_map_padded)
             is_bgr = True
         if is_bgr:
-            texture_map_padded = BaseRenderer.rgb2bgr(texture_map_padded)
+            texture_map_padded = rgb2bgr(texture_map_padded)
 
         if texture_map_padded.shape[0] == 1:
             texture_map_padded = texture_map_padded.repeat(N, 1, 1, 1)
