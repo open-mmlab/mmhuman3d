@@ -20,20 +20,26 @@ class ParametricMeshes(Meshes):
     """Mesh structure for parametric body models, E.g., smpl, smplx, mano,
     flame.
 
-    There are 3 ways to initialize the verts:     1). Pass the verts directly
-    as verts_padded (N, V, 3)         or verts_list (list of (N, 3)).     2).
-    Pass body_model and pose_params.     3). Pass meshes. Could be Meshes or
-    ParametricMeshes.         Will use the verts from the meshes. There are 3
-    ways to initialize the faces:     1). Pass the faces directly as
-    faces_padded (N, F, 3)         or faces_list (list of (F, 3)).     2). Pass
-    body_model and will use body_model.faces_tensor.     3). Pass meshes. Could
-    be Meshes or ParametricMeshes.         Will use the faces from the meshes.
-    There are 4 ways to initialize the textures.     1). Pass the textures
-    directly.     2). Pass the texture_images of shape (H, W, 3) for single
-    person or (_N_individual, H, W, 3) for multi-person. `body_model` should be
-    passed and should has `uv_renderer`.     3). Pass the vertex_color of shape
-    (3) or (V, 3) or (N, V, 3).     4). Pass meshes. Could be Meshes or
-    ParametricMeshes.         Will use the textures directly from the meshes.
+    There are 3 ways to initialize the verts:
+        1): Pass the verts directly as verts_padded (N, V, 3) or verts_list
+        (list of (N, 3)).
+        2): Pass body_model and pose_params.
+        3): Pass meshes. Could be Meshes or ParametricMeshes.
+            Will use the verts from the meshes.
+    There are 3 ways to initialize the faces:
+        1): Pass the faces directly as faces_padded (N, F, 3) or faces_list
+        (list of (F, 3)).
+        2): Pass body_model and will use body_model.faces_tensor.
+        3): Pass meshes. Could be Meshes or ParametricMeshes.
+        Will use the faces from the meshes.
+    There are 4 ways to initialize the textures.
+        1): Pass the textures directly.
+        2): Pass the texture_images of shape (H, W, 3) for single person or
+        (_N_individual, H, W, 3) for multi-person. `body_model` should be
+        passed and should has `uv_renderer`.
+        3): Pass the vertex_color of shape (3) or (V, 3) or (N, V, 3).
+        4): Pass meshes. Could be Meshes or ParametricMeshes.
+        Will use the textures directly from the meshes.
     """
     # TODO: More model class to be added (FLAME, MANO)
     model_classes = {'smpl': SMPL, 'smplx': SMPLX}
