@@ -77,7 +77,10 @@ def align_input_to_padded(tensor=Union[List[torch.Tensor], torch.Tensor],
                           padding_mode: Literal['ones', 'zeros', 'repeat',
                                                 'none'] = 'none'):
     if isinstance(tensor, list):
-        tensor = list_to_padded(tensor)
+        for i in range(len(tensor)):
+            if tensor[i].dim == ndim:
+                tensor[i] = tensor[i][0]
+        tensor = list_to_padded(tensor, equisized=True)
     assert tensor.ndim in (ndim, ndim - 1)
     if tensor.ndim == ndim - 1:
         tensor = tensor.unsqueeze(0)

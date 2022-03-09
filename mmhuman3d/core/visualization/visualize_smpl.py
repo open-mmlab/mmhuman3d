@@ -812,9 +812,6 @@ def render_smpl(
     ]:
         raise ValueError('Please choose the right render_choice.')
 
-    if render_choice == 'part_silhouette':
-        render_param_dict.update(texture_type='nearest')
-
     # body part colorful visualization should use flat shader to be sharper.
     if texture_image is None:
         if isinstance(palette, str):
@@ -842,7 +839,7 @@ def render_smpl(
         N_individual_overdide=num_person,
         model_type=model_type,
         texture_image=texture_image,
-        use_nearest=bool(palette == 'segmentation'),
+        use_nearest=bool(render_choice == 'part_silhouette'),
         vertex_color=colors_all)
 
     # write .ply or .obj files

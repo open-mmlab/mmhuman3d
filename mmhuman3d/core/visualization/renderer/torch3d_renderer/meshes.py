@@ -4,9 +4,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 from pytorch3d.renderer import TexturesUV, TexturesVertex
+from pytorch3d.renderer.mesh.textures import TexturesBase
 from pytorch3d.structures import Meshes, list_to_padded, padded_to_list
 
-from mmhuman3d.models.body_models import SMPL, SMPLX
+from mmhuman3d.models import SMPL, SMPLX
 from mmhuman3d.utils.mesh_utils import \
     join_meshes_as_batch as _join_meshes_as_batch
 from mmhuman3d.utils.mesh_utils import \
@@ -16,33 +17,48 @@ from .utils import align_input_to_padded
 
 
 class ParametricMeshes(Meshes):
-    # More model class to be added
-    model_classes = {'smpl': SMPL, 'smplx': SMPLX}
     """Mesh structure for parametric body models, E.g., smpl, smplx, mano,
-    flame."""
+    flame.
+
+    There are 3 ways to initialize the verts:     1). Pass the verts directly
+    as verts_padded (N, V, 3)         or verts_list (list of (N, 3)).     2).
+    Pass body_model and pose_params.     3). Pass meshes. Could be Meshes or
+    ParametricMeshes.         Will use the verts from the meshes. There are 3
+    ways to initialize the faces:     1). Pass the faces directly as
+    faces_padded (N, F, 3)         or faces_list (list of (F, 3)).     2). Pass
+    body_model and will use body_model.faces_tensor.     3). Pass meshes. Could
+    be Meshes or ParametricMeshes.         Will use the faces from the meshes.
+    There are 4 ways to initialize the textures.     1). Pass the textures
+    directly.     2). Pass the texture_images of shape (H, W, 3) for single
+    person or (_N_individual, H, W, 3) for multi-person. `body_model` should be
+    passed and should has `uv_renderer`.     3). Pass the vertex_color of shape
+    (3) or (V, 3) or (N, V, 3).     4). Pass meshes. Could be Meshes or
+    ParametricMeshes.         Will use the textures directly from the meshes.
+    """
+    # TODO: More model class to be added (FLAME, MANO)
+    model_classes = {'smpl': SMPL, 'smplx': SMPLX}
 
     def __init__(self,
-                 verts=None,
-                 faces=None,
-                 textures=None,
+                 verts: Union[List[torch.Tensor], torch.Tensor] = None,
+                 faces: Union[List[torch.Tensor], torch.Tensor] = None,
+                 textures: TexturesBase = None,
                  meshes: Meshes = None,
                  body_model: Union[nn.Module, dict] = None,
                  vertex_color: Union[Iterable[float], torch.Tensor,
                                      np.ndarray] = ((1, 1, 1), ),
                  use_nearest: bool = False,
-                 model_type: str = 'smpl',
-                 N_individual_overdide: int = None,
                  texture_images: Union[torch.Tensor, List[torch.Tensor],
                                        None] = None,
+                 model_type: str = 'smpl',
+                 N_individual_overdide: int = None,
                  *,
-                 verts_normals=None,
+                 verts_normals: torch.Tensor = None,
                  **pose_params) -> None:
+
         if isinstance(meshes, Meshes):
             verts = meshes.verts_padded()
             faces = meshes.faces_padded()
             textures = meshes.textures
-
-        self.body_model = body_model
 
         self.model_type = body_model._get_name().lower(
         ) if body_model is not None else model_type
@@ -50,40 +66,41 @@ class ParametricMeshes(Meshes):
         self.model_class = self.model_classes[self.model_type]
 
         use_list = False
+
         # formart verts as verts_padded: (N, V, 3)
         if verts is None:
-            assert self.body_model is not None
-            verts = self.body_model(**pose_params)['vertices']
-
-        elif isinstance(verts, np.ndarray):
-            verts = torch.Tensor(np.ndarray)
+            assert body_model is not None
+            verts = body_model(**pose_params)['vertices']
         elif isinstance(verts, list):
             verts = list_to_padded(verts)
             use_list = True
+        # specify number of individuals
         if N_individual_overdide is not None:
             verts = verts.view(
                 -1, self.model_class.NUM_VERTS * N_individual_overdide, 3)
 
+        # the information of _N_individual should be revealed in verts's shape
         self._N_individual = int(verts.shape[-2] // self.model_class.NUM_VERTS)
 
+        assert verts.shape[1] % self.model_class.NUM_VERTS == 0
         verts = verts.view(-1, self.model_class.NUM_VERTS * self._N_individual,
                            3)
         device = verts.device
         N, V, _ = verts.shape
-        assert V % self.model_class.NUM_VERTS == 0
 
         # formart faces as faces_padded: (N, F, 3)
         if isinstance(faces, list):
+            faces = list_to_padded(faces)
             self.face_individual = faces[0][:self.model_class.NUM_FACES].to(
                 device)
-            faces = self.get_faces_padded(N, self._N_individual)
         elif faces is None:
+            assert body_model is not None
             self.face_individual = body_model.faces_tensor[None].to(device)
             faces = self.get_faces_padded(N, self._N_individual)
         elif isinstance(faces, torch.Tensor):
+            faces = align_input_to_padded(faces, ndim=3, batch_size=N)
             self.face_individual = faces[:1, :self.model_class.NUM_FACES].to(
                 device)
-            faces = self.get_faces_padded(N, self._N_individual)
         else:
             raise ValueError(f'Wrong type of faces: {type(faces)}.')
 
@@ -93,18 +110,17 @@ class ParametricMeshes(Meshes):
         F = faces.shape[1]
         if textures is None:
             if texture_images is None:
+                # input vertex_color should be
+                #   (3), (1, 3), (1, 1, 3). all the same color
+                #   (V, 3), (1, V, 3), each vertex has a single color
+                #   (N, V, 3), each batch each vertex has a single color
                 if isinstance(vertex_color, (tuple, list)):
-                    vertex_color = torch.Tensor(vertex_color).view(1, 1,
-                                                                   3).repeat(
-                                                                       N, V, 1)
+                    vertex_color = torch.Tensor(vertex_color)
                 elif isinstance(vertex_color, (torch.Tensor, np.ndarray)):
                     vertex_color = torch.Tensor(vertex_color) if isinstance(
                         vertex_color, np.ndarray) else vertex_color
-                    if vertex_color.numel() == 3:
-                        vertex_color = vertex_color.view(1, 1,
-                                                         3).repeat(N, V, 1)
-                    elif vertex_color.shape[-2] == 1:
-                        vertex_color = vertex_color.repeat_interleave(V, -2)
+                if vertex_color.numel() == 3:
+                    vertex_color = vertex_color.view(1, 3).repeat(V, 1)
                 vertex_color = align_input_to_padded(
                     vertex_color, ndim=3, batch_size=N)
                 assert vertex_color.shape == verts.shape
@@ -119,9 +135,9 @@ class ParametricMeshes(Meshes):
                 texture_images = align_input_to_padded(
                     texture_images, ndim=4, batch_size=N)
 
-                assert self.body_model.uv_renderer is not None
+                assert body_model.uv_renderer is not None
 
-                textures = self.body_model.uv_renderer.wrap_texture(
+                textures = body_model.uv_renderer.wrap_texture(
                     texture_images).to(device)
                 textures = textures.join_scene()
                 textures = textures.extend(N)
@@ -157,6 +173,8 @@ class ParametricMeshes(Meshes):
         return meshes
 
     def clone(self):
+        """Modified from pytorch3d and add `model_type` in
+        __class__.__init__."""
         verts_list = self.verts_list()
         faces_list = self.faces_list()
         new_verts_list = [v.clone() for v in verts_list]
@@ -164,8 +182,7 @@ class ParametricMeshes(Meshes):
         other = self.__class__(
             verts=new_verts_list,
             faces=new_faces_list,
-            model_type=self.model_type,
-            body_model=self.body_model)
+            model_type=self.model_type)
         for k in self._INTERNAL_TENSORS:
             v = getattr(self, k)
             if torch.is_tensor(v):
@@ -177,6 +194,8 @@ class ParametricMeshes(Meshes):
         return other
 
     def detach(self):
+        """Modified from pytorch3d and add `model_type` in
+        __class__.__init__."""
         verts_list = self.verts_list()
         faces_list = self.faces_list()
         new_verts_list = [v.detach() for v in verts_list]
@@ -184,8 +203,7 @@ class ParametricMeshes(Meshes):
         other = self.__class__(
             verts=new_verts_list,
             faces=new_faces_list,
-            model_type=self.model_type,
-            body_model=self.body_model)
+            model_type=self.model_type)
 
         for k in self._INTERNAL_TENSORS:
             v = getattr(self, k)
@@ -197,7 +215,9 @@ class ParametricMeshes(Meshes):
             other.textures = self.textures.detach()
         return other
 
-    def update_padded(self, new_verts_padded):
+    def update_padded(self, new_verts_padded: torch.Tensor):
+        """Modified from pytorch3d and add `model_type` in
+        __class__.__init__."""
 
         def check_shapes(x, size):
             if x.shape[0] != size[0]:
@@ -214,8 +234,7 @@ class ParametricMeshes(Meshes):
         new = self.__class__(
             verts=new_verts_padded,
             faces=self.faces_padded(),
-            model_type=self.model_type,
-            body_model=self.body_model)
+            model_type=self.model_type)
 
         if new._N != self._N or new._V != self._V or new._F != self._F:
             raise ValueError('Inconsistent sizes after construction.')
@@ -283,7 +302,14 @@ class ParametricMeshes(Meshes):
 
         return new
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: Union[tuple, int, list, slice, torch.Tensor]):
+        """Slice the meshes by the batch dim like pytorch3d Meshes. And slice
+        by scene dim due to the topology of the parametric meshes.
+
+        Args:
+            index (Union[tuple, int, list, slice, torch.Tensor]): indexes, if
+            pass only one augment, will ignore the scene dim.
+        """
         if isinstance(index, tuple):
             batch_index, individual_index = index
         else:
@@ -305,8 +331,7 @@ class ParametricMeshes(Meshes):
                 faces=self.faces_padded()[batch_index],
                 textures=self.textures[batch_index]
                 if self.textures is not None else None,
-                model_type=self.model_type,
-                body_model=self.body_model)
+                model_type=self.model_type)
 
         if isinstance(individual_index, int):
             individual_index = [individual_index]
@@ -322,11 +347,7 @@ class ParametricMeshes(Meshes):
         ]
         vertex_index = torch.cat(vertex_index).to(self.device).long()
 
-        face_index = [
-            torch.arange(self.model_class.NUM_FACES) +
-            idx * self.model_class.NUM_FACES for idx in individual_index
-        ]
-        face_index = torch.cat(face_index).to(self.device).long()
+        new_face_num = self.model_class.NUM_FACES * len(individual_index)
 
         verts_padded = self.verts_padded()[batch_index][:, vertex_index]
         faces_padded = self.get_faces_padded(
@@ -343,9 +364,11 @@ class ParametricMeshes(Meshes):
             ]
             maps_index = torch.cat(maps_index).to(self.device)
             verts_uvs_padded = textures_batch.verts_uvs_padded(
-            )[:, :len(face_index)]
+            )[:, :len(vertex_index)] * torch.Tensor([
+                self._N_individual / len(individual_index), 1
+            ]).view(1, 1, 2).to(self.device)
             faces_uvs_padded = textures_batch.faces_uvs_padded(
-            )[:, :len(face_index)]
+            )[:, :new_face_num]
             maps_padded = maps[:, :, maps_index]
             textures = TexturesUV(
                 faces_uvs=faces_uvs_padded,
@@ -359,8 +382,7 @@ class ParametricMeshes(Meshes):
             verts=verts_padded,
             faces=faces_padded,
             textures=textures,
-            model_type=self.model_type,
-            body_model=self.body_model)
+            model_type=self.model_type)
         return meshes
 
     @property
@@ -368,45 +390,106 @@ class ParametricMeshes(Meshes):
         return (len(self), self._N_individual)
 
 
-def join_meshes_as_batch(meshes: List[ParametricMeshes],
-                         include_textures: bool = True):
+def join_meshes_as_batch(meshes: List[ParametricMeshes, Meshes],
+                         include_textures: bool = True,
+                         model_type: str = None) -> ParametricMeshes:
+    """Join the meshes along the batch dim.
 
+    Args:
+        meshes (Union[ParametricMeshes, List[ParametricMeshes, Meshes,
+            List[Meshes]]]): Meshes object that contains a batch of meshes,
+            or a list of Meshes objects.
+        include_textures (bool, optional): whether to try to join the textures.
+            Defaults to True.
+        model_type (str, optional): model_type. Should be specified if use
+            Meshes rather than ParametricMeshes.
+            Defaults to None.
+
+    Returns:
+        ParametricMeshes: the joined ParametricMeshes.
+    """
     if isinstance(meshes, ParametricMeshes):
         raise ValueError('Wrong first argument to join_meshes_as_batch.')
     first = meshes[0]
-    assert all(mesh.model_type == first.model_type for mesh in meshes), \
-        'model_type should all be the same'
-
+    if isinstance(first, ParametricMeshes):
+        assert all(mesh.model_type == first.model_type for mesh in meshes), \
+            'model_type should all be the same.'
+        model_type = first.model_type
+    else:
+        assert model_type is not None
+    assert all(mesh.verts_padded().shape[1] == first.verts_padded().shape[1]
+               for mesh in meshes), 'Number of verts should all be the same.'
     meshes = _join_meshes_as_batch(meshes, include_textures=include_textures)
     return ParametricMeshes(
-        model_type=getattr(first, 'model_type', None),
-        body_model=getattr(first, 'body_model', None),
-        meshes=meshes)
+        model_type=getattr(first, 'model_type', model_type), meshes=meshes)
 
 
 def join_meshes_as_scene(meshes: Union[ParametricMeshes,
-                                       List[ParametricMeshes]],
-                         include_textures: bool = True):
+                                       List[ParametricMeshes, Meshes,
+                                            List[Meshes]]],
+                         include_textures: bool = True,
+                         model_type: str = None) -> ParametricMeshes:
+    """_summary_
 
+    Args:
+        meshes (Union[ParametricMeshes, List[ParametricMeshes, Meshes,
+            List[Meshes]]]): Meshes object that contains a batch of meshes,
+            or a list of Meshes objects.
+        include_textures (bool, optional): whether to try to join the textures.
+            Defaults to True.
+        model_type (str, optional): model_type. Should be specified if use
+            Meshes rather than ParametricMeshes.
+            Defaults to None.
+
+    Returns:
+        ParametricMeshes: the joined ParametricMeshes.
+    """
     first = meshes[0]
-    assert all(mesh.model_type == first.model_type for mesh in meshes), \
-        'model_type should all be the same'
+    if isinstance(first, ParametricMeshes):
+        assert all(mesh.model_type == first.model_type for mesh in meshes), \
+            'model_type should all be the same.'
+        model_type = first.model_type
+    else:
+        assert model_type is not None
 
+    if isinstance(meshes, list):
+        assert all(len(mesh) == len(first) for mesh in meshes), \
+            'meshes should all have the same batch size.'
     meshes = _join_meshes_as_scene(meshes, include_textures=include_textures)
     return ParametricMeshes(
-        model_type=getattr(first, 'model_type', None),
-        body_model=getattr(first, 'body_model', None),
-        meshes=meshes)
+        model_type=getattr(first, 'model_type', model_type), meshes=meshes)
 
 
-def join_batch_meshes_as_scene(
-    meshes: List[ParametricMeshes],
-    include_textures: bool = True,
-):
+def join_batch_meshes_as_scene(meshes: List[ParametricMeshes, Meshes],
+                               include_textures: bool = True,
+                               model_type: str = None) -> ParametricMeshes:
+    """Join `meshes` as a scene each batch. For ParametricMeshes. The Meshes
+    must share the same batch size, and topology could be different. They must
+    all be on the same device. If `include_textures` is true, the textures
+    should be the same type, all be None is not accepted. If `include_textures`
+    is False, textures are ignored. The return meshes will have no textures.
+
+    Args:
+        meshes (Union[ParametricMeshes, List[ParametricMeshes, Meshes,
+            List[Meshes]]]): Meshes object that contains a batch of meshes,
+            or a list of Meshes objects.
+        include_textures (bool, optional): whether to try to join the textures.
+            Defaults to True.
+        model_type (str, optional): model_type. Should be specified if use
+            Meshes rather than ParametricMeshes.
+            Defaults to None.
+
+    Returns:
+        New Meshes which has join different Meshes by each batch.
+    """
     first = meshes[0]
-    assert all(mesh.model_type == first.model_type for mesh in meshes), \
-        'model_type should all be the same'
-    assert all(mesh.num_individual == first.num_individual for mesh in meshes)
+    if isinstance(first, ParametricMeshes):
+        assert all(mesh.model_type == first.model_type for mesh in meshes), \
+            'model_type should all be the same.'
+        assert all(mesh.num_individual == first.num_individual
+                   for mesh in meshes)
+    else:
+        assert model_type is not None
     assert all(len(mesh) == len(first) for mesh in meshes)
     for mesh in meshes:
         mesh._verts_list = padded_to_list(mesh.verts_padded(),
@@ -419,7 +502,10 @@ def join_batch_meshes_as_scene(
         meshes_batch = []
         for i in range(num_scene_size):
             meshes_batch.append(meshes[i][j])
-        meshes_all.append(join_meshes_as_scene(meshes_batch, include_textures))
-    meshes_final = join_meshes_as_batch(meshes_all, include_textures)
+        meshes_all.append(
+            join_meshes_as_scene(
+                meshes_batch, include_textures, model_type=model_type))
+    meshes_final = join_meshes_as_batch(
+        meshes_all, include_textures, model_type=model_type)
 
     return meshes_final
