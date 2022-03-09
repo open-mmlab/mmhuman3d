@@ -175,10 +175,14 @@ class ParametricMeshes(Meshes):
         self._verts_list = self.verts_list()
 
     def extend(self, N_batch: int, N_scene: int = 1):
+
         if N_batch != 1:
             meshes = join_meshes_as_batch([self for _ in range(N_batch)])
+        else:
+            meshes = self
         if N_scene != 1:
-            meshes = join_batch_meshes_as_scene([self for _ in range(N_scene)])
+            meshes = join_batch_meshes_as_scene(
+                [meshes for _ in range(N_scene)])
         return meshes
 
     def clone(self):
@@ -328,9 +332,12 @@ class ParametricMeshes(Meshes):
             batch_index = [batch_index]
         elif isinstance(batch_index, (tuple, list, slice)):
             batch_index = torch.arange(self._N)[batch_index]
-        batch_index = torch.tensor(batch_index).to(self.device)
+        batch_index = torch.tensor(batch_index) if not isinstance(
+            batch_index, torch.Tensor) else batch_index
         batch_index = batch_index.long() if not (
             batch_index.dtype is torch.long) else batch_index
+        batch_index = batch_index.to(self.device)
+
         if (batch_index > self._N).any():
             raise (IndexError, 'list index out of range')
 
@@ -347,7 +354,8 @@ class ParametricMeshes(Meshes):
         elif isinstance(individual_index, (tuple, list, slice)):
             individual_index = torch.arange(
                 self._N_individual)[individual_index]
-        individual_index = torch.tensor(individual_index)
+        individual_index = torch.tensor(individual_index) if not isinstance(
+            individual_index, torch.Tensor) else individual_index
         if (individual_index > self._N_individual).any():
             raise (IndexError, 'list index out of range')
         vertex_index = [
@@ -461,9 +469,6 @@ def join_meshes_as_scene(meshes: Union[ParametricMeshes,
     else:
         assert model_type is not None
 
-    if isinstance(meshes, list):
-        assert all(len(mesh) == len(first) for mesh in meshes), \
-            'meshes should all have the same batch size.'
     meshes = _join_meshes_as_scene(meshes, include_textures=include_textures)
     return ParametricMeshes(
         model_type=getattr(first, 'model_type', model_type), meshes=meshes)
@@ -495,8 +500,6 @@ def join_batch_meshes_as_scene(meshes: Union[List[ParametricMeshes], Meshes],
     if isinstance(first, ParametricMeshes):
         assert all(mesh.model_type == first.model_type for mesh in meshes), \
             'model_type should all be the same.'
-        assert all(mesh.num_individual == first.num_individual
-                   for mesh in meshes)
     else:
         assert model_type is not None
     assert all(len(mesh) == len(first) for mesh in meshes)
