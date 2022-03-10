@@ -1,5 +1,6 @@
 import pytest
 import torch
+from pytorch3d.renderer.mesh import TexturesVertex
 from pytorch3d.utils import torus
 
 from mmhuman3d.core.visualization.renderer import build_renderer
@@ -8,10 +9,14 @@ from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import (
     join_batch_meshes_as_scene,
 )
 from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.utils.mesh_utils import \
+    join_batch_meshes_as_scene as join_batch_meshes_as_scene_
 from mmhuman3d.utils.mesh_utils import (
+    load_plys_as_meshes,
     mesh_to_pointcloud_vc,
     save_meshes_as_objs,
     save_meshes_as_plys,
+    texture_uv2vc,
 )
 
 
@@ -31,6 +36,8 @@ def test_parametric_meshes_ops():
     pose_dict = body_model.tensor2dict(full_pose)
 
     meshes = ParametricMeshes(body_model=body_model, **pose_dict)
+    assert meshes.clone()
+    assert meshes.detach()
     meshes2 = meshes.extend(2)
     assert meshes2.shape == (2, 1)
     assert meshes2.verts_padded().shape == (2, meshes2.model_class.NUM_VERTS,
@@ -76,7 +83,7 @@ def test_parametric_meshes_ops_uv():
         uv_renderer=uv_renderer,
         texture_images=torch.ones(100, 100, 3),
         **pose_dict)
-
+    assert isinstance(texture_uv2vc(meshes).textures, TexturesVertex)
     meshes2 = meshes.extend(2)
     assert meshes2.shape == (2, 1)
     assert meshes2.verts_padded().shape == (2, meshes2.model_class.NUM_VERTS,
@@ -117,6 +124,8 @@ def test_save_meshes():
         save_meshes_as_plys(Torus, files=['1.obj'])
 
     save_meshes_as_plys(Torus, files=['1.ply'])
+    mesh = load_plys_as_meshes(files=['1.ply'])
+    assert mesh.verts_padded().shape == Torus.verts_padded().shape
     save_meshes_as_plys(
         verts=Torus.verts_padded(), faces=Torus.faces_padded(), files='1.ply')
     save_meshes_as_plys(
@@ -125,6 +134,11 @@ def test_save_meshes():
         faces=Torus.faces_packed(),
         files='1.ply')
     save_meshes_as_objs(Torus, files='1.obj')
+    Torus2 = Torus.extend(2)
+    Torus2_2 = join_batch_meshes_as_scene_([Torus2, Torus2])
+    assert Torus2_2.verts_padded().shape == (2,
+                                             Torus.verts_padded().shape[1] * 2,
+                                             3)
 
 
 def test_mesh2pointcloud():

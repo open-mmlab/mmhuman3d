@@ -423,7 +423,7 @@ class ParametricMeshes(Meshes):
         return (len(self), self._N_individual)
 
 
-def join_meshes_as_batch(meshes: Union[List[ParametricMeshes]],
+def join_meshes_as_batch(meshes: List[ParametricMeshes],
                          include_textures: bool = True) -> ParametricMeshes:
     """Join the meshes along the batch dim.
 
