@@ -26,10 +26,7 @@ from .utils import array2tensor, rgb2bgr
 
 @RENDERER.register_module(name=['uv_renderer', 'uv', 'UV', 'UVRenderer'])
 class UVRenderer(nn.Module):
-    """Renderer for SMPL(x) UV map.
-
-    # TODO: test smplx support.
-    """
+    """Renderer for SMPL(x) UV map."""
 
     def __init__(
         self,
@@ -40,7 +37,7 @@ class UVRenderer(nn.Module):
         device: Union[torch.device, str] = 'cpu',
         threshold_size: int = 512,
         # TODO: Solved the sample bug when the resolution is too small.
-        # set threshold_size is just a temporal solution.
+        # set threshold_size is just a temporary solution.
 
         # TODO: add smplx_uv.npz and eval the warping & sampling of smplx
         # model.
