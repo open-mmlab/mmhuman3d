@@ -103,6 +103,8 @@ def test_parametric_meshes_ops_uv():
     # TODO: This assert is linked to ParametricMeshes line 382 and 497.
     # It is recommended that we can assure the shape of _maps_padded
     # is known due to the unique maps.
+    # So this assert could be modified but we must know the what the texture
+    # map of individual j in batch i is like.
     # assert all(mesh.textures._maps_padded.shape == (mesh.shape[0], 512,
     #                                                 512 * mesh._N_individual,
     #                                                 3)
