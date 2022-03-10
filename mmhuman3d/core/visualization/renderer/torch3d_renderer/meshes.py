@@ -10,8 +10,6 @@ from pytorch3d.structures import Meshes, list_to_padded, padded_to_list
 from mmhuman3d.models import SMPL, SMPLX
 from mmhuman3d.utils.mesh_utils import \
     join_meshes_as_batch as _join_meshes_as_batch
-from mmhuman3d.utils.mesh_utils import \
-    join_meshes_as_scene as _join_meshes_as_scene
 from .builder import build_renderer
 from .textures import TexturesNearest
 from .utils import align_input_to_padded
@@ -141,15 +139,17 @@ class ParametricMeshes(Meshes):
             else:
 
                 texture_images = align_input_to_padded(
-                    texture_images, ndim=4, batch_size=N)
+                    texture_images, ndim=4, batch_size=N).to(device)
 
                 assert uv_renderer is not None
                 if isinstance(uv_renderer, dict):
                     uv_renderer = build_renderer(uv_renderer)
                 uv_renderer = uv_renderer.to(device)
                 textures = uv_renderer.wrap_texture(texture_images).to(device)
-                textures = textures.join_scene()
-                textures = textures.extend(N)
+                if self._N_individual > 1:
+                    textures = textures.join_scene()
+                    textures = textures.extend(N)
+
         num_verts_per_mesh = [V for _ in range(N)]
         num_faces_per_mesh = [F for _ in range(N)]
 
@@ -175,14 +175,16 @@ class ParametricMeshes(Meshes):
         self._verts_list = self.verts_list()
 
     def extend(self, N_batch: int, N_scene: int = 1):
-
-        if N_batch != 1:
-            meshes = join_meshes_as_batch([self for _ in range(N_batch)])
+        if N_batch == 1:
+            meshes_batch = self
         else:
-            meshes = self
-        if N_scene != 1:
+            meshes_batch = join_meshes_as_batch([self for _ in range(N_batch)])
+
+        if N_scene == 1:
+            meshes = meshes_batch
+        else:
             meshes = join_batch_meshes_as_scene(
-                [meshes for _ in range(N_scene)])
+                [meshes_batch for _ in range(N_scene)])
         return meshes
 
     def clone(self):
@@ -323,6 +325,10 @@ class ParametricMeshes(Meshes):
             index (Union[tuple, int, list, slice, torch.Tensor]): indexes, if
             pass only one augment, will ignore the scene dim.
         """
+        # from IPython import embed
+        # embed()
+        # return super().__getitem__(index)
+
         if isinstance(index, tuple):
             batch_index, individual_index = index
         else:
@@ -338,8 +344,8 @@ class ParametricMeshes(Meshes):
             batch_index.dtype is torch.long) else batch_index
         batch_index = batch_index.to(self.device)
 
-        if (batch_index > self._N).any():
-            raise (IndexError, 'list index out of range')
+        if (batch_index >= self._N).any():
+            raise IndexError('list index out of range')
 
         if individual_index is None:
             return self.__class__(
@@ -357,7 +363,7 @@ class ParametricMeshes(Meshes):
         individual_index = torch.tensor(individual_index) if not isinstance(
             individual_index, torch.Tensor) else individual_index
         if (individual_index > self._N_individual).any():
-            raise (IndexError, 'list index out of range')
+            raise IndexError('list index out of range')
         vertex_index = [
             torch.arange(self.model_class.NUM_VERTS) +
             idx * self.model_class.NUM_VERTS for idx in individual_index
@@ -369,14 +375,24 @@ class ParametricMeshes(Meshes):
         verts_padded = self.verts_padded()[batch_index][:, vertex_index]
         faces_padded = self.get_faces_padded(
             len(verts_padded), len(individual_index))
-        # TODO: eval textures
+
         textures_batch = self.textures[batch_index]
 
         if isinstance(textures_batch, TexturesUV):
+            # TODO: there is still some problem with `TexturesUV`
+            # slice and need to fix the function `join_meshes_as_scene`.
+            # It is recommended that we re-inplement the `TexturesUV`
+            # as `ParametricTexturesUV`, mainly for the `__getitem__`
+            # and `join_scene` functions.
+
+            # textures_batch.get('unique_map_index ')
+
+            # This version only consider the maps tensor as different id.
             maps = textures_batch.maps_padded()
             width_individual = maps.shape[-2] // self._N_individual
             maps_index = [
-                torch.arange(width_individual) * idx
+                torch.arange(width_individual * idx,
+                             width_individual * (idx + 1))
                 for idx in individual_index
             ]
             maps_index = torch.cat(maps_index).to(self.device)
@@ -407,9 +423,8 @@ class ParametricMeshes(Meshes):
         return (len(self), self._N_individual)
 
 
-def join_meshes_as_batch(meshes: Union[List[ParametricMeshes], List[Meshes]],
-                         include_textures: bool = True,
-                         model_type: str = None) -> ParametricMeshes:
+def join_meshes_as_batch(meshes: Union[List[ParametricMeshes]],
+                         include_textures: bool = True) -> ParametricMeshes:
     """Join the meshes along the batch dim.
 
     Args:
@@ -418,9 +433,6 @@ def join_meshes_as_batch(meshes: Union[List[ParametricMeshes], List[Meshes]],
             or a list of Meshes objects.
         include_textures (bool, optional): whether to try to join the textures.
             Defaults to True.
-        model_type (str, optional): model_type. Should be specified if use
-            Meshes rather than ParametricMeshes.
-            Defaults to None.
 
     Returns:
         ParametricMeshes: the joined ParametricMeshes.
@@ -428,55 +440,65 @@ def join_meshes_as_batch(meshes: Union[List[ParametricMeshes], List[Meshes]],
     if isinstance(meshes, ParametricMeshes):
         raise ValueError('Wrong first argument to join_meshes_as_batch.')
     first = meshes[0]
-    if isinstance(first, ParametricMeshes):
-        assert all(mesh.model_type == first.model_type for mesh in meshes), \
-            'model_type should all be the same.'
-        model_type = first.model_type
-    else:
-        assert model_type is not None
-    assert all(mesh.verts_padded().shape[1] == first.verts_padded().shape[1]
-               for mesh in meshes), 'Number of verts should all be the same.'
+
+    assert all(mesh.model_type == first.model_type
+               for mesh in meshes), 'model_type should all be the same.'
+
     meshes = _join_meshes_as_batch(meshes, include_textures=include_textures)
-    return ParametricMeshes(
-        model_type=getattr(first, 'model_type', model_type), meshes=meshes)
+    return ParametricMeshes(model_type=first.model_type, meshes=meshes)
 
 
 def join_meshes_as_scene(meshes: Union[ParametricMeshes,
-                                       List[ParametricMeshes], Meshes,
-                                       List[Meshes]],
-                         include_textures: bool = True,
-                         model_type: str = None) -> ParametricMeshes:
+                                       List[ParametricMeshes]],
+                         include_textures: bool = True) -> ParametricMeshes:
     """Join the meshes along the scene dim.
 
     Args:
-        meshes (Union[ParametricMeshes, List[ParametricMeshes, Meshes,
-            List[Meshes]]]): Meshes object that contains a batch of meshes,
-            or a list of Meshes objects.
+        meshes (Union[ParametricMeshes, List[ParametricMeshes]]):
+            ParametricMeshes object that contains a batch of meshes,
+            or a list of ParametricMeshes objects.
         include_textures (bool, optional): whether to try to join the textures.
             Defaults to True.
-        model_type (str, optional): model_type. Should be specified if use
-            Meshes rather than ParametricMeshes.
-            Defaults to None.
 
     Returns:
         ParametricMeshes: the joined ParametricMeshes.
     """
     first = meshes[0]
-    if isinstance(first, ParametricMeshes):
-        assert all(mesh.model_type == first.model_type for mesh in meshes), \
-            'model_type should all be the same.'
-        model_type = first.model_type
-    else:
-        assert model_type is not None
+    assert all(mesh.model_type == first.model_type
+               for mesh in meshes), 'model_type should all be the same.'
 
-    meshes = _join_meshes_as_scene(meshes, include_textures=include_textures)
-    return ParametricMeshes(
-        model_type=getattr(first, 'model_type', model_type), meshes=meshes)
+    if isinstance(meshes, List):
+        meshes = join_meshes_as_batch(
+            meshes, include_textures=include_textures)
+
+    if len(meshes) == 1:
+        return meshes
+    verts = meshes.verts_packed()  # (sum(V_n), 3)
+    # Offset automatically done by faces_packed
+    faces = meshes.faces_packed()  # (sum(F_n), 3)
+    textures = None
+
+    if include_textures and meshes.textures is not None:
+        # TODO: Our geiitem needs to consider the individual dim.
+        # Need to consider `unique_map_index` for the meshes to be joined
+        # mainly because that the same id link to the same tensor.
+        # Some meshes have already been joined, and as expected, we should have
+        # already setattr it with `unique_map_index`. So this information could
+        # be passed to the next join operation.
+        textures = meshes.textures.join_scene()
+
+    mesh = ParametricMeshes(
+        verts=verts.unsqueeze(0),
+        faces=faces.unsqueeze(0),
+        textures=textures,
+        model_type=first.model_type)
+
+    return mesh
 
 
-def join_batch_meshes_as_scene(meshes: Union[List[ParametricMeshes], Meshes],
-                               include_textures: bool = True,
-                               model_type: str = None) -> ParametricMeshes:
+def join_batch_meshes_as_scene(
+        meshes: List[ParametricMeshes],
+        include_textures: bool = True) -> ParametricMeshes:
     """Join `meshes` as a scene each batch. For ParametricMeshes. The Meshes
     must share the same batch size, and topology could be different. They must
     all be on the same device. If `include_textures` is true, the textures
@@ -484,25 +506,29 @@ def join_batch_meshes_as_scene(meshes: Union[List[ParametricMeshes], Meshes],
     is False, textures are ignored. The return meshes will have no textures.
 
     Args:
-        meshes (Union[ParametricMeshes, List[ParametricMeshes, Meshes,
-            List[Meshes]]]): Meshes object that contains a batch of meshes,
-            or a list of Meshes objects.
+        meshes (List[ParametricMeshes]): Meshes object that contains a list of
+            Meshes objects.
         include_textures (bool, optional): whether to try to join the textures.
             Defaults to True.
-        model_type (str, optional): model_type. Should be specified if use
-            Meshes rather than ParametricMeshes.
-            Defaults to None.
+
 
     Returns:
         New Meshes which has join different Meshes by each batch.
     """
     first = meshes[0]
-    if isinstance(first, ParametricMeshes):
-        assert all(mesh.model_type == first.model_type for mesh in meshes), \
-            'model_type should all be the same.'
-    else:
-        assert model_type is not None
+
+    assert all(mesh.model_type == first.model_type
+               for mesh in meshes), 'model_type should all be the same.'
+
     assert all(len(mesh) == len(first) for mesh in meshes)
+    if not all(mesh.shape[1] == first.shape[1] for mesh in meshes):
+        meshes_temp = []
+        for mesh_scene in meshes:
+            meshes_temp.extend([
+                mesh_scene[:, individual_index]
+                for individual_index in range(mesh_scene._N_individual)
+            ])
+        meshes = meshes_temp
     for mesh in meshes:
         mesh._verts_list = padded_to_list(mesh.verts_padded(),
                                           mesh.num_verts_per_mesh().tolist())
@@ -514,10 +540,7 @@ def join_batch_meshes_as_scene(meshes: Union[List[ParametricMeshes], Meshes],
         meshes_batch = []
         for i in range(num_scene_size):
             meshes_batch.append(meshes[i][j])
-        meshes_all.append(
-            join_meshes_as_scene(
-                meshes_batch, include_textures, model_type=model_type))
-    meshes_final = join_meshes_as_batch(
-        meshes_all, include_textures, model_type=model_type)
+        meshes_all.append(join_meshes_as_scene(meshes_batch, include_textures))
+    meshes_final = join_meshes_as_batch(meshes_all, include_textures)
 
     return meshes_final

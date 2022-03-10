@@ -39,6 +39,11 @@ class UVRenderer(nn.Module):
         obj_path: Optional[str] = None,
         device: Union[torch.device, str] = 'cpu',
         threshold_size: int = 512,
+        # TODO: Solved the sample bug when the resolution is too small.
+        # set threshold_size is just a temporal solution.
+
+        # TODO: add smplx_uv.npz and eval the warping & sampling of smplx
+        # model.
     ):
         super().__init__()
         self.threshold_size = threshold_size
