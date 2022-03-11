@@ -479,12 +479,6 @@ def join_meshes_as_scene(meshes: Union[ParametricMeshes,
     textures = None
 
     if include_textures and meshes.textures is not None:
-        # TODO: Our geiitem needs to consider the individual dim.
-        # Need to consider `unique_map_index` for the meshes to be joined
-        # mainly because that the same id link to the same tensor.
-        # Some meshes have already been joined, and as expected, we should have
-        # already setattr it with `unique_map_index`. So this information could
-        # be passed to the next join operation.
         textures = meshes.textures.join_scene()
 
     mesh = ParametricMeshes(
