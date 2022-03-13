@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -163,6 +162,13 @@ class KeypointMSELoss(nn.Module):
 
 @LOSSES.register_module()
 class PoseRegLoss(nn.Module):
+    """Regulizer loss for body pose parameters.
+
+    Args:
+        reduction (str, optional): The method that reduces the loss to a
+            scalar. Options are "none", "mean" and "sum".
+        loss_weight (float, optional): The weight of the loss. Defaults to 1.0
+    """
 
     def __init__(self, reduction='mean', loss_weight=1.0):
         super().__init__()
@@ -170,36 +176,23 @@ class PoseRegLoss(nn.Module):
         self.reduction = reduction
         self.loss_weight = loss_weight
 
-    def _func_l2(self, x):
-        return torch.sum(x**2)
-
     def forward(self,
                 body_pose,
                 weight=None,
                 avg_factor=None,
                 loss_weight_override=None,
                 reduction_override=None):
-        # reduction = (
-        #     reduction_override if reduction_override else self.reduction)
+        reduction = (
+            reduction_override if reduction_override else self.reduction)
         loss_weight = (
             loss_weight_override
             if loss_weight_override is not None else self.loss_weight)
 
-        'regulizer for body poses'
-        loss = loss_weight * self._func_l2(body_pose)
-        loss /= body_pose.shape[0]
+        pose_prior_loss = loss_weight * (body_pose**2)
 
-        # tmp smooth body pose
-        debug = True
-        if debug:
-            nframe = body_pose.shape[0]
-            poses_interp = body_pose.clone().detach()
-            poses_interp[1:-1] = (poses_interp[1:-1] + poses_interp[:-2] +
-                                  poses_interp[2:]) / 3
-            accel_loss = self._func_l2(body_pose[1:-1] - poses_interp[1:-1])
-            loss += 1.0 * accel_loss / (nframe - 2)
+        if reduction == 'mean':
+            pose_prior_loss = pose_prior_loss.mean()
+        elif reduction == 'sum':
+            pose_prior_loss = pose_prior_loss.sum()
 
-        return loss
-
-    def __str__(self) -> str:
-        return 'Loss function for Regulizer of Poses'
+        return pose_prior_loss
