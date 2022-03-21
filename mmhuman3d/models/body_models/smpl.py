@@ -168,7 +168,13 @@ class SMPL(_SMPL):
         body_pose = full_pose[:, 3:]
         global_orient = full_pose[:, :3]
         batch_size = full_pose.shape[0]
-        betas = betas.view(batch_size, -1) if betas is not None else betas
+        if betas is not None:
+            # squeeze or unsqueeze betas to 2 dims
+            betas = betas.view(-1, betas.shape[-1])
+            if betas.shape[0] == 1:
+                betas = betas.repeat(batch_size, 1)
+        else:
+            betas = betas
         transl = transl.view(batch_size, -1) if transl is not None else transl
         return {
             'betas': betas,

@@ -333,7 +333,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
     elif verts is not None:
         if isinstance(verts, np.ndarray):
             verts = torch.Tensor(verts)
-
+        verts = verts[start:end]
         pose_dict = body_model.tensor2dict(
             torch.zeros(1, (NUM_JOINTS + 1) * 3))
 
@@ -347,8 +347,6 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         num_verts = body_model.NUM_VERTS
         assert verts.shape[-2] == num_verts, 'Wrong input verts shape.'
         faces = body_model.faces_tensor
-        num_frames = verts.shape[0]
-        verts = verts[start:end]
         num_frames = verts.shape[0]
         vertices = verts.view(num_frames, -1, num_verts, 3)
         num_joints = joints.shape[-2]
@@ -1174,4 +1172,4 @@ def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
     for k in func.keywords.keys():
         if k in kwargs:
             kwargs.pop(k)
-    return func(poses=poses, **kwargs)
+    return func(poses=poses, verts=verts, **kwargs)

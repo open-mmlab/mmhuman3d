@@ -110,7 +110,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                     mask=keypoints2d_mask)
             self.human_data.__setitem__('keypoints2d', keypoints2d)
             self.human_data.__setitem__('keypoints2d_mask', keypoints2d_mask)
-        self.num_data = self.human_data.temporal_len
+        self.num_data = self.human_data.data_len
 
     def prepare_raw_data(self, idx: int):
         """Get item from self.human_data."""
