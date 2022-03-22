@@ -830,7 +830,8 @@ def render_smpl(
         colors_all = _prepare_colors(palette, render_choice, num_person,
                                      num_verts, model_type)
         colors_all = colors_all.view(-1, num_person * num_verts, 3)
-
+    # verts of ParametricMeshes should be in (N, V, 3)
+    vertices = vertices.view(num_frames, -1, 3)
     meshes = ParametricMeshes(
         body_model=body_model,
         verts=vertices,
@@ -1025,7 +1026,7 @@ def render_smpl(
             image_array, ndim=4, batch_size=num_frames, padding_mode='ones')
     # prepare the render data.
     render_data = dict(
-        backgrounds=image_array,
+        images=image_array,
         meshes=meshes,
         cameras=cameras,
         joints=joints,

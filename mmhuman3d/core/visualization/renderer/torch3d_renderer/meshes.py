@@ -167,7 +167,7 @@ class ParametricMeshes(Meshes):
         faces = self.face_individual.repeat(N_batch, N_individual, 1)
         faces_offset = torch.arange(N_individual).view(N_individual, 1).repeat(
             1, self.model_class.NUM_FACES).view(1, -1, 1).to(faces.device)
-        faces += faces_offset
+        faces = faces + faces_offset * self.model_class.NUM_VERTS
         return faces
 
     def _compute_list(self):

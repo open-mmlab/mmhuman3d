@@ -160,7 +160,7 @@ class SMPLRenderer(BaseRenderer):
                 resolution=self.resolution,
                 img_format=self.read_img_format,
                 start=indexes[0],
-                end=indexes[-1],
+                end=indexes[-1] + 1,
                 disable_log=True).astype(np.float64)
             images = torch.Tensor(images).to(self.device)
             images = align_input_to_padded(
