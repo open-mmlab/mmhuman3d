@@ -1,4 +1,7 @@
+import os
+import os.path as osp
 from argparse import ArgumentParser
+from pathlib import Path
 
 import mmcv
 import numpy as np
@@ -9,6 +12,7 @@ from mmhuman3d.apis import (
     init_model,
 )
 from mmhuman3d.core.visualization import visualize_smpl_vibe
+from mmhuman3d.utils import array_to_images
 from mmhuman3d.utils.demo_utils import (
     extract_feature_sequence,
     prepare_frames,
@@ -107,6 +111,11 @@ def single_person_with_mmdet(args, frames_iter):
         verts = smooth_process(verts, smooth_type=args.smooth_type)
 
     if args.show_path is not None:
+        frames_folder = osp.join(Path(args.show_path).parent, 'images')
+        os.makedirs(frames_folder, exist_ok=True)
+        array_to_images(
+            np.array(frames_iter)[img_index], output_folder=frames_folder)
+
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_vibe(
             verts=verts,
@@ -115,10 +124,11 @@ def single_person_with_mmdet(args, frames_iter):
             output_path=args.show_path,
             render_choice=args.render_choice,
             resolution=frames_iter[0].shape[:2],
-            image_array=np.array(frames_iter)[img_index],
+            origin_frames=frames_folder,
             body_model_config=body_model_config,
             overwrite=True,
-            palette=args.palette)
+            palette=args.palette,
+            read_frames_batch=True)
 
 
 def multi_person_with_mmtracking(args, frames_iter):
@@ -205,30 +215,34 @@ def multi_person_with_mmtracking(args, frames_iter):
         verts = smooth_process(verts, smooth_type=args.smooth_type)
 
     # To compress vertices array
-    V = np.zeros([frame_num, max_instance, 6890, 3])
-    C = np.zeros([frame_num, max_instance, 3])
-    B = np.zeros([frame_num, max_instance, 5])
+    compressed_verts = np.zeros([frame_num, max_instance, 6890, 3])
+    compressed_cams = np.zeros([frame_num, max_instance, 3])
+    compressed_bboxs = np.zeros([frame_num, max_instance, 5])
     for i, track_ids_list in enumerate(track_ids_lists):
         instance_num = len(track_ids_list)
-        V[i, :instance_num] = verts[i, track_ids_list]
-        C[i, :instance_num] = pred_cams[i, track_ids_list]
-        B[i, :instance_num] = bboxes_xyxy[i, track_ids_list]
+        compressed_verts[i, :instance_num] = verts[i, track_ids_list]
+        compressed_cams[i, :instance_num] = pred_cams[i, track_ids_list]
+        compressed_bboxs[i, :instance_num] = bboxes_xyxy[i, track_ids_list]
     assert len(img_index) > 0
 
     if args.show_path is not None:
-
+        frames_folder = osp.join(Path(args.show_path).parent, 'images')
+        os.makedirs(frames_folder, exist_ok=True)
+        array_to_images(
+            np.array(frames_iter)[img_index], output_folder=frames_folder)
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_vibe(
-            verts=verts,
-            pred_cam=pred_cams,
-            bbox=bboxes_xyxy,
+            verts=compressed_verts,
+            pred_cam=compressed_cams,
+            bbox=compressed_bboxs,
             output_path=args.show_path,
             render_choice=args.render_choice,
             resolution=frames_iter[0].shape[:2],
-            image_array=np.array(frames_iter)[img_index],
+            origin_frames=frames_folder,
             body_model_config=body_model_config,
             overwrite=True,
-            palette=args.palette)
+            palette=args.palette,
+            read_frames_batch=True)
 
 
 def main(args):
