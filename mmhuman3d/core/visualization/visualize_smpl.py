@@ -464,7 +464,7 @@ def render_smpl(
     origin_frames: Optional[str] = None,
     frame_list: Optional[List[str]] = None,
     image_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
-    img_format: str = 'frame_%06d.jpg',
+    img_format: str = '%06d.png',
     overwrite: bool = False,
     mesh_file_path: Optional[str] = None,
     read_frames_batch: bool = False,
