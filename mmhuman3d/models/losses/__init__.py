@@ -17,9 +17,11 @@ from .utils import (
     weighted_loss,
 )
 
+from .crossentropy_loss import CrossEntropyLoss
+
 __all__ = [
     'reduce_loss', 'weight_reduce_loss', 'weighted_loss', 'convert_to_one_hot',
     'MSELoss', 'L1Loss', 'SmoothL1Loss', 'GANLoss', 'JointPriorLoss',
     'ShapePriorLoss', 'KeypointMSELoss', 'CameraPriorLoss', 'SmoothJointLoss',
-    'SmoothPelvisLoss', 'SmoothTranslationLoss', 'MaxMixturePrior'
+    'SmoothPelvisLoss', 'SmoothTranslationLoss', 'MaxMixturePrior','CrossEntropyLoss'
 ]

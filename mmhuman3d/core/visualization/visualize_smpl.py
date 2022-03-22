@@ -343,7 +343,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         elif verts.ndim == 4:
             joints = torch.einsum('fpik,ji->fpjk',
                                   [verts, body_model.J_regressor])
-        model_output = body_model(**pose_dict)
+        # model_output = body_model(**pose_dict)
         num_verts = body_model.NUM_VERTS
         assert verts.shape[-2] == num_verts, 'Wrong input verts shape.'
         faces = body_model.faces_tensor
@@ -1003,7 +1003,7 @@ def render_smpl(
     # start rendering. no grad if non-differentiable render.
     # return None if return_tensor is False.
     results = []
-    for data in tqdm(RenderLoader):
+    for data in (RenderLoader):
         if no_grad:
             with torch.no_grad():
                 result = renderer(**data)

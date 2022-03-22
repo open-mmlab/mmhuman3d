@@ -73,8 +73,9 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
     def get_annotation_file(self):
         """Get path of the annotation file."""
-        ann_prefix = os.path.join(self.data_prefix, 'preprocessed_datasets')
-        self.ann_file = os.path.join(ann_prefix, self.ann_file)
+        # ann_prefix = os.path.join(self.data_prefix, 'preprocessed_datasets')
+        # self.ann_file = os.path.join(ann_prefix, self.ann_file)
+        self.ann_file = self.ann_file
 
     def load_annotations(self):
         """Load annotation from the annotation file.
@@ -117,8 +118,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         info = {}
         info['img_prefix'] = None
         image_path = self.human_data['image_path'][idx]
-        info['image_path'] = os.path.join(self.data_prefix, 'datasets',
-                                          self.dataset_name, image_path)
+        info['image_path'] = os.path.join(self.data_prefix,
+                                          image_path)
         if image_path.endswith('smc'):
             device, device_id, frame_id = self.human_data['image_id'][idx]
             info['image_id'] = (device, int(device_id), int(frame_id))
