@@ -1,3 +1,5 @@
+import math
+
 import torch
 
 from mmhuman3d.core.cameras import (
@@ -7,32 +9,27 @@ from mmhuman3d.core.cameras import (
     PerspectiveCameras,
     WeakPerspectiveCameras,
     build_cameras,
+    compute_direction_cameras,
 )
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
-from mmhuman3d.core.conventions.cameras import convert_cameras
+from mmhuman3d.core.conventions.cameras import convert_camera_matrix
 
 
-def check_camera_close(cam1, cam2, eps=1e-3):
-    N = 100
-    points = torch.rand(N, 3)
+def check_camera_close(cam1, cam2, points=None, eps=1e-3):
+
+    points = torch.rand(100, 3) if points is None else points
     assert cam1.device == cam2.device
     assert cam1.in_ndc() is cam2.in_ndc()
     assert cam1.is_perspective() is cam2.is_perspective()
-
     assert torch.isclose(
         cam1.transform_points_screen(points)[..., :2],
         cam2.transform_points_screen(points)[..., :2],
         rtol=0,
-        atol=eps).all()
+        atol=2e-1).all()
 
     assert torch.isclose(
-        cam1.transform_points_screen(points)[..., :2],
-        cam2.transform_points_screen(points)[..., :2],
-        rtol=0,
-        atol=eps).all()
-    assert torch.isclose(
-        cam1.compute_depth_of_points(points)[..., :2],
-        cam2.compute_depth_of_points(points)[..., :2],
+        cam1.compute_depth_of_points(points)[..., :1],
+        cam2.compute_depth_of_points(points)[..., :1],
         rtol=0,
         atol=eps).all()
 
@@ -41,7 +38,13 @@ def check_camera_slice(cam1):
     cam2 = cam1[0]
     cam2 = cam2.extend(len(cam1))
     check_camera_close(cam1, cam2)
-    print(cam1.__repr__)
+
+
+def check_camera_concat(cam):
+    cam0 = cam[0]
+    cam1 = cam[1]
+    cam2 = cam0.concat(cam1)
+    check_camera_close(cam[:2], cam2)
 
 
 def test_cameras_parameter():
@@ -94,6 +97,8 @@ def test_cameras():
 
             check_camera_close(cam1, cam2)
             check_camera_slice(cam1)
+            if len(cam1) > 1:
+                check_camera_concat(cam1)
 
             cam3 = build_cameras(
                 dict(
@@ -103,7 +108,7 @@ def test_cameras():
                     T=T_list[idx],
                     convention='opencv',
                     image_size=image_size))
-            K, R, T = convert_cameras(
+            K, R, T = convert_camera_matrix(
                 K=K_list[idx],
                 R=R_list[idx],
                 T=T_list[idx],
@@ -231,3 +236,32 @@ def test_perspective_projection():
         camera_center=torch.Tensor((112, 112)))
 
     assert torch.allclose(projected_keypoints, projected_keypoints_alt)
+
+
+def test_direction_cameras():
+    # Four ways to get direction cameras
+    K1, R1, T1 = compute_direction_cameras(
+        eye=(0, 0, 0), dist=math.sqrt(2), z_vec=(1, 0, 1))
+    K2, R2, T2 = compute_direction_cameras(
+        at=(1, 0, 1), dist=math.sqrt(2), z_vec=(1, 0, 1))
+    K3, R3, T3 = compute_direction_cameras(
+        at=(1, 0, 1), dist=math.sqrt(2), plane=((0, 1, 0), (1, 0, -1)))
+    K4, R4, T4 = compute_direction_cameras(at=(1, 0, 1), eye=(0, 0, 0))
+
+    cam1 = build_cameras(
+        dict(
+            type='perspective', in_ndc=True, image_size=256, K=K1, R=R1, T=T1))
+    cam2 = build_cameras(
+        dict(
+            type='perspective', in_ndc=True, image_size=256, K=K2, R=R2, T=T2))
+    cam3 = build_cameras(
+        dict(
+            type='perspective', in_ndc=True, image_size=256, K=K3, R=R3, T=T3))
+    cam4 = build_cameras(
+        dict(
+            type='perspective', in_ndc=True, image_size=256, K=K4, R=R4, T=T4))
+
+    points = torch.Tensor([[0, 0, 1]])
+    check_camera_close(cam1, cam2, points=points)
+    check_camera_close(cam1, cam3, points=points)
+    check_camera_close(cam1, cam4, points=points)

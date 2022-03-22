@@ -67,7 +67,6 @@ class SMPL(_SMPL):
         self.keypoint_src = keypoint_src
         self.keypoint_dst = keypoint_dst
         self.keypoint_approximate = keypoint_approximate
-
         # override the default SMPL joint regressor if available
         if joints_regressor is not None:
             joints_regressor = torch.tensor(

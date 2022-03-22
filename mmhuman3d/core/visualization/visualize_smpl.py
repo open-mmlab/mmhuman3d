@@ -13,16 +13,20 @@ import numpy as np
 import torch
 import torch.nn as nn
 from colormap import Color
-from torch.utils.data import DataLoader
-from tqdm import tqdm
 
 import mmhuman3d
 from mmhuman3d.core.cameras import (
     WeakPerspectiveCameras,
     compute_orbit_cameras,
 )
-from mmhuman3d.core.conventions.cameras import convert_cameras
+from mmhuman3d.core.cameras.builder import build_cameras
+from mmhuman3d.core.conventions.cameras import convert_camera_matrix
 from mmhuman3d.core.conventions.segmentation import body_segmentation
+from mmhuman3d.core.visualization.renderer import render_runner
+from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import \
+    ParametricMeshes  # noqa: E501
+from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import \
+    align_input_to_padded  # noqa: E501
 from mmhuman3d.models.builder import build_body_model
 from mmhuman3d.utils import (
     check_input_path,
@@ -34,12 +38,13 @@ from mmhuman3d.utils import (
     get_different_colors,
     images_to_array,
     prepare_output_path,
+    save_meshes_as_objs,
     save_meshes_as_plys,
     vid_info_reader,
     video_to_array,
     video_to_images,
 )
-from .renderer import RenderDataset, SMPLRenderer
+from .renderer import SMPLRenderer
 
 try:
     from typing import Literal
@@ -106,7 +111,11 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
                             Path(output_path).name + '_input_temp')
                         os.makedirs(frames_folder, exist_ok=True)
                         video_to_images(
-                            origin_frames, frames_folder, start=start, end=end)
+                            origin_frames,
+                            frames_folder,
+                            img_format=img_format,
+                            start=start,
+                            end=end)
                         remove_folder = True
                     else:
                         remove_folder = False
@@ -160,19 +169,18 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
     return image_array, remove_folder, frames_folder
 
 
-def _prepare_body_model(model_type, body_model, body_model_config):
+def _prepare_body_model(body_model, body_model_config):
     """Prepare `body_model` from `body_model_config` or existing
     `body_model`."""
-    if model_type not in ['smpl', 'smplx']:
-        raise ValueError(
-            f'Do not support {model_type}, please choose in `smpl` or `smplx.')
     if body_model is None:
         if body_model_config is not None:
             body_model_config = copy.deepcopy(body_model_config)
             model_path = body_model_config.get('model_path', None)
 
-            model_type = body_model_config.get('type', model_type)
-            body_model_config.update(type=model_type.lower())
+            model_type = body_model_config.get('type').lower()
+            if model_type not in ['smpl', 'smplx']:
+                raise ValueError(f'Do not support {model_type}, please choose'
+                                 f' in `smpl` or `smplx.')
 
             if model_path and osp.isdir(model_path):
                 model_path = osp.join(model_path, model_type)
@@ -273,7 +281,8 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         # multi person check
         if num_person > 1:
             if betas is not None:
-                betas = betas.view(num_frames, -1, 10)
+                num_betas = betas.shape[-1]
+                betas = betas.view(num_frames, -1, num_betas)
 
                 if betas.shape[1] == 1:
                     betas = betas.repeat(1, num_person, 1)
@@ -327,7 +336,6 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
 
         model_output = body_model(**pose_dict)
         vertices = model_output['vertices']
-        faces = body_model.faces_tensor
         joints = model_output['joints']
 
     elif verts is not None:
@@ -343,10 +351,9 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         elif verts.ndim == 4:
             joints = torch.einsum('fpik,ji->fpjk',
                                   [verts, body_model.J_regressor])
-        model_output = body_model(**pose_dict)
+
         num_verts = body_model.NUM_VERTS
         assert verts.shape[-2] == num_verts, 'Wrong input verts shape.'
-        faces = body_model.faces_tensor
         num_frames = verts.shape[0]
         vertices = verts.view(num_frames, -1, num_verts, 3)
         num_joints = joints.shape[-2]
@@ -354,7 +361,7 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         num_person = vertices.shape[1]
     else:
         raise ValueError('Poses and verts are all None.')
-    return vertices, faces, joints, num_frames, num_person
+    return vertices, joints, num_frames, num_person
 
 
 def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
@@ -426,7 +433,6 @@ def render_smpl(
     betas: Optional[Union[torch.Tensor, np.ndarray]] = None,
     transl: Optional[Union[torch.Tensor, np.ndarray]] = None,
     verts: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    model_type: Literal['smpl', 'smplx'] = 'smpl',
     body_model: Optional[nn.Module] = None,
     body_model_config: Optional[dict] = None,
     # camera parameters
@@ -443,7 +449,8 @@ def render_smpl(
     # render choice parameters
     render_choice: Literal['lq', 'mq', 'hq', 'silhouette', 'depth', 'normal',
                            'pointcloud', 'part_silhouette'] = 'hq',
-    palette: Union[List[str], str, np.ndarray] = 'white',
+    palette: Union[List[str], str, np.ndarray, torch.Tensor] = 'white',
+    texture_image: Union[torch.Tensor, np.ndarray] = None,
     resolution: Optional[Union[List[int], Tuple[int, int]]] = None,
     start: int = 0,
     end: Optional[int] = None,
@@ -519,13 +526,10 @@ def render_smpl(
             Higher priority over `poses` & `betas` & `transl`.
 
             Defaults to None.
-        model_type (Literal[, optional): choose in 'smpl' or 'smplx'.
-
-            Defaults to 'smpl'.
-
-            Defaults to None.
         body_model (nn.Module, optional): body_model created from smplx.create.
-            Higher priority than `body_model_config`. Should not both be None.
+            Higher priority than `body_model_config`. If `body_model` is not
+            None, it will override `body_model_config`.
+            Should not both be None.
 
             Defaults to None.
         body_model_config (dict, optional): body_model_config for build_model.
@@ -544,7 +548,7 @@ def render_smpl(
             identical rotation.
             If `K` and `orig_cam` is None, will be generated by `look_at_view`.
             If have `K` or `orig_cam` and `R` is None, will be generated by
-            `convert_cameras`.
+            `convert_camera_matrix`.
 
             Defaults to None.
         T (Optional[Union[torch.Tensor, np.ndarray]], optional):
@@ -552,7 +556,7 @@ def render_smpl(
             identical translation.
             If `K` and `orig_cam` is None, will be generated by `look_at_view`.
             If have `K` or `orig_cam` and `T` is None, will be generated by
-            `convert_cameras`.
+            `convert_camera_matrix`.
 
             Defaults to None.
         orig_cam (Optional[Union[torch.Tensor, np.ndarray]], optional):
@@ -588,21 +592,21 @@ def render_smpl(
             choose in ['lq', 'mq', 'hq', 'silhouette', 'depth', 'normal',
             'pointcloud', 'part_silhouette'] .
 
-            `lq`, `mq`, `hq` would output (frame, h, w, 4) tensor.
+            `lq`, `mq`, `hq` would output (frame, h, w, 4) FloatTensor.
 
             `lq` means low quality, `mq` means medium quality,
             h`q means high quality.
 
-            `silhouette` would output (frame, h, w) binary tensor.
+            `silhouette` would output (frame, h, w) soft binary FloatTensor.
 
-            `part_silhouette` would output (frame, h, w, n_class) tensor.
+            `part_silhouette` would output (frame, h, w, 1) LongTensor.
 
-            n_class is the body segmentation classes.
+            Every pixel stores a class index.
 
-            `depth` will output a depth map of (frame, h, w, 1) tensor
+            `depth` will output a depth map of (frame, h, w, 1) FloatTensor
             and 'normal' will output a normal map of (frame, h, w, 1).
 
-            `pointcloud` will output a (frame, h, w, 4) tensor.
+            `pointcloud` will output a (frame, h, w, 4) FloatTensor.
 
             Defaults to 'mq'.
         palette (Union[List[str], str, np.ndarray], optional):
@@ -624,6 +628,16 @@ def render_smpl(
             Your `array` should be in range [0, 255] for 8 bit color.
 
             Defaults to 'white'.
+
+        texture_image (Union[torch.Tensor, np.ndarray], optional):
+            Texture image to be wrapped on the smpl mesh. If not None,
+            the `palette` will be ignored, and the `body_model` is required
+            to have `uv_param_path`.
+            Should pass list or tensor of shape (num_person, H, W, 3).
+            The color channel should be `RGB`.
+
+            Defaults to None.
+
         resolution (Union[Iterable[int], int], optional):
             1). If iterable, should be (height, width) of output images.
 
@@ -727,20 +741,15 @@ def render_smpl(
     verts, poses, betas, transl = _prepare_input_pose(verts, poses, betas,
                                                       transl)
 
-    body_model = _prepare_body_model(model_type, body_model, body_model_config)
+    body_model = _prepare_body_model(body_model, body_model_config)
     model_type = body_model.name().replace('-', '').lower()
     assert model_type in ['smpl', 'smplx']
 
-    vertices, faces, joints, num_frames, num_person = _prepare_mesh(
+    vertices, joints, num_frames, num_person = _prepare_mesh(
         poses, betas, transl, verts, start, end, body_model)
     end = num_frames if end is None else end
     vertices = vertices.view(num_frames, num_person, -1, 3)
     num_verts = vertices.shape[-2]
-
-    if render_choice == 'pointcloud':
-        plot_kps = True
-    else:
-        plot_kps = False
 
     if not plot_kps:
         joints = None
@@ -802,41 +811,59 @@ def render_smpl(
         raise ValueError('Please choose the right render_choice.')
 
     # body part colorful visualization should use flat shader to be sharper.
-    if isinstance(palette, str):
-        if (palette == 'segmentation') and ('silhouette'
-                                            not in render_choice.lower()):
-            render_param_dict['shader_type'] = 'flat'
+    if texture_image is None:
+        if isinstance(palette, str):
+            palette = [palette] * num_person
+        elif isinstance(palette, np.ndarray):
+            palette = torch.Tensor(palette)
+            palette = palette.view(-1, 3)
+            if palette.shape[0] != num_person:
+                _times = num_person // palette.shape[0]
+                palette = palette.repeat(_times, 1)[:num_person]
+                if palette.shape[0] == 1:
+                    print(f'Same color for all the {num_person} people')
+                else:
+                    print('Repeat palette for multi-person.')
+        else:
+            raise ValueError('Wrong input palette type. '
+                             'Palette should be tensor, array or list of strs')
+        colors_all = _prepare_colors(palette, render_choice, num_person,
+                                     num_verts, model_type)
+        colors_all = colors_all.view(-1, num_person * num_verts, 3)
+    # verts of ParametricMeshes should be in (N, V, 3)
+    vertices = vertices.view(num_frames, -1, 3)
+    meshes = ParametricMeshes(
+        body_model=body_model,
+        verts=vertices,
+        N_individual_overdide=num_person,
+        model_type=model_type,
+        texture_image=texture_image,
+        use_nearest=bool(render_choice == 'part_silhouette'),
+        vertex_color=colors_all)
 
-        palette = [palette] * num_person
-    elif isinstance(palette, np.ndarray):
-        palette = torch.Tensor(palette)
-        palette = palette.view(-1, 3)
-        if palette.shape[0] != num_person:
-            _times = num_person // palette.shape[0]
-            palette = palette.repeat(_times, 1)[:num_person]
-            if palette.shape[0] == 1:
-                print(f'Same color for all the {num_person} people')
-            else:
-                print('Repeat palette for multi-person.')
-    else:
-        raise ValueError('Wrong input palette type. '
-                         'Palette should be tensor, array or list of strs')
-    colors = _prepare_colors(palette, render_choice, num_person, num_verts,
-                             model_type)
-
-    # write .ply files
+    # write .ply or .obj files
     if mesh_file_path is not None:
         mmcv.mkdir_or_exist(mesh_file_path)
-        for frame_idx in range(num_frames):
-            ply_paths = [
-                f'{mesh_file_path}/frame{frame_idx}_person{person_idx}.ply'
-                for person_idx in range(num_person)
-            ]
-            save_meshes_as_plys(
-                verts=vertices[frame_idx],
-                faces=faces[None].repeat(num_person, 1, 1),
-                verts_rgb=colors,
-                paths=ply_paths)
+
+        for person_idx in range(meshes.shape[1]):
+            mesh_person = meshes[:, person_idx]
+            if texture_image is None:
+                ply_paths = [
+                    f'{mesh_file_path}/frame{frame_idx}_'
+                    f'person{person_idx}.ply'
+                    for frame_idx in range(num_frames)
+                ]
+                save_meshes_as_plys(meshes=mesh_person, files=ply_paths)
+
+            else:
+                obj_paths = [
+                    f'{mesh_file_path}/frame{frame_idx}_'
+                    f'person{person_idx}.obj'
+                    for frame_idx in range(num_frames)
+                ]
+                save_meshes_as_objs(meshes=mesh_person, files=obj_paths)
+
+    vertices = meshes.verts_padded().view(num_frames, num_person, -1, 3)
 
     # prepare camera matrixs
     if Ks is not None:
@@ -884,11 +911,17 @@ def render_smpl(
             znear=torch.min(vertices[..., 2] - 1),
             aspect_ratio=r)
 
+    if num_person > 1:
+        vertices = vertices.reshape(num_frames, -1, 3)
+    else:
+        vertices = vertices.view(num_frames, -1, 3)
+    meshes = meshes.update_padded(new_verts_padded=vertices)
+
     # orig_cam and K are None, use look_at_view
     if K is None:
         projection = 'fovperspective'
         K, R, T = compute_orbit_cameras(
-            at=(torch.mean(vertices.view(-1, 3), 0)),
+            at=(torch.mean(vertices.view(-1, 3), 0)).detach().cpu(),
             orbit_speed=orbit_speed,
             batch_size=num_frames,
             convention=convention)
@@ -951,7 +984,7 @@ def render_smpl(
     if projection in ['fovperspective', 'fovorthographics', 'weakperspective']:
         assert in_ndc
 
-    K, R, T = convert_cameras(
+    K, R, T = convert_camera_matrix(
         convention_dst='pytorch3d',
         K=K,
         R=R,
@@ -965,59 +998,55 @@ def render_smpl(
     # initialize the renderer.
     renderer = SMPLRenderer(
         resolution=render_resolution,
-        faces=faces,
         device=device,
         output_path=output_path,
-        colors=colors,
         return_tensor=return_tensor,
         alpha=alpha,
-        model_type=model_type,
-        img_format=img_format,
+        read_img_format=img_format,
         render_choice=render_choice,
-        projection=projection,
         frames_folder=frames_folder,
         plot_kps=plot_kps,
         vis_kp_index=vis_kp_index,
-        in_ndc=in_ndc,
         final_resolution=final_resolution,
         **render_param_dict)
 
-    renderer = renderer.to(device)
+    cameras = build_cameras(
+        dict(
+            type=projection,
+            in_ndc=in_ndc,
+            device=device,
+            K=K,
+            R=R,
+            T=T,
+            resolution=render_resolution))
 
+    if image_array is not None:
+        image_array = torch.Tensor(image_array)
+        image_array = align_input_to_padded(
+            image_array, ndim=4, batch_size=num_frames, padding_mode='ones')
     # prepare the render data.
-    render_dataset = RenderDataset(
-        **{
-            'images': image_array,
-            'vertices': vertices,
-            'K': K,
-            'R': R,
-            'T': T,
-            'joints': joints,
-            'joints_gt': kp3d,
-        })
-    RenderLoader = DataLoader(
-        dataset=render_dataset, batch_size=batch_size, shuffle=False)
+    render_data = dict(
+        images=image_array,
+        meshes=meshes,
+        cameras=cameras,
+        joints=joints,
+        joints_gt=kp3d,
+    )
 
-    # start rendering. no grad if non-differentiable render.
-    # return None if return_tensor is False.
-    results = []
-    for data in tqdm(RenderLoader):
-        if no_grad:
-            with torch.no_grad():
-                result = renderer(**data)
-                torch.cuda.empty_cache()
-                results.append(result)
-        else:
-            result = renderer(**data)
-            results.append(result)
-    renderer.export()
+    results = render_runner.render(
+        renderer=renderer,
+        device=device,
+        batch_size=batch_size,
+        output_path=output_path,
+        return_tensor=return_tensor,
+        no_grad=no_grad,
+        **render_data)
 
     if remove_folder:
         if Path(frames_folder).is_dir():
             shutil.rmtree(frames_folder)
 
     if return_tensor:
-        results = torch.cat(results, 0)
         return results
     else:
         return None
@@ -1121,11 +1150,16 @@ def visualize_smpl_vibe(orig_cam=None,
 
 
 def visualize_T_pose(num_frames,
+                     body_model_config=None,
+                     body_model=None,
                      orbit_speed=1.0,
-                     model_type='smpl',
                      **kwargs) -> None:
     """Simplest way to visualize a sequence of T pose."""
     assert num_frames > 0, '`num_frames` is required.'
+    assert body_model_config is not None or body_model is not None
+    model_type = body_model_config[
+        'type'] if body_model_config is not None else body_model.name(
+        ).replace('-', '').lower()
     if model_type == 'smpl':
         poses = torch.zeros(num_frames, 72)
     else:
@@ -1146,7 +1180,11 @@ def visualize_T_pose(num_frames,
         if k in kwargs:
             kwargs.pop(k)
     return func(
-        poses=poses, model_type=model_type, orbit_speed=orbit_speed, **kwargs)
+        poses=poses,
+        body_model_config=body_model_config,
+        body_model=body_model,
+        orbit_speed=orbit_speed,
+        **kwargs)
 
 
 def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:

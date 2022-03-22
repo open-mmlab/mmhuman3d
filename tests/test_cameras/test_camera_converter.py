@@ -4,9 +4,10 @@ import numpy as np
 import pytest
 import torch
 
+from mmhuman3d.core.cameras.cameras import FoVPerspectiveCameras
 from mmhuman3d.core.conventions.cameras import (
     CAMERA_CONVENTIONS,
-    convert_cameras,
+    convert_camera_matrix,
     convert_K_3x3_to_4x4,
     convert_K_4x4_to_3x3,
     convert_ndc_to_screen,
@@ -33,7 +34,7 @@ def check_isclose(K,
                   resolution_dst=None,
                   use_numpy=True,
                   eps=1e-2):
-    K1, R1, T1 = convert_cameras(
+    K1, R1, T1 = convert_camera_matrix(
         K=K,
         R=R,
         T=T,
@@ -44,7 +45,7 @@ def check_isclose(K,
         in_ndc_dst=in_ndc_dst,
         resolution_src=resolution_src,
         resolution_dst=resolution_dst)
-    K2, R2, T2 = convert_cameras(
+    K2, R2, T2 = convert_camera_matrix(
         K=K1,
         R=R1,
         T=T1,
@@ -241,7 +242,16 @@ def test_camera_utils():
     T = torch.zeros(1, 3)
     resolution = (1080, 1920)
     transl = torch.zeros(10, 3)
-    poses, orig_cam = convert_smpl_from_opencv_calibration(
+    _, _ = convert_smpl_from_opencv_calibration(
+        R=R,
+        T=T,
+        transl=transl,
+        poses=poses,
+        resolution=resolution,
+        model_path=model_path)
+
+    _, _ = convert_smpl_from_opencv_calibration(
+        K=FoVPerspectiveCameras.get_default_projection_matrix(),
         R=R,
         T=T,
         transl=transl,
