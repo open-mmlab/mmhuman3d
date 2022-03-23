@@ -2,7 +2,10 @@ import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.utils import ico_sphere
 
+from mmhuman3d.core.cameras import compute_orbit_cameras
+from mmhuman3d.core.cameras.builder import build_cameras
 from mmhuman3d.core.visualization import render_runner
+from mmhuman3d.core.visualization.renderer import build_renderer
 
 
 def test_render_runner():
@@ -13,17 +16,25 @@ def test_render_runner():
 
     device = torch.device(device_name)
     meshes = ico_sphere(3, device)
+
     meshes.textures = TexturesVertex(
-        verts_features=torch.zeros_like(meshes.verts_padded()).to(device))
-    for render_choice in [
-            'hq', 'lq', 'mq', 'pointcloud', 'normal', 'depth', 'silhouette'
-    ]:
-        render_runner.render(
-            meshes=meshes.extend(2),
-            render_choice=render_choice,
-            orbit_speed=1.0,
-            no_grad=True,
-            dist_speed=0.0,
-            device=device,
-            batch_size=2,
-            output_path=f'/tmp/{render_choice}.mp4')
+        verts_features=torch.ones_like(meshes.verts_padded()).to(device))
+    K, R, T = compute_orbit_cameras(orbit_speed=1.0, batch_size=2)
+    resolution = 128
+    cameras = build_cameras(
+        dict(type='fovperspective', K=K, R=R, T=T, resolution=resolution))
+    renderer = build_renderer(
+        dict(
+            type='mesh',
+            resolution=resolution,
+            shader=dict(type='soft_phong'),
+            lights=dict(type='ambient')))
+    tensor = render_runner.render(
+        meshes=meshes.extend(2),
+        cameras=cameras,
+        renderer=renderer,
+        device=device,
+        return_tensor=True,
+        batch_size=2,
+        output_path='/tmp/demo.mp4')
+    assert tensor.shape == (2, 128, 128, 4)

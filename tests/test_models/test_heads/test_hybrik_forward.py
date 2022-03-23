@@ -75,7 +75,7 @@ def test_HybrIK_head():
         predictions = head(features, trans_inv, intrinsic_param, joint_root,
                            depth_factor, smpl)
         pred_keys = [
-            'pred_phi', 'pred_delta_shape', 'pred_shape', 'pred_theta_mats',
+            'pred_phi', 'pred_delta_shape', 'pred_shape', 'pred_pose',
             'pred_uvd_jts', 'pred_xyz_jts_24', 'pred_xyz_jts_24_struct',
             'pred_xyz_jts_17', 'pred_vertices', 'maxvals'
         ]

@@ -177,11 +177,17 @@ class SMPLX(_SMPLX):
         right_hand_pose = full_pose[:,
                                     NUM_BODY_JOINTS + 19:NUM_BODY_JOINTS + 34]
         batch_size = body_pose.shape[0]
-        betas = betas.view(batch_size, -1) if betas is not None else betas
+        if betas is not None:
+            # squeeze or unsqueeze betas to 2 dims
+            betas = betas.view(-1, betas.shape[-1])
+            if betas.shape[0] == 1:
+                betas = betas.repeat(batch_size, 1)
+        else:
+            betas = betas
         transl = transl.view(batch_size, -1) if transl is not None else transl
         expression = expression.view(
             batch_size, -1) if expression is not None else torch.zeros(
-                batch_size, 10)
+                batch_size, 10).to(body_pose.device)
         return {
             'betas':
             betas,
