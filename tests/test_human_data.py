@@ -434,6 +434,10 @@ def test_concat():
     human_data_1['keypoints2d_convention'] = 'human_data'
     human_data_1['keypoints2d_mask'] = np.ones(shape=(190))
     cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    assert cat_human_data['keypoints2d'].shape[0] == 3
+    assert\
+        cat_human_data['keypoints2d'].shape[1:] ==\
+        human_data_0['keypoints2d'].shape[1:]
     assert cat_human_data['image_path'][2] == \
         human_data_1['image_path'][0]
     assert cat_human_data['keypoints2d'][2, 0, 0] == \
@@ -456,6 +460,9 @@ def test_concat():
     assert 'keypoints2d' in cat_human_data
     assert 'keypoints3d' not in cat_human_data
     assert 'keypoints3d_1' in cat_human_data
+    assert\
+        cat_human_data['keypoints3d_1'].shape ==\
+        human_data_1['keypoints3d'].shape
     # test different definition of the same key
     human_data_0['names'] = 'John Cena'
     human_data_1['names'] = 'John_Xina'
