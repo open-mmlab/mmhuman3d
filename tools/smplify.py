@@ -8,7 +8,6 @@ import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.evaluation import keypoint_mpjpe
-from mmhuman3d.core.visualization.visualize_keypoints3d import visualize_kp3d
 from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_pose
 from mmhuman3d.data.data_structures import HumanData
 from mmhuman3d.models.builder import build_registrant
@@ -58,7 +57,6 @@ def parse_args():
     parser.add_argument('--output', help='output result file')
     parser.add_argument(
         '--show_path', help='directory to save rendered images or video')
-    # parser.add_argument('--tmpdir', help='tmp dir for writing some results')
     parser.add_argument(
         '--overwrite',
         action='store_true',
@@ -90,55 +88,6 @@ def main():
     else:
         raise KeyError('Only support keypoints2d and keypoints3d')
 
-    debug = False
-    if debug:
-        keypoints, mask = convert_kps(
-            keypoints_src,
-            mask=keypoints_src_mask,
-            src=args.keypoint_type,
-            dst='smpl')
-        visualize_kp3d(
-            keypoints,
-            output_path='smpl_24.mp4',
-            mask=mask,
-            data_source='smpl',
-            start=0,
-            end=1)
-        keypoints, mask = convert_kps(
-            keypoints,
-            mask=mask,
-            src='smpl',
-            dst='openpose_25',
-            approximate=True)
-        print(keypoints.shape)
-        print(mask)
-        openpose_13_limbs = np.array(
-            [
-                # [ 2,  1],
-                [3, 2],
-                [4, 3],
-                # [ 5,  1],
-                [6, 5],
-                [7, 6],
-                # [ 8,  1],
-                # [ 9,  8],
-                [10, 9],
-                [11, 10],
-                # [12,  8],
-                [13, 12],
-                [14, 13],
-            ],
-            dtype=np.int32)
-        visualize_kp3d(
-            keypoints,
-            output_path='openpose_13.mp4',
-            mask=mask,
-            limbs=openpose_13_limbs,
-            data_source='openpose_25',
-            start=0,
-            end=1)
-        exit()
-
     keypoints, mask = convert_kps(
         keypoints_src,
         mask=keypoints_src_mask,
@@ -148,16 +97,18 @@ def main():
 
     batch_size = args.batch_size if args.batch_size else keypoints.shape[0]
 
-    print('keypoints.shape', keypoints.shape)
-    print('mask', mask)
     keypoints = torch.tensor(keypoints, dtype=torch.float32, device=device)
     keypoints_conf = torch.tensor(
         keypoints_conf, dtype=torch.float32, device=device)
 
-    # TODO: support keypoints2d
     if args.input_type == 'keypoints3d':
         human_data = dict(
             keypoints3d=keypoints, keypoints3d_conf=keypoints_conf)
+    elif args.input_type == 'keypoints2d':
+        human_data = dict(
+            keypoints2d=keypoints, keypoints2d_conf=keypoints_conf)
+    else:
+        raise TypeError(f'Unsupported input type: {args.input_type}')
 
     # create body model
     body_model_config = dict(
@@ -190,17 +141,17 @@ def main():
     t0 = time.time()
     smplify_output = smplify(**human_data, return_joints=True)
     t1 = time.time()
-    print(f'{t1 - t0} s')
+    print(f'Time:  {t1 - t0:.2f} s')
 
     # test MPJPE
     pred = smplify_output['joints'].cpu().numpy()
     gt = keypoints.cpu().numpy()
+    mask = mask.reshape(1, -1).repeat(gt.shape[0], axis=0).astype(bool)
     mpjpe = keypoint_mpjpe(pred=pred, gt=gt, mask=mask)
-    print(f'SMPLify MPJPE: {mpjpe:.2f}')
+    print(f'SMPLify MPJPE: {mpjpe * 1000:.2f} mm')
 
     # get smpl parameters directly from smplify output
     poses = {k: v.detach().cpu() for k, v in smplify_output.items()}
-    print(poses.keys())
     smplify_results = HumanData(dict(smpl=poses))
 
     if args.output is not None:
@@ -208,12 +159,11 @@ def main():
         smplify_results.dump(args.output, overwrite=args.overwrite)
 
     if args.show_path is not None:
-        # visualize mesh
+        # visualize smpl pose
         body_model_dir = os.path.dirname(args.body_model_dir.rstrip('/'))
         body_model_config.update(
             model_path=body_model_dir,
             model_type=smplify_config.body_model.type.lower())
-        print(body_model_config)
         visualize_smpl_pose(
             poses=poses,
             body_model_config=body_model_config,
