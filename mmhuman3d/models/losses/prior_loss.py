@@ -69,7 +69,9 @@ class ShapePriorLoss(nn.Module):
 
 @LOSSES.register_module()
 class LimbLengthLoss(nn.Module):
-    """Limb length loss for body shape parameters.
+    """Limb length loss for body shape parameters. Note that it should take
+    keypoints3d as input, as limb length computed from keypoints2d varies with
+    camera.
 
     Args:
         reduction (str, optional): The method that reduces the loss to a
@@ -93,8 +95,6 @@ class LimbLengthLoss(nn.Module):
         limb_idxs = sorted(limb_idxs['body'])
         self.limb_idxs = np.array(
             list(x for x, _ in itertools.groupby(limb_idxs)))
-        # print('limbs.shape', self.limb_idxs.shape)
-        # print('limbs.val', self.limb_idxs)
 
     def _get_limb_vec(self, keypoints3d):
         kp_src = keypoints3d[:, self.limb_idxs[:, 0], :3]
@@ -115,7 +115,7 @@ class LimbLengthLoss(nn.Module):
                 keypoints3d_target_conf=None,
                 loss_weight_override=None,
                 reduction_override=None):
-        """Forward function of loss.
+        """Forward function of LimbLengthLoss.
 
         Args:
             betas (torch.Tensor): The body shape parameters
@@ -134,46 +134,28 @@ class LimbLengthLoss(nn.Module):
             loss_weight_override
             if loss_weight_override is not None else self.loss_weight)
 
-        # shape_prior_loss = loss_weight * betas**2
-
-        # TODO: use reduction
-        if reduction == 'mean':
-            pass
-        # if reduction == 'mean':
-        #     shape_prior_loss = shape_prior_loss.mean()
-        # elif reduction == 'sum':
-        #     shape_prior_loss = shape_prior_loss.sum()
-
-        print('k3d_pred', keypoints3d_pred.shape)
-        print('k3d_pred conf', keypoints3d_pred_conf.shape)
-        print('k3d_target', keypoints3d_target.shape)
-        print('k3d_target_conf', keypoints3d_target_conf.shape)
-        # print(limbs)
-        # print(limbs.shape)
-
         if self.limb_conf is None:
-            # calculate bone length
+            # To compute self.limb_conf only once,
+            # we assume that target will not change during optimization
             _, _, self.limb_length = self._compute_normed_limb(
                 keypoints3d_target)
-            print('limb_length shape', self.limb_length.shape)
-            print('limb_length val', self.limb_length[0])
             self.limb_conf = torch.min(
                 keypoints3d_target_conf[:, self.limb_idxs[:, 1]],
-                keypoints3d_target_conf[:,
-                                        self.limb_idxs[:,
-                                                       0]]).unsqueeze(dim=-1)
-            print('pred_conf', keypoints3d_pred_conf[0])
-            print('target_conf', keypoints3d_target_conf[0])
-            print('limb_conf shape', self.limb_conf.shape)
-            print('limb_conf val', self.limb_conf[0])
+                keypoints3d_target_conf[:, self.limb_idxs[:, 0]])
+            self.limb_conf = self.limb_conf.unsqueeze(dim=-1)
 
         pred_limb_vec, pred_limb_vec_normed, _ = self._compute_normed_limb(
-            keypoints3d_pred)
-        # TODO: use keypoints3d_pred_conf
+            keypoints3d_pred * keypoints3d_pred_conf.unsqueeze(dim=-1))
 
         loss = pred_limb_vec - pred_limb_vec_normed * self.limb_length
-        loss = loss_weight * torch.sum(
-            loss**2 * self.limb_conf) / keypoints3d_pred.shape[0]
+        loss = loss**2 * self.limb_conf
+
+        if reduction == 'mean':
+            loss = loss.mean()
+        elif reduction == 'sum':
+            loss = loss.sum()
+
+        loss *= loss_weight
 
         return loss
 
@@ -299,18 +281,24 @@ class SmoothJointLoss(nn.Module):
             tensor is in degree or radian.
     """
 
-    def __init__(self, reduction='mean', loss_weight=1.0, degree=False):
+    def __init__(self,
+                 reduction='mean',
+                 loss_weight=1.0,
+                 degree=False,
+                 loss_func='L1'):
         super().__init__()
         assert reduction in (None, 'none', 'mean', 'sum')
+        assert loss_func in ('L1', 'L2')
         self.reduction = reduction
         self.loss_weight = loss_weight
         self.degree = degree
+        self.loss_func = loss_func
 
     def forward(self,
                 body_pose,
                 loss_weight_override=None,
                 reduction_override=None):
-        """Forward function of loss.
+        """Forward function of SmoothJointLoss.
 
         Args:
             body_pose (torch.Tensor): The body pose parameters
@@ -334,17 +322,20 @@ class SmoothJointLoss(nn.Module):
             theta = torch.deg2rad(theta)
         rot_6d = aa_to_rot6d(theta)
         rot_6d_diff = rot_6d[1:] - rot_6d[:-1]
-        smooth_joint_loss = rot_6d_diff.abs().sum(dim=-1)
-        smooth_joint_loss = torch.cat(
-            [torch.zeros_like(smooth_joint_loss)[:1],
-             smooth_joint_loss]).sum(dim=-1)
 
-        smooth_joint_loss = loss_weight * smooth_joint_loss
+        if self.loss_func == 'L2':
+            smooth_joint_loss = (rot_6d_diff**2).sum(dim=[1, 2])
+        elif self.loss_func == 'L1':
+            smooth_joint_loss = rot_6d_diff.abs().sum(dim=[1, 2])
+        else:
+            raise TypeError(f'{self.func} is not defined')
 
         if reduction == 'mean':
             smooth_joint_loss = smooth_joint_loss.mean()
         elif reduction == 'sum':
             smooth_joint_loss = smooth_joint_loss.sum()
+
+        smooth_joint_loss *= loss_weight
 
         return smooth_joint_loss
 
@@ -372,7 +363,7 @@ class SmoothPelvisLoss(nn.Module):
                 global_orient,
                 loss_weight_override=None,
                 reduction_override=None):
-        """Forward function of loss.
+        """Forward function of SmoothPelvisLoss.
 
         Args:
             global_orient (torch.Tensor): The global orientation parameters
