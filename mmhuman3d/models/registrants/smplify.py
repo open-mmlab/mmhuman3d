@@ -212,16 +212,9 @@ class SMPLify(object):
             betas = self._match_init_batch_size(init_betas,
                                                 self.body_model.betas,
                                                 batch_size)
-        #  print('betas', betas.mean())
-        #  print('transl', transl.mean())
-        #  print('global_orient', global_orient.mean())
-        #  print('init body_pose', body_pose.mean())
-        #  exit()
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
-                # if i > 0 and stage_config.get('warmup', False):
-                #     continue
                 print(f'epoch {i}, stage {stage_idx}')
                 self._optimize_stage(
                     global_orient=global_orient,
@@ -747,8 +740,6 @@ class SMPLify(object):
 
         if hasattr(self, 'ignore_keypoint_idxs'):
             weight[self.ignore_keypoint_idxs] = 0.0
-
-        # print('weight', use_shoulder_hip_only, body_weight, weight)
 
         return weight
 
