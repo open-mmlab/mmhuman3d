@@ -170,14 +170,51 @@ data = dict(
             ann_file='cmu_mosh.npz')),
     test=dict(
         type=dataset_type,
+
         body_model=dict(
-            type='GenderedSMPL',
+            type='SMPL',
             keypoint_src='h36m',
             keypoint_dst='h36m',
             model_path='data/body_models/smpl',
             joints_regressor='data/body_models/J_regressor_h36m.npy'),
-        dataset_name='pw3d',
+        dataset_name='humman',
+        convention='coco_wholebody',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='pw3d_test.npz'),
+        ann_file='humman_test_kinect_ds10_smpl.npz'),
+
+        # body_model=dict(
+        #     type='SMPL',
+        #     keypoint_src='h36m',
+        #     keypoint_dst='h36m',
+        #     model_path='data/body_models/smpl',
+        #     joints_regressor='data/body_models/J_regressor_h36m.npy'),
+        # dataset_name='humman',
+        # convention='coco_wholebody',
+        # data_prefix='data',
+        # pipeline=test_pipeline,
+        # ann_file='humman_test_iphone_ds10_smpl.npz'),
+
+        # body_model=dict(
+        #     type='GenderedSMPL',
+        #     keypoint_src='h36m',
+        #     keypoint_dst='h36m',
+        #     model_path='data/body_models/smpl',
+        #     joints_regressor='data/body_models/J_regressor_h36m.npy'),
+        # dataset_name='pw3d',
+        # data_prefix='data',
+        # pipeline=test_pipeline,
+        # ann_file='pw3d_test.npz'),
+
+        # body_model=dict(
+        #     type='SMPL',
+        #     keypoint_src='h36m',
+        #     keypoint_dst='h36m',
+        #     model_path='data/body_models/smpl',
+        #     joints_regressor='data/body_models/J_regressor_h36m.npy'),
+        # dataset_name='h36m',
+        # convention='h36m',  # convert keypoints to h36m
+        # data_prefix='data',
+        # pipeline=test_pipeline,
+        # ann_file='h36m_valid_protocol2.npz'),
 )
