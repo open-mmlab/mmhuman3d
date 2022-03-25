@@ -254,6 +254,12 @@ class HuMManConverter(BaseModeConverter):
 
         ann_paths = sorted(glob.glob(os.path.join(dataset_path, '*.smc')))
 
+        # temp action
+        if mode != 'test': return
+        view = 10
+        # body_part = 'lower_limb'
+        # with open(os.path.join(dataset_path, f'{body_part}.txt'), 'r') as f:
+        #     split = set(f.read().splitlines())
         with open(os.path.join(dataset_path, f'{mode}.txt'), 'r') as f:
             split = set(f.read().splitlines())
 
@@ -280,6 +286,9 @@ class HuMManConverter(BaseModeConverter):
             device_list = [('Kinect', i) for i in range(num_kinect)] + \
                 [('iPhone', i) for i in range(num_iphone)]
             assert len(device_list) == num_kinect + num_iphone
+
+            # temp
+            device_list = [('Kinect', view)]
 
             for device, device_id in device_list:
                 assert device in {
@@ -412,17 +421,20 @@ class HuMManConverter(BaseModeConverter):
             kinect_keypoints3d_smpl_, kinect_keypoints2d_humman_,
             kinect_keypoints3d_humman_)
 
-        file_name = f'humman_{mode}_kinect_ds{self.downsample_ratio}_smpl.npz'
+        # temp
+        # file_name = f'humman_{mode}_kinect_ds{self.downsample_ratio}_smpl.npz'
+        file_name = f'humman_{mode}_kinect_ds10_view{view}.npz'
         out_file = os.path.join(out_path, file_name)
         kinect_human_data.dump(out_file)
 
-        # make iphone human data
-        iphone_human_data = self._make_human_data(
-            iphone_smpl, iphone_image_path_, iphone_image_id_,
-            iphone_bbox_xywh_, iphone_keypoints2d_smpl_,
-            iphone_keypoints3d_smpl_, iphone_keypoints2d_humman_,
-            iphone_keypoints3d_humman_)
-
-        file_name = f'humman_{mode}_iphone_ds{self.downsample_ratio}_smpl.npz'
-        out_file = os.path.join(out_path, file_name)
-        iphone_human_data.dump(out_file)
+        # temp
+        # # make iphone human data
+        # iphone_human_data = self._make_human_data(
+        #     iphone_smpl, iphone_image_path_, iphone_image_id_,
+        #     iphone_bbox_xywh_, iphone_keypoints2d_smpl_,
+        #     iphone_keypoints3d_smpl_, iphone_keypoints2d_humman_,
+        #     iphone_keypoints3d_humman_)
+        #
+        # file_name = f'humman_{mode}_iphone_ds{self.downsample_ratio}_smpl.npz'
+        # out_file = os.path.join(out_path, file_name)
+        # iphone_human_data.dump(out_file)
