@@ -110,11 +110,11 @@ We provide pretrained models in the respective method folders in [config](https:
 ### Evaluate with a single GPU / multiple GPUs
 
 ```shell
-python tools/test.py ${CONFIG} --work-dir=${WORK_DIR} ${CHECKPOINT}
+python tools/test.py ${CONFIG} --work-dir=${WORK_DIR} ${CHECKPOINT} --metrics=${METRICS}
 ```
 Example:
 ```shell
-python tools/test.py configs/hmr/resnet50_hmr_pw3d.py --work-dir=work_dirs/hmr work_dirs/hmr/latest.pth
+python tools/test.py configs/hmr/resnet50_hmr_pw3d.py --work-dir=work_dirs/hmr work_dirs/hmr/latest.pth --metrics pa-mpjpe mpjpe
 ```
 
 ### Evaluate with slurm
@@ -122,11 +122,11 @@ python tools/test.py configs/hmr/resnet50_hmr_pw3d.py --work-dir=work_dirs/hmr w
 If you can run MMHuman3D on a cluster managed with [slurm](https://slurm.schedmd.com/), you can use the script `slurm_test.sh`.
 
 ```shell
-./tools/slurm_test.sh ${PARTITION} ${JOB_NAME} ${CONFIG} ${WORK_DIR} ${CHECKPOINT}
+./tools/slurm_test.sh ${PARTITION} ${JOB_NAME} ${CONFIG} ${WORK_DIR} ${CHECKPOINT} --metrics ${METRICS}
 ```
 Example:
 ```shell
-./tools/slurm_test.sh my_partition test_hmr configs/hmr/resnet50_hmr_pw3d.py work_dirs/hmr work_dirs/hmr/latest.pth 8
+./tools/slurm_test.sh my_partition test_hmr configs/hmr/resnet50_hmr_pw3d.py work_dirs/hmr work_dirs/hmr/latest.pth 8 --metrics pa-mpjpe mpjpe
 ```
 
 

@@ -1,29 +1,26 @@
 from mmcv.utils import Registry
 from pytorch3d.renderer import (
-    AmbientLights,
-    DirectionalLights,
     HardFlatShader,
-    MeshRasterizer,
-    PointLights,
-    PointsRasterizer,
+    HardGouraudShader,
+    HardPhongShader,
     SoftGouraudShader,
     SoftPhongShader,
-    SoftSilhouetteShader,
     TexturesAtlas,
     TexturesUV,
     TexturesVertex,
 )
 
-from .shader import NoLightShader
-from .textures import TexturesClosest
+from .lights import AmbientLights, DirectionalLights, PointLights
+from .shader import (
+    DepthShader,
+    NoLightShader,
+    NormalShader,
+    SegmentationShader,
+    SilhouetteShader,
+)
+from .textures import TexturesNearest
 
 RENDERER = Registry('renderer')
-RASETER = Registry('raster')
-RASETER.register_module(
-    name=['mesh', 'mesh_rasterizer', 'MeshRasterizer'], module=MeshRasterizer)
-RASETER.register_module(
-    name=['point', 'point_rasterizer', 'PointsRasterizer'],
-    module=PointsRasterizer)
 
 LIGHTS = Registry('lights')
 LIGHTS.register_module(
@@ -41,38 +38,47 @@ SHADER.register_module(
     ],
     module=HardFlatShader)
 SHADER.register_module(
-    name=['gouraud', 'soft_gouraud', 'SoftGouraud', 'SoftGouraudShader'],
+    name=['hard_phong', 'HardPhong', 'HardPhongShader'],
+    module=HardPhongShader)
+SHADER.register_module(
+    name=['hard_gouraud', 'HardGouraud', 'HardGouraudShader'],
+    module=HardGouraudShader)
+SHADER.register_module(
+    name=['soft_gouraud', 'SoftGouraud', 'SoftGouraudShader'],
     module=SoftGouraudShader)
 SHADER.register_module(
-    name=['phong', 'soft_phong', 'SoftPhong', 'SoftPhongShader'],
+    name=['soft_phong', 'SoftPhong', 'SoftPhongShader'],
     module=SoftPhongShader)
 SHADER.register_module(
-    name=[
-        'silhouette', 'soft_silhouette', 'SoftSilhouette',
-        'SoftSilhouetteShader'
-    ],
-    module=SoftSilhouetteShader)
+    name=['silhouette', 'Silhouette', 'SilhouetteShader'],
+    module=SilhouetteShader)
 SHADER.register_module(
     name=['nolight', 'nolight_shader', 'NoLight', 'NoLightShader'],
     module=NoLightShader)
+SHADER.register_module(
+    name=['normal', 'normal_shader', 'Normal', 'NormalShader'],
+    module=NormalShader)
+SHADER.register_module(
+    name=['depth', 'depth_shader', 'Depth', 'DepthShader'], module=DepthShader)
+SHADER.register_module(
+    name=[
+        'segmentation', 'segmentation_shader', 'Segmentation',
+        'SegmentationShader'
+    ],
+    module=SegmentationShader)
 
 TEXTURES = Registry('textures')
 TEXTURES.register_module(
     name=['TexturesAtlas', 'textures_atlas', 'atlas', 'Atlas'],
     module=TexturesAtlas)
 TEXTURES.register_module(
-    name=['TexturesClosest', 'textures_closest', 'closest', 'Closest'],
-    module=TexturesClosest)
+    name=['TexturesNearest', 'textures_nearest', 'nearest', 'Nearest'],
+    module=TexturesNearest)
 TEXTURES.register_module(
     name=['TexturesUV', 'textures_uv', 'uv'], module=TexturesUV)
 TEXTURES.register_module(
     name=['TexturesVertex', 'textures_vertex', 'vertex', 'vc'],
     module=TexturesVertex)
-
-
-def build_raster(cfg):
-    """Build raster."""
-    return RASETER.build(cfg)
 
 
 def build_textures(cfg):

@@ -4,6 +4,7 @@ from abc import ABCMeta
 import torch
 
 from mmhuman3d.data.datasets.pipelines.hybrik_transforms import heatmap2coord
+from mmhuman3d.utils.transforms import rotmat_to_quat
 from ..builder import (
     ARCHITECTURES,
     build_backbone,
@@ -134,12 +135,7 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
 
         losses = self.compute_losses(predictions, labels)
 
-        loss, log_vars = self._parse_losses(losses)
-
-        output = {
-            'loss': loss,
-        }
-        return output
+        return losses
 
     def compute_losses(self, predictions, targets):
         """Compute regression losses for beta, theta, twist and uvd."""
@@ -151,10 +147,12 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
                 predictions['pred_shape'] * smpl_weight,
                 targets['target_beta'] * smpl_weight)
         if self.loss_theta is not None:
+            pred_pose = rotmat_to_quat(predictions['pred_pose']).reshape(
+                -1, 96)
             losses['loss_theta'] = self.loss_theta(
-                predictions['pred_theta_mats'] * smpl_weight *
-                targets['target_theta_weight'], targets['target_theta'] *
-                smpl_weight * targets['target_theta_weight'])
+                pred_pose * smpl_weight * targets['target_theta_weight'],
+                targets['target_theta'] * smpl_weight *
+                targets['target_theta_weight'])
         if self.loss_twist is not None:
             losses['loss_twist'] = self.loss_twist(
                 predictions['pred_phi'] * targets['target_twist_weight'],
@@ -246,6 +244,8 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
         pred_xyz_jts_17 = pred_xyz_jts_17.cpu().data.numpy()
         pred_uvd_jts = pred_uvd_jts.cpu().data
         pred_mesh = pred_mesh.cpu().data.numpy()
+        pred_pose = output['pred_pose'].cpu().data.numpy()
+        pred_beta = output['pred_shape'].cpu().data.numpy()
 
         assert pred_xyz_jts_17.ndim in [2, 3]
         pred_xyz_jts_17 = pred_xyz_jts_17.reshape(pred_xyz_jts_17.shape[0], 17,
@@ -269,6 +269,8 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
 
         all_preds = {}
         all_preds['vertices'] = pred_mesh
+        all_preds['smpl_pose'] = pred_pose
+        all_preds['smpl_beta'] = pred_beta
         all_preds['xyz_17'] = pred_xyz_jts_17
         all_preds['uvd_jts'] = pose_coords
         all_preds['xyz_24'] = pred_xyz_jts_24_struct

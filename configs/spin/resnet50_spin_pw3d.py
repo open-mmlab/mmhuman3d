@@ -1,6 +1,9 @@
 _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
+# evaluate
+evaluation = dict(metric=['pa-mpjpe', 'mpjpe'])
+
 img_res = 224
 
 body_model = dict(

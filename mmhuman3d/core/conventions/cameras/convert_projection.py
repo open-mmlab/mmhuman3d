@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import numpy as np
 import torch
 
-from .convert_convention import convert_cameras
+from .convert_convention import convert_camera_matrix
 
 
 def convert_perspective_to_weakperspective(
@@ -30,7 +30,7 @@ def convert_perspective_to_weakperspective(
             shape is (batch, 4)
     """
     assert K is not None, 'K is required.'
-    K, _, _ = convert_cameras(
+    K, _, _ = convert_camera_matrix(
         K=K,
         convention_src=convention,
         convention_dst='pytorch3d',
@@ -99,7 +99,7 @@ def convert_weakperspective_to_perspective(
     new_K[:, 2, 3] = 1
     new_K[:, 3, 2] = 1
 
-    new_K, _, _ = convert_cameras(
+    new_K, _, _ = convert_camera_matrix(
         K=new_K,
         convention_src=convention,
         convention_dst='pytorch3d',

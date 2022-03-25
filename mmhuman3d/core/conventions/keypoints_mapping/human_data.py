@@ -317,8 +317,6 @@ HUMAN_DATA_LIMBS = {
     'body': [
         ['pelvis', 'left_hip'],
         ['pelvis', 'right_hip'],
-        ['left_hip', 'right_hip'],
-        ['left_shoulder', 'right_shoulder'],
         ['pelvis', 'spine_1'],
         ['spine_1', 'spine_2'],
         ['spine_2', 'spine_3'],

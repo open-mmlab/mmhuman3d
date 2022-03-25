@@ -80,7 +80,7 @@ def enc_camera_convention(convention, camera_conventions=CAMERA_CONVENTIONS):
     return sign, axis_order
 
 
-def convert_cameras(
+def convert_camera_matrix(
     K: Optional[Union[torch.Tensor, np.ndarray]] = None,
     R: Optional[Union[torch.Tensor, np.ndarray]] = None,
     T: Optional[Union[torch.Tensor, np.ndarray]] = None,

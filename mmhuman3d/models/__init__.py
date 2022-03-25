@@ -16,6 +16,7 @@ from .builder import (
     build_head,
     build_loss,
     build_neck,
+    build_registrant,
 )
 from .discriminators import *  # noqa: F401,F403
 from .heads import *  # noqa: F401,F403
@@ -26,5 +27,6 @@ from .registrants import *  # noqa: F401,F403
 __all__ = [
     'BACKBONES', 'LOSSES', 'ARCHITECTURES', 'HEADS', 'BODY_MODELS', 'NECKS',
     'DISCRIMINATORS', 'build_backbone', 'build_loss', 'build_architecture',
-    'build_body_model', 'build_head', 'build_neck', 'build_discriminator'
+    'build_body_model', 'build_head', 'build_neck', 'build_discriminator',
+    'build_registrant'
 ]

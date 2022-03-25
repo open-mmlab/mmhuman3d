@@ -236,5 +236,6 @@ def test_vis_kp2d():
         origin_frames='tests/data/test_vis_kp2d/',
         img_format='%06d.png',
         overwrite=True,
+        resolution=(1000, 1000),
     )
     assert images_to_array(output_folder).shape

@@ -285,7 +285,7 @@ class _CavasProducer:
     def __init__(self,
                  frame_list,
                  resolution,
-                 kp2d,
+                 kp2d=None,
                  image_array=None,
                  default_scale=1.5):
         """Initialize a canvas writer."""
@@ -297,42 +297,53 @@ class _CavasProducer:
             self.frame_list = []
         self.resolution = resolution
         self.kp2d = kp2d
+
         # with numpy array frames
         self.image_array = image_array
-        if self.image_array is not None:
-            self.auto_resolution = self.image_array.shape[1:3]
-        elif len(self.frame_list) > 1 and \
-                check_path_existence(
-                    self.frame_list[0], 'file') == Existence.FileExist:
-            tmp_image_array = cv2.imread(self.frame_list[0])
-            self.auto_resolution = tmp_image_array.shape[:2]
-        else:
 
-            self.auto_resolution = [
-                int(np.max(kp2d) * default_scale),
-                int(np.max(kp2d) * default_scale)
-            ]
+        if self.resolution is None:
+            if self.image_array is not None:
+                self.auto_resolution = self.image_array.shape[1:3]
+            elif len(self.frame_list) > 1 and \
+                    check_path_existence(
+                        self.frame_list[0], 'file') == Existence.FileExist:
+                tmp_image_array = cv2.imread(self.frame_list[0])
+                self.auto_resolution = tmp_image_array.shape[:2]
+            else:
+
+                self.auto_resolution = [
+                    int(np.max(kp2d) * default_scale),
+                    int(np.max(kp2d) * default_scale)
+                ]
+        self.len = kp2d.shape[0]
+
         if self.image_array is None:
-            self.len = len(self.frame_list)
+            self.len_frame = len(self.frame_list)
         else:
-            self.len = self.image_array.shape[0]
+            self.len_frame = self.image_array.shape[0]
 
-    def get_data(self, frame_index):
+    def __getitem__(self, frame_index):
         """Get frame data from frame_list of image_array."""
         # frame file exists, resolution not set
-        if frame_index < self.len and self.resolution is None:
+        if frame_index < self.len_frame and self.resolution is None:
             if self.image_array is not None:
                 canvas = self.image_array[frame_index]
             else:
                 canvas = cv2.imread(self.frame_list[frame_index])
-            kp2d_frame = self.kp2d[frame_index]
+            if self.kp2d is None:
+                kp2d_frame = None
+            else:
+                kp2d_frame = self.kp2d[frame_index]
         # no frame file, resolution has been set
-        elif frame_index >= self.len and self.resolution is not None:
+        elif frame_index >= self.len_frame and self.resolution is not None:
             canvas = np.ones((self.resolution[0], self.resolution[1], 3),
                              dtype=np.uint8) * 255
-            kp2d_frame = self.kp2d[frame_index]
+            if self.kp2d is None:
+                kp2d_frame = None
+            else:
+                kp2d_frame = self.kp2d[frame_index]
         # frame file exists, resolution has been set
-        elif frame_index < self.len and self.resolution is not None:
+        elif frame_index < self.len_frame and self.resolution is not None:
             if self.image_array is not None:
                 canvas = self.image_array[frame_index]
             else:
@@ -342,15 +353,24 @@ class _CavasProducer:
             canvas = cv2.resize(canvas,
                                 (self.resolution[1], self.resolution[0]),
                                 cv2.INTER_CUBIC)
-            kp2d_frame = np.array([[w_scale, h_scale]
-                                   ]) * self.kp2d[frame_index]
+            if self.kp2d is None:
+                kp2d_frame = None
+            else:
+                kp2d_frame = np.array([[w_scale, h_scale]
+                                       ]) * self.kp2d[frame_index]
         # no frame file, no resolution
         else:
             canvas = np.ones(
                 (self.auto_resolution[0], self.auto_resolution[1], 3),
                 dtype=np.uint8) * 255
-            kp2d_frame = self.kp2d[frame_index]
+            if self.kp2d is None:
+                kp2d_frame = None
+            else:
+                kp2d_frame = self.kp2d[frame_index]
         return canvas, kp2d_frame
+
+    def __len__(self):
+        return self.len
 
 
 def update_frame_list(frame_list, origin_frames, img_format, start, end):
@@ -505,8 +525,8 @@ def visualize_kp2d(
         frame_list, input_temp_folder = update_frame_list(
             frame_list, origin_frames, img_format, start, end)
 
-    if frame_list is not None:
-        num_frames = min(len(frame_list), num_frames)
+    # if frame_list is not None:
+    #     num_frames = min(len(frame_list), num_frames)
     kp2d = kp2d[:num_frames]
     # check output path
     if output_path is not None:
@@ -544,7 +564,7 @@ def visualize_kp2d(
     out_image_array = []
     # start plotting by frame
     for frame_index in tqdm(range(kp2d.shape[0]), disable=disable_tqdm):
-        canvas, kp2d_frame = canvas_producer.get_data(frame_index)
+        canvas, kp2d_frame = canvas_producer[frame_index]
         # start plotting by person
         for person_index in range(num_person):
             if num_person >= 2 and not disable_limbs:
@@ -568,7 +588,9 @@ def visualize_kp2d(
                     np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
         if output_path is not None:
             # write the frame with opencv
-            if frame_list is not None and check_path_suffix(output_path, ['']):
+            if frame_list is not None and check_path_suffix(
+                    output_path,
+                    '') and len(frame_list) >= len(canvas_producer):
                 frame_path = os.path.join(output_temp_folder,
                                           Path(frame_list[frame_index]).name)
                 img_format = None

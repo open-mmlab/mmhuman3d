@@ -427,8 +427,8 @@ class HybrIKHead(BaseModule):
         pred_xyz_jts_24_struct = hybrik_output['joints'].float() / 2
         #  -0.5 ~ 0.5
         pred_xyz_jts_17 = hybrik_output['joints_from_verts'].float() / 2
-        pred_theta_mats = hybrik_output['rot_mats'].float().reshape(
-            batch_size, 24 * 4)
+        pred_poses = hybrik_output['poses'].float().reshape(
+            batch_size, 24, 3, 3)
         pred_xyz_jts_24 = pred_xyz_jts_29[:, :24, :].reshape(batch_size, 72)
         pred_xyz_jts_24_struct = pred_xyz_jts_24_struct.reshape(batch_size, 72)
         pred_xyz_jts_17 = pred_xyz_jts_17.reshape(batch_size, 17 * 3)
@@ -437,7 +437,7 @@ class HybrIKHead(BaseModule):
             'pred_phi': pred_phi,
             'pred_delta_shape': delta_shape,
             'pred_shape': pred_shape,
-            'pred_theta_mats': pred_theta_mats,
+            'pred_pose': pred_poses,
             'pred_uvd_jts': pred_uvd_jts_29_flat,
             'pred_xyz_jts_24': pred_xyz_jts_24,
             'pred_xyz_jts_24_struct': pred_xyz_jts_24_struct,

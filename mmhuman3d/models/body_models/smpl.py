@@ -13,7 +13,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 )
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.models.utils import batch_inverse_kinematics_transform
-from mmhuman3d.utils.transforms import quat_to_rotmat, rotmat_to_quat
+from mmhuman3d.utils.transforms import quat_to_rotmat
 from ..builder import BODY_MODELS
 
 
@@ -67,7 +67,6 @@ class SMPL(_SMPL):
         self.keypoint_src = keypoint_src
         self.keypoint_dst = keypoint_dst
         self.keypoint_approximate = keypoint_approximate
-
         # override the default SMPL joint regressor if available
         if joints_regressor is not None:
             joints_regressor = torch.tensor(
@@ -168,7 +167,13 @@ class SMPL(_SMPL):
         body_pose = full_pose[:, 3:]
         global_orient = full_pose[:, :3]
         batch_size = full_pose.shape[0]
-        betas = betas.view(batch_size, -1) if betas is not None else betas
+        if betas is not None:
+            # squeeze or unsqueeze betas to 2 dims
+            betas = betas.view(-1, betas.shape[-1])
+            if betas.shape[0] == 1:
+                betas = betas.repeat(batch_size, 1)
+        else:
+            betas = betas
         transl = transl.view(batch_size, -1) if transl is not None else transl
         return {
             'betas': betas,
@@ -596,27 +601,21 @@ class HybrIKSMPL(SMPL):
         joints_from_verts = vertices2joints(self.joints_regressor_extra,
                                             vertices)
 
-        rot_mats = rot_mats.reshape(batch_size * 24, 3, 3)
-        rot_mats = rotmat_to_quat(rot_mats).reshape(batch_size, 24 * 4)
-
+        # rot_mats = rot_mats.reshape(batch_size * 24, 3, 3)
         if transl is not None:
             new_joints += transl.unsqueeze(dim=1)
             vertices += transl.unsqueeze(dim=1)
             joints_from_verts += transl.unsqueeze(dim=1)
         else:
-            vertices = vertices - joints_from_verts[:, self.
-                                                    root_idx_17, :].unsqueeze(
-                                                        1).detach()
-            new_joints = new_joints - new_joints[:, self.
-                                                 root_idx_smpl, :].unsqueeze(
-                                                     1).detach()
+            new_joints = new_joints - \
+                new_joints[:, self.root_idx_smpl, :].unsqueeze(1).detach()
             joints_from_verts = joints_from_verts - \
                 joints_from_verts[:, self.root_idx_17, :].unsqueeze(1).detach()
 
         output = {
             'vertices': vertices,
             'joints': new_joints,
-            'rot_mats': rot_mats,
+            'poses': rot_mats,
             'joints_from_verts': joints_from_verts,
         }
         return output

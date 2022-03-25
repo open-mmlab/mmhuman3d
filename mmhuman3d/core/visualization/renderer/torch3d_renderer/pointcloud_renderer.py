@@ -1,44 +1,32 @@
-import os.path as osp
 import warnings
-from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
-import mmcv
 import torch
+import torch.nn as nn
 from pytorch3d.renderer import (
     AlphaCompositor,
     PointsRasterizationSettings,
-    PointsRenderer,
+    PointsRasterizer,
 )
 from pytorch3d.structures import Meshes, Pointclouds
 
+from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils.mesh_utils import mesh_to_pointcloud_vc
-from mmhuman3d.utils.path_utils import check_path_suffix
-from .base_renderer import MeshBaseRenderer
-from .builder import RENDERER, build_raster
-
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
+from .base_renderer import BaseRenderer
+from .builder import RENDERER
 
 
 @RENDERER.register_module(name=[
     'PointCloud', 'pointcloud', 'point_cloud', 'pointcloud_renderer',
     'PointCloudRenderer'
 ])
-class PointCloudRenderer(MeshBaseRenderer):
+class PointCloudRenderer(BaseRenderer):
 
     def __init__(self,
-                 resolution: Tuple[int, int],
+                 resolution: Tuple[int, int] = None,
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
-                 return_type: Optional[List] = None,
                  out_img_format: str = '%06d.png',
-                 projection: Literal['weakperspective', 'fovperspective',
-                                     'orthographics', 'perspective',
-                                     'fovorthographics'] = 'weakperspective',
-                 in_ndc: bool = True,
                  radius: Optional[float] = None,
                  **kwargs) -> None:
         """Point cloud renderer.
@@ -52,72 +40,63 @@ class PointCloudRenderer(MeshBaseRenderer):
             output_path (Optional[str], optional):
                 Output path of the video or images to be saved.
                 Defaults to None.
-            return_type (List, optional): the type of tensor to be
-                returned. 'tensor' denotes return the determined tensor. E.g.,
-                return silhouette tensor of (B, H, W) for SilhouetteRenderer.
-                'rgba' denotes the colorful RGBA tensor to be written.
-                Will be same for MeshBaseRenderer.
-                Will return a pointcloud image for 'tensor' and for 'rgba'.
-                Defaults to None.
             out_img_format (str, optional): name format for temp images.
                 Defaults to '%06d.png'.
-            projection (Literal[, optional): projection type of camera.
-                Defaults to 'weakperspective'.
-            in_ndc (bool, optional): cameras whether defined in NDC.
-                Defaults to True.
             radius (float, optional): radius of points. Defaults to None.
 
         Returns:
             None
         """
-        self.device = device
-        self.output_path = output_path
-        self.resolution = resolution
-        self.return_type = return_type
-        self.out_img_format = out_img_format
         self.radius = radius
-        self.projection = projection
-        self.in_ndc = in_ndc
-        if output_path is not None:
-            if check_path_suffix(output_path, ['.mp4', '.gif']):
-                self.temp_path = osp.join(
-                    Path(output_path).parent,
-                    Path(output_path).name + '_output_temp')
-                mmcv.mkdir_or_exist(self.temp_path)
-                print('make dir', self.temp_path)
-            else:
-                self.temp_path = output_path
-        self.set_render_params(**kwargs)
-        super(MeshBaseRenderer, self).__init__()
+        super().__init__(
+            resolution=resolution,
+            device=device,
+            output_path=output_path,
+            out_img_format=out_img_format,
+            **kwargs)
 
-    def set_render_params(self, **kwargs):
+    def to(self, device):
+        if isinstance(device, str):
+            device = torch.device(device)
+        self.device = device
+        if getattr(self.rasterizer, 'cameras', None) is not None:
+            self.rasterizer.cameras = self.rasterizer.cameras.to(device)
+
+        self.compositor = self.compositor.to(device)
+        return self
+
+    def _init_renderer(self, rasterizer=None, compositor=None, **kwargs):
         """Set render params."""
-        self.raster_type = kwargs.get('raster_type', 'point')
-        self.shader_type = None
-        self.bg_color = torch.tensor(
-            kwargs.get('bg_color', [
-                1.0,
-                1.0,
-                1.0,
-                0.0,
-            ]),
-            dtype=torch.float32,
-            device=self.device)
-        self.raster_settings = PointsRasterizationSettings(
-            image_size=self.resolution,
-            radius=self.radius
-            if self.radius is not None else kwargs.get('radius'),
-            points_per_pixel=kwargs.get('points_per_pixel', 10))
 
-    def init_renderer(self, cameras):
-        renderer = PointsRenderer(
-            rasterizer=build_raster(
-                dict(
-                    type=self.raster_type,
-                    cameras=cameras,
-                    raster_settings=self.raster_settings)),
-            compositor=AlphaCompositor(background_color=self.bg_color))
-        return renderer
+        if isinstance(rasterizer, nn.Module):
+            rasterizer.raster_settings.image_size = self.resolution
+            self.rasterizer = rasterizer
+        elif isinstance(rasterizer, dict):
+            rasterizer['image_size'] = self.resolution
+            if self.radius is not None:
+                rasterizer.update(radius=self.radius)
+            raster_settings = PointsRasterizationSettings(**rasterizer)
+            self.rasterizer = PointsRasterizer(raster_settings=raster_settings)
+        elif rasterizer is None:
+            self.rasterizer = PointsRasterizer(
+                raster_settings=PointsRasterizationSettings(
+                    radius=self.radius,
+                    image_size=self.resolution,
+                    points_per_pixel=10))
+        else:
+            raise TypeError(
+                f'Wrong type of rasterizer: {type(self.rasterizer)}.')
+
+        if isinstance(compositor, dict):
+            self.compositor = AlphaCompositor(**compositor)
+        elif isinstance(compositor, nn.Module):
+            self.compositor = compositor
+        elif compositor is None:
+            self.compositor = AlphaCompositor()
+        else:
+            raise TypeError(
+                f'Wrong type of compositor: {type(self.compositor)}.')
+        self = self.to(self.device)
 
     def forward(
         self,
@@ -125,11 +104,9 @@ class PointCloudRenderer(MeshBaseRenderer):
         vertices: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         verts_rgba: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         meshes: Meshes = None,
-        K: Optional[torch.Tensor] = None,
-        R: Optional[torch.Tensor] = None,
-        T: Optional[torch.Tensor] = None,
-        images: Optional[torch.Tensor] = None,
+        cameras: Optional[MMCamerasBase] = None,
         indexes: Optional[Iterable[int]] = None,
+        backgrounds: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> Union[None, torch.Tensor]:
         """Render pointclouds.
@@ -143,16 +120,10 @@ class PointCloudRenderer(MeshBaseRenderer):
                 optional): coordinate tensor of points. Defaults to None.
             verts_rgba (Optional[Union[torch.Tensor, List[torch.Tensor]]],
                 optional): color tensor of points. Defaults to None.
-            K (Optional[torch.Tensor], optional): Camera intrinsic matrix.
-                Defaults to None.
-            R (Optional[torch.Tensor], optional): Camera rotation matrix.
-                Defaults to None.
-            T (Optional[torch.Tensor], optional): Camera translation matrix.
-                Defaults to None.
-            images (Optional[torch.Tensor], optional): background images.
-                Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for the
                 images.
+                Defaults to None.
+            backgrounds (Optional[torch.Tensor], optional): background images.
                 Defaults to None.
 
         Returns:
@@ -175,20 +146,23 @@ class PointCloudRenderer(MeshBaseRenderer):
                 warnings.warn(
                     'Redundant input, will ignore `vertices` and `verts_rgb`.')
         pointclouds = pointclouds.to(self.device)
-        cameras = self.init_cameras(K=K, R=R, T=T)
-        renderer = self.init_renderer(cameras)
+        self._update_resolution(cameras, **kwargs)
+        fragments = self.rasterizer(pointclouds, cameras=cameras)
+        r = self.rasterizer.raster_settings.radius
 
-        rendered_images = renderer(pointclouds)
+        dists2 = fragments.dists.permute(0, 3, 1, 2)
+        weights = 1 - dists2 / (r * r)
+        rendered_images = self.compositor(
+            fragments.idx.long().permute(0, 3, 1, 2),
+            weights,
+            pointclouds.features_packed().permute(1, 0),
+            **kwargs,
+        )
+        rendered_images = rendered_images.permute(0, 2, 3, 1)
 
-        if self.output_path is not None or 'rgba' in self.return_type:
-            rgbs, valid_masks = rendered_images[
-                ..., :3], (rendered_images[..., 3:] > 0) * 1.0
+        if self.output_path is not None:
+            rgba = self.tensor2rgba(rendered_images)
             if self.output_path is not None:
-                self.write_images(rgbs, valid_masks, images, indexes)
+                self.write_images(rgba, backgrounds, indexes)
 
-        results = {}
-        if 'tensor' in self.return_type:
-            results.update(tensor=rendered_images)
-        if 'rgba' in self.return_type:
-            results.update(rgba=rendered_images)
-        return results
+        return rendered_images
