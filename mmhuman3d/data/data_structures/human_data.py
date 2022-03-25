@@ -2,7 +2,7 @@ import logging
 import pickle
 from enum import Enum
 from math import ceil
-from typing import Any, Optional, Type, TypeVar, Union, overload
+from typing import Any, List, Optional, TypeVar, Union, overload
 
 import numpy as np
 import torch
@@ -19,6 +19,7 @@ from mmhuman3d.utils.path_utils import (
 _T1 = TypeVar('_T1')
 _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')
+_HumanData = TypeVar('_HumanData')
 _CPU_DEVICE = torch.device('cpu')
 
 _HumanData_SUPPORTED_KEYS = {
@@ -100,14 +101,14 @@ class HumanData(dict):
     SUPPORTED_KEYS = _HumanData_SUPPORTED_KEYS
     WARNED_KEYS = []
 
-    def __new__(cls: Type[_T1], *args: Any, **kwargs: Any) -> _T1:
+    def __new__(cls: _HumanData, *args: Any, **kwargs: Any) -> _HumanData:
         """New an instance of HumanData.
 
         Args:
-            cls (Type[_T1]): HumanData class.
+            cls (HumanData): HumanData class.
 
         Returns:
-            _T1: An instance of HumanData.
+            HumanData: An instance of HumanData.
         """
         ret_human_data = super().__new__(cls, args, kwargs)
         setattr(ret_human_data, '__data_len__', -1)
@@ -128,7 +129,7 @@ class HumanData(dict):
         cls.logger = logger
 
     @classmethod
-    def fromfile(cls, npz_path: str):
+    def fromfile(cls, npz_path: str) -> _HumanData:
         """Construct a HumanData instance from an npz file.
 
         Args:
@@ -144,7 +145,9 @@ class HumanData(dict):
         return ret_human_data
 
     @classmethod
-    def new(cls, source_dict: dict = None, key_strict: bool = False):
+    def new(cls,
+            source_dict: dict = None,
+            key_strict: bool = False) -> _HumanData:
         """Construct a HumanData instance from a dict.
 
         Args:
@@ -261,7 +264,21 @@ class HumanData(dict):
         dict_to_dump.update(self)
         np.savez_compressed(npz_path, **dict_to_dump)
 
-    def get_sliced_cache(self, slice_size=10):
+    def get_sliced_cache(self, slice_size=10) -> List:
+        """Slice the whole HumanData into pieces for HumanDataCacheWriter.
+
+        Args:
+            slice_size (int, optional):
+                The length of each unit in HumanData cache.
+                Defaults to 10.
+
+        Returns:
+            List:
+                Two dicts for HumanDataCacheWriter.
+                Init HumanDataCacheWriter by HumanDataCacheWriter(**Returns[0])
+                and set data by
+                human_data_cache_writer.update_sliced_dict(Returns[1]).
+        """
         keypoints_info = {}
         non_sliced_data = {}
         sliced_data = {}
@@ -506,7 +523,7 @@ class HumanData(dict):
     def get_slice(self,
                   arg_0: int,
                   arg_1: Union[int, Any] = None,
-                  step: int = 1):
+                  step: int = 1) -> _HumanData:
         """Slice all sliceable values along major_dim dimension.
 
         Args:
@@ -550,6 +567,7 @@ class HumanData(dict):
                             HumanData.__get_sliced_result__(
                                 sub_value, sub_dim, slice_index)
                         sliced_dict[sub_key] = sliced_sub_value
+                ret_human_data[key] = sliced_dict
             else:
                 value = self[key]
                 sliced_value = \
@@ -558,7 +576,7 @@ class HumanData(dict):
                 ret_human_data[key] = sliced_value
         return ret_human_data
 
-    def __get_slice_dim__(self):
+    def __get_slice_dim__(self) -> dict:
         """For each key in this HumanData, get the dimension for slicing. 0 for
         default, if no other value specified.
 
@@ -613,7 +631,7 @@ class HumanData(dict):
                     ret_dict[key] = slice_dim
         return ret_dict
 
-    def __setitem__(self, key: _KT, val: _VT):
+    def __setitem__(self, key: _KT, val: _VT) -> None:
         """Set self[key] to value. Only be called when using
         human_data[key] = val. Methods like update won't call __setitem__.
         In keypoints_compressed mode, if the key contains 'keypoints',
@@ -689,7 +707,7 @@ class HumanData(dict):
         self.__check_value__(key, val)
         dict.__setitem__(self, key, val)
 
-    def pop_unsupported_items(self):
+    def pop_unsupported_items(self) -> None:
         """Find every item with a key not in HumanData.SUPPORTED_KEYS, and pop
         it to save memory."""
         for key in list(self.keys()):
@@ -757,7 +775,7 @@ class HumanData(dict):
         """
         ret_bool = self.__check_value_type__(key, val) and\
             self.__check_value_shape__(key, val) and\
-            self.__check_value_temporal__(key, val)
+            self.__check_value_len__(key, val)
         if not ret_bool:
             raise ValueError(self.__class__.__get_value_error_msg__())
         return ret_bool
@@ -854,7 +872,7 @@ class HumanData(dict):
         """
         self.__data_len__ = value
 
-    def __check_value_temporal__(self, key: Any, val: Any) -> bool:
+    def __check_value_len__(self, key: Any, val: Any) -> bool:
         """Check whether the temporal length of val matches other values.
 
         Args:
@@ -897,7 +915,7 @@ class HumanData(dict):
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
 
-    def compress_keypoints_by_mask(self):
+    def compress_keypoints_by_mask(self) -> None:
         """If a key contains 'keypoints', and f'{key}_mask' is in self.keys(),
         invalid zeros will be removed and f'{key}_mask' will be locked.
 
@@ -931,7 +949,7 @@ class HumanData(dict):
         self.update(compressed_dict)
         self.__keypoints_compressed__ = True
 
-    def decompress_keypoints(self):
+    def decompress_keypoints(self) -> None:
         """If a key contains 'keypoints', and f'{key}_mask' is in self.keys(),
         invalid zeros will be inserted to the right places and f'{key}_mask'
         will be unlocked.
@@ -969,7 +987,7 @@ class HumanData(dict):
         self.update(decompressed_dict)
         self.__keypoints_compressed__ = False
 
-    def dump_by_pickle(self, pkl_path: str, overwrite: bool = True):
+    def dump_by_pickle(self, pkl_path: str, overwrite: bool = True) -> None:
         """Dump keys and items to a pickle file. It's a secondary dump method,
         when a HumanData instance is too large to be dumped by self.dump()
 
@@ -1001,7 +1019,7 @@ class HumanData(dict):
             pickle.dump(
                 dict_to_dump, f_writeb, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def load_by_pickle(self, pkl_path: str):
+    def load_by_pickle(self, pkl_path: str) -> None:
         """Load data from pkl_path and update them to self.
 
         When a HumanData Instance was dumped by
@@ -1029,7 +1047,7 @@ class HumanData(dict):
             self.update(tmp_data_dict)
             self.__set_default_values__()
 
-    def __set_default_values__(self):
+    def __set_default_values__(self) -> None:
         """For older versions of HumanData, call this method to apply missing
         values (also attributes)."""
         supported_keys = self.__class__.SUPPORTED_KEYS
@@ -1055,6 +1073,131 @@ class HumanData(dict):
                     not key.endswith('_convention') and \
                     convention_key not in self:
                 self[convention_key] = 'human_data'
+
+    @classmethod
+    def concatenate(cls, human_data_0: _HumanData,
+                    human_data_1: _HumanData) -> _HumanData:
+        """Concatenate two human_data. All keys will be kept it the returned
+        human_data. If either value from human_data_0 or human_data_1 matches
+        data_len from its HumanData, the two values will be concatenated as a
+        single value. If not, postfix will be added to the key to specify
+        source of the value.
+
+        Args:
+            human_data_0 (_HumanData)
+            human_data_1 (_HumanData)
+
+        Returns:
+            _HumanData:
+                A new human_data instance with all concatenated data.
+        """
+        ret_human_data = cls.new(key_strict=False)
+        set_0 = set(human_data_0.keys())
+        set_1 = set(human_data_1.keys())
+        common_keys = set_0.intersection(set_1)
+        dim_dict_0 = human_data_0.__get_slice_dim__()
+        dim_dict_1 = human_data_1.__get_slice_dim__()
+        for key in common_keys:
+            value_0 = human_data_0[key]
+            value_1 = human_data_1[key]
+            # align type
+            value_0 = list(value_0) if isinstance(value_0, tuple)\
+                else value_0
+            value_1 = list(value_1) if isinstance(value_1, tuple)\
+                else value_1
+            assert type(value_0) == type(value_1)
+            # align convention
+            if key.startswith('keypoints') and\
+                    key.endswith('_convention'):
+                assert value_0 == value_1
+                ret_human_data[key] = value_0
+                continue
+            # mask_0 and mask_1
+            elif key.startswith('keypoints') and\
+                    key.endswith('_mask'):
+                new_mask = value_0 * value_1
+                ret_human_data[key] = new_mask
+                continue
+            # go through the sub dict
+            if isinstance(value_0, dict):
+                sub_dict = {}
+                for sub_key, sub_value_0 in value_0.items():
+                    # only found in value_0
+                    if sub_key not in value_1:
+                        sub_dict[sub_key] = sub_value_0
+                    # found in both values
+                    else:
+                        sub_value_1 = value_1[sub_key]
+                        concat_sub_dict = cls.__concat_value__(
+                            key=sub_key,
+                            value_0=sub_value_0,
+                            dim_0=dim_dict_0[key][sub_key],
+                            value_1=sub_value_1,
+                            dim_1=dim_dict_1[key][sub_key])
+                        sub_dict.update(concat_sub_dict)
+                for sub_key, sub_value_1 in value_1.items():
+                    if sub_key not in value_0:
+                        sub_dict[sub_key] = sub_value_1
+                ret_human_data[key] = sub_dict
+            # try concat
+            else:
+                concat_dict = cls.__concat_value__(
+                    key=key,
+                    value_0=value_0,
+                    dim_0=dim_dict_0[key],
+                    value_1=value_1,
+                    dim_1=dim_dict_1[key])
+                ret_human_data.update(concat_dict)
+        # check exclusive keys
+        for key, value in human_data_0.items():
+            if key not in common_keys:
+                # value not for concat and slice
+                if dim_dict_0[key] is None:
+                    ret_human_data[key] = value
+                # value aligned with data_len of HumanData_0
+                else:
+                    ret_human_data[f'{key}_0'] = value
+        for key, value in human_data_1.items():
+            if key not in common_keys:
+                # same as above
+                if dim_dict_1[key] is None:
+                    ret_human_data[key] = value
+                else:
+                    ret_human_data[f'{key}_1'] = value
+        return ret_human_data
+
+    @classmethod
+    def __concat_value__(cls, key: Any, value_0: Any, value_1: Any,
+                         dim_0: Union[None, int], dim_1: Union[None,
+                                                               int]) -> dict:
+        """Concat two values from two different HumanData.
+
+        Args:
+            key (Any):
+                The common key of the two values.
+            value_0 (Any):
+                Value from 0.
+            value_1 (Any):
+                Value from 1.
+            dim_0 (Union[None, int]):
+                The dim for concat and slice. None for N/A.
+            dim_1 (Union[None, int]):
+                The dim for concat and slice. None for N/A.
+
+        Returns:
+            dict:
+                Dict for concatenated result.
+        """
+        ret_dict = {}
+        if dim_0 is None or dim_1 is None:
+            ret_dict[f'{key}_0'] = value_0
+            ret_dict[f'{key}_1'] = value_1
+        elif isinstance(value_0, list):
+            ret_dict[key] = value_0 + value_1
+        # elif isinstance(value_0, np.ndarray):
+        else:
+            ret_dict[key] = np.concatenate((value_0, value_1), axis=dim_0)
+        return ret_dict
 
     @classmethod
     def __add_zero_pad__(cls, compressed_array: np.ndarray,
