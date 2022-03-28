@@ -88,28 +88,18 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             self.human_data.decompress_keypoints()
         if 'keypoints3d' in self.human_data:
             keypoints3d = self.human_data['keypoints3d']
-            assert 'keypoints3d_mask' in self.human_data
-            keypoints3d_mask = self.human_data['keypoints3d_mask']
-            keypoints3d, keypoints3d_mask = \
-                convert_kps(
-                    keypoints3d,
-                    src='human_data',
-                    dst=self.convention,
-                    mask=keypoints3d_mask)
+            keypoints3d = convert_kps(
+                keypoints3d,
+                src='human_data',
+                dst=self.convention)
             self.human_data.__setitem__('keypoints3d', keypoints3d)
-            self.human_data.__setitem__('keypoints3d_mask', keypoints3d_mask)
         if 'keypoints2d' in self.human_data:
             keypoints2d = self.human_data['keypoints2d']
-            assert 'keypoints2d_mask' in self.human_data
-            keypoints2d_mask = self.human_data['keypoints2d_mask']
-            keypoints2d, keypoints2d_mask = \
-                convert_kps(
-                    keypoints2d,
-                    src='human_data',
-                    dst=self.convention,
-                    mask=keypoints2d_mask)
+            keypoints2d = convert_kps(
+                keypoints2d,
+                src='human_data',
+                dst=self.convention)
             self.human_data.__setitem__('keypoints2d', keypoints2d)
-            self.human_data.__setitem__('keypoints2d_mask', keypoints2d_mask)
         self.num_data = self.human_data.data_len
 
     def prepare_raw_data(self, idx: int):
@@ -137,9 +127,6 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             info['bbox_xywh'] = np.zeros((5))
             info['center'] = np.zeros((2))
             info['scale'] = np.zeros((2))
-
-        # in later modules, we will check validity of each keypoint by
-        # its confidence. Therefore, we do not need the mask of keypoints.
 
         if 'keypoints2d' in self.human_data:
             info['keypoints2d'] = self.human_data['keypoints2d'][idx]
