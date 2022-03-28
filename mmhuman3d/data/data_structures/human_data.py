@@ -916,8 +916,8 @@ class HumanData(dict):
         return ret_bool
 
     def compress_keypoints(self) -> None:
-        """If a key contains 'keypoints', and f'{key}_mask' is in self.keys(),
-        invalid zeros will be removed and f'{key}_mask' will be locked.
+        """If a key contains 'keypoints', invalid zeros will be removed
+        and a corresponding f'{key}_mask' will be generated
 
         Raises:
             KeyError:
@@ -925,25 +925,22 @@ class HumanData(dict):
                 but its corresponding mask is missing.
         """
         assert self.__keypoints_compressed__ is False
-        key_pairs = []
+        keys = []
         for key in self.keys():
-            mask_key = f'{key}_mask'
             val = self.get_raw_value(key)
             if isinstance(val, np.ndarray) and \
                     'keypoints' in key and \
                     '_mask' not in key:
-                if mask_key in self:
-                    key_pairs.append([key, mask_key])
-                else:
-                    msg = f'Mask for {key} has not been set.' +\
-                        f'Please set {mask_key} before compression.'
-                    raise KeyError(msg)
+                keys.append(key)
         compressed_dict = {}
-        for kpt_key, mask_key in key_pairs:
+        for kpt_key in keys:
             kpt_array = self.get_raw_value(kpt_key)
-            mask_array = np.asarray(self.get_raw_value(mask_key))
-            compressed_kpt = \
-                self.__class__.__remove_zero_pad__(kpt_array, mask_array)
+            num_joints = kpt_array.shape[-2]
+            # if all conf of a joint are zero, this joint is masked
+            joint_conf = kpt_array[..., -1].reshape(-1, num_joints)
+            mask_array = (joint_conf > 0).astype(np.int).max(axis=0)
+            assert len(mask_array) == num_joints
+            compressed_kpt = self.__class__.__remove_zero_pad__(kpt_array, mask_array)
             compressed_dict[kpt_key] = compressed_kpt
         # set value after all pairs are compressed
         self.update(compressed_dict)
