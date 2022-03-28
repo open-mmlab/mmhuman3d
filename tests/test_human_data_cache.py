@@ -33,7 +33,7 @@ def test_write():
             0,
         ],
     }
-    human_data.compress_keypoints_by_mask()
+    human_data.compress_keypoints()
 
     writer_kwargs, sliced_data = human_data.get_sliced_cache()
     writer = HumanDataCacheWriter(**writer_kwargs)

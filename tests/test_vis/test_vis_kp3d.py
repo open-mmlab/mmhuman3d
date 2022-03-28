@@ -184,22 +184,26 @@ def test_vis_kp3d():
 
     keypoints = np.random.randint(
         low=0, high=255, size=(5, 1, 17, 3), dtype=np.uint8)
-    keypoints, mask = convert_kps(
+    keypoints = np.concatenate([
+        keypoints, np.ones((*keypoints.shape[:-1], 1))], axis=-1)
+
+    keypoints = convert_kps(
         keypoints=keypoints, src='coco', dst='coco_wholebody')
-    assert keypoints.shape == (5, 1, 133, 3)
+    assert keypoints.shape == (5, 1, 133, 4)
+
     visualize_kp3d(
-        keypoints,
+        keypoints[..., :-1],
         'tests/data/test_vis_kp3d/with_mask.mp4',
-        mask=mask,
+        mask=keypoints[0, 0, :, -1],
         orbit_speed=0.5,
         resolution=(128, 128),
         data_source='coco_wholebody')
     assert video_to_array('tests/data/test_vis_kp3d/with_mask.mp4').shape
 
     visualize_kp3d(
-        keypoints,
+        keypoints[..., :-1],
         'tests/data/test_vis_kp3d/with_mask_list.mp4',
-        mask=mask.tolist(),
+        mask=keypoints[0, 0, :, -1],
         orbit_speed=0.5,
         resolution=(128, 128),
         data_source='coco_wholebody')

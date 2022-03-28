@@ -151,12 +151,12 @@ def test_vis_kp2d():
 
     # visualize single frame
     kp2d = np.random.randint(low=0, high=255, size=(1, 17, 2), dtype=np.uint8)
-    kp2d, mask = convert_kps(keypoints=kp2d, src='coco', dst='coco_wholebody')
+    kp2d = convert_kps(keypoints=kp2d, src='coco', dst='coco_wholebody')
     image_array = visualize_kp2d(
         kp2d,
         image_array=image_array,
         data_source='coco_wholebody',
-        mask=mask,
+        mask=kp2d[0, :, -1],
         draw_bbox=True,
         with_number=True,
         return_array=True)

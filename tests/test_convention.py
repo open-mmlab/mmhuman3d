@@ -22,10 +22,10 @@ def test_conventions():
     n_person = 3
     # name should be in KEYPOINTS_FACTORY
     with pytest.raises(KeyError):
-        keypoints_dst, mask = convert_kps(np.zeros((f, 17, 3)), '1', '2')
+        keypoints_dst = convert_kps(np.zeros((f, 17, 3)), '1', '2')
     # shape of keypoints should be (f * J * 3/2) or (f * n * K * 3/2)
     with pytest.raises(AssertionError):
-        keypoints_dst, mask = convert_kps(np.zeros((17, 3)), 'coco', 'coco')
+        keypoints_dst = convert_kps(np.zeros((17, 3)), 'coco', 'coco')
     for src_name in data_names:
         for dst_name in data_names:
             J = len(KEYPOINTS_FACTORY[src_name])
@@ -38,14 +38,12 @@ def test_conventions():
                     np.zeros((f, n_person, J, 3)),
                     np.zeros((f, n_person, J, 2))
             ]:
-                keypoints_dst, mask = convert_kps(keypoints, src_name,
+                keypoints_dst = convert_kps(keypoints, src_name,
                                                   dst_name)
                 exp_shape = list(keypoints.shape)
                 exp_shape[-2] = J_dst
                 assert keypoints_dst.shape == tuple(exp_shape)
-                assert mask.shape == (J_dst, )
-                if src_name == dst_name:
-                    assert mask.all() == 1
+
             # test keypoints3d/keypoints2d input as tensor
             for keypoints in [
                     torch.zeros((f, J, 3)),
@@ -53,36 +51,22 @@ def test_conventions():
                     torch.zeros((f, n_person, J, 3)),
                     torch.zeros((f, n_person, J, 2))
             ]:
-                keypoints_dst, mask = convert_kps(keypoints, src_name,
+                keypoints_dst = convert_kps(keypoints, src_name,
                                                   dst_name)
                 exp_shape = list(keypoints.shape)
                 exp_shape[-2] = J_dst
                 assert keypoints_dst.shape == torch.Size(exp_shape)
-                assert mask.shape == torch.Size([J_dst])
-                if src_name == dst_name:
-                    assert mask.all() == 1
-
-    # test original_mask
-    keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
-    original_mask = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
-    original_mask[KEYPOINTS_FACTORY['smpl'].index('right_ankle')] = 0
-    _, mask_coco = convert_kps(
-        keypoints=keypoints, mask=original_mask, src='smpl', dst='coco')
-    _, mask_coco_full = convert_kps(
-        keypoints=keypoints, src='smpl', dst='coco')
-    assert mask_coco[KEYPOINTS_FACTORY['coco'].index('right_ankle')] == 0
-    mask_coco[KEYPOINTS_FACTORY['coco'].index('right_ankle')] = 1
-    assert (mask_coco == mask_coco_full).all()
 
     # test approximate mapping
     keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
-    _, mask_coco = convert_kps(
+    keypoints_coco = convert_kps(
         keypoints=keypoints, src='smpl', dst='coco', approximate=False)
-    _, approximate_mask_coco = convert_kps(
+    keypoints_approximate_coco = convert_kps(
         keypoints=keypoints, src='smpl', dst='coco', approximate=True)
-    assert mask_coco[KEYPOINTS_FACTORY['coco'].index('left_hip_extra')] == 0
-    assert approximate_mask_coco[KEYPOINTS_FACTORY['coco'].index(
-        'left_hip_extra')] == 1
+    assert keypoints_coco[
+               0, KEYPOINTS_FACTORY['coco'].index('left_hip_extra'), -1] == 0
+    assert keypoints_approximate_coco[
+               0, KEYPOINTS_FACTORY['coco'].index('left_hip_extra'), -1] == 1
 
     assert len(KEYPOINTS_FACTORY['human_data']) == len(
         set(KEYPOINTS_FACTORY['human_data']))
@@ -153,13 +137,11 @@ def test_approximate_mapping():
 
 def test_cache():
     coco_wb_keypoints2d = np.ones((1, 133, 3))
-    coco_wb_mask = np.ones((133, ))
     start_time = time.time()
     # establish mapping cache at the first time
     for dst_key in KEYPOINTS_FACTORY:
         convert_kps(
             keypoints=coco_wb_keypoints2d,
-            mask=coco_wb_mask,
             src='coco_wholebody',
             dst=dst_key)
     without_cache_time = time.time() - start_time
@@ -168,7 +150,6 @@ def test_cache():
     for dst_key in KEYPOINTS_FACTORY:
         convert_kps(
             keypoints=coco_wb_keypoints2d,
-            mask=coco_wb_mask,
             src='coco_wholebody',
             dst=dst_key)
     with_cache_time = time.time() - start_time
