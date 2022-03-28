@@ -1418,7 +1418,7 @@ def compute_direction_cameras(
             eye = -z_vec * dist + at
         eye = torch.Tensor(eye).view(-1, 3)
         assert eye is not None
-        z_vec = z_vec / torch.sqrt((z_vec * z_vec).sum())
+        z_vec = norm_vec(z_vec)
         normed_norm = -z_vec
 
     z_vec = z_vec.view(-1, 3)
