@@ -115,24 +115,20 @@ class SMPL(_SMPL):
                                            smpl_output.vertices)
             joints = torch.cat([joints, extra_joints], dim=1)
 
-        joints, joint_mask = convert_kps(
-            joints,
+        joints_conf = torch.ones((*joints.shape[:-1], 1)).to(joints.device)
+        keypoints = torch.cat([joints, joints_conf], dim=-1)
+
+        keypoints = convert_kps(
+            keypoints,
             src=self.keypoint_src,
             dst=self.keypoint_dst,
             approximate=self.keypoint_approximate)
-        if isinstance(joint_mask, np.ndarray):
-            joint_mask = torch.tensor(
-                joint_mask, dtype=torch.uint8, device=joints.device)
-
-        batch_size = joints.shape[0]
-        joint_mask = joint_mask.reshape(1, -1).expand(batch_size, -1)
 
         output = dict(
             global_orient=smpl_output.global_orient,
             body_pose=smpl_output.body_pose,
-            joints=joints,
-            joint_mask=joint_mask,
-            keypoints=torch.cat([joints, joint_mask[:, :, None]], dim=-1),
+            joints=joints[..., :-1],  # joints do not have conf
+            keypoints=keypoints,  # keypoints are joints with conf
             betas=smpl_output.betas)
 
         if return_verts:
