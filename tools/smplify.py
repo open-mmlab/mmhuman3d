@@ -168,7 +168,6 @@ def main():
             poses=poses,
             body_model_config=body_model_config,
             output_path=args.show_path,
-            model_type=smplify_config.body_model.type.lower(),
             orbit_speed=1,
             overwrite=True)
 
