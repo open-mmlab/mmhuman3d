@@ -234,14 +234,12 @@ class SurrealConverter(BaseModeConverter):
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 24, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'smpl', 'human_data')
+        keypoints2d_ = convert_kps(keypoints2d_, 'smpl', 'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 24, 4))
-        keypoints3d_, _ = convert_kps(keypoints3d_, 'smpl', 'human_data')
+        keypoints3d_ = convert_kps(keypoints3d_, 'smpl', 'human_data')
 
         human_data['image_path'] = image_path_
-        human_data['keypoints2d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_
-        human_data['keypoints3d_mask'] = mask
         human_data['keypoints3d'] = keypoints3d_
         human_data['bbox_xywh'] = bbox_xywh_
         human_data['video_path'] = video_path_
@@ -249,7 +247,7 @@ class SurrealConverter(BaseModeConverter):
         human_data['meta'] = meta
         human_data['cam_param'] = cam_param_
         human_data['config'] = 'surreal'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store data
         if not os.path.isdir(out_path):

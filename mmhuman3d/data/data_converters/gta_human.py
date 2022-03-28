@@ -94,9 +94,9 @@ class GTAHumanConverter(BaseConverter):
             seq_idx, _ = os.path.splitext(base)  # -> seq_00000001
             num_frames = len(ann['body_pose'])
 
-            keypoints_2d_gta, keypoints_2d_gta_mask = convert_kps(
+            keypoints_2d_gta = convert_kps(
                 ann['keypoints_2d'], src='gta', dst='smpl_49')
-            keypoints_3d_gta, keypoints_3d_gta_mask = convert_kps(
+            keypoints_3d_gta = convert_kps(
                 ann['keypoints_3d'], src='gta', dst='smpl_49')
 
             global_orient = ann['global_orient']
@@ -163,30 +163,26 @@ class GTAHumanConverter(BaseConverter):
         keypoints2d = np.array(keypoints_2d_).reshape(-1, 49, 2)
         keypoints2d = np.concatenate(
             [keypoints2d, np.ones([keypoints2d.shape[0], 49, 1])], axis=-1)
-        keypoints2d, keypoints2d_mask = \
-            convert_kps(keypoints2d, src='smpl_49', dst='human_data')
+        keypoints2d = convert_kps(
+            keypoints2d, src='smpl_49', dst='human_data')
         human_data['keypoints2d'] = keypoints2d
-        human_data['keypoints2d_mask'] = keypoints2d_mask
 
         keypoints3d = np.array(keypoints_3d_).reshape(-1, 49, 3)
         keypoints3d = np.concatenate(
             [keypoints3d, np.ones([keypoints3d.shape[0], 49, 1])], axis=-1)
-        keypoints3d, keypoints3d_mask = \
-            convert_kps(keypoints3d, src='smpl_49', dst='human_data')
+        keypoints3d = convert_kps(
+            keypoints3d, src='smpl_49', dst='human_data')
         human_data['keypoints3d'] = keypoints3d
-        human_data['keypoints3d_mask'] = keypoints3d_mask
 
         keypoints2d_gta = np.array(keypoints_2d_gta_).reshape(-1, 49, 3)
-        keypoints2d_gta, keypoints2d_gta_mask = \
-            convert_kps(keypoints2d_gta, src='smpl_49', dst='human_data')
+        keypoints2d_gta = convert_kps(
+            keypoints2d_gta, src='smpl_49', dst='human_data')
         human_data['keypoints2d_gta'] = keypoints2d_gta
-        human_data['keypoints2d_gta_mask'] = keypoints2d_gta_mask
 
         keypoints3d_gta = np.array(keypoints_3d_gta_).reshape(-1, 49, 4)
-        keypoints3d_gta, keypoints3d_gta_mask = \
-            convert_kps(keypoints3d_gta, src='smpl_49', dst='human_data')
+        keypoints3d_gta = convert_kps(
+            keypoints3d_gta, src='smpl_49', dst='human_data')
         human_data['keypoints3d_gta'] = keypoints3d_gta
-        human_data['keypoints3d_gta_mask'] = keypoints3d_gta_mask
 
         human_data['image_path'] = image_path_
 
@@ -195,7 +191,7 @@ class GTAHumanConverter(BaseConverter):
         human_data['bbox_xywh'] = bbox_xywh
 
         human_data['config'] = 'gta_human'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store data
         if not os.path.isdir(out_path):

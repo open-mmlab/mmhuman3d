@@ -101,7 +101,7 @@ class Up3dConverter(BaseModeConverter):
             keypoints2d_.append(keypoints2d)
 
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 14, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'lsp', 'human_data')
+        keypoints2d_ = convert_kps(keypoints2d_, 'lsp', 'human_data')
 
         # change list to np array
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
@@ -114,10 +114,9 @@ class Up3dConverter(BaseModeConverter):
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
         human_data['smpl'] = smpl
-        human_data['keypoints2d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_
         human_data['config'] = 'up3d'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store data
         if not os.path.isdir(out_path):

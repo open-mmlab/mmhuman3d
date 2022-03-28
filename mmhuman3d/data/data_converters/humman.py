@@ -31,9 +31,6 @@ class HuMManConverter(BaseModeConverter):
         self.skip_no_keypoints3d = True
         self.downsample_ratio = 10  # uniformly sampling
 
-        self.keypoints2d_humman_mask = None
-        self.keypoints3d_humman_mask = None
-
         self.keypoint_convention_humman = 'coco_wholebody'
         self.num_keypoints_humman = \
             get_keypoint_num(self.keypoint_convention_humman)
@@ -146,7 +143,7 @@ class HuMManConverter(BaseModeConverter):
         keypoints2d_smpl = np.concatenate(
             keypoints2d_smpl, axis=0).reshape(num_frames,
                                               self.num_keypoints_smpl, 2)
-        keypoints2d_smpl, keypoints2d_smpl_mask = convert_kps(
+        keypoints2d_smpl = convert_kps(
             keypoints2d_smpl,
             src=self.keypoint_convention_smpl,
             dst='human_data')
@@ -155,13 +152,12 @@ class HuMManConverter(BaseModeConverter):
              np.ones([*keypoints2d_smpl.shape[:2], 1])],
             axis=-1)
         human_data['keypoints2d'] = keypoints2d_smpl[selected_inds]
-        human_data['keypoints2d_mask'] = keypoints2d_smpl_mask
 
         # 3D SMPL keypoints
         keypoints3d_smpl = np.concatenate(
             keypoints3d_smpl, axis=0).reshape(num_frames,
                                               self.num_keypoints_smpl, 3)
-        keypoints3d_smpl, keypoints3d_smpl_mask = convert_kps(
+        keypoints3d_smpl = convert_kps(
             keypoints3d_smpl,
             src=self.keypoint_convention_smpl,
             dst='human_data')
@@ -170,34 +166,29 @@ class HuMManConverter(BaseModeConverter):
              np.ones([*keypoints3d_smpl.shape[:2], 1])],
             axis=-1)
         human_data['keypoints3d'] = keypoints3d_smpl[selected_inds]
-        human_data['keypoints3d_mask'] = keypoints3d_smpl_mask
 
         # Save HuMMan keypoints
         # 2D HuMMan Keypoints
         keypoints2d_humman = np.concatenate(
             keypoints2d_humman, axis=0).reshape(num_frames,
                                                 self.num_keypoints_humman, 3)
-        keypoints2d_humman, keypoints2d_humman_mask = convert_kps(
+        keypoints2d_humman = convert_kps(
             keypoints2d_humman,
-            mask=self.keypoints2d_humman_mask,
             src=self.keypoint_convention_humman,
             dst='human_data')
 
         human_data['keypoints2d_humman'] = keypoints2d_humman[selected_inds]
-        human_data['keypoints2d_humman_mask'] = keypoints2d_humman_mask
 
         # 3D HuMMan Keypoints
         keypoints3d_humman = np.concatenate(
             keypoints3d_humman, axis=0).reshape(num_frames,
                                                 self.num_keypoints_humman, 4)
-        keypoints3d_humman, keypoints3d_humman_mask = convert_kps(
+        keypoints3d_humman = convert_kps(
             keypoints3d_humman,
-            mask=self.keypoints3d_humman_mask,
             src=self.keypoint_convention_humman,
             dst='human_data')
 
         human_data['keypoints3d_humman'] = keypoints3d_humman[selected_inds]
-        human_data['keypoints3d_humman_mask'] = keypoints3d_humman_mask
 
         # Save bboxes
         bbox_xywh = np.array(bbox_xywh).reshape((num_frames, 4))
@@ -211,7 +202,7 @@ class HuMManConverter(BaseModeConverter):
         human_data['image_id'] = [image_id[i] for i in selected_inds]
         human_data['config'] = 'humman'
 
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         return human_data
 
@@ -333,22 +324,13 @@ class HuMManConverter(BaseModeConverter):
                 # get keypoints2d (all frames)
                 keypoints2d_humman, keypoints2d_humman_mask = \
                     smc_reader.get_keypoints2d(device, device_id)
-
-                if self.keypoints2d_humman_mask is None:
-                    self.keypoints2d_humman_mask = keypoints2d_humman_mask
-                assert np.allclose(self.keypoints2d_humman_mask,
-                                   keypoints2d_humman_mask)
-
+                keypoints2d_humman[..., -1] *= keypoints2d_humman_mask  # TODO: remove mask
                 keypoints2d_humman_.append(keypoints2d_humman)
 
                 # get keypoints3d (all frames)
                 keypoints3d_humman, keypoints3d_humman_mask = \
                     smc_reader.get_keypoints3d(device, device_id)
-
-                if self.keypoints3d_humman_mask is None:
-                    self.keypoints3d_humman_mask = keypoints3d_humman_mask
-                assert np.allclose(self.keypoints3d_humman_mask,
-                                   keypoints3d_humman_mask)
+                keypoints3d_humman[..., -1] *= keypoints3d_humman_mask  # TODO: remove mask
 
                 # root-align keypoints3d
                 left_hip_keypoints = \

@@ -159,21 +159,20 @@ class Pw3dHybrIKConverter(BaseConverter):
         joint_cam_ = np.array(joint_cam_).reshape((-1, 17, 4))
         joint_relative_ = np.array(joint_relative_).reshape((-1, 17, 4))
 
-        keypoints3d17_, keypoints3d17_mask = convert_kps(
+        keypoints3d17_ = convert_kps(
             joint_img_, 'h36m', 'human_data')
-        keypoints3d17_cam, _ = convert_kps(joint_cam_, 'h36m', 'human_data')
-        keypoints3d17_relative_, _ = convert_kps(joint_relative_, 'h36m',
+        keypoints3d17_cam = convert_kps(joint_cam_, 'h36m', 'human_data')
+        keypoints3d17_relative_ = convert_kps(joint_relative_, 'h36m',
                                                  'human_data')
 
         joint29_img_ = np.array(joint29_img_).reshape((-1, 29, 4))
         joint29_cam_ = np.array(joint29_cam_).reshape((-1, 29, 4))
         joint29_relative_ = np.array(joint29_relative_).reshape((-1, 29, 4))
-        keypoints3d_, keypoints3d_mask = convert_kps(joint29_img_, 'hybrik_29',
-                                                     'human_data')
-        keypoints3d_cam_, _ = convert_kps(joint29_cam_, 'hybrik_29',
-                                          'human_data')
-        keypoints3d_relative_, _ = convert_kps(joint29_relative_, 'hybrik_29',
-                                               'human_data')
+        keypoints3d_ = convert_kps(joint29_img_, 'hybrik_29', 'human_data')
+        keypoints3d_cam_ = convert_kps(
+            joint29_cam_, 'hybrik_29', 'human_data')
+        keypoints3d_relative_ = convert_kps(
+            joint29_relative_, 'hybrik_29', 'human_data')
 
         human_data['image_path'] = image_path_
         human_data['image_height'] = image_height_
@@ -183,12 +182,6 @@ class Pw3dHybrIKConverter(BaseConverter):
         human_data['cam_param'] = cam_param
         human_data['root_cam'] = root_cam_
         human_data['depth_factor'] = depth_factor_
-        human_data['keypoints3d17_mask'] = keypoints3d17_mask
-        human_data['keypoints3d_mask'] = keypoints3d_mask
-        human_data['keypoints3d17_cam_mask'] = keypoints3d17_mask
-        human_data['keypoints3d_cam_mask'] = keypoints3d_mask
-        human_data['keypoints3d17_relative_mask'] = keypoints3d17_mask
-        human_data['keypoints3d_relative_mask'] = keypoints3d_mask
         human_data['keypoints3d17_cam'] = keypoints3d17_cam
         human_data['keypoints3d17'] = keypoints3d17_
         human_data['keypoints3d17_relative'] = keypoints3d17_relative_
@@ -196,7 +189,7 @@ class Pw3dHybrIKConverter(BaseConverter):
         human_data['keypoints3d_cam'] = keypoints3d_cam_
         human_data['keypoints3d'] = keypoints3d_
         human_data['config'] = 'pw3d'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store the data struct
         if not os.path.isdir(out_path):

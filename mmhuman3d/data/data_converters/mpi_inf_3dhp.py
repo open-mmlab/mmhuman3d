@@ -177,11 +177,11 @@ class MpiInf3dhpConverter(BaseModeConverter):
             bbox_xywh_ = np.hstack(
                 [bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
             keypoints2d_ = np.array(keypoints2d_).reshape((-1, 28, 3))
-            keypoints2d_, mask = convert_kps(keypoints2d_, 'mpi_inf_3dhp',
-                                             'human_data')
+            keypoints2d_ = convert_kps(
+                keypoints2d_, 'mpi_inf_3dhp', 'human_data')
             keypoints3d_ = np.array(keypoints3d_).reshape((-1, 28, 4))
-            keypoints3d_, _ = convert_kps(keypoints3d_, 'mpi_inf_3dhp',
-                                          'human_data')
+            keypoints3d_ = convert_kps(
+                keypoints3d_, 'mpi_inf_3dhp', 'human_data')
 
         elif mode == 'test':
 
@@ -225,20 +225,18 @@ class MpiInf3dhpConverter(BaseModeConverter):
             bbox_xywh_ = np.hstack(
                 [bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
             keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
-            keypoints2d_, mask = convert_kps(keypoints2d_, 'mpi_inf_3dhp_test',
-                                             'human_data')
+            keypoints2d_ = convert_kps(
+                keypoints2d_, 'mpi_inf_3dhp_test', 'human_data')
             keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
-            keypoints3d_, _ = convert_kps(keypoints3d_, 'mpi_inf_3dhp_test',
-                                          'human_data')
+            keypoints3d_ = convert_kps(
+                keypoints3d_, 'mpi_inf_3dhp_test', 'human_data')
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
-        human_data['keypoints2d_mask'] = mask
-        human_data['keypoints3d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_
         human_data['keypoints3d'] = keypoints3d_
         human_data['config'] = 'mpi_inf_3dhp'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store the data struct
         if not os.path.isdir(out_path):

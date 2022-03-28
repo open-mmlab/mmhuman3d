@@ -128,17 +128,13 @@ class VibeConverter(BaseModeConverter):
         if 'openpose' in data:
             keypoints2d_ = np.hstack([data['openpose'], data['part']])
             keypoints2d_ = np.array(keypoints2d_).reshape((-1, 49, 3))
-            keypoints2d_, keypoints2d_mask = convert_kps(
-                keypoints2d_, 'smpl_49', 'human_data')
-            human_data['keypoints2d_mask'] = keypoints2d_mask
+            keypoints2d_ = convert_kps(keypoints2d_, 'smpl_49', 'human_data')
             human_data['keypoints2d'] = keypoints2d_
 
         if 'S' in data:
             keypoints3d_ = data['S']
             keypoints3d_ = np.array(keypoints3d_).reshape((-1, 24, 4))
-            keypoints3d_, keypoints3d_mask = convert_kps(
-                keypoints3d_, 'smpl_24', 'human_data')
-            human_data['keypoints3d_mask'] = keypoints3d_mask
+            keypoints3d_ = convert_kps(keypoints3d_, 'smpl_24', 'human_data')
             human_data['keypoints3d'] = keypoints3d_
 
         if 'pose' in data:
@@ -192,7 +188,7 @@ class VibeConverter(BaseModeConverter):
         human_data['bbox_xywh'] = bbox_xywh_
         human_data['config'] = mode
         human_data['features'] = features
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store the data struct
         if not os.path.isdir(out_path):

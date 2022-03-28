@@ -96,15 +96,14 @@ class CrowdposeConverter(BaseModeConverter):
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 14, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'crowdpose',
+        keypoints2d_ = convert_kps(keypoints2d_, 'crowdpose',
                                          'human_data')
 
         human_data['image_path'] = image_path_
-        human_data['keypoints2d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_
         human_data['bbox_xywh'] = bbox_xywh_
         human_data['config'] = 'crowdpose'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store the data struct
         if not os.path.isdir(out_path):

@@ -77,19 +77,18 @@ class InstaVibeConverter(BaseConverter):
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 25, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'instavariety',
+        keypoints2d_ = convert_kps(keypoints2d_, 'instavariety',
                                          'human_data')
         features_ = np.array(features_).reshape((-1, 2048))
 
         human_data['image_path'] = image_path_
         human_data['video_path'] = vid_path_
         human_data['bbox_xywh'] = bbox_xywh_
-        human_data['keypoints2d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_
         human_data['frame_idx'] = frame_idx_
         human_data['features'] = features_
         human_data['config'] = 'instavariety'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store the data struct
         if not os.path.isdir(out_path):

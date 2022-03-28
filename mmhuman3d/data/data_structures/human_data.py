@@ -915,7 +915,7 @@ class HumanData(dict):
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
 
-    def compress_keypoints_by_mask(self) -> None:
+    def compress_keypoints(self) -> None:
         """If a key contains 'keypoints', and f'{key}_mask' is in self.keys(),
         invalid zeros will be removed and f'{key}_mask' will be locked.
 

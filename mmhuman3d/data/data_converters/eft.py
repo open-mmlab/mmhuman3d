@@ -108,14 +108,13 @@ class EftConverter(BaseModeConverter):
             (-1, 3))
         smpl['betas'] = np.array(smpl['betas']).reshape((-1, 10))
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 49, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'smpl_49', 'human_data')
+        keypoints2d_ = convert_kps(keypoints2d_, 'smpl_49', 'human_data')
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
-        human_data['keypoints2d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_
         human_data['smpl'] = smpl
         human_data['config'] = 'eft'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store the data struct
         if not os.path.isdir(out_path):

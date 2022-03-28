@@ -158,18 +158,17 @@ class MpiInf3dhpHybrIKConverter(BaseModeConverter):
         if mode == 'train':
             keypoints3d_ = np.array(joint_img_).reshape((-1, 28, 4))
             keypoints3d_cam_ = np.array(joint_cam_).reshape((-1, 28, 4))
-            keypoints3d_, keypoints3d_mask = convert_kps(
+            keypoints3d_ = convert_kps(
                 keypoints3d_, 'hybrik_hp3d', 'human_data')
-            keypoints3d_cam_, keypoints3d_cam_mask = convert_kps(
+            keypoints3d_cam_ = convert_kps(
                 keypoints3d_cam_, 'hybrik_hp3d', 'human_data')
         elif mode == 'test':
             keypoints3d_ = np.array(joint_img_).reshape((-1, 17, 4))
             keypoints3d_cam_ = np.array(joint_cam_).reshape((-1, 17, 4))
-            keypoints3d_, keypoints3d_mask = convert_kps(
+            keypoints3d_ = convert_kps(
                 keypoints3d_, 'mpi_inf_3dhp_test', 'human_data')
-            keypoints3d_cam_, _ = convert_kps(keypoints3d_cam_,
-                                              'mpi_inf_3dhp_test',
-                                              'human_data')
+            keypoints3d_cam_ = convert_kps(
+                keypoints3d_cam_, 'mpi_inf_3dhp_test', 'human_data')
 
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
@@ -178,8 +177,6 @@ class MpiInf3dhpHybrIKConverter(BaseModeConverter):
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
         human_data['depth_factor'] = depth_factor_
-        human_data['keypoints3d_mask'] = keypoints3d_mask
-        human_data['keypoints3d_cam_mask'] = keypoints3d_mask
         human_data['keypoints3d_cam'] = keypoints3d_cam_
         human_data['keypoints3d'] = keypoints3d_
 
@@ -188,7 +185,7 @@ class MpiInf3dhpHybrIKConverter(BaseModeConverter):
         human_data['image_height'] = image_height_
         human_data['image_width'] = image_width_
         human_data['config'] = 'mpi_inf_3dhp'
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store the data struct
         if not os.path.isdir(out_path):

@@ -217,16 +217,14 @@ class AgoraConverter(BaseModeConverter):
 
         # change list to np array
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, num_keypoints, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, keypoints_convention,
+        keypoints2d_ = convert_kps(keypoints2d_, keypoints_convention,
                                          'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, num_keypoints, 4))
-        keypoints3d_, _ = convert_kps(keypoints3d_, keypoints_convention,
+        keypoints3d_ = convert_kps(keypoints3d_, keypoints_convention,
                                       'human_data')
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
-        human_data['keypoints2d_mask'] = mask
-        human_data['keypoints3d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_
         human_data['keypoints3d'] = keypoints3d_
         human_data['meta'] = meta
@@ -235,7 +233,7 @@ class AgoraConverter(BaseModeConverter):
             human_data['smplx'] = body_model
         else:
             human_data['smpl'] = body_model
-        human_data.compress_keypoints_by_mask()
+        human_data.compress_keypoints()
 
         # store data
         if not os.path.isdir(out_path):
