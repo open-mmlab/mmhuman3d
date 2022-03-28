@@ -80,17 +80,20 @@ def main():
         else:
             raise KeyError('Only support keypoints2d and keypoints3d')
 
-    keypoints, mask = convert_kps(
+    keypoints_src_conf = np.ones((*keypoints_src.shape[:-1], 1))
+    keypoints_src = np.concatenate([keypoints_src, keypoints_src_conf], axis=-1)
+
+    keypoints = convert_kps(
         keypoints_src,
         src=args.keypoint_type,
         dst=smplify_config.body_model['keypoint_dst'])
-    keypoints_conf = np.repeat(mask[None], keypoints.shape[0], axis=0)
 
     batch_size = args.batch_size if args.batch_size else keypoints.shape[0]
 
-    keypoints = torch.tensor(keypoints, dtype=torch.float32, device=device)
+    keypoints = torch.tensor(
+        keypoints[..., :-1], dtype=torch.float32, device=device)
     keypoints_conf = torch.tensor(
-        keypoints_conf, dtype=torch.float32, device=device)
+        keypoints[..., -1], dtype=torch.float32, device=device)
 
     if args.input_type == 'keypoints3d':
         human_data = dict(
