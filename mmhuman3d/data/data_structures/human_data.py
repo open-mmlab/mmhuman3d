@@ -942,6 +942,8 @@ class HumanData(dict):
             assert len(mask_array) == num_joints
             compressed_kpt = self.__class__.__remove_zero_pad__(kpt_array, mask_array)
             compressed_dict[kpt_key] = compressed_kpt
+            # generate mask
+            compressed_dict[f'{kpt_key}_mask'] = mask_array
         # set value after all pairs are compressed
         self.update(compressed_dict)
         self.__keypoints_compressed__ = True
