@@ -63,7 +63,6 @@ def convert_kps(
     src: str,
     dst: str,
     approximate: bool = False,
-    mask: Optional[Union[np.ndarray, torch.Tensor]] = None,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
 ) -> Tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
     """Convert keypoints following the mapping correspondence between src and
@@ -71,16 +70,12 @@ def convert_kps(
     smpl, mpi_inf_3dhp, mpi_inf_3dhp_test, h36m, h36m_mmpose, pw3d, mpii, lsp.
     Args:
         keypoints [Union[np.ndarray, torch.Tensor]]: input keypoints array,
-            could be (f * n * J * 3/2) or (f * J * 3/2).
-            You can set keypoints as np.zeros((1, J, 2))
-            if you only need mask.
+            could be (f * n * J * 3/4) or (f * J * 3/4).
+            Note that the last values of the last dim (keypoints[..., -1])
+                are assumed to be confidence
         src (str): source data type from keypoints_factory.
         dst (str): destination data type from keypoints_factory.
         approximate (bool): control whether approximate mapping is allowed.
-        mask (Optional[Union[np.ndarray, torch.Tensor]], optional):
-            The original mask to mark the existence of the keypoints.
-            None represents all ones mask.
-            Defaults to None.
         keypoints_factory (dict, optional): A class to store the attributes.
             Defaults to keypoints_factory.
     Returns:
@@ -89,6 +84,7 @@ def convert_kps(
             the same type.
     """
     assert keypoints.ndim in {3, 4}
+    assert keypoints.shape[-1] in {3, 4}
     if src == dst:
         return keypoints, np.ones((keypoints.shape[-2]))
     src_names = keypoints_factory[src.lower()]
@@ -105,31 +101,13 @@ def convert_kps(
             device=keypoints.device,
             dtype=keypoints.dtype)
 
-    original_mask = mask
-    if original_mask is not None:
-        original_mask = original_mask.reshape(-1)
-        assert original_mask.shape[0] == len(
-            src_names), f'The length of mask should be {len(src_names)}'
-
-    if isinstance(keypoints, np.ndarray):
-        mask = np.zeros((len(dst_names)), dtype=np.uint8)
-    elif isinstance(keypoints, torch.Tensor):
-        mask = torch.zeros((len(dst_names)),
-                           dtype=torch.uint8,
-                           device=keypoints.device)
-    else:
-        raise TypeError('keypoints should be torch.Tensor or np.ndarray')
-
     dst_idxs, src_idxs, _ = \
         get_mapping(src, dst, approximate, keypoints_factory)
     out_keypoints[:, dst_idxs] = keypoints[:, src_idxs]
     out_shape = extra_dims + (len(dst_names), keypoints.shape[-1])
     out_keypoints = out_keypoints.reshape(out_shape)
 
-    mask[dst_idxs] = original_mask[src_idxs] \
-        if original_mask is not None else 1.0
-
-    return out_keypoints, mask
+    return out_keypoints
 
 
 def compress_converted_kps(
