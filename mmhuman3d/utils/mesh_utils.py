@@ -157,14 +157,15 @@ def load_plys_as_meshes(
     return meshes
 
 
-def save_meshes_as_plys(meshes: Meshes = None,
+def save_meshes_as_plys(files: List[str],
+                        meshes: Meshes = None,
                         verts: torch.Tensor = None,
                         faces: torch.Tensor = None,
-                        verts_rgb: torch.Tensor = None,
-                        files: List[str] = None) -> None:
+                        verts_rgb: torch.Tensor = None) -> None:
     """Save meshes as .ply files. Mainly for vertex color meshes.
 
     Args:
+        files (List[str]): Output .ply file list.
         meshes (Meshes, optional): higher priority than
             (verts & faces & verts_rgb). Defaults to None.
         verts (torch.Tensor, optional): lower priority than meshes.
@@ -172,8 +173,6 @@ def save_meshes_as_plys(meshes: Meshes = None,
         faces (torch.Tensor, optional): lower priority than meshes.
             Defaults to None.
         verts_rgb (torch.Tensor, optional): lower priority than meshes.
-            Defaults to None.
-        files (List[str], optional): Output .ply file list.
             Defaults to None.
     """
     if meshes is None:
@@ -197,16 +196,14 @@ def save_meshes_as_plys(meshes: Meshes = None,
             meshes[idx], files[idx], colors_as_uint8=True, binary=False)
 
 
-def save_meshes_as_objs(meshes: Meshes = None,
-                        files: List[str] = None) -> None:
+def save_meshes_as_objs(files: List[str], meshes: Meshes = None) -> None:
     """Save meshes as .obj files. Pytorch3D will not save vertex color for.
 
     .obj, please use `save_meshes_as_plys`.
 
     Args:
+        files (List[str]): Output .obj file list.
         meshes (Meshes, optional):
-            Defaults to None.
-        files (List[str], optional): Output .obj file list.
             Defaults to None.
     """
     if not isinstance(files, list):

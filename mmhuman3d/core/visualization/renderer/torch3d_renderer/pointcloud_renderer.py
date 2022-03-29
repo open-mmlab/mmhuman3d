@@ -100,7 +100,7 @@ class PointCloudRenderer(BaseRenderer):
 
     def forward(
         self,
-        pointclouds: Optional[Pointclouds] = None,
+        pointclouds: Pointclouds,
         vertices: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         verts_rgba: Optional[Union[torch.Tensor, List[torch.Tensor]]] = None,
         meshes: Meshes = None,
