@@ -5,6 +5,7 @@ from pathlib import Path
 
 import mmcv
 import numpy as np
+import torch
 
 from mmhuman3d.apis import (
     feature_extract,
@@ -105,6 +106,11 @@ def single_person_with_mmdet(args, frames_iter):
     pred_cams = np.array(pred_cams)
     verts = np.array(verts)
     bboxes_xyxy = np.array(bboxes_xyxy)
+
+    del mesh_model
+    del extractor
+    del person_det_model
+    torch.cuda.empty_cache()
 
     # smooth
     if args.smooth_type is not None:
@@ -209,6 +215,11 @@ def multi_person_with_mmtracking(args, frames_iter):
             track_ids.append(instance_id)
 
         track_ids_lists.append(track_ids)
+
+    del mesh_model
+    del extractor
+    del tracking_model
+    torch.cuda.empty_cache()
 
     # smooth
     if args.smooth_type is not None:
