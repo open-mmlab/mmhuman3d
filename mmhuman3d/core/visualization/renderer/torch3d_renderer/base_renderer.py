@@ -18,7 +18,7 @@ from pytorch3d.renderer import (
 )
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from mmhuman3d.utils.ffmpeg_utils import images_to_video
+from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .builder import RENDERER, build_lights, build_shader
 from .utils import normalize, rgb2bgr, tensor2array
@@ -210,8 +210,13 @@ class BaseRenderer(nn.Module):
         if self.output_path is not None:
             folder = self.temp_path if self.temp_path is not None else\
                  self.output_path
-            if check_path_suffix(self.output_path, ['.mp4', '.gif']):
+            if check_path_suffix(self.output_path, ['.mp4']):
                 images_to_video(
+                    input_folder=folder,
+                    output_path=self.output_path,
+                    img_format=self.out_img_format)
+            elif check_path_suffix(self.output_path, ['.gif']):
+                images_to_gif(
                     input_folder=folder,
                     output_path=self.output_path,
                     img_format=self.out_img_format)
