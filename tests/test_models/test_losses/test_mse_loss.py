@@ -3,23 +3,46 @@ import torch
 from mmhuman3d.models import build_loss
 
 
-def test_keypoint_mse__loss():
+def test_keypoint_mse_loss():
     loss_cfg = dict(type='KeypointMSELoss')
     loss = build_loss(loss_cfg)
-    fake_pred = torch.zeros((1, 3, 3))
-    fake_target = torch.zeros((1, 3, 3))
-    assert torch.allclose(loss(fake_pred, fake_target), torch.tensor(0.))
+    pred = torch.zeros(1, 3, 2)
+    target = torch.zeros(1, 3, 2)
+    assert torch.allclose(loss(pred, target), torch.tensor(0.))
 
-    fake_pred = torch.ones((1, 3, 3))
-    fake_target = torch.zeros((1, 3, 3))
-    assert torch.allclose(loss(fake_pred, fake_target), torch.tensor(.5))
+    pred = torch.ones(1, 3, 2)
+    target = torch.zeros(1, 3, 2)
+    assert torch.allclose(loss(pred, target), torch.tensor(.5))
 
-
-def test_pose_reg_loss():
-    loss_cfg = dict(type='PoseRegLoss')
+    # test sum reduction
+    loss_cfg = dict(type='KeypointMSELoss', reduction='sum')
     loss = build_loss(loss_cfg)
-    fake_body_pose = torch.zeros((1, 3, 3))
-    assert torch.allclose(loss(fake_body_pose), torch.tensor(0.))
+    pred = torch.zeros(1, 3, 2)
+    target = torch.zeros(1, 3, 2)
+    assert torch.allclose(loss(pred, target), torch.tensor(0.))
 
-    fake_body_pose = torch.ones((1, 3, 3))
-    assert torch.allclose(loss(fake_body_pose), torch.tensor(1.))
+    pred = torch.ones(1, 3, 2)
+    target = torch.zeros(1, 3, 2)
+    assert torch.allclose(loss(pred, target), torch.tensor(3.))
+
+    # test None reduction
+    loss_cfg = dict(type='KeypointMSELoss', reduction='none')
+    loss = build_loss(loss_cfg)
+    pred = torch.zeros(1, 3, 2)
+    target = torch.zeros(1, 3, 2)
+    assert torch.allclose(loss(pred, target), pred)
+
+    pred = torch.ones(1, 3, 2)
+    target = torch.zeros(1, 3, 2)
+    assert torch.allclose(loss(pred, target), target)
+
+    # test loss weight
+    loss_cfg = dict(type='KeypointMSELoss', loss_weight=2.)
+    loss = build_loss(loss_cfg)
+    pred = torch.zeros(1, 3, 2)
+    target = torch.zeros(1, 3, 2)
+    assert torch.allclose(loss(pred, target), torch.tensor(0.))
+
+    pred = torch.ones(1, 3, 2)
+    target = torch.zeros(1, 3, 2)
+    assert torch.allclose(loss(pred, target), torch.tensor(1.))
