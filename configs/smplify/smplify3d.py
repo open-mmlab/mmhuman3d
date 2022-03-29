@@ -67,10 +67,7 @@ shape_prior_loss = dict(
     type='ShapePriorLoss', loss_weight=5e-3, reduction='sum')
 
 limb_length_loss = dict(
-    type='LimbLengthLoss',
-    limb_convention='smpl',
-    loss_weight=1.,
-    reduction='sum')
+    type='LimbLengthLoss', convention='smpl', loss_weight=1., reduction='sum')
 
 pose_reg_loss = dict(type='PoseRegLoss', loss_weight=0.001, reduction='mean')
 

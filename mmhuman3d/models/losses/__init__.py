@@ -1,10 +1,11 @@
 from .gan_loss import GANLoss
-from .mse_loss import KeypointMSELoss, MSELoss, PoseRegLoss
+from .mse_loss import KeypointMSELoss, MSELoss
 from .prior_loss import (
     CameraPriorLoss,
     JointPriorLoss,
     LimbLengthLoss,
     MaxMixturePrior,
+    PoseRegLoss,
     ShapePriorLoss,
     SmoothJointLoss,
     SmoothPelvisLoss,

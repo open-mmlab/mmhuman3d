@@ -68,10 +68,8 @@ class ShapePriorLoss(nn.Module):
 
 
 @LOSSES.register_module()
-class LimbLengthLoss(nn.Module):
-    """Limb length loss for body shape parameters. Note that it should take
-    keypoints3d as input, as limb length computed from keypoints2d varies with
-    camera.
+class PoseRegLoss(nn.Module):
+    """Regulizer loss for body pose parameters.
 
     Args:
         reduction (str, optional): The method that reduces the loss to a
@@ -79,8 +77,52 @@ class LimbLengthLoss(nn.Module):
         loss_weight (float, optional): The weight of the loss. Defaults to 1.0
     """
 
+    def __init__(self, reduction='mean', loss_weight=1.0):
+        super().__init__()
+        assert reduction in (None, 'none', 'mean', 'sum')
+        self.reduction = reduction
+        self.loss_weight = loss_weight
+
+    def forward(self,
+                body_pose,
+                weight=None,
+                avg_factor=None,
+                loss_weight_override=None,
+                reduction_override=None):
+        reduction = (
+            reduction_override if reduction_override else self.reduction)
+        loss_weight = (
+            loss_weight_override
+            if loss_weight_override is not None else self.loss_weight)
+
+        pose_prior_loss = loss_weight * (body_pose**2)
+
+        if reduction == 'mean':
+            pose_prior_loss = pose_prior_loss.mean()
+        elif reduction == 'sum':
+            pose_prior_loss = pose_prior_loss.sum()
+
+        return pose_prior_loss
+
+
+@LOSSES.register_module()
+class LimbLengthLoss(nn.Module):
+    """Limb length loss for body shape parameters. As betas are associated with
+    the height of a person, fitting on limb length help determine body shape
+    parameters. Note that it should take keypoints3d as input, as limb length
+    computed from keypoints2d varies with camera.
+
+    Args:
+        convention (str): Limb convention to search for keypoint connections.
+        reduction (str, optional): The method that reduces the loss to a
+            scalar. Options are "none", "mean" and "sum".
+        loss_weight (float, optional): The weight of the loss. Defaults to 1.0
+        eps (float, optional): epsilon for computing normalized limb vector.
+            Defaults to 1e-4.
+    """
+
     def __init__(self,
-                 limb_convention,
+                 convention,
                  reduction='mean',
                  loss_weight=1.0,
                  eps=1e-4):
@@ -91,7 +133,7 @@ class LimbLengthLoss(nn.Module):
         self.eps = eps
         self.limb_conf = None
         self.limb_length = None
-        limb_idxs, _ = search_limbs(data_source=limb_convention)
+        limb_idxs, _ = search_limbs(data_source=convention)
         limb_idxs = sorted(limb_idxs['body'])
         self.limb_idxs = np.array(
             list(x for x, _ in itertools.groupby(limb_idxs)))
@@ -118,15 +160,32 @@ class LimbLengthLoss(nn.Module):
         """Forward function of LimbLengthLoss.
 
         Args:
-            betas (torch.Tensor): The body shape parameters
+            keypoints3d_pred (torch.Tensor): The predicted smpl keypoints.
+                Shape should be (N, K, 3).
+                B: batch size. K: number of keypoints.
+            keypoints3d_target (torch.Tensor): The ground-truth keypoints.
+                Shape should be (N, K, 3).
+            keypoints3d_pred_conf (torch.Tensor, optional): Confidence of
+                predicted keypoints. Shape should be (N, K).
+            keypoints3d_target_conf (torch.Tensor, optional): Confidence of
+                target keypoints. Shape should be (N, K).
             loss_weight_override (float, optional): The weight of loss used to
-                override the original weight of loss
+                override the original weight of loss. Defaults to None.
             reduction_override (str, optional): The reduction method used to
                 override the original reduction method of the loss.
                 Defaults to None
         Returns:
             torch.Tensor: The calculated loss
         """
+        assert keypoints3d_pred.dim() == 3 and keypoints3d_pred.shape[-1] == 3
+        assert keypoints3d_pred.shape == keypoints3d_target.shape
+        if keypoints3d_pred_conf is not None:
+            assert keypoints3d_pred_conf.dim() == 2
+            assert keypoints3d_pred_conf.shape == keypoints3d_pred.shape[:2]
+        if keypoints3d_target_conf is not None:
+            assert keypoints3d_target_conf.dim() == 2
+            assert keypoints3d_target_conf.shape == keypoints3d_target.shape[:
+                                                                             2]
         assert reduction_override in (None, 'none', 'mean', 'sum')
         reduction = (
             reduction_override if reduction_override else self.reduction)
@@ -139,13 +198,20 @@ class LimbLengthLoss(nn.Module):
             # we assume that target will not change during optimization
             _, _, self.limb_length = self._compute_normed_limb(
                 keypoints3d_target)
+            if keypoints3d_target_conf is None:
+                keypoints3d_target_conf = torch.ones_like(
+                    keypoints3d_target[..., :1])
             self.limb_conf = torch.min(
                 keypoints3d_target_conf[:, self.limb_idxs[:, 1]],
                 keypoints3d_target_conf[:, self.limb_idxs[:, 0]])
             self.limb_conf = self.limb_conf.unsqueeze(dim=-1)
 
+        _keypoints3d_pred = keypoints3d_pred
+        if keypoints3d_pred_conf is not None:
+            _keypoints3d_pred *= keypoints3d_pred_conf.unsqueeze(dim=-1)
+
         pred_limb_vec, pred_limb_vec_normed, _ = self._compute_normed_limb(
-            keypoints3d_pred * keypoints3d_pred_conf.unsqueeze(dim=-1))
+            _keypoints3d_pred)
 
         loss = pred_limb_vec - pred_limb_vec_normed * self.limb_length
         loss = loss**2 * self.limb_conf
