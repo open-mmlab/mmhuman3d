@@ -41,7 +41,7 @@ class ParametricMeshes(Meshes):
         Will use the textures directly from the meshes.
     """
     # TODO: More model class to be added (FLAME, MANO)
-    model_classes = {'smpl': SMPL, 'smplx': SMPLX}
+    MODEL_CLASSES = {'smpl': SMPL, 'smplx': SMPLX}
 
     def __init__(self,
                  verts: Union[List[torch.Tensor], torch.Tensor] = None,
@@ -56,7 +56,7 @@ class ParametricMeshes(Meshes):
                  texture_images: Union[torch.Tensor, List[torch.Tensor],
                                        None] = None,
                  model_type: str = 'smpl',
-                 N_individual_overdide: int = None,
+                 N_individual_override: int = None,
                  *,
                  verts_normals: torch.Tensor = None,
                  **pose_params) -> None:
@@ -69,7 +69,7 @@ class ParametricMeshes(Meshes):
         self.model_type = body_model._get_name().lower(
         ) if body_model is not None else model_type
 
-        self.model_class = self.model_classes[self.model_type]
+        self.model_class = self.MODEL_CLASSES[self.model_type]
 
         use_list = False
 
@@ -81,9 +81,9 @@ class ParametricMeshes(Meshes):
             verts = list_to_padded(verts)
             use_list = True
         # specify number of individuals
-        if N_individual_overdide is not None:
+        if N_individual_override is not None:
             verts = verts.view(
-                -1, self.model_class.NUM_VERTS * N_individual_overdide, 3)
+                -1, self.model_class.NUM_VERTS * N_individual_override, 3)
 
         # the information of _N_individual should be revealed in verts's shape
         self._N_individual = int(verts.shape[-2] // self.model_class.NUM_VERTS)
@@ -122,9 +122,8 @@ class ParametricMeshes(Meshes):
                 #   (N, V, 3), each batch each vertex has a single color
                 if isinstance(vertex_color, (tuple, list)):
                     vertex_color = torch.Tensor(vertex_color)
-                elif isinstance(vertex_color, (torch.Tensor, np.ndarray)):
-                    vertex_color = torch.Tensor(vertex_color) if isinstance(
-                        vertex_color, np.ndarray) else vertex_color
+                elif isinstance(vertex_color, np.ndarray):
+                    vertex_color = torch.from_numpy(vertex_color)
                 if vertex_color.numel() == 3:
                     vertex_color = vertex_color.view(1, 3).repeat(V, 1)
                 vertex_color = align_input_to_padded(
@@ -236,8 +235,7 @@ class ParametricMeshes(Meshes):
 
         def check_shapes(x, size):
             if x.shape[0] != size[0]:
-                raise ValueError(
-                    'new values must have the same batch dimension.')
+                raise ValueError('new values must have the same batch size.')
             if x.shape[1] != size[1]:
                 raise ValueError(
                     'new values must have the same number of points.')
@@ -325,10 +323,6 @@ class ParametricMeshes(Meshes):
             index (Union[tuple, int, list, slice, torch.Tensor]): indexes, if
             pass only one augment, will ignore the scene dim.
         """
-        # from IPython import embed
-        # embed()
-        # return super().__getitem__(index)
-
         if isinstance(index, tuple):
             batch_index, individual_index = index
         else:
@@ -340,9 +334,7 @@ class ParametricMeshes(Meshes):
             batch_index = torch.arange(self._N)[batch_index]
         batch_index = torch.tensor(batch_index) if not isinstance(
             batch_index, torch.Tensor) else batch_index
-        batch_index = batch_index.long() if not (
-            batch_index.dtype is torch.long) else batch_index
-        batch_index = batch_index.to(self.device)
+        batch_index = batch_index.to(self.device, dtype=torch.long)
 
         if (batch_index >= self._N).any():
             raise IndexError('list index out of range')

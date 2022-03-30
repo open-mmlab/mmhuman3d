@@ -525,8 +525,6 @@ def visualize_kp2d(
         frame_list, input_temp_folder = update_frame_list(
             frame_list, origin_frames, img_format, start, end)
 
-    # if frame_list is not None:
-    #     num_frames = min(len(frame_list), num_frames)
     kp2d = kp2d[:num_frames]
     # check output path
     if output_path is not None:

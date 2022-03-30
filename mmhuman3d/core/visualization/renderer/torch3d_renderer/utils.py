@@ -63,7 +63,7 @@ def array2tensor(image: np.ndarray) -> torch.Tensor:
 
 def rgb2bgr(rgbs) -> Union[torch.Tensor, np.ndarray]:
     """Convert color channels."""
-    bgrs = [rgbs[..., 0, None], rgbs[..., 1, None], rgbs[..., 2, None]]
+    bgrs = [rgbs[..., 2, None], rgbs[..., 1, None], rgbs[..., 0, None]]
     if isinstance(rgbs, torch.Tensor):
         bgrs = torch.cat(bgrs, -1)
     elif isinstance(rgbs, np.ndarray):

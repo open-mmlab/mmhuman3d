@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import torch
 from pytorch3d.renderer.mesh import TexturesVertex
@@ -18,6 +20,9 @@ from mmhuman3d.utils.mesh_utils import (
     save_meshes_as_plys,
     texture_uv2vc,
 )
+
+output_dir = 'tests/data/mesh_utils_output'
+os.makedirs(output_dir, exist_ok=True)
 
 
 def test_parametric_meshes_ops():
@@ -113,29 +118,34 @@ def test_parametric_meshes_ops_uv():
 
 def test_save_meshes():
     Torus = torus(r=10, R=20, sides=100, rings=100)
-    # wrong files
-    with pytest.raises(AssertionError):
+    # no files arg
+    with pytest.raises(TypeError):
         save_meshes_as_plys(meshes=Torus)
 
     # No input
     with pytest.raises(AssertionError):
-        save_meshes_as_plys()
+        save_meshes_as_plys(files=None)
 
     # File suffix wrong
     with pytest.raises(AssertionError):
-        save_meshes_as_plys(Torus, files=['1.obj'])
+        save_meshes_as_plys(files=[os.path.join(output_dir, 'test.obj')])
 
-    save_meshes_as_plys(Torus, files=['1.ply'])
-    mesh = load_plys_as_meshes(files=['1.ply'])
+    save_meshes_as_plys(
+        files=[os.path.join(output_dir, 'test.ply')], meshes=Torus)
+    mesh = load_plys_as_meshes(files=[os.path.join(output_dir, 'test.ply')])
     assert mesh.verts_padded().shape == Torus.verts_padded().shape
     save_meshes_as_plys(
-        verts=Torus.verts_padded(), faces=Torus.faces_padded(), files='1.ply')
+        files=os.path.join(output_dir, 'test.ply'),
+        verts=Torus.verts_padded(),
+        faces=Torus.faces_padded())
     save_meshes_as_plys(
-        Torus,
+        files=os.path.join(output_dir, 'test.ply'),
+        meshes=Torus,
         verts=Torus.verts_padded(),
         faces=Torus.faces_packed(),
-        files='1.ply')
-    save_meshes_as_objs(Torus, files='1.obj')
+    )
+    save_meshes_as_objs(
+        files=os.path.join(output_dir, 'test.obj'), meshes=Torus)
     Torus2 = Torus.extend(2)
     Torus2_2 = join_batch_meshes_as_scene_([Torus2, Torus2])
     assert Torus2_2.verts_padded().shape == (2,
