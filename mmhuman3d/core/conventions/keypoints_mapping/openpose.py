@@ -1,5 +1,16 @@
 """These keypoint formats are taken from https://github.com/CMU-Perceptual-
-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp."""
+Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp.
+Openpose mainly supports 25 and 135 now, 118 convention can be found in
+https://github.com/vchoutas/smplify-x/issues/152#issuecomment-923715702.
+
+- OPENPOSE_25_KEYPOINTS:  body(25)
+- OPENPOSE_118_KEYPOINTS: body(25) + hand(42) + face(51)
+- OPENPOSE_135_KEYPOINTS: body(25) + hand(40) + face(70)
+
+Note that:
+1. 135 and coco17 share the first 17 body keypoints
+2. 25 and 118 share the first 25 body keypoints
+"""
 
 OPENPOSE_135_KEYPOINTS = [
     'nose',
@@ -168,31 +179,31 @@ OPENPOSE_25_KEYPOINTS = [
 ]
 
 OPENPOSE_118_KEYPOINTS = [
-    'nose',
-    'neck',
-    'right_shoulder',
-    'right_elbow',
-    'right_wrist',
-    'left_shoulder',
-    'left_elbow',
-    'left_wrist',
-    'pelvis',
-    'right_hip',
-    'right_knee',
-    'right_ankle',
-    'left_hip',
-    'left_knee',
-    'left_ankle',
-    'right_eye',
-    'left_eye',
-    'right_ear',
-    'left_ear',
-    'left_bigtoe',
-    'left_smalltoe',
-    'left_heel',
-    'right_bigtoe',
-    'right_smalltoe',
-    'right_heel',
+    'nose_openpose',
+    'neck_openpose',
+    'right_shoulder_openpose',
+    'right_elbow_openpose',
+    'right_wrist_openpose',
+    'left_shoulder_openpose',
+    'left_elbow_openpose',
+    'left_wrist_openpose',
+    'pelvis_openpose',
+    'right_hip_openpose',
+    'right_knee_openpose',
+    'right_ankle_openpose',
+    'left_hip_openpose',
+    'left_knee_openpose',
+    'left_ankle_openpose',
+    'right_eye_openpose',
+    'left_eye_openpose',
+    'right_ear_openpose',
+    'left_ear_openpose',
+    'left_bigtoe_openpose',
+    'left_smalltoe_openpose',
+    'left_heel_openpose',
+    'right_bigtoe_openpose',
+    'right_smalltoe_openpose',
+    'right_heel_openpose',
     'left_wrist',
     'left_thumb_1',
     'left_thumb_2',
