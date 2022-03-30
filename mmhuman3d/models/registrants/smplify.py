@@ -89,7 +89,11 @@ class SMPLify(object):
             smooth_loss: config of smooth loss.
                 Used to prevent jittering by temporal smoothing.
             pose_prior_loss: config of pose prior loss.
-                Used to prevent
+                Used to prevent unnatural pose.
+            pose_reg_loss: config of pose regularizer loss.
+                Used to prevent pose being too large.
+            limb_length_loss: config of limb length loss.
+                Used to prevent the change of body shape.
             use_one_betas_per_video: whether to use the same beta parameters
                 for all frames in a single video sequence.
             ignore_keypoints: list of keypoint names to ignore in keypoint
@@ -642,14 +646,12 @@ class SMPLify(object):
 
         total_loss = 0
         for loss_name, loss in losses.items():
-            print(loss_name, loss.shape)
             if loss.ndim == 3:
                 total_loss = total_loss + loss.sum(dim=(2, 1))
             elif loss.ndim == 2:
                 total_loss = total_loss + loss.sum(dim=-1)
             else:
                 total_loss = total_loss + loss
-        print(total_loss)
         losses['total_loss'] = total_loss
 
         return losses
