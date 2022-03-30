@@ -15,6 +15,7 @@ stages = [
     # stage 0: optimize `betas`
     dict(
         num_iter=10,
+        ftol=1e-4,
         fit_global_orient=False,
         fit_transl=False,
         fit_body_pose=False,
@@ -28,6 +29,7 @@ stages = [
     # stage 1: optimize `global_orient` and `transl`
     dict(
         num_iter=50,
+        ftol=1e-4,
         fit_global_orient=True,
         fit_transl=True,
         fit_body_pose=False,
@@ -44,6 +46,7 @@ stages = [
     # stage 2: optimize `global_orient`, `transl` and `body_pose`
     dict(
         num_iter=120,
+        ftol=1e-4,
         fit_global_orient=True,
         fit_transl=True,
         fit_body_pose=True,
