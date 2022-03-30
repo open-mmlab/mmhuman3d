@@ -7,12 +7,17 @@ import scipy.io as sio
 from tqdm import tqdm
 
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_flip_pairs,
+)
 from mmhuman3d.data.data_structures.human_data import HumanData
-from mmhuman3d.data.datasets.pipelines.transforms import _flip_smpl_pose, _flip_keypoints
+from mmhuman3d.data.datasets.pipelines.transforms import (
+    _flip_keypoints,
+    _flip_smpl_pose,
+)
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
-from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
 
 
 @DATA_CONVERTERS.register_module()
