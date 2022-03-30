@@ -34,7 +34,8 @@ def test_keypoint_mse_loss():
 
     pred = torch.ones(1, 3, 2)
     target = torch.zeros(1, 3, 2)
-    assert torch.allclose(loss(pred, target), target)
+    result = torch.ones(1, 3, 2) * 0.5
+    assert torch.allclose(loss(pred, target), result)
 
     # test loss weight
     loss_cfg = dict(type='KeypointMSELoss', loss_weight=2.)
