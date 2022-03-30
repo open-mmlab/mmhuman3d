@@ -8,7 +8,7 @@ import torch
 
 from mmhuman3d.core.cameras.cameras import PerspectiveCameras
 from mmhuman3d.core.conventions.cameras import (
-    convert_cameras,
+    convert_camera_matrix,
     convert_K_3x3_to_4x4,
     convert_K_4x4_to_3x3,
 )
@@ -461,7 +461,7 @@ class CameraParameter:
         is_perspective = cam.is_perspective()
         in_ndc = cam.in_ndc()
 
-        k_4x4, r_3x3, t_3 = convert_cameras(
+        k_4x4, r_3x3, t_3 = convert_camera_matrix(
             K=k_4x4,
             R=r_3x3,
             T=t_3,

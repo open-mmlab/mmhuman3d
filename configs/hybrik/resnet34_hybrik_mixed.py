@@ -176,6 +176,8 @@ data = dict(
         ann_file='hybrik_pw3d_test.npz'),
     val=dict(
         type=dataset_type,
+        body_model=dict(
+            type='GenderedSMPL', model_path='data/body_models/smpl'),
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,

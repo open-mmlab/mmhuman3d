@@ -4,6 +4,7 @@ from abc import ABCMeta
 import torch
 
 from mmhuman3d.data.datasets.pipelines.hybrik_transforms import heatmap2coord
+from mmhuman3d.utils.transforms import rotmat_to_quat
 from ..builder import (
     ARCHITECTURES,
     build_backbone,
@@ -146,10 +147,12 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
                 predictions['pred_shape'] * smpl_weight,
                 targets['target_beta'] * smpl_weight)
         if self.loss_theta is not None:
+            pred_pose = rotmat_to_quat(predictions['pred_pose']).reshape(
+                -1, 96)
             losses['loss_theta'] = self.loss_theta(
-                predictions['pred_theta_mats'] * smpl_weight *
-                targets['target_theta_weight'], targets['target_theta'] *
-                smpl_weight * targets['target_theta_weight'])
+                pred_pose * smpl_weight * targets['target_theta_weight'],
+                targets['target_theta'] * smpl_weight *
+                targets['target_theta_weight'])
         if self.loss_twist is not None:
             losses['loss_twist'] = self.loss_twist(
                 predictions['pred_phi'] * targets['target_twist_weight'],

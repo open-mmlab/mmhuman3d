@@ -46,12 +46,12 @@ class HybrIKHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     }
 
     def __init__(self,
-                 data_prefix,
-                 pipeline,
-                 dataset_name,
-                 body_model,
-                 ann_file,
-                 test_mode=False):
+                 data_prefix: str,
+                 pipeline: list,
+                 dataset_name: str,
+                 body_model: Optional[Union[dict, None]] = None,
+                 ann_file: Optional[Union[str, None]] = None,
+                 test_mode: Optional[bool] = False):
         if dataset_name is not None:
             self.dataset_name = dataset_name
         self.test_mode = test_mode

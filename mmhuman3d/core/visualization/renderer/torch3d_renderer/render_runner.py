@@ -1,101 +1,122 @@
 import math
 import os
-from pathlib import Path
-from typing import Iterable, Union
+from typing import Iterable, Optional, Union
 
-import mmcv
+import numpy as np
 import torch
-from pytorch3d.structures.meshes import Meshes
+import torch.nn as nn
+from pytorch3d.renderer import MeshRenderer, SoftSilhouetteShader
+from pytorch3d.renderer.cameras import CamerasBase
+from pytorch3d.structures import Meshes
 from tqdm import trange
 
-import mmhuman3d
-from mmhuman3d.core.cameras import compute_orbit_cameras
-from mmhuman3d.core.conventions.cameras import convert_cameras
-from .builder import build_renderer
+from mmhuman3d.core.cameras import MMCamerasBase
+from mmhuman3d.core.cameras.builder import build_cameras
+from .base_renderer import BaseRenderer
+from .builder import build_lights, build_renderer
+from .lights import AmbientLights, MMLights
 
 osj = os.path.join
 
 
-def render(
-    output_path: str,
-    device: Union[str, torch.device] = 'cpu',
-    meshes: Meshes = None,
-    render_choice: str = 'base',
-    batch_size: int = 5,
-    K: torch.Tensor = None,
-    R: torch.Tensor = None,
-    T: torch.Tensor = None,
-    projection: str = 'perspective',
-    orbit_speed: Union[Iterable[float], float] = 0.0,
-    dist: float = 2.7,
-    dist_speed=1.0,
-    in_ndc: bool = True,
-    resolution=[1024, 1024],
-    convention: str = 'pytorch3d',
-    no_grad: bool = False,
-    return_tensor: bool = True,
-):
-    RENDER_CONFIGS = mmcv.Config.fromfile(
-        os.path.join(
-            Path(mmhuman3d.__file__).parents[1],
-            'configs/render/smpl.py'))['RENDER_CONFIGS'][render_choice]
-    renderer = build_renderer(
-        dict(
-            type=RENDER_CONFIGS['renderer_type'],
-            device=device,
-            resolution=resolution,
-            projection=projection,
-            output_path=output_path,
-            return_type=['tensor'] if return_tensor else None,
-            in_ndc=in_ndc,
-            **RENDER_CONFIGS))
+def render(renderer: Union[nn.Module, dict],
+           meshes: Union[Meshes, None] = None,
+           output_path: Optional[str] = None,
+           resolution: Union[Iterable[int], int] = None,
+           device: Union[str, torch.device] = 'cpu',
+           cameras: Union[MMCamerasBase, CamerasBase, dict, None] = None,
+           lights: Union[MMLights, dict, None] = None,
+           batch_size: int = 5,
+           return_tensor: bool = False,
+           no_grad: bool = False,
+           **forward_params):
 
-    num_frames = len(meshes)
-    if K is None or R is None or T is None:
-        K, R, T = compute_orbit_cameras(
-            orbit_speed=orbit_speed,
-            dist=dist,
-            batch_size=num_frames,
-            dist_speed=dist_speed)
-
-    if projection in ['perspective', 'fovperspective']:
-        is_perspective = True
+    if isinstance(renderer, dict):
+        renderer = build_renderer(renderer)
+    elif isinstance(renderer, MeshRenderer):
+        if isinstance(renderer.shader, SoftSilhouetteShader):
+            renderer = build_renderer(
+                dict(
+                    type='silhouette',
+                    resolution=resolution,
+                    shader=renderer.shader,
+                    rasterizer=renderer.rasterizer))
+        else:
+            renderer = build_renderer(
+                dict(
+                    type='mesh',
+                    resolution=resolution,
+                    shader=renderer.shader,
+                    rasterizer=renderer.rasterizer))
+    elif isinstance(renderer, BaseRenderer):
+        renderer = renderer
     else:
-        is_perspective = False
+        raise TypeError('Wrong input renderer type.')
 
-    K, R, T = convert_cameras(
-        resolution_dst=resolution,
-        resolution_src=resolution,
-        in_ndc_dst=in_ndc,
-        in_ndc_src=in_ndc,
-        K=K,
-        R=R,
-        T=T,
-        is_perspective=is_perspective,
-        convention_src=convention,
-        convention_dst='pytorch3d')
+    renderer = renderer.to(device)
+    if output_path is not None:
+        renderer._set_output_path(output_path)
 
+    if isinstance(cameras, dict):
+        cameras = build_cameras(cameras)
+    elif isinstance(cameras, MMCamerasBase):
+        cameras = cameras
+    elif isinstance(cameras,
+                    CamerasBase) and not isinstance(cameras, MMCamerasBase):
+        cameras = build_cameras(
+            dict(
+                type=cameras.__class__.__name__,
+                K=cameras.K,
+                R=cameras.R,
+                T=cameras.T,
+                in_ndc=cameras.in_ndc(),
+                resolution=resolution))
+    else:
+        raise TypeError('Wrong input cameras type.')
+    num_frames = len(meshes)
+    if isinstance(lights, dict):
+        lights = build_lights(lights)
+    elif isinstance(lights, MMLights):
+        lights = lights
+    elif lights is None:
+        lights = AmbientLights(device=device).extend(num_frames)
+    else:
+        raise ValueError('Wrong light type.')
+
+    if len(cameras) == 1:
+        cameras = cameras.extend(num_frames)
+    if len(lights) == 1:
+        lights = lights.extend(num_frames)
+
+    forward_params.update(lights=lights, cameras=cameras, meshes=meshes)
+
+    batch_size = min(batch_size, num_frames)
     tensors = []
+    for k in forward_params:
+        if isinstance(forward_params[k], np.ndarray):
+            forward_params.update(
+                {k: torch.tensor(forward_params[k]).to(device)})
+
     for i in trange(math.ceil(num_frames // batch_size)):
         indexes = list(
             range(i * batch_size, min((i + 1) * batch_size, len(meshes))))
+        foward_params_batch = {}
+
+        for k in forward_params:
+            if hasattr(forward_params[k], '__getitem__'):
+                foward_params_batch[k] = forward_params[k][indexes].to(device)
+
         if no_grad:
             with torch.no_grad():
-                images_batch = renderer(
-                    meshes=meshes[indexes],
-                    K=K[indexes],
-                    R=R[indexes],
-                    T=T[indexes],
-                    indexes=indexes)
-        else:
-            images_batch = renderer(
-                meshes=meshes[indexes],
-                K=K[indexes],
-                R=R[indexes],
-                T=T[indexes],
-                indexes=indexes)
-        tensors.append(images_batch['tensor'])
+                images_batch = renderer(indexes=indexes, **foward_params_batch)
 
-    tensors = torch.cat(tensors)
+        else:
+            images_batch = renderer(indexes=indexes, **foward_params_batch)
+        if return_tensor:
+            tensors.append(images_batch)
+
     renderer.export()
-    return tensors
+
+    if return_tensor:
+        tensors = torch.cat(tensors)
+        return tensors
