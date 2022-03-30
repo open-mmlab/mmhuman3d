@@ -43,8 +43,8 @@ def test_conventions():
                                                   dst_name)
 
                 # without mask
-                keypoints_dst_wo_mask = convert_kps(keypoints, src_name,
-                                                  dst_name, return_mask=False)
+                keypoints_dst_wo_mask = convert_kps(
+                    keypoints, src_name, dst_name, return_mask=False)
 
                 assert np.all(keypoints_dst == keypoints_dst_wo_mask)
 

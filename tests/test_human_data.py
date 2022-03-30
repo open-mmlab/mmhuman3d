@@ -171,8 +171,7 @@ def test_generate_mask_from_keypoints():
     assert (human_data['keypoints3d_mask'][:72] == 1).all()
 
     # test str keys
-    human_data.generate_mask_from_confidence(
-        keys='keypoints2d')
+    human_data.generate_mask_from_confidence(keys='keypoints2d')
 
     # test list of str keys
     human_data.generate_mask_from_confidence(
