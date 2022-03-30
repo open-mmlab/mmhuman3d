@@ -381,6 +381,8 @@ mmhuman3d
 }
 ```
 
+</details>
+
 Details for direct preprocessing will be added in the future.
 
 **Alternatively**, you may download the preprocessed files directly:
