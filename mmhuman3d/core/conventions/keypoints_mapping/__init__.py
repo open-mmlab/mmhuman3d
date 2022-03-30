@@ -65,6 +65,7 @@ def convert_kps(
     approximate: bool = False,
     mask: Optional[Union[np.ndarray, torch.Tensor]] = None,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
+    return_mask: bool = True
 ) -> Tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
     """Convert keypoints following the mapping correspondence between src and
     dst keypoints definition. Supported conventions by now: agora, coco, smplx,
@@ -83,6 +84,10 @@ def convert_kps(
             Defaults to None.
         keypoints_factory (dict, optional): A class to store the attributes.
             Defaults to keypoints_factory.
+        return_mask (bool, optional): whether to return a mask as part of the
+            output. It is unnecessary to return a mask if the keypoints consist
+            of confidence. Any invalid keypoints will have zero confidence.
+            Defaults to True.
     Returns:
         Tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]
             : tuple of (out_keypoints, mask). out_keypoints and mask will be of
@@ -129,7 +134,10 @@ def convert_kps(
     mask[dst_idxs] = original_mask[src_idxs] \
         if original_mask is not None else 1.0
 
-    return out_keypoints, mask
+    if return_mask:
+        return out_keypoints, mask
+    else:
+        return out_keypoints
 
 
 def compress_converted_kps(
