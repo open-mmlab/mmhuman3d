@@ -51,7 +51,7 @@ stages = [
         fit_transl=True,
         fit_body_pose=True,
         fit_betas=False,
-        keypoints3d_weight=1.0,
+        keypoints3d_weight=10.0,
         pose_reg_weight=0.001,
         smooth_loss_weight=1.0,
         limb_length_weight=0.0,
@@ -67,10 +67,10 @@ keypoints3d_loss = dict(
     type='KeypointMSELoss', loss_weight=10, reduction='sum', sigma=100)
 
 shape_prior_loss = dict(
-    type='ShapePriorLoss', loss_weight=5e-3, reduction='sum')
+    type='ShapePriorLoss', loss_weight=5e-3, reduction='mean')
 
 limb_length_loss = dict(
-    type='LimbLengthLoss', convention='smpl', loss_weight=1., reduction='sum')
+    type='LimbLengthLoss', convention='smpl', loss_weight=1., reduction='mean')
 
 pose_reg_loss = dict(type='PoseRegLoss', loss_weight=0.001, reduction='mean')
 
