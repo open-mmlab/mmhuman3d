@@ -160,7 +160,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def prepare_raw_data(self, idx: int):
         """Get item from self.human_data."""
         if self.cache_reader is not None:
-            self.human_data = self.reader.get_item(idx)
+            self.human_data = self.cache_reader.get_item(idx)
             idx = idx % self.cache_reader.slice_size
         info = {}
         info['img_prefix'] = None
