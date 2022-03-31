@@ -55,7 +55,9 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             When cache_data_path is None, each dataset will store a copy into
             memory. If cache_data_path is set, the dataset will first create
             cache files and then use a cache reader to reduce memory cost and
-            initialization time.
+            initialization time. The cache file will be generated only once
+            if they are not found at the the path. Otherwise, only cache
+            readers will be established.
         test_mode (bool, optional): in train mode or test mode.
             Default: False.
     """
