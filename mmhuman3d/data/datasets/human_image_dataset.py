@@ -149,18 +149,19 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 writer.update_sliced_dict(sliced_data)
                 writer.dump(self.cache_data_path)
             dist.barrier()
-            self.reader = HumanDataCacheReader(npz_path=self.cache_data_path)
-            self.num_data = self.reader.data_len
+            self.cache_reader = HumanDataCacheReader(
+                npz_path=self.cache_data_path)
+            self.num_data = self.cache_reader.data_len
             self.human_data = None
         else:
-            self.reader = None
+            self.cache_reader = None
             self.num_data = self.human_data.data_len
 
     def prepare_raw_data(self, idx: int):
         """Get item from self.human_data."""
-        if self.reader is not None:
+        if self.cache_reader is not None:
             self.human_data = self.reader.get_item(idx)
-            idx = idx % self.reader.slice_size
+            idx = idx % self.cache_reader.slice_size
         info = {}
         info['img_prefix'] = None
         image_path = self.human_data['image_path'][idx]
