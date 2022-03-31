@@ -96,7 +96,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         Here we simply use :obj:`HumanData` to parse the annotation.
         """
-        rank, _ = get_dist_info()
+        rank, world_size = get_dist_info()
         self.get_annotation_file()
         if self.cache_data_path is None:
             use_human_data = True
@@ -148,7 +148,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 writer = HumanDataCacheWriter(**writer_kwargs)
                 writer.update_sliced_dict(sliced_data)
                 writer.dump(self.cache_data_path)
-            dist.barrier()
+            if world_size > 1:
+                dist.barrier()
             self.cache_reader = HumanDataCacheReader(
                 npz_path=self.cache_data_path)
             self.num_data = self.cache_reader.data_len
