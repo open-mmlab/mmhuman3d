@@ -48,7 +48,20 @@ class AgoraConverter(BaseModeConverter):
                           pNum,
                           globalOrient=None,
                           meanPose=False):
+        """Modified from https://github.com/pixelite1201/agora_evaluation/blob/
+        master/agora_evaluation/projection.py specific to AGORA.
 
+        Args:
+            imgPath: image path
+            df: annotation dataframe
+            i: frame index
+            pNum: person index
+            globalOrient: original global orientation
+            meanPose: Store True for mean pose from vposer
+
+        Returns:
+            globalOrient: rotated global orientation
+        """
         if 'hdri' in imgPath:
             camYaw = 0
             camPitch = 0
@@ -109,6 +122,15 @@ class AgoraConverter(BaseModeConverter):
 
     @staticmethod
     def rotate_global_orient(rotMat, global_orient):
+        """Transform global orientation given rotation matrix.
+
+        Args:
+            rotMat: rotation matrix
+            global_orient: original global orientation
+
+        Returns:
+            new_global_orient: transformed global orientation
+        """
         new_global_orient = cv2.Rodrigues(
             np.dot(rotMat,
                    cv2.Rodrigues(global_orient.reshape(-1))[0]))[0].T[0]
