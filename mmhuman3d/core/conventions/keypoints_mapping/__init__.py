@@ -95,7 +95,11 @@ def convert_kps(
     """
     assert keypoints.ndim in {3, 4}
     if src == dst:
-        return keypoints, np.ones((keypoints.shape[-2]))
+        if return_mask:
+            return keypoints, np.ones((keypoints.shape[-2]))
+        else:
+            return keypoints
+
     src_names = keypoints_factory[src.lower()]
     dst_names = keypoints_factory[dst.lower()]
     extra_dims = keypoints.shape[:-2]
