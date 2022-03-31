@@ -139,7 +139,7 @@ class KeypointMSELoss(nn.Module):
             if keypoint_weight is not None else 1.0
 
         weight = keypoint_weight * pred_conf * target_conf
-        assert weight.shape == (B, K, 1)
+        assert isinstance(weight, float) or weight.shape == (B, K, 1)
 
         # B, J, D = pred.shape[:2]
         # if len(weight.shape) == 1:

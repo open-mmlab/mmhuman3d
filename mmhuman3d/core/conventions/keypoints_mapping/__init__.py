@@ -49,6 +49,7 @@ KEYPOINTS_FACTORY = {
     'posetrack': posetrack.POSETRACK_KEYPOINTS,
     'instavariety': instavariety.INSTAVARIETY_KEYPOINTS,
     'openpose_25': openpose.OPENPOSE_25_KEYPOINTS,
+    'openpose_118': openpose.OPENPOSE_118_KEYPOINTS,
     'openpose_135': openpose.OPENPOSE_135_KEYPOINTS,
     'hybrik_29': hybrik.HYBRIK_29_KEYPOINTS,
     'hybrik_hp3d': mpi_inf_3dhp.HYBRIK_MPI_INF_3DHP_KEYPOINTS,

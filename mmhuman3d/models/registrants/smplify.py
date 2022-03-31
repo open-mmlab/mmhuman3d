@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union
 
+import numpy as np
 import torch
 from mmcv.runner import build_optimizer
 
@@ -64,6 +65,8 @@ class SMPLify(object):
         joint_prior_loss: dict = None,
         smooth_loss: dict = None,
         pose_prior_loss: dict = None,
+        pose_reg_loss: dict = None,
+        limb_length_loss: dict = None,
         use_one_betas_per_video: bool = False,
         ignore_keypoints: List[int] = None,
         device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
@@ -86,7 +89,11 @@ class SMPLify(object):
             smooth_loss: config of smooth loss.
                 Used to prevent jittering by temporal smoothing.
             pose_prior_loss: config of pose prior loss.
-                Used to prevent
+                Used to prevent unnatural pose.
+            pose_reg_loss: config of pose regularizer loss.
+                Used to prevent pose being too large.
+            limb_length_loss: config of limb length loss.
+                Used to prevent the change of body shape.
             use_one_betas_per_video: whether to use the same beta parameters
                 for all frames in a single video sequence.
             ignore_keypoints: list of keypoint names to ignore in keypoint
@@ -110,6 +117,8 @@ class SMPLify(object):
         self.joint_prior_loss = build_loss(joint_prior_loss)
         self.smooth_loss = build_loss(smooth_loss)
         self.pose_prior_loss = build_loss(pose_prior_loss)
+        self.pose_reg_loss = build_loss(pose_reg_loss)
+        self.limb_length_loss = build_loss(limb_length_loss)
 
         if self.joint_prior_loss is not None:
             self.joint_prior_loss = self.joint_prior_loss.to(self.device)
@@ -117,6 +126,10 @@ class SMPLify(object):
             self.smooth_loss = self.smooth_loss.to(self.device)
         if self.pose_prior_loss is not None:
             self.pose_prior_loss = self.pose_prior_loss.to(self.device)
+        if self.pose_reg_loss is not None:
+            self.pose_reg_loss = self.pose_reg_loss.to(self.device)
+        if self.limb_length_loss is not None:
+            self.limb_length_loss = self.limb_length_loss.to(self.device)
 
         # initialize body model
         if isinstance(body_model, dict):
@@ -206,6 +219,7 @@ class SMPLify(object):
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
+                print(f'epoch {i}, stage {stage_idx}')
                 self._optimize_stage(
                     global_orient=global_orient,
                     transl=transl,
@@ -271,16 +285,20 @@ class SMPLify(object):
                         fit_betas: bool = True,
                         keypoints2d: torch.Tensor = None,
                         keypoints2d_conf: torch.Tensor = None,
-                        keypoints2d_weight: float = None,
+                        keypoints2d_weight: float = 0.,
                         keypoints3d: torch.Tensor = None,
                         keypoints3d_conf: torch.Tensor = None,
-                        keypoints3d_weight: float = None,
-                        shape_prior_weight: float = None,
-                        joint_prior_weight: float = None,
-                        smooth_loss_weight: float = None,
-                        pose_prior_weight: float = None,
+                        keypoints3d_weight: float = 0.,
+                        shape_prior_weight: float = 0.,
+                        joint_prior_weight: float = 0.,
+                        smooth_loss_weight: float = 0.,
+                        pose_prior_weight: float = 0.,
+                        pose_reg_weight: float = 0.,
+                        limb_length_weight: float = 0.,
                         joint_weights: dict = {},
-                        num_iter: int = 1) -> None:
+                        num_iter: int = 1,
+                        ftol: float = 1e-4,
+                        **kwargs) -> None:
         """Optimize a stage of body model parameters according to
         configuration.
 
@@ -323,6 +341,7 @@ class SMPLify(object):
 
         optimizer = build_optimizer(parameters, self.optimizer)
 
+        pre_loss = None
         for iter_idx in range(num_iter):
 
             def closure():
@@ -344,13 +363,22 @@ class SMPLify(object):
                     shape_prior_weight=shape_prior_weight,
                     smooth_loss_weight=smooth_loss_weight,
                     pose_prior_weight=pose_prior_weight,
+                    pose_reg_weight=pose_reg_weight,
+                    limb_length_weight=limb_length_weight,
                     joint_weights=joint_weights)
 
                 loss = loss_dict['total_loss']
                 loss.backward()
                 return loss
 
-            optimizer.step(closure)
+            loss = optimizer.step(closure)
+            if iter_idx > 0 and pre_loss is not None and ftol > 0:
+                loss_rel_change = self._compute_relative_loss_change(
+                    pre_loss, loss.item())
+                if loss_rel_change < ftol:
+                    print(f'[ftol={ftol}] Early stop at {iter_idx} iter!')
+                    break
+            pre_loss = loss.item()
 
     def evaluate(
         self,
@@ -360,14 +388,16 @@ class SMPLify(object):
         transl: torch.Tensor = None,
         keypoints2d: torch.Tensor = None,
         keypoints2d_conf: torch.Tensor = None,
-        keypoints2d_weight: float = None,
+        keypoints2d_weight: float = 0.,
         keypoints3d: torch.Tensor = None,
         keypoints3d_conf: torch.Tensor = None,
-        keypoints3d_weight: float = None,
-        shape_prior_weight: float = None,
-        joint_prior_weight: float = None,
-        smooth_loss_weight: float = None,
-        pose_prior_weight: float = None,
+        keypoints3d_weight: float = 0.,
+        shape_prior_weight: float = 0.,
+        joint_prior_weight: float = 0.,
+        smooth_loss_weight: float = 0.,
+        pose_prior_weight: float = 0.,
+        pose_reg_weight: float = 0.,
+        limb_length_weight: float = 0.,
         joint_weights: dict = {},
         return_verts: bool = False,
         return_full_pose: bool = False,
@@ -435,8 +465,11 @@ class SMPLify(object):
             shape_prior_weight=shape_prior_weight,
             smooth_loss_weight=smooth_loss_weight,
             pose_prior_weight=pose_prior_weight,
+            pose_reg_weight=pose_reg_weight,
+            limb_length_weight=limb_length_weight,
             joint_weights=joint_weights,
             reduction_override=reduction_override,
+            global_orient=global_orient,
             body_pose=body_pose,
             betas=betas)
         ret.update(loss_dict)
@@ -458,13 +491,16 @@ class SMPLify(object):
                       keypoints2d_weight: float = None,
                       keypoints3d: torch.Tensor = None,
                       keypoints3d_conf: torch.Tensor = None,
-                      keypoints3d_weight: float = None,
-                      shape_prior_weight: float = None,
-                      joint_prior_weight: float = None,
-                      smooth_loss_weight: float = None,
-                      pose_prior_weight: float = None,
+                      keypoints3d_weight: float = 0.,
+                      shape_prior_weight: float = 0.,
+                      joint_prior_weight: float = 0.,
+                      smooth_loss_weight: float = 0.,
+                      pose_prior_weight: float = 0.,
+                      pose_reg_weight: float = 0.,
+                      limb_length_weight: float = 0.,
                       joint_weights: dict = {},
                       reduction_override: str = None,
+                      global_orient: torch.Tensor = None,
                       body_pose: torch.Tensor = None,
                       betas: torch.Tensor = None):
         """Loss computation.
@@ -502,7 +538,8 @@ class SMPLify(object):
         weight = self._get_weight(**joint_weights)
 
         # 2D keypoint loss
-        if keypoints2d is not None:
+        if keypoints2d is not None and (self.keypoints2d_mse_loss.loss_weight >
+                                        0 or keypoints2d_weight > 0):
             # bs = model_joints.shape[0]
             # projected_joints = perspective_projection(
             #     model_joints,
@@ -529,7 +566,8 @@ class SMPLify(object):
             losses['keypoint2d_loss'] = keypoint2d_loss
 
         # 3D keypoint loss
-        if keypoints3d is not None:
+        if keypoints3d is not None and (self.keypoints3d_mse_loss.loss_weight >
+                                        0 or keypoints3d_weight > 0):
             keypoints3d_loss = self.keypoints3d_mse_loss(
                 pred=model_joints,
                 pred_conf=model_joint_conf,
@@ -541,7 +579,9 @@ class SMPLify(object):
             losses['keypoints3d_loss'] = keypoints3d_loss
 
         # regularizer to prevent betas from taking large values
-        if self.shape_prior_loss is not None:
+        if self.shape_prior_loss is not None and (
+                self.shape_prior_loss.loss_weight > 0
+                or shape_prior_weight > 0):
             shape_prior_loss = self.shape_prior_loss(
                 betas=betas,
                 loss_weight_override=shape_prior_weight,
@@ -549,7 +589,9 @@ class SMPLify(object):
             losses['shape_prior_loss'] = shape_prior_loss
 
         # joint prior loss
-        if self.joint_prior_loss is not None:
+        if self.joint_prior_loss is not None and (
+                self.joint_prior_loss.loss_weight > 0
+                or joint_prior_weight > 0):
             joint_prior_loss = self.joint_prior_loss(
                 body_pose=body_pose,
                 loss_weight_override=joint_prior_weight,
@@ -557,7 +599,8 @@ class SMPLify(object):
             losses['joint_prior_loss'] = joint_prior_loss
 
         # smooth body loss
-        if self.smooth_loss is not None:
+        if self.smooth_loss is not None and (self.smooth_loss.loss_weight > 0
+                                             or smooth_loss_weight > 0):
             smooth_loss = self.smooth_loss(
                 body_pose=body_pose,
                 loss_weight_override=smooth_loss_weight,
@@ -565,18 +608,41 @@ class SMPLify(object):
             losses['smooth_loss'] = smooth_loss
 
         # pose prior loss
-        if self.pose_prior_loss is not None:
+        if self.pose_prior_loss is not None and (
+                self.pose_prior_loss.loss_weight > 0 or pose_prior_weight > 0):
             pose_prior_loss = self.pose_prior_loss(
                 body_pose=body_pose,
                 loss_weight_override=pose_prior_weight,
                 reduction_override=reduction_override)
             losses['pose_prior_loss'] = pose_prior_loss
 
+        # pose reg loss
+        if self.pose_reg_loss is not None and (
+                self.pose_reg_loss.loss_weight > 0 or pose_reg_weight > 0):
+            pose_reg_loss = self.pose_reg_loss(
+                body_pose=body_pose,
+                loss_weight_override=pose_reg_weight,
+                reduction_override=reduction_override)
+            losses['pose_reg_loss'] = pose_reg_loss
+
+        # limb length loss
+        if self.limb_length_loss is not None and (
+                self.limb_length_loss.loss_weight > 0
+                or limb_length_weight > 0):
+            limb_length_loss = self.limb_length_loss(
+                pred=model_joints,
+                pred_conf=model_joint_conf,
+                target=keypoints3d,
+                target_conf=keypoints3d_conf,
+                loss_weight_override=limb_length_weight,
+                reduction_override=reduction_override)
+            losses['limb_length_loss'] = limb_length_loss
+
         if self.verbose:
             msg = ''
             for loss_name, loss in losses.items():
-                msg += f'{loss_name}={loss.mean().item():.6f}'
-            print(msg)
+                msg += f'{loss_name}={loss.mean().item():.6f}, '
+            print(msg.strip(', '))
 
         total_loss = 0
         for loss_name, loss in losses.items():
@@ -715,3 +781,7 @@ class SMPLify(object):
             betas_video = betas.view(1, feat_dim).expand(batch_size, feat_dim)
 
         return betas_video
+
+    @staticmethod
+    def _compute_relative_loss_change(pre_v, cur_v):
+        return (pre_v - cur_v) / max([np.abs(pre_v), np.abs(cur_v), 1])
