@@ -214,7 +214,8 @@ class SurrealConverter(BaseModeConverter):
                     bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
                     bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
-                    # apply left-right flipping for keypoints and pose
+                    # Left-right flipping is required to correct the original
+                    # keypoints and poses obtained from raw annotations
                     bpose = pose[:, idx]
                     bpose = _flip_smpl_pose(bpose)
                     keypoints3d = _flip_keypoints(keypoints3d, flip_pairs)
