@@ -917,8 +917,8 @@ class HumanData(dict):
 
     def generate_mask_from_confidence(self, keys=None) -> None:
         """Generate mask from keypoints' confidence. Keypoints that have zero
-        confidence in all occurrences will have a zero mask. Note that the
-        last value of the keypoint is assumed to be confidence.
+        confidence in all occurrences will have a zero mask. Note that the last
+        value of the keypoint is assumed to be confidence.
 
         Args:
             keys: None, str, or list of str.
