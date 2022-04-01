@@ -915,6 +915,56 @@ class HumanData(dict):
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
 
+    def generate_mask_from_confidence(self, keys=None) -> None:
+        """Generate mask from keypoints' confidence. Keypoints that have zero
+        confidence in all occurrences will have a zero mask. Note that the last
+        value of the keypoint is assumed to be confidence.
+
+        Args:
+            keys: None, str, or list of str.
+                None: all keys with `keypoint` in it will have mask
+                    generated from their confidence.
+                str: key of the keypoint, the mask has name f'{key}_name'
+                list of str: a list of keys of the keypoints.
+                    Generate mask for multiple keypoints.
+                Defaults to None.
+
+        Returns:
+            None
+
+        Raises:
+            KeyError:
+                A key is not not found
+        """
+        if keys is None:
+            keys = []
+            for key in self.keys():
+                val = self.get_raw_value(key)
+                if isinstance(val, np.ndarray) and \
+                        'keypoints' in key and \
+                        '_mask' not in key:
+                    keys.append(key)
+        elif isinstance(keys, str):
+            keys = [keys]
+        elif isinstance(keys, list):
+            for key in keys:
+                assert isinstance(key, str)
+        else:
+            raise TypeError(f'`Keys` must be None, str, or list of str, '
+                            f'got {type(keys)}.')
+
+        update_dict = {}
+        for kpt_key in keys:
+            kpt_array = self.get_raw_value(kpt_key)
+            num_joints = kpt_array.shape[-2]
+            # if all conf of a joint are zero, this joint is masked
+            joint_conf = kpt_array[..., -1].reshape(-1, num_joints)
+            mask_array = (joint_conf > 0).astype(np.uint8).max(axis=0)
+            assert len(mask_array) == num_joints
+            # generate mask
+            update_dict[f'{kpt_key}_mask'] = mask_array
+        self.update(update_dict)
+
     def compress_keypoints_by_mask(self) -> None:
         """If a key contains 'keypoints', and f'{key}_mask' is in self.keys(),
         invalid zeros will be removed and f'{key}_mask' will be locked.
