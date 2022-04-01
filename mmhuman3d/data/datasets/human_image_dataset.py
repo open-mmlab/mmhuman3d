@@ -51,7 +51,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         convention (str, optional): keypoints convention. Keypoints will be
             converted from "human_data" to the given one.
             Default: "human_data"
-        cache_data_path (str | None, optional): the path to store the cach
+        cache_data_path (str | None, optional): the path to store the cache
             file. When cache_data_path is None, each dataset will store a copy
             into memory. If cache_data_path is set, the dataset will first
             create one cache file and then use a cache reader to reduce memory
