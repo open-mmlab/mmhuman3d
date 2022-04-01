@@ -776,7 +776,11 @@ class SMPLify(object):
     @staticmethod
     def _compute_relative_change(pre_v, cur_v):
         """Compute relative loss change. If relative change is small enough, we
-        can apply early stop to accelerate the optimization.
+        can apply early stop to accelerate the optimization. When the max value
+        of pre_v and cur_v is smaller than 1, it degrades to absolute change.
+        Intuitively, if pre_v and cur_v are close and the max value is small,
+        if it does not apply absolute change, the relative change tends to be
+        very large.
 
         Args:
             pre_v: previous value
@@ -785,7 +789,7 @@ class SMPLify(object):
         Returns:
             float: relative change
         """
-        return (pre_v - cur_v) / max([np.abs(pre_v), np.abs(cur_v), 1])
+        return np.abs(pre_v - cur_v) / max([np.abs(pre_v), np.abs(cur_v), 1])
 
     @staticmethod
     def _skip_loss(loss, loss_weight_override):
