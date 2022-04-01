@@ -45,6 +45,8 @@ def test_write():
 
 def test_read():
     reader = HumanDataCacheReader(npz_path=human_data_cache_path)
+    config = reader.get_non_sliced_data('config')
+    assert config == 'config/example'
     slice_with_0 = reader.get_item(0)
     assert isinstance(slice_with_0, HumanData)
     slice_with_50 = reader.get_item(50)

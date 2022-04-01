@@ -11,6 +11,18 @@ from mmhuman3d.data.datasets.pipelines import (
 
 
 def test_human_image_dataset():
+    # test auto padding for bbox_xywh
+    train_dataset = HumanImageDataset(
+        data_prefix='tests/data',
+        pipeline=[],
+        dataset_name='h36m',
+        ann_file='sample_3dpw_test.npz')
+    train_dataset.human_data.pop('bbox_xywh')
+    data = train_dataset[0]
+    assert sum(data['scale']) == 0
+    assert sum(data['bbox_xywh']) == 0
+    assert sum(data['center']) == 0
+
     train_dataset = HumanImageDataset(
         data_prefix='tests/data',
         pipeline=[],
@@ -117,6 +129,36 @@ def test_human_image_dataset():
     res = test_dataset.evaluate(outputs, res_folder='tests/data')
     assert 'PA-MPJPE' in res
     assert res['PA-MPJPE'] > 0
+
+
+def test_cached_dataset():
+    # dump cache files
+    train_dataset = HumanImageDataset(
+        data_prefix='tests/data',
+        pipeline=[],
+        dataset_name='h36m',
+        cache_data_path='sample_3dpw_test_cache.npz',
+        ann_file='sample_3dpw_test.npz')
+    assert train_dataset.human_data is None
+
+    # directly read from cache files
+    train_dataset = HumanImageDataset(
+        data_prefix='tests/data',
+        pipeline=[],
+        dataset_name='h36m',
+        cache_data_path='sample_3dpw_test_cache.npz',
+        ann_file='sample_3dpw_test.npz')
+    assert train_dataset.human_data is None
+
+    # get data from cache files
+    data_keys = [
+        'img_prefix', 'image_path', 'dataset_name', 'sample_idx', 'bbox_xywh',
+        'center', 'scale', 'keypoints2d', 'keypoints3d', 'has_smpl',
+        'smpl_body_pose', 'smpl_global_orient', 'smpl_betas', 'smpl_transl'
+    ]
+    for i, data in enumerate(train_dataset):
+        for key in data_keys:
+            assert key in data
 
 
 def test_pipeline():

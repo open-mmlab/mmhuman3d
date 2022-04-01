@@ -344,6 +344,7 @@ class HumanData(dict):
         writer_args_dict = {
             'slice_size': slice_size,
             'keypoints_info': keypoints_info,
+            'data_len': self.data_len,
             'non_sliced_data': non_sliced_data,
             'key_strict': self.get_key_strict()
         }

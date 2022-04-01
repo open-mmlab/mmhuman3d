@@ -8,6 +8,8 @@ from typing import Any, List, Optional, Union
 import mmcv
 import numpy as np
 import torch
+import torch.distributed as dist
+from mmcv.runner import get_dist_info
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
@@ -20,6 +22,10 @@ from mmhuman3d.core.evaluation import (
     vertice_pve,
 )
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.human_data_cache import (
+    HumanDataCacheReader,
+    HumanDataCacheWriter,
+)
 from mmhuman3d.models.builder import build_body_model
 from .base_dataset import BaseDataset
 from .builder import DATASETS
@@ -45,6 +51,13 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         convention (str, optional): keypoints convention. Keypoints will be
             converted from "human_data" to the given one.
             Default: "human_data"
+        cache_data_path (str | None, optional): the path to store the cache
+            file. When cache_data_path is None, each dataset will store a copy
+            into memory. If cache_data_path is set, the dataset will first
+            create one cache file and then use a cache reader to reduce memory
+            cost and initialization time. The cache file will be generated
+            only once if they are not found at the the path. Otherwise, only
+            cache readers will be established.
         test_mode (bool, optional): in train mode or test mode.
             Default: False.
     """
@@ -60,9 +73,11 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                  body_model: Optional[Union[dict, None]] = None,
                  ann_file: Optional[Union[str, None]] = None,
                  convention: Optional[str] = 'human_data',
+                 cache_data_path: Optional[Union[str, None]] = None,
                  test_mode: Optional[bool] = False):
         self.convention = convention
         self.num_keypoints = get_keypoint_num(convention)
+        self.cache_data_path = cache_data_path
         super(HumanImageDataset,
               self).__init__(data_prefix, pipeline, ann_file, test_mode,
                              dataset_name)
@@ -81,39 +96,73 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         Here we simply use :obj:`HumanData` to parse the annotation.
         """
+        rank, world_size = get_dist_info()
         self.get_annotation_file()
-        # change keypoint from 'human_data' to the given convention
-        self.human_data = HumanData.fromfile(self.ann_file)
-        if self.human_data.check_keypoints_compressed():
-            self.human_data.decompress_keypoints()
-        if 'keypoints3d' in self.human_data:
-            keypoints3d = self.human_data['keypoints3d']
-            assert 'keypoints3d_mask' in self.human_data
-            keypoints3d_mask = self.human_data['keypoints3d_mask']
-            keypoints3d, keypoints3d_mask = \
-                convert_kps(
-                    keypoints3d,
-                    src='human_data',
-                    dst=self.convention,
-                    mask=keypoints3d_mask)
-            self.human_data.__setitem__('keypoints3d', keypoints3d)
-            self.human_data.__setitem__('keypoints3d_mask', keypoints3d_mask)
-        if 'keypoints2d' in self.human_data:
-            keypoints2d = self.human_data['keypoints2d']
-            assert 'keypoints2d_mask' in self.human_data
-            keypoints2d_mask = self.human_data['keypoints2d_mask']
-            keypoints2d, keypoints2d_mask = \
-                convert_kps(
-                    keypoints2d,
-                    src='human_data',
-                    dst=self.convention,
-                    mask=keypoints2d_mask)
-            self.human_data.__setitem__('keypoints2d', keypoints2d)
-            self.human_data.__setitem__('keypoints2d_mask', keypoints2d_mask)
-        self.num_data = self.human_data.data_len
+        if self.cache_data_path is None:
+            use_human_data = True
+        elif rank == 0 and not os.path.exists(self.cache_data_path):
+            use_human_data = True
+        else:
+            use_human_data = False
+        if use_human_data:
+            self.human_data = HumanData.fromfile(self.ann_file)
+
+            if self.human_data.check_keypoints_compressed():
+                self.human_data.decompress_keypoints()
+            # change keypoint from 'human_data' to the given convention
+            if 'keypoints3d' in self.human_data:
+                keypoints3d = self.human_data['keypoints3d']
+                assert 'keypoints3d_mask' in self.human_data
+                keypoints3d_mask = self.human_data['keypoints3d_mask']
+                keypoints3d, keypoints3d_mask = \
+                    convert_kps(
+                        keypoints3d,
+                        src='human_data',
+                        dst=self.convention,
+                        mask=keypoints3d_mask)
+                self.human_data.__setitem__('keypoints3d', keypoints3d)
+                self.human_data.__setitem__('keypoints3d_convention',
+                                            self.convention)
+                self.human_data.__setitem__('keypoints3d_mask',
+                                            keypoints3d_mask)
+            if 'keypoints2d' in self.human_data:
+                keypoints2d = self.human_data['keypoints2d']
+                assert 'keypoints2d_mask' in self.human_data
+                keypoints2d_mask = self.human_data['keypoints2d_mask']
+                keypoints2d, keypoints2d_mask = \
+                    convert_kps(
+                        keypoints2d,
+                        src='human_data',
+                        dst=self.convention,
+                        mask=keypoints2d_mask)
+                self.human_data.__setitem__('keypoints2d', keypoints2d)
+                self.human_data.__setitem__('keypoints2d_convention',
+                                            self.convention)
+                self.human_data.__setitem__('keypoints2d_mask',
+                                            keypoints2d_mask)
+            self.human_data.compress_keypoints_by_mask()
+
+        if self.cache_data_path is not None:
+            if rank == 0 and not os.path.exists(self.cache_data_path):
+                writer_kwargs, sliced_data = self.human_data.get_sliced_cache()
+                writer = HumanDataCacheWriter(**writer_kwargs)
+                writer.update_sliced_dict(sliced_data)
+                writer.dump(self.cache_data_path)
+            if world_size > 1:
+                dist.barrier()
+            self.cache_reader = HumanDataCacheReader(
+                npz_path=self.cache_data_path)
+            self.num_data = self.cache_reader.data_len
+            self.human_data = None
+        else:
+            self.cache_reader = None
+            self.num_data = self.human_data.data_len
 
     def prepare_raw_data(self, idx: int):
         """Get item from self.human_data."""
+        if self.cache_reader is not None:
+            self.human_data = self.cache_reader.get_item(idx)
+            idx = idx % self.cache_reader.slice_size
         info = {}
         info['img_prefix'] = None
         image_path = self.human_data['image_path'][idx]
