@@ -39,6 +39,7 @@ class MSELoss(nn.Module):
     def __init__(self, reduction='mean', loss_weight=1.0):
         super().__init__()
         assert reduction in (None, 'none', 'mean', 'sum')
+        reduction = 'none' if reduction is None else reduction
         self.reduction = reduction
         self.loss_weight = loss_weight
 
@@ -86,6 +87,7 @@ class KeypointMSELoss(nn.Module):
     def __init__(self, reduction='mean', loss_weight=1.0, sigma=1.0):
         super().__init__()
         assert reduction in (None, 'none', 'mean', 'sum')
+        reduction = 'none' if reduction is None else reduction
         self.reduction = reduction
         self.loss_weight = loss_weight
         self.sigma = sigma
