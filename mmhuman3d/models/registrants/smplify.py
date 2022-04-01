@@ -789,10 +789,11 @@ class SMPLify(object):
 
     @staticmethod
     def _skip_loss(loss, loss_weight_override):
-        """Whether to skip loss computation. In the table below, if the return
-        value is True, it means the computation of loss can be skipped. As the
-        result is 0 even if it is calculated, we can skip it to save
-        computational cost.
+        """Whether to skip loss computation. If loss is None, it will directly
+        skip the loss to avoid RuntimeError. If loss is not None, the table
+        below shows the return value. If the return value is True, it means the
+        computation of loss can be skipped. As the result is 0 even if it is
+        calculated, we can skip it to save computational cost.
 
         | loss.loss_weight | loss_weight_override | returns |
         | ---------------- | -------------------- | ------- |
@@ -804,7 +805,8 @@ class SMPLify(object):
         |      != 0        |         != 0         |   False |
 
         Args:
-            loss: loss.loss_weight is assigned when loss is initialized
+            loss: loss is an object that has attribute loss_weight.
+                loss.loss_weight is assigned when loss is initialized.
             loss_weight_override: loss_weight used to override loss.loss_weight
 
         Returns:
