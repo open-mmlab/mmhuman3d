@@ -129,8 +129,8 @@ class MpiInf3dhpConverter(BaseModeConverter):
                                     break
                                 frame += 1
                                 # image name
-                                imgname = os.path.join(
-                                    imgs_path, 'frame_%06d.jpg' % frame)
+                                imgname = os.path.join(imgs_path,
+                                                       '%06d.jpg' % frame)
                                 # save image
                                 cv2.imwrite(imgname, image)
 

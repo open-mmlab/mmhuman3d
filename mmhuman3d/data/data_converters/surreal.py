@@ -7,8 +7,15 @@ import scipy.io as sio
 from tqdm import tqdm
 
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_flip_pairs,
+)
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.datasets.pipelines.transforms import (
+    _flip_keypoints,
+    _flip_smpl_pose,
+)
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -139,6 +146,8 @@ class SurrealConverter(BaseModeConverter):
         data_path = os.path.join(dataset_path,
                                  '{}/run{}'.format(mode, self.run))
 
+        flip_pairs = get_flip_pairs('smpl')
+
         # go through all the .pkl files
         for seq_name in tqdm(os.listdir(data_path)):
             seq_path = os.path.join(data_path, seq_name)
@@ -205,6 +214,12 @@ class SurrealConverter(BaseModeConverter):
                     bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
                     bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
+                    # Left-right flipping is required to correct the original
+                    # keypoints and poses obtained from raw annotations
+                    bpose = pose[:, idx]
+                    bpose = _flip_smpl_pose(bpose)
+                    keypoints3d = _flip_keypoints(keypoints3d, flip_pairs)
+
                     # add confidence column
                     keypoints2d = np.hstack([keypoints2d, np.ones((24, 1))])
                     keypoints3d = np.hstack([keypoints3d, np.ones([24, 1])])
@@ -218,8 +233,8 @@ class SurrealConverter(BaseModeConverter):
                     keypoints2d_.append(keypoints2d)
                     keypoints3d_.append(keypoints3d)
                     bbox_xywh_.append(bbox_xywh)
-                    smpl['body_pose'].append(pose[3:, idx].reshape((23, 3)))
-                    smpl['global_orient'].append(pose[:3, idx])
+                    smpl['body_pose'].append(bpose[3:, ].reshape((23, 3)))
+                    smpl['global_orient'].append(bpose[:3, ])
                     smpl['betas'].append(beta[:, idx])
                     cam_param_.append(parameter_dict)
 

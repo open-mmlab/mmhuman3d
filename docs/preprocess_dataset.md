@@ -679,7 +679,7 @@ h36m_p1=dict(
 
 For data preparation of [Human3.6M](http://vision.imar.ro/human3.6m/description.php) for HMR and SPIN training, we use the [MoShed](https://mosh.is.tue.mpg.de/) data provided in [HMR](https://github.com/akanazawa/hmr) for training. However, due to license limitations, we are not allowed to redistribute the data. Even if you do not have access to these parameters, you can still generate the preprocessed h36m npz file without mosh parameters using our [converter](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py).
 
-To do so, modify the `h36m_p1` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
+You will need to extract images from raw videos for training. Do note that preprocessing can take a long time if image extraction is required. To do so, modify the `h36m_p1` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
 
 Config without mosh:
 ```python
@@ -687,15 +687,17 @@ h36m_p1=dict(
     type='H36mConverter',
     modes=['train', 'valid'],
     protocol=1,
+    extract_img=True,  # this is to specify you want to extract images from videos
     prefix='h36m'),
 ```
 
-Config:
+Config with mosh:
 ```python
 h36m_p1=dict(
     type='H36mConverter',
     modes=['train', 'valid'],
     protocol=1,
+    extract_img=True,  # this is to specify you want to extract images from videos
     mosh_dir='data/datasets/h36m_mosh', # supply the directory to the mosh if available
     prefix='h36m'),
 ```
@@ -874,8 +876,17 @@ mmhuman3d
  doi={10.1109/3dv.2017.00064},
 }
 ```
-
 </details>
+
+You will need to extract images from raw videos for training. Do note that preprocessing can take a long time if image extraction is required. To do so, modify the `mpi_inf_3dhp` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
+
+Config:
+```python
+mpi_inf_3dhp=dict(
+  type='MpiInf3dhpConverter',
+  modes=['train', 'test'],
+  extract_img=True),  # this is to specify you want to extract images from videos
+```
 
 For [MPI-INF-3DHP](http://gvv.mpi-inf.mpg.de/3dhp-dataset/), download and extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
 
@@ -923,6 +934,7 @@ mmhuman3d
 ```
 
 
+
 ### MPII
 
 <!-- [DATASET] -->
@@ -942,7 +954,7 @@ mmhuman3d
 
 </details>
 
-For [MPII](http://human-pose.mpi-inf.mpg.de/) data, please download from [MPII Human Pose Dataset](http://human-pose.mpi-inf.mpg.de/).
+For [MPII](http://human-pose.mpi-inf.mpg.de/) data, please download images from [MPII Human Pose Dataset](http://human-pose.mpi-inf.mpg.de/ and annotations from [here](https://github.com/princeton-vl/pose-hg-train/tree/master/data/mpii/annot?rgh-link-date=2020-07-05T04%3A14%3A02Z).
 Extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
 
 ```text
