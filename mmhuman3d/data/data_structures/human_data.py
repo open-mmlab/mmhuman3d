@@ -917,8 +917,8 @@ class HumanData(dict):
 
     def generate_mask_from_confidence(self, keys=None) -> None:
         """Generate mask from keypoints' confidence. Keypoints that have zero
-        confidence in all occurrences will have a zero mask.Note that the last
-        value of the keypoint is assumed to be confidence.
+        confidence in all occurrences will have a zero mask. Note that the
+        last value of the keypoint is assumed to be confidence.
 
         Args:
             keys: None, str, or list of str.
@@ -951,7 +951,7 @@ class HumanData(dict):
                 assert isinstance(key, str)
         else:
             raise TypeError(f'`Keys` must be None, str, or list of str, '
-                            f'got{type(keys)}.')
+                            f'got {type(keys)}.')
 
         update_dict = {}
         for kpt_key in keys:
@@ -959,7 +959,7 @@ class HumanData(dict):
             num_joints = kpt_array.shape[-2]
             # if all conf of a joint are zero, this joint is masked
             joint_conf = kpt_array[..., -1].reshape(-1, num_joints)
-            mask_array = (joint_conf > 0).astype(np.int).max(axis=0)
+            mask_array = (joint_conf > 0).astype(np.uint8).max(axis=0)
             assert len(mask_array) == num_joints
             # generate mask
             update_dict[f'{kpt_key}_mask'] = mask_array
