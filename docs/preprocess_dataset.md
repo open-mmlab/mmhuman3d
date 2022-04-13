@@ -42,7 +42,6 @@ These are our supported converters and their respective `dataset-name`:
 - GTAHumanConverter (`gta_human`)
 - H36mConverter (`h36m_p1`, `h36m_p2`)
 - H36mHybrIKConverter (`h36m_hybrik`)
-- H36mSpinConverter (`h36m_spin`)
 - InstaVibeConverter (`instavariety_vibe`)
 - LspExtendedConverter (`lsp_extended`)
 - LspConverter (`lsp_original`, `lsp_dataset`)
@@ -670,6 +669,7 @@ h36m_p1=dict(
     modes=['train', 'valid'],
     protocol=1,
     extract_img=True, # set to true to extract images from raw videos
+    algorithm='hmr',
     prefix='h36m'),
 ```
 
@@ -688,6 +688,7 @@ h36m_p1=dict(
     modes=['train', 'valid'],
     protocol=1,
     extract_img=True,  # this is to specify you want to extract images from videos
+    algorithm='hmr',
     prefix='h36m'),
 ```
 
@@ -699,6 +700,7 @@ h36m_p1=dict(
     protocol=1,
     extract_img=True,  # this is to specify you want to extract images from videos
     mosh_dir='data/datasets/h36m_mosh', # supply the directory to the mosh if available
+    algorithm='hmr',
     prefix='h36m'),
 ```
 
