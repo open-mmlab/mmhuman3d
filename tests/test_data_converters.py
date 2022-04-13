@@ -197,8 +197,9 @@ def test_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_mpii_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_lspet_train.npz')
     cfg = dict(
-        type='H36mSpinConverter',
+        type='H36mConverter',
         modes=['train'],
+        algorithm='spin',
         mosh_dir='tests/data/dataset_sample/h36m_mosh')
     data_converter = build_data_converter(cfg)
     data_converter.convert(H36M_ROOT, output_path)
