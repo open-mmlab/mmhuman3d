@@ -63,7 +63,7 @@ class SegmentationRenderer(BaseRenderer):
         self.num_class = num_class
 
     def forward(self,
-                meshes: Optional[Meshes] = None,
+                meshes: Meshes,
                 cameras: Optional[MMCamerasBase] = None,
                 indexes: Optional[Iterable[int]] = None,
                 backgrounds: Optional[torch.Tensor] = None,
@@ -71,10 +71,9 @@ class SegmentationRenderer(BaseRenderer):
         """Render segmentation map.
 
         Args:
-            meshes (Optional[Meshes], optional): meshes to be rendered.
+            meshes (Meshes): meshes to be rendered.
                 Require the textures type is `TexturesClosest`.
                 The color indicates the class index of the triangle.
-                Defaults to None.
             cameras (Optional[MMCamerasBase], optional): cameras for render.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for images.

@@ -73,7 +73,6 @@ class BaseRenderer(nn.Module):
                     'blur_radius': 0.0,
                     'faces_per_pixel': 1,
                     'perspective_correct': False,
-                    'bin_size': 0,
                 },
                 'blend_params': {'background_color': (1.0, 1.0, 1.0)},
             },
@@ -211,12 +210,12 @@ class BaseRenderer(nn.Module):
         if self.output_path is not None:
             folder = self.temp_path if self.temp_path is not None else\
                  self.output_path
-            if Path(self.output_path).suffix == '.mp4':
+            if check_path_suffix(self.output_path, ['.mp4']):
                 images_to_video(
                     input_folder=folder,
                     output_path=self.output_path,
                     img_format=self.out_img_format)
-            elif Path(self.output_path).suffix == '.gif':
+            elif check_path_suffix(self.output_path, ['.gif']):
                 images_to_gif(
                     input_folder=folder,
                     output_path=self.output_path,
@@ -240,7 +239,7 @@ class BaseRenderer(nn.Module):
             rgbs, valid_masks = rgba[..., :3], rgba[..., 3:]
         else:
             rgbs = rgba[..., :3]
-            valid_masks = torch.ones_like(rgbs)[..., :1]
+            valid_masks = torch.ones_like(rgbs[..., :1])
         rgbs = normalize(rgbs, origin_value_range=(0, 1), clip=True)
         bgrs = rgb2bgr(rgbs)
         if backgrounds is not None:

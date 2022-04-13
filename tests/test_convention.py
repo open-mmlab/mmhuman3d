@@ -38,8 +38,16 @@ def test_conventions():
                     np.zeros((f, n_person, J, 3)),
                     np.zeros((f, n_person, J, 2))
             ]:
+                # with mask
                 keypoints_dst, mask = convert_kps(keypoints, src_name,
                                                   dst_name)
+
+                # without mask
+                keypoints_dst_wo_mask = convert_kps(
+                    keypoints, src_name, dst_name, return_mask=False)
+
+                assert np.all(keypoints_dst == keypoints_dst_wo_mask)
+
                 exp_shape = list(keypoints.shape)
                 exp_shape[-2] = J_dst
                 assert keypoints_dst.shape == tuple(exp_shape)

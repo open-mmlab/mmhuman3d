@@ -53,13 +53,14 @@ class MpiInf3dhpConverter(BaseModeConverter):
         x_in = np.logical_and(keypoints2d[:, 0] < w, keypoints2d[:, 0] >= 0)
         y_in = np.logical_and(keypoints2d[:, 1] < h, keypoints2d[:, 1] >= 0)
         ok_pts = np.logical_and(x_in, y_in)
+
+        valid = True
         if np.sum(ok_pts) < num_keypoints:
             valid = False
 
         # add confidence column
         keypoints2d = np.hstack([keypoints2d, np.ones((num_keypoints, 1))])
         keypoints3d = np.hstack([keypoints3d, np.ones((num_keypoints, 1))])
-        valid = True
 
         return valid, keypoints2d, keypoints3d, bbox_xywh
 
@@ -128,8 +129,8 @@ class MpiInf3dhpConverter(BaseModeConverter):
                                     break
                                 frame += 1
                                 # image name
-                                imgname = os.path.join(
-                                    imgs_path, 'frame_%06d.jpg' % frame)
+                                imgname = os.path.join(imgs_path,
+                                                       '%06d.jpg' % frame)
                                 # save image
                                 cv2.imwrite(imgname, image)
 

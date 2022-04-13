@@ -47,7 +47,7 @@ class MeshRenderer(BaseRenderer):
             **kwargs)
 
     def forward(self,
-                meshes: Optional[Meshes] = None,
+                meshes: Meshes,
                 cameras: Optional[MMCamerasBase] = None,
                 lights: Optional[MMLights] = None,
                 indexes: Optional[Iterable[int]] = None,
@@ -56,8 +56,7 @@ class MeshRenderer(BaseRenderer):
         """Render Meshes.
 
         Args:
-            meshes (Optional[Meshes], optional): meshes to be rendered.
-                Defaults to None.
+            meshes (Meshes): meshes to be rendered.
             cameras (Optional[MMCamerasBase], optional): cameras for render.
                 Defaults to None.
             lights (Optional[MMLights], optional): lights for render.

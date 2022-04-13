@@ -145,6 +145,43 @@ def test_compression():
         human_data.decompress_keypoints()
 
 
+def test_generate_mask_from_keypoints():
+
+    human_data = HumanData.new(key_strict=False)
+    keypoints2d = np.random.rand(3, 144, 3)
+    keypoints3d = np.random.rand(3, 144, 4)
+
+    # set confidence
+    keypoints2d[:, :72, -1] = 0
+    keypoints3d[:, 72:, -1] = 0
+    human_data['keypoints2d'] = keypoints2d
+    human_data['keypoints3d'] = keypoints3d
+
+    # test all keys
+    with pytest.raises(KeyError):
+        human_data['keypoints2d_mask']
+    with pytest.raises(KeyError):
+        human_data['keypoints3d_mask']
+    human_data.generate_mask_from_confidence()
+    assert 'keypoints2d_mask' in human_data
+    assert (human_data['keypoints2d_mask'][:72] == 0).all()
+    assert (human_data['keypoints2d_mask'][72:] == 1).all()
+    assert 'keypoints3d_mask' in human_data
+    assert (human_data['keypoints3d_mask'][72:] == 0).all()
+    assert (human_data['keypoints3d_mask'][:72] == 1).all()
+
+    # test str keys
+    human_data.generate_mask_from_confidence(keys='keypoints2d')
+
+    # test list of str keys
+    human_data.generate_mask_from_confidence(
+        keys=['keypoints2d', 'keypoints3d'])
+
+    # test compression with generated mask
+    human_data.compress_keypoints_by_mask()
+    assert human_data.check_keypoints_compressed() is True
+
+
 def test_pop_unsupported_items():
     # directly pop them
     human_data = HumanData.new(key_strict=False)
