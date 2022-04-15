@@ -111,6 +111,16 @@ inference_pipeline = [
         meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 
+cache_files = {
+    'h36m': 'data/cache/h36m_mosh_train_smpl_54.npz',
+    'mpi_inf_3dhp': 'data/cache/mpi_inf_3dhp_train_smpl_54.npz',
+    'lsp': 'data/cache/lsp_train_smpl_54.npz',
+    'lspet': 'data/cache/lspet_train_smpl_54.npz',
+    'mpii': 'data/cache/mpii_train_smpl_54.npz',
+    'coco': 'data/cache/coco_2014_train_smpl_54.npz',
+    'gta': 'data/cache/gta_human_4x_smpl_54.npz'
+}
+
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=2,
@@ -125,7 +135,7 @@ data = dict(
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
-                    cache_data_path='data/cache/h36m_mosh_train_smpl_54.npz',
+                    cache_data_path=cache_files['h36m'],
                     ann_file='h36m_mosh_train.npz'),
                 dict(
                     type=dataset_type,
@@ -133,7 +143,7 @@ data = dict(
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
-                    cache_data_path='data/cache/mpi_inf_3dhp_train_smpl_54.npz',
+                    cache_data_path=cache_files['mpi_inf_3dhp'],
                     ann_file='mpi_inf_3dhp_train.npz'),
                 dict(
                     type=dataset_type,
@@ -141,7 +151,7 @@ data = dict(
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
-                    cache_data_path='data/cache/lsp_train_smpl_54.npz',
+                    cache_data_path=cache_files['lsp'],
                     ann_file='lsp_train.npz'),
                 dict(
                     type=dataset_type,
@@ -149,7 +159,7 @@ data = dict(
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
-                    cache_data_path='data/cache/lspet_train_smpl_54.npz',
+                    cache_data_path=cache_files['lspet'],
                     ann_file='lspet_train.npz'),
                 dict(
                     type=dataset_type,
@@ -157,7 +167,7 @@ data = dict(
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
-                    cache_data_path='data/cache/mpii_train_smpl_54.npz',
+                    cache_data_path=cache_files['mpii'],
                     ann_file='mpii_train.npz'),
                 dict(
                     type=dataset_type,
@@ -165,7 +175,7 @@ data = dict(
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
-                    cache_data_path='data/cache/coco_2014_train_smpl_54.npz',
+                    cache_data_path=cache_files['coco'],
                     ann_file='coco_2014_train.npz'),
                 dict(
                     type=dataset_type,
@@ -173,7 +183,7 @@ data = dict(
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
-                    cache_data_path='data/cache/gta_human_4x_smpl_54.npz',
+                    cache_data_path=cache_files['gta'],
                     ann_file='gta_human_4x.npz'),
             ],
             partition=[0.35, 0.15, 0.1, 0.10, 0.10, 0.2, 1],
@@ -193,12 +203,8 @@ data = dict(
             model_path='data/body_models/smpl',
             joints_regressor='data/body_models/J_regressor_h36m.npy'),
         dataset_name='pw3d',
-        # dataset_name='h36m',
-        # dataset_name='mpi_inf_3dhp',
         data_prefix='data',
         pipeline=test_pipeline,
         convention='h36m',
-        # ann_file='mpi_inf_3dhp_test.npz'),
-        # ann_file='h36m_valid_protocol2.npz'),
         ann_file='pw3d_test.npz'),
 )
