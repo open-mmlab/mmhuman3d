@@ -1,0 +1,84 @@
+# HMR
+
+## Introduction
+
+We provide the config files for GTA-Human: [Playing for 3D Human Recovery](https://arxiv.org/pdf/2110.07588.pdf).
+
+```BibTeX
+@article{GTAHuman,
+  author    = {Cai Zhongang and
+               Zhang Mingyuan and
+               Ren Jiawei and
+               Wei Chen and
+               Ren Daxuan and
+               Li Jiatong and
+               Lin Zhengyu and
+               Zhao Haiyu and
+               Yi Shuai and
+               Yang Lei and
+               Chen Change Loy and
+               Liu Ziwei},
+  title     = {Playing for 3D Human Recovery},
+  journal   = {arXiv preprint arXiv:2110.07588},
+  year      = {2021}
+}
+```
+
+## Notes
+
+- [SMPL](https://smpl.is.tue.mpg.de/) v1.0 is used in our experiments.
+- [J_regressor_extra.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_extra.npy?versionId=CAEQHhiBgIDD6c3V6xciIGIwZDEzYWI5NTBlOTRkODU4OTE1M2Y4YTI0NTVlZGM1)
+- [J_regressor_h36m.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_h36m.npy?versionId=CAEQHhiBgIDE6c3V6xciIDdjYzE3MzQ4MmU4MzQyNmRiZDA5YTg2YTI5YWFkNjRi)
+- [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
+- [resnet50_hmr-2672873c_20220415.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hmr/resnet50_hmr-2672873c_20220415.pth?versionId=CAEQLxiBgIDuou6vgRgiIDFiOGRiZTA1ZTQ5NjRmMzdhYzkzY2ZmZGQwYjE0MzBl)
+
+Download the above resources and arrange them in the following file structure:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── body_models
+    │   ├── J_regressor_extra.npy
+    │   ├── J_regressor_h36m.npy
+    │   ├── smpl_mean_params.npz
+    │   └── smpl
+    │       ├── SMPL_FEMALE.pkl
+    │       ├── SMPL_MALE.pkl
+    │       └── SMPL_NEUTRAL.pkl
+    ├── preprocessed_datasets
+    │   ├── cmu_mosh.npz
+    │   ├── coco_2014_train.npz
+    │   ├── h36m_mosh_train.npz
+    │   ├── lspet_train.npz
+    │   ├── lsp_train.npz
+    │   ├── mpi_inf_3dhp_train.npz
+    │   ├── mpii_train.npz
+    │   ├── gta_human_4x.npz   
+    │   └── pw3d_test.npz
+    ├── pretrained
+    │   └── resnet50_hmr-2672873c_20220415.pth
+    └── datasets
+        ├── coco
+        ├── h36m
+        ├── lspet
+        ├── lsp
+        ├── mpi_inf_3dhp
+        ├── mpii
+        ├── gta
+        └── pw3d
+
+```
+
+## Results and Models
+
+We evaluate HMR on 3DPW. Values are MPJPE/PA-MPJPE.
+
+| Config | 3DPW    | Download |
+|:------:|:-------:|:------:|
+| [resnet50_hmr_gta_bt.py](resnet50_hmr_gta_bt.py) | 98.72 / 60.49 | [model]() &#124; [log]() |
+| [resnet50_hmr_gta_ft.py](resnet50_hmr_gta_ft.py) | 91.42 / 55.71 | [model]() &#124; [log]() |
