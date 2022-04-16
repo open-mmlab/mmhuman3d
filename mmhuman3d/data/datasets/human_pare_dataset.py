@@ -26,8 +26,8 @@ from .builder import DATASETS
 
 
 @DATASETS.register_module()
-class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
-    """Human Image Dataset.
+class PareHumanImageDataset(BaseDataset, metaclass=ABCMeta):
+    """Pare Human Image Dataset.
 
     Args:
         data_prefix (str): the prefix of data path.
@@ -47,6 +47,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             Default: "human_data"
         test_mode (bool, optional): in train mode or test mode.
             Default: False.
+
+        
     """
     # metric
     ALLOWED_METRICS = {
@@ -60,17 +62,16 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                  body_model: Optional[Union[dict, None]] = None,
                  ann_file: Optional[Union[str, None]] = None,
                  convention: Optional[str] = 'human_data',
-                 test_mode: Optional[bool] = False):
+                 test_mode: Optional[bool] = False,):
         self.convention = convention
         self.num_keypoints = get_keypoint_num(convention)
-        super(HumanImageDataset,
+        super(PareHumanImageDataset,
               self).__init__(data_prefix, pipeline, ann_file, test_mode,
                              dataset_name)
         if body_model is not None:
             self.body_model = build_body_model(body_model)
         else:
             self.body_model = None
-
     def get_annotation_file(self):
         """Get path of the annotation file."""
         # ann_prefix = os.path.join(self.data_prefix, 'preprocessed_datasets')
@@ -148,9 +149,10 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             info['keypoints2d'] = np.zeros((self.num_keypoints, 3))
         if 'keypoints3d' in self.human_data:
             info['keypoints3d'] = self.human_data['keypoints3d'][idx]
+            info['has_kp3d'] = 1
         else:
             info['keypoints3d'] = np.zeros((self.num_keypoints, 4))
-
+            info['has_kp3d'] = 0
         if 'smpl' in self.human_data:
             smpl_dict = self.human_data['smpl']
         else:

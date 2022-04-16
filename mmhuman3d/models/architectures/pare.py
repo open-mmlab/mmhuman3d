@@ -1,6 +1,10 @@
 from abc import ABCMeta, abstractmethod
 from typing import Optional, Tuple, Union
+<<<<<<< Updated upstream
 
+=======
+import numpy as np
+>>>>>>> Stashed changes
 import torch
 import torch.nn.functional as F
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx
@@ -11,6 +15,10 @@ from mmhuman3d.utils.geometry import (
     project_points,
     rotation_matrix_to_angle_axis,
 )
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 from ..builder import (
     ARCHITECTURES,
     build_backbone,
@@ -22,10 +30,17 @@ from ..builder import (
     build_registrant,
 )
 from .base_architecture import BaseArchitecture
+<<<<<<< Updated upstream
 
 from mmhuman3d.utils.geometry import perspective_projection
 from mmhuman3d.core.visualization import render_smpl
 
+=======
+from mmhuman3d.core.visualization.visualize_keypoints2d import visualize_kp2d
+from mmhuman3d.utils.geometry import perspective_projection
+from mmhuman3d.core.visualization import render_smpl
+import cv2
+>>>>>>> Stashed changes
 def set_requires_grad(nets, requires_grad=False):
     """Set requies_grad for all the networks.
 
@@ -128,7 +143,12 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
                  head: Optional[Union[dict, None]] = None,
                  image_res: Optional[int] = 224,
                  focal_length: Optional[int] = 5000,
+<<<<<<< Updated upstream
                  body_model: Optional[Union[dict, None]] = None,
+=======
+                 body_model_train: Optional[Union[dict, None]] = None,
+                 body_model_test: Optional[Union[dict, None]] = None,
+>>>>>>> Stashed changes
                  convention: Optional[str] = 'human_data',
                  loss_keypoints2d_smpl: Optional[Union[dict, None]] = None,
                  loss_keypoints2d_openpose: Optional[Union[dict, None]] = None,
@@ -144,7 +164,12 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         self.backbone = build_backbone(backbone)
         self.neck = build_neck(neck)
         self.head = build_head(head)
+<<<<<<< Updated upstream
         self.body_model = build_body_model(body_model)
+=======
+        self.body_model_train = build_body_model(body_model_train)
+        self.body_model_test = build_body_model(body_model_test)
+>>>>>>> Stashed changes
         self.image_res = image_res
         self.focal_length = focal_length
         self.loss_keypoints2d_smpl = build_loss(loss_keypoints2d_smpl)
@@ -166,7 +191,12 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         self.register_buffer('K', K)
         self.register_buffer('R', R)
         
+<<<<<<< Updated upstream
         set_requires_grad(self.body_model, False)
+=======
+        set_requires_grad(self.body_model_train, False)
+        set_requires_grad(self.body_model_test, False)
+>>>>>>> Stashed changes
         
     def get_smpl_result(self, 
                         rotmat: torch.Tensor, 
@@ -175,7 +205,11 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
                         img_res: int = 224, 
                         focal_length: int = 5000, 
                         normalize_joints2d: bool = False):
+<<<<<<< Updated upstream
         smpl_output = self.body_model(
+=======
+        smpl_output = self.body_model_train(
+>>>>>>> Stashed changes
             betas=shape,
             body_pose=rotmat[:, 1:].contiguous(),
             global_orient=rotmat[:, 0].unsqueeze(1).contiguous(),
@@ -204,6 +238,7 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
 
         return output
 
+<<<<<<< Updated upstream
     def compute_keypoints3d_loss(self, pred_keypoints3d: torch.Tensor,
                                  gt_keypoints3d: torch.Tensor):
         """Compute loss for 3d keypoints."""
@@ -216,6 +251,54 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         # both datasets have right_hip_extra and left_hip_extra
         right_hip_idx = get_keypoint_idx('right_hip_extra', self.convention)
         left_hip_idx = get_keypoint_idx('left_hip_extra', self.convention)
+=======
+    # def compute_keypoints3d_loss(self, pred_keypoints3d: torch.Tensor,
+    #                              gt_keypoints3d: torch.Tensor):
+    #     """Compute loss for 3d keypoints."""
+    #     keypoints3d_conf = gt_keypoints3d[:, :, 3].float().unsqueeze(-1)
+    #     keypoints3d_conf = keypoints3d_conf.repeat(1, 1, 3)
+    #     pred_keypoints3d = pred_keypoints3d.float()
+    #     gt_keypoints3d = gt_keypoints3d[:, :, :3].float()
+    #     # currently, only mpi_inf_3dhp and h36m have 3d keypoints
+    #     # both datasets have right_hip_extra and left_hip_extra
+    #     right_hip_idx = get_keypoint_idx('right_hip_extra', self.convention)
+    #     left_hip_idx = get_keypoint_idx('left_hip_extra', self.convention)
+    #     gt_pelvis = (gt_keypoints3d[:, right_hip_idx, :] +
+    #                  gt_keypoints3d[:, left_hip_idx, :]) / 2
+    #     pred_pelvis = (pred_keypoints3d[:, right_hip_idx, :] +
+    #                    pred_keypoints3d[:, left_hip_idx, :]) / 2
+
+    #     gt_keypoints3d = gt_keypoints3d - gt_pelvis[:, None, :]
+    #     pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
+    #     loss = self.loss_keypoints3d(
+    #         pred_keypoints3d, gt_keypoints3d, reduction_override='none')
+        
+    #     valid_pos = keypoints3d_conf > 0
+    #     # print(keypoints3d_conf[valid_pos])
+    #     if keypoints3d_conf[valid_pos].numel() == 0:
+    #         return torch.Tensor([0]).type_as(gt_keypoints3d)
+    #     # loss = (loss * keypoints3d_conf).mean()
+    #     loss = torch.sum(loss * keypoints3d_conf)
+    #     loss /= keypoints3d_conf[valid_pos].numel()
+    #     return loss
+    def compute_keypoints3d_loss(self, pred_keypoints3d: torch.Tensor,
+                                 gt_keypoints3d: torch.Tensor,
+                                 has_kp3d: torch.Tensor,):
+        """Compute loss for 3d keypoints."""
+        keypoints3d_conf = gt_keypoints3d[:, :, 3].float().unsqueeze(-1)
+        keypoints3d_conf = keypoints3d_conf[has_kp3d == 1]
+        keypoints3d_conf = keypoints3d_conf.repeat(1, 1, 3)
+        pred_keypoints3d = pred_keypoints3d.float()
+        pred_keypoints3d = pred_keypoints3d[has_kp3d == 1]
+        gt_keypoints3d = gt_keypoints3d[:, :, :3].float()
+        gt_keypoints3d_orig = gt_keypoints3d.clone()
+        gt_keypoints3d = gt_keypoints3d[has_kp3d == 1]
+
+        # currently, only mpi_inf_3dhp and h36m have 3d keypoints
+        # both datasets have right_hip_extra and left_hip_extra
+        right_hip_idx = get_keypoint_idx('right_hip_extra', 'smpl_24')
+        left_hip_idx = get_keypoint_idx('left_hip_extra', 'smpl_24')
+>>>>>>> Stashed changes
         gt_pelvis = (gt_keypoints3d[:, right_hip_idx, :] +
                      gt_keypoints3d[:, left_hip_idx, :]) / 2
         pred_pelvis = (pred_keypoints3d[:, right_hip_idx, :] +
@@ -225,11 +308,23 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
         loss = self.loss_keypoints3d(
             pred_keypoints3d, gt_keypoints3d, reduction_override='none')
+<<<<<<< Updated upstream
         valid_pos = keypoints3d_conf > 0
         if keypoints3d_conf[valid_pos].numel() == 0:
             return torch.Tensor([0]).type_as(gt_keypoints3d)
         loss = torch.sum(loss * keypoints3d_conf)
         loss /= keypoints3d_conf[valid_pos].numel()
+=======
+        keypoints3d_conf = keypoints3d_conf
+        # print(keypoints3d_conf[valid_pos])
+        if gt_keypoints3d.shape[0] == 0:
+            return torch.Tensor([0]).type_as(gt_keypoints3d_orig)
+        # print(keypoints3d_conf[0],gt_keypoints3d[0],pred_keypoints3d[0])
+
+        loss = (loss * keypoints3d_conf).mean()
+        # loss = torch.sum(loss * keypoints3d_conf)
+        # loss /= keypoints3d_conf[valid_pos].numel()
+>>>>>>> Stashed changes
         return loss
 
     def compute_keypoints2d_loss(self,
@@ -263,8 +358,14 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         valid_pos = keypoints2d_conf > 0
         if keypoints2d_conf[valid_pos].numel() == 0:
             return torch.Tensor([0]).type_as(gt_keypoints2d)
+<<<<<<< Updated upstream
         loss = torch.sum(loss * keypoints2d_conf)
         loss /= keypoints2d_conf[valid_pos].numel()
+=======
+        loss = (loss * keypoints2d_conf).mean()  
+        # loss = torch.sum(loss * keypoints2d_conf).mean()
+        # loss /= keypoints2d_conf[valid_pos].numel()
+>>>>>>> Stashed changes
         return loss
 
     def compute_vertex_loss(self, pred_vertices: torch.Tensor,
@@ -349,6 +450,11 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         # Get data from the batch
 
         img = data_batch['img']
+<<<<<<< Updated upstream
+=======
+ 
+
+>>>>>>> Stashed changes
         features = self.backbone(img)
 
         
@@ -397,6 +503,13 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
 
 
         targets = self.prepare_targets(data_batch)
+<<<<<<< Updated upstream
+=======
+        # vis_img = np.ascontiguousarray((img.detach().cpu().permute(0,2,3,1).clamp(0,1).numpy()*255).astype(np.uint8))
+        # vis_img = vis_img.copy()
+        # print(targets['keypoints2d'][0,24:,2].shape)
+        # visualize_kp2d(kp2d=targets['keypoints2d'][:,25:,:2].detach().cpu().numpy(), mask =targets['keypoints2d'][0,25:,2], output_path = '/mnt/lustre/wangyanjun/pare_log/debug_output',image_array=vis_img,data_source='smpl_24',overwrite = True)
+>>>>>>> Stashed changes
 
         losses = self.compute_losses(pare_output, targets)
 
@@ -414,6 +527,10 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
             log_vars=log_vars,
             num_samples=len(next(iter(data_batch.values()))))
         return outputs
+<<<<<<< Updated upstream
+=======
+    
+>>>>>>> Stashed changes
     def prepare_targets(self, data_batch: dict):
         gt_keypoints_2d = data_batch['keypoints2d']  # 2D keypoints
         gt_pose = data_batch['smpl_body_pose'].float()
@@ -425,7 +542,11 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         device = gt_pose.device
         # Get GT vertices and model joints
         # Note that gt_model_joints is different from gt_joints as it comes from SMPL
+<<<<<<< Updated upstream
         gt_out = self.body_model(
+=======
+        gt_out = self.body_model_train(
+>>>>>>> Stashed changes
             betas=gt_betas,
             body_pose=gt_pose[:, 3:],
             global_orient=gt_pose[:, :3],
@@ -433,12 +554,19 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         )
         gt_model_joints = gt_out['joints']
         gt_vertices = gt_out['vertices']
+<<<<<<< Updated upstream
 
         # De-normalize 2D keypoints from [-1,1] to pixel space
         gt_keypoints_2d_orig = gt_keypoints_2d.clone()
         gt_keypoints_2d_orig[:, :, :-1] = \
             0.5 * self.image_res * (gt_keypoints_2d_orig[:, :, :-1] + 1)
 
+=======
+        # De-normalize 2D keypoints from [-1,1] to pixel space
+        gt_keypoints_2d_orig = gt_keypoints_2d.clone()
+        # gt_keypoints_2d_orig[:, :, :-1] = \
+        #     0.5 * self.image_res * (gt_keypoints_2d_orig[:, :, :-1] + 1)
+>>>>>>> Stashed changes
         # Estimate camera translation given the model joints and 2D keypoints
         # by minimizing a weighted least squares loss
         gt_cam_t = estimate_translation(
@@ -454,7 +582,10 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
 
         
 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
         data_batch['gt_cam_t'] = gt_cam_t
         data_batch['vertices'] = gt_vertices
         data_batch['gt_segm_mask'] = render_smpl(
@@ -465,7 +596,11 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
                 render_choice = 'part_silhouette',
                 resolution =  self.image_res,
                 return_tensor = True,
+<<<<<<< Updated upstream
                 body_model = self.body_model,
+=======
+                body_model = self.body_model_train,
+>>>>>>> Stashed changes
                 device=device,
                 in_ndc=False,
                 convention='pytorch3d',
@@ -485,10 +620,18 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
 
         gt_keypoints3d = targets['keypoints3d']
         gt_keypoints2d = targets['keypoints2d']
+<<<<<<< Updated upstream
         gt_seg = targets['gt_segm_mask']
         # pred_pose N, 24, 3, 3
         if self.body_model is not None:
             pred_output = self.body_model(
+=======
+        has_kp3d = targets['has_kp3d'].squeeze(-1)
+        gt_seg = targets['gt_segm_mask']
+        # pred_pose N, 24, 3, 3
+        if self.body_model_train is not None:
+            pred_output = self.body_model_train(
+>>>>>>> Stashed changes
                 betas=pred_betas,
                 body_pose=pred_pose[:, 1:],
                 global_orient=pred_pose[:, 0].unsqueeze(1),
@@ -509,8 +652,13 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         gt_betas = targets['smpl_betas'].float()
 
         # gt_pose N, 72
+<<<<<<< Updated upstream
         if self.body_model is not None:
             gt_output = self.body_model(
+=======
+        if self.body_model_train is not None:
+            gt_output = self.body_model_train(
+>>>>>>> Stashed changes
                 betas=gt_betas,
                 body_pose=gt_pose[:, 3:],
                 global_orient=gt_pose[:, :3],
@@ -518,15 +666,55 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
             gt_vertices = gt_output['vertices']
 
         losses = {}
+<<<<<<< Updated upstream
         if self.loss_keypoints3d is not None:
             losses['keypoints3d_loss'] = self.compute_keypoints3d_loss(
                 pred_keypoints3d, gt_keypoints3d)
+=======
+        # pred_keypoints2d = project_points(
+        #     pred_keypoints3d,
+        #     pred_cam,
+        #     focal_length=5000,
+        #     img_res=224)
+        # pred_keypoints2d = pred_keypoints2d+112
+        # t_img = (gt_seg*10).detach().cpu().unsqueeze(-1)
+        # disp_img = torch.cat([t_img,t_img,t_img],dim=-1)
+        # disp_img = disp_img.numpy().astype(np.int8)
+        # print(pred_keypoints2d)
+        # mask = torch.zeros(49).detach().cpu().numpy()
+        # print(mask)
+        # mask[27:29] = 1
+        # disp_img_pred = disp_img.copy()
+        # visualize_kp2d(
+        #     kp2d=gt_keypoints2d.detach().cpu().numpy(),
+        #     image_array=disp_img,
+        #     data_source='smpl_49',
+        #     output_path='/mnt/lustre/wangyanjun/pare_log/debug_output',
+        #     overwrite=True,
+        #     mask=mask
+        # )
+        # visualize_kp2d(
+        #     kp2d=pred_keypoints2d.detach().cpu().numpy(),
+        #     image_array=disp_img_pred,
+        #     data_source='smpl_49',
+        #     output_path='/mnt/lustre/wangyanjun/pare_log/debug_output_gt',
+        #     overwrite=True,
+        #     mask=mask
+        # )
+        if self.loss_keypoints3d is not None:
+            losses['keypoints3d_loss'] = self.compute_keypoints3d_loss(
+                pred_keypoints3d[:,25:], gt_keypoints3d[:,25:],has_kp3d)
+>>>>>>> Stashed changes
         if self.loss_keypoints2d_openpose is not None:
             losses['keypoints2d_loss_openpose'] = self.compute_keypoints2d_loss(
                 pred_keypoints3d[:,:25], pred_cam, gt_keypoints2d[:,:25], loss_keypoints2d=self.loss_keypoints2d_openpose)
         if self.loss_keypoints2d_smpl is not None:
             losses['loss_keypoints2d_smpl'] = self.compute_keypoints2d_loss(
+<<<<<<< Updated upstream
                 pred_keypoints3d[:,:25], pred_cam, gt_keypoints2d[:,:25], loss_keypoints2d=self.loss_keypoints2d_smpl)
+=======
+                pred_keypoints3d[:,25:], pred_cam, gt_keypoints2d[:,25:], loss_keypoints2d=self.loss_keypoints2d_smpl)
+>>>>>>> Stashed changes
         if self.loss_vertex is not None:
             losses['vertex_loss'] = self.compute_vertex_loss(
                 pred_vertices, gt_vertices, has_smpl)
@@ -539,7 +727,11 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         if self.loss_camera is not None:
             losses['camera_loss'] = self.compute_camera_loss(pred_cam)
         if self.loss_segm_mask is not None:
+<<<<<<< Updated upstream
             losses['part_seg'] = self.compute_segm_loss(pred_seg, gt_seg, has_smpl)
+=======
+            losses['part_seg_loss'] = self.compute_segm_loss(pred_seg, gt_seg, has_smpl)
+>>>>>>> Stashed changes
         return losses
 
 
@@ -558,7 +750,10 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
         features = self.backbone(img)
 
         
+<<<<<<< Updated upstream
         pare_output = self.head(features)
+=======
+>>>>>>> Stashed changes
 
         predictions = self.head(features)
         pred_pose = predictions['pred_pose']
@@ -602,7 +797,11 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
 
 
 
+<<<<<<< Updated upstream
         pred_output = self.body_model(
+=======
+        pred_output = self.body_model_test(
+>>>>>>> Stashed changes
             betas=pred_betas,
             body_pose=pred_pose[:, 1:],
             global_orient=pred_pose[:, 0].unsqueeze(1),
