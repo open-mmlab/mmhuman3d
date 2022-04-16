@@ -80,5 +80,5 @@ We evaluate HMR on 3DPW. Values are MPJPE/PA-MPJPE.
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [resnet50_hmr_gta_bt.py](resnet50_hmr_gta_bt.py) | 98.72 / 60.49 | [model]() &#124; [log]() |
-| [resnet50_hmr_gta_ft.py](resnet50_hmr_gta_ft.py) | 91.42 / 55.71 | [model]() &#124; [log]() |
+| [resnet50_hmr_gta_bt.py](resnet50_hmr_gta_bt.py) | 98.72 / 60.49 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/hmr_gta_bt-aa643b97_20220416.pth?versionId=CAEQLxiBgICc7IvFgRgiIGY0NTFhMzE3NzU5YzRlZjk5ZDczN2NlY2E4MjNmOWIy) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/hmr_gta_bt.log?versionId=CAEQLxiBgICi54vFgRgiIDNlYmViZmQyYzhjYjRhOWU4MmE2MjkwMWI1MjQ2YTVi) |
+| [resnet50_hmr_gta_ft.py](resnet50_hmr_gta_ft.py) | 91.42 / 55.71 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/hmr_gta_ft-f444e49c_20220416.pth?versionId=CAEQLxiBgMDw5ovFgRgiIDdlN2FmODY5OThiZDQzNzhhZDg2ZjNjM2ZlZmI5MDg3) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/hmr_gta_ft.log?versionId=CAEQLxiBgICn2YvFgRgiIDYwZTEyOWM0NzEzZTQzMDg4OWNiYTY3MjViYTY5M2Q0) |
