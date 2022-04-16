@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+import shutil
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import torch
 
 from mmhuman3d.apis import inference_image_based_model, init_model
 from mmhuman3d.core.visualization import visualize_smpl_hmr
+from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.utils import array_to_images
 from mmhuman3d.utils.demo_utils import (
     prepare_frames,
@@ -16,6 +18,7 @@ from mmhuman3d.utils.demo_utils import (
     process_mmtracking_results,
     smooth_process,
 )
+from mmhuman3d.utils.transforms import rotmat_to_aa
 
 try:
     from mmdet.apis import inference_detector, init_detector
@@ -50,7 +53,7 @@ def single_person_with_mmdet(args, frames_iter):
 
     # Used to save the img index
     img_index = []
-    pred_cams, verts, bboxes_xyxy = [], [], []
+    pred_cams, verts, smpl_poses, smpl_betas, bboxes_xyxy = [], [], [], [], []
     for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
         # test a single image, the resulting box is (x1, y1, x2, y2)
         mmdet_results = inference_detector(person_det_model, frame)
@@ -78,14 +81,50 @@ def single_person_with_mmdet(args, frames_iter):
             mmcv.imshow_bboxes(
                 frame, bboxes, top_k=-1, thickness=2, show=False)
         img_index.append(i)
-
+        smpl_betas.append(mesh_results[0]['smpl_beta'])
+        smpl_pose = mesh_results[0]['smpl_pose']
+        if smpl_pose.shape == (24, 3, 3):
+            smpl_poses.append(rotmat_to_aa(smpl_pose))
+        elif smpl_pose.shape == (24, 3):
+            smpl_poses.append(smpl_pose)
+        else:
+            raise (f'Wrong shape of `smpl_pose`: {smpl_pose.shape}')
         pred_cams.append(mesh_results[0]['camera'])
         verts.append(mesh_results[0]['vertices'])
         bboxes_xyxy.append(mesh_results[0]['bbox'])
 
+    smpl_poses = np.array(smpl_poses)
+    smpl_betas = np.array(smpl_betas)
     pred_cams = np.array(pred_cams)
     verts = np.array(verts)
     bboxes_xyxy = np.array(bboxes_xyxy)
+
+    if args.output is not None:
+        body_pose_, global_orient_, smpl_betas_, pred_cams_, \
+            bboxes_xyxy_, image_path_ = [], [], [], [], [], []
+        human_data = HumanData()
+        frames_folder = osp.join(args.output, 'images')
+        os.makedirs(frames_folder, exist_ok=True)
+        array_to_images(
+            np.array(frames_iter)[img_index], output_folder=frames_folder)
+
+        for i, img_i in enumerate(sorted(os.listdir(frames_folder))):
+            body_pose_.append(smpl_poses[i][1:])
+            global_orient_.append(smpl_poses[i][:1])
+            smpl_betas_.append(smpl_betas[i])
+            pred_cams_.append(pred_cams[i])
+            bboxes_xyxy_.append(bboxes_xyxy[i])
+            image_path_.append(os.path.join('images', img_i))
+
+        smpl = {}
+        smpl['body_pose'] = np.array(body_pose_).reshape((-1, 23, 3))
+        smpl['global_orient'] = np.array(global_orient_).reshape((-1, 3))
+        smpl['betas'] = np.array(smpl_betas_).reshape((-1, 10))
+        human_data['smpl'] = smpl
+        human_data['pred_cams'] = pred_cams_
+        human_data['bboxes_xyxy'] = bboxes_xyxy_
+        human_data['image_path'] = image_path_
+        human_data.dump(osp.join(args.output, 'inference_result.npz'))
 
     del mesh_model
     del person_det_model
@@ -96,10 +135,14 @@ def single_person_with_mmdet(args, frames_iter):
         verts = smooth_process(verts, smooth_type=args.smooth_type)
 
     if args.show_path is not None:
-        frames_folder = osp.join(Path(args.show_path).parent, 'images')
-        os.makedirs(frames_folder, exist_ok=True)
-        array_to_images(
-            np.array(frames_iter)[img_index], output_folder=frames_folder)
+        if args.output is not None:
+            frames_folder = os.path.join(args.output, 'images')
+        else:
+            frames_folder = osp.join(Path(args.show_path).parent, 'images')
+            os.makedirs(frames_folder, exist_ok=True)
+            array_to_images(
+                np.array(frames_iter)[img_index], output_folder=frames_folder)
+
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         # Visualization
         visualize_smpl_hmr(
@@ -114,6 +157,9 @@ def single_person_with_mmdet(args, frames_iter):
             overwrite=True,
             palette=args.palette,
             read_frames_batch=True)
+
+        if args.output is None:
+            shutil.rmtree(frames_folder)
 
 
 def multi_person_with_mmtracking(args, frames_iter):
@@ -176,6 +222,8 @@ def multi_person_with_mmtracking(args, frames_iter):
     verts = np.zeros([frame_num, max_track_id + 1, 6890, 3])
     pred_cams = np.zeros([frame_num, max_track_id + 1, 3])
     bboxes_xyxy = np.zeros([frame_num, max_track_id + 1, 5])
+    smpl_poses = np.zeros([frame_num, max_track_id + 1, 24, 3])
+    smpl_betas = np.zeros([frame_num, max_track_id + 1, 10])
 
     track_ids_lists = []
     for i, mesh_results in enumerate(
@@ -186,9 +234,45 @@ def multi_person_with_mmtracking(args, frames_iter):
             bboxes_xyxy[i, instance_id] = mesh_result['bbox']
             pred_cams[i, instance_id] = mesh_result['camera']
             verts[i, instance_id] = mesh_result['vertices']
+            smpl_betas[i, instance_id] = mesh_result['smpl_beta']
+            smpl_pose = mesh_result['smpl_pose']
+            if smpl_pose.shape == (24, 3, 3):
+                smpl_poses[i, instance_id] = rotmat_to_aa(smpl_pose)
+            elif smpl_pose.shape == (24, 3):
+                smpl_poses[i, instance_id] = smpl_pose
+            else:
+                raise (f'Wrong shape of `smpl_pose`: {smpl_pose.shape}')
             track_ids.append(instance_id)
 
         track_ids_lists.append(track_ids)
+
+    if args.output is not None:
+        body_pose_, global_orient_, smpl_betas_, pred_cams_, \
+            bboxes_xyxy_, image_path_ = [], [], [], [], [], []
+        human_data = HumanData()
+        frames_folder = osp.join(args.output, 'images')
+        os.makedirs(frames_folder, exist_ok=True)
+        array_to_images(
+            np.array(frames_iter)[img_index], output_folder=frames_folder)
+
+        for i, img_i in enumerate(sorted(os.listdir(frames_folder))):
+            for person_i in track_ids_lists[i]:
+                body_pose_.append(smpl_poses[i][person_i][1:])
+                global_orient_.append(smpl_poses[i][person_i][:1])
+                smpl_betas_.append(smpl_betas[i][person_i])
+                pred_cams_.append(pred_cams[i][person_i])
+                bboxes_xyxy_.append(bboxes_xyxy[i][person_i])
+                image_path_.append(os.path.join('images', img_i))
+
+        smpl = {}
+        smpl['body_pose'] = np.array(body_pose_).reshape((-1, 23, 3))
+        smpl['global_orient'] = np.array(global_orient_).reshape((-1, 3))
+        smpl['betas'] = np.array(smpl_betas_).reshape((-1, 10))
+        human_data['smpl'] = smpl
+        human_data['pred_cams'] = pred_cams_
+        human_data['bboxes_xyxy'] = bboxes_xyxy_
+        human_data['image_path'] = image_path_
+        human_data.dump(osp.join(args.output, 'inference_result.npz'))
 
     del mesh_model
     del tracking_model
@@ -210,13 +294,14 @@ def multi_person_with_mmtracking(args, frames_iter):
         compressed_bboxs[i, :instance_num] = bboxes_xyxy[i, track_ids_list]
 
     if args.show_path is not None:
-        frames_folder = osp.join(Path(args.show_path).parent, 'images')
-        os.makedirs(frames_folder, exist_ok=True)
-        array_to_images(
-            np.array(frames_iter)[img_index], output_folder=frames_folder)
-
+        if args.output is not None:
+            frames_folder = os.path.join(args.output, 'images')
+        else:
+            frames_folder = osp.join(Path(args.show_path).parent, 'images')
+            os.makedirs(frames_folder, exist_ok=True)
+            array_to_images(
+                np.array(frames_iter)[img_index], output_folder=frames_folder)
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
-
         # Visualization
         visualize_smpl_hmr(
             cam_transl=compressed_cams,
@@ -230,6 +315,8 @@ def multi_person_with_mmtracking(args, frames_iter):
             overwrite=True,
             palette=args.palette,
             read_frames_batch=True)
+        if args.output is None:
+            shutil.rmtree(frames_folder)
 
 
 def main(args):
