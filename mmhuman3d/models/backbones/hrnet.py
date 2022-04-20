@@ -10,8 +10,7 @@ from .resnet import BasicBlock, Bottleneck
 import torch
 import torch.nn.functional as F
 BN_MOMENTUM = 0.1
-from loguru import logger
-
+import warnings
 class HRModule(BaseModule):
     """High-Resolution Module for HRNet.
     In this module, every branch has 4 BasicBlocks/Bottlenecks. Fusion/Exchange
@@ -230,53 +229,16 @@ class PoseHighResolutionNet(BaseModule):
         multiscale_output (bool): Whether to output multi-level features
             produced by multiple branches. If False, only the first level
             feature will be output. Default: True.
+        num_joints(int): the number of output for the final layer. Default: 24.
         pretrained (str, optional): Model pretrained path. Default: None.
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None.
-    Example:
-        >>> from mmdet.models import HRNet
-        >>> import torch
-        >>> extra = dict(
-        >>>     stage1=dict(
-        >>>         num_modules=1,
-        >>>         num_branches=1,
-        >>>         block='BOTTLENECK',
-        >>>         num_blocks=(4, ),
-        >>>         num_channels=(64, )),
-        >>>     stage2=dict(
-        >>>         num_modules=1,
-        >>>         num_branches=2,
-        >>>         block='BASIC',
-        >>>         num_blocks=(4, 4),
-        >>>         num_channels=(32, 64)),
-        >>>     stage3=dict(
-        >>>         num_modules=4,
-        >>>         num_branches=3,
-        >>>         block='BASIC',
-        >>>         num_blocks=(4, 4, 4),
-        >>>         num_channels=(32, 64, 128)),
-        >>>     stage4=dict(
-        >>>         num_modules=3,
-        >>>         num_branches=4,
-        >>>         block='BASIC',
-        >>>         num_blocks=(4, 4, 4, 4),
-        >>>         num_channels=(32, 64, 128, 256)))
-        >>> self = HRNet(extra, in_channels=1)
-        >>> self.eval()
-        >>> inputs = torch.rand(1, 1, 32, 32)
-        >>> level_outputs = self.forward(inputs)
-        >>> for level_out in level_outputs:
-        ...     print(tuple(level_out.shape))
-        (1, 32, 8, 8)
-        (1, 64, 4, 4)
-        (1, 128, 2, 2)
-        (1, 256, 1, 1)
     """
 
     blocks_dict = {'BASIC': BasicBlock, 'BOTTLENECK': Bottleneck}
 
     def __init__(self,
-                 model_cfg,
+                 extra,
                  in_channels=3,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
@@ -284,17 +246,17 @@ class PoseHighResolutionNet(BaseModule):
                  with_cp=False,
                  zero_init_residual=False,
                  multiscale_output=True,
+                 num_joints=24,
                  pretrained=None,
                  init_cfg=None):
         super(PoseHighResolutionNet, self).__init__(init_cfg)
 
         self.pretrained = pretrained
       
-        extra = model_cfg['model']['extra']
         assert not (init_cfg and pretrained), \
             'init_cfg and pretrained cannot be specified at the same time'
         if isinstance(pretrained, str):
-            logger.warning('DeprecationWarning: pretrained is deprecated, '
+            warnings.warn('DeprecationWarning: pretrained is deprecated, '
                           'please use "init_cfg" instead')
             self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
         elif pretrained is None:
@@ -402,7 +364,7 @@ class PoseHighResolutionNet(BaseModule):
         self.final_layer = build_conv_layer(
             cfg = self.conv_cfg,
             in_channels=pre_stage_channels[0],
-            out_channels=model_cfg['model']['num_joints'],
+            out_channels=num_joints,
             kernel_size=extra['final_conv_kernel'],
             stride=1,
             padding=1 if extra['final_conv_kernel'] == 3 else 0
@@ -653,8 +615,11 @@ class PoseHighResolutionNet(BaseModule):
                 x = torch.cat([x[0], x1, x2, x3], 1)
         return x
 
+   
     def init_weights(self,):
-        logger.info('=> init weights from normal distribution')
+        """This function is modified from [PARE](https://github.com/
+        mkocabas/PARE/blob/master/pare/models/backbone/hrnet.py#L529). 
+        Original license please see docs/additional_licenses.md."""
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -674,8 +639,6 @@ class PoseHighResolutionNet(BaseModule):
         if self.init_cfg['type'] == 'Pretrained' and os.path.isfile(self.init_cfg['checkpoint']):
             pretrained = self.init_cfg['checkpoint']
             pretrained_state_dict = torch.load(pretrained)
-            logger.info('=> loading pretrained model {}'.format(pretrained))
-
             need_init_state_dict = {}
             for name, m in pretrained_state_dict.items():
               
@@ -685,458 +648,6 @@ class PoseHighResolutionNet(BaseModule):
                     need_init_state_dict[name] = m
             self.load_state_dict(need_init_state_dict, strict=False)
         elif self.init_cfg['type'] == 'Pretrained':
-            logger.warning('IMPORTANT WARNING!! Please download pre-trained models if you are in TRAINING mode!')
-            # raise ValueError('{} is not exist!'.format(pretrained))
-
-def get_pose_net(cfg, is_train):
-    model = PoseHighResolutionNet(cfg,pretrained = cfg['model']['pretrained'])
-
-    # if is_train and cfg['model']['init_weights']:
-    #     model.init_weights(cfg['model']['pretrained'])
-
-    return model
-def get_cfg_defaults( width=32, downsample=False, use_conv=False):
-    # pose_multi_resoluton_net related params
-    hrnet_extra = dict(
-        stage1=dict(
-            num_modules=1,
-            num_branches=1,
-            block='BOTTLENECK',
-            num_blocks=(4, ),
-            num_channels=(64, )),
-        stage2=dict(
-            num_modules=1,
-            num_branches=2,
-            block='BASIC',
-            num_blocks=(4, 4),
-            num_channels=(width, width*2)),
-        stage3=dict(
-            num_modules=4,
-            num_branches=3,
-            block='BASIC',
-            num_blocks=(4, 4, 4),
-            num_channels=(width, width*2, width*4)),
-        stage4=dict(
-            num_modules=3,
-            num_branches=4,
-            block='BASIC',
-            num_blocks=(4, 4, 4, 4),
-            num_channels=(width, width*2, width*4, width*8)),
-        downsample = downsample,
-        use_conv = use_conv,
-        pretrained_layers = [
-            'conv1', 'bn1', 'conv2', 'bn2', 'layer1', 'transition1',
-            'stage2', 'transition2', 'stage3', 'transition3', 'stage4',
-        ],
-        final_conv_kernel = 1,
-
-        )
-    cfg = dict(
-        model = dict(
-            init_weights = True,
-            extra = hrnet_extra,
-            num_joints = 24
-        ),
-    )
-
-    return cfg
-
-# def hrnet_w32(
-#         pretrained=True,
-#         pretrained_ckpt='/mnt/lustre/wangyanjun/data/pretrained_models/pose_coco/pose_hrnet_w32_256x192.pth',
-#         downsample=False,
-#         use_conv=False,
-# ):
-#     cfg = get_cfg_defaults(width=32, downsample=downsample, use_conv=use_conv)
-   
-#     return get_pose_net(cfg, is_train=True)
+            warnings.warn('IMPORTANT WARNING!! Please download pre-trained models if you are in TRAINING mode!')
 
 
-
-@BACKBONES.register_module()
-class HRNet(BaseModule):
-    """HRNet backbone.
-    `High-Resolution Representations for Labeling Pixels and Regions
-    arXiv: <https://arxiv.org/abs/1904.04514>`_.
-    Args:
-        extra (dict): Detailed configuration for each stage of HRNet.
-            There must be 4 stages, the configuration for each stage must have
-            5 keys:
-                - num_modules(int): The number of HRModule in this stage.
-                - num_branches(int): The number of branches in the HRModule.
-                - block(str): The type of convolution block.
-                - num_blocks(tuple): The number of blocks in each branch.
-                    The length must be equal to num_branches.
-                - num_channels(tuple): The number of channels in each branch.
-                    The length must be equal to num_branches.
-        in_channels (int): Number of input image channels. Default: 3.
-        conv_cfg (dict): Dictionary to construct and config conv layer.
-        norm_cfg (dict): Dictionary to construct and config norm layer.
-        norm_eval (bool): Whether to set norm layers to eval mode, namely,
-            freeze running stats (mean and var). Note: Effect on Batch Norm
-            and its variants only. Default: True.
-        with_cp (bool): Use checkpoint or not. Using checkpoint will save some
-            memory while slowing down the training speed. Default: False.
-        zero_init_residual (bool): Whether to use zero init for last norm layer
-            in resblocks to let them behave as identity. Default: False.
-        multiscale_output (bool): Whether to output multi-level features
-            produced by multiple branches. If False, only the first level
-            feature will be output. Default: True.
-        pretrained (str, optional): Model pretrained path. Default: None.
-        init_cfg (dict or list[dict], optional): Initialization config dict.
-            Default: None.
-    Example:
-        >>> from mmdet.models import HRNet
-        >>> import torch
-        >>> extra = dict(
-        >>>     stage1=dict(
-        >>>         num_modules=1,
-        >>>         num_branches=1,
-        >>>         block='BOTTLENECK',
-        >>>         num_blocks=(4, ),
-        >>>         num_channels=(64, )),
-        >>>     stage2=dict(
-        >>>         num_modules=1,
-        >>>         num_branches=2,
-        >>>         block='BASIC',
-        >>>         num_blocks=(4, 4),
-        >>>         num_channels=(32, 64)),
-        >>>     stage3=dict(
-        >>>         num_modules=4,
-        >>>         num_branches=3,
-        >>>         block='BASIC',
-        >>>         num_blocks=(4, 4, 4),
-        >>>         num_channels=(32, 64, 128)),
-        >>>     stage4=dict(
-        >>>         num_modules=3,
-        >>>         num_branches=4,
-        >>>         block='BASIC',
-        >>>         num_blocks=(4, 4, 4, 4),
-        >>>         num_channels=(32, 64, 128, 256)))
-        >>> self = HRNet(extra, in_channels=1)
-        >>> self.eval()
-        >>> inputs = torch.rand(1, 1, 32, 32)
-        >>> level_outputs = self.forward(inputs)
-        >>> for level_out in level_outputs:
-        ...     print(tuple(level_out.shape))
-        (1, 32, 8, 8)
-        (1, 64, 4, 4)
-        (1, 128, 2, 2)
-        (1, 256, 1, 1)
-    """
-
-    blocks_dict = {'BASIC': BasicBlock, 'BOTTLENECK': Bottleneck}
-
-    def __init__(self,
-                 extra,
-                 in_channels=3,
-                 conv_cfg=None,
-                 norm_cfg=dict(type='BN'),
-                 norm_eval=True,
-                 with_cp=False,
-                 zero_init_residual=False,
-                 multiscale_output=True,
-                 pretrained=None,
-                 init_cfg=None):
-        super(HRNet, self).__init__(init_cfg)
-
-        self.pretrained = pretrained
-        assert not (init_cfg and pretrained), \
-            'init_cfg and pretrained cannot be specified at the same time'
-        if isinstance(pretrained, str):
-            logger.warning('DeprecationWarning: pretrained is deprecated, '
-                          'please use "init_cfg" instead')
-            self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
-        elif pretrained is None:
-            if init_cfg is None:
-                self.init_cfg = [
-                    dict(type='Kaiming', layer='Conv2d'),
-                    dict(
-                        type='Constant',
-                        val=1,
-                        layer=['_BatchNorm', 'GroupNorm'])
-                ]
-        else:
-            raise TypeError('pretrained must be a str or None')
-
-        # Assert configurations of 4 stages are in extra
-        assert 'stage1' in extra and 'stage2' in extra \
-               and 'stage3' in extra and 'stage4' in extra
-        # Assert whether the length of `num_blocks` and `num_channels` are
-        # equal to `num_branches`
-        for i in range(4):
-            cfg = extra[f'stage{i + 1}']
-            assert len(cfg['num_blocks']) == cfg['num_branches'] and \
-                   len(cfg['num_channels']) == cfg['num_branches']
-
-        self.extra = extra
-        self.conv_cfg = conv_cfg
-        self.norm_cfg = norm_cfg
-        self.norm_eval = norm_eval
-        self.with_cp = with_cp
-        self.zero_init_residual = zero_init_residual
-
-        # stem net
-        self.norm1_name, norm1 = build_norm_layer(self.norm_cfg, 64, postfix=1)
-        self.norm2_name, norm2 = build_norm_layer(self.norm_cfg, 64, postfix=2)
-
-        self.conv1 = build_conv_layer(
-            self.conv_cfg,
-            in_channels,
-            64,
-            kernel_size=3,
-            stride=2,
-            padding=1,
-            bias=False)
-
-        self.add_module(self.norm1_name, norm1)
-        self.conv2 = build_conv_layer(
-            self.conv_cfg,
-            64,
-            64,
-            kernel_size=3,
-            stride=2,
-            padding=1,
-            bias=False)
-
-        self.add_module(self.norm2_name, norm2)
-        self.relu = nn.ReLU(inplace=True)
-
-        # stage 1
-        self.stage1_cfg = self.extra['stage1']
-        num_channels = self.stage1_cfg['num_channels'][0]
-        block_type = self.stage1_cfg['block']
-        num_blocks = self.stage1_cfg['num_blocks'][0]
-
-        block = self.blocks_dict[block_type]
-        stage1_out_channels = num_channels * block.expansion
-        self.layer1 = self._make_layer(block, 64, num_channels, num_blocks)
-
-        # stage 2
-        self.stage2_cfg = self.extra['stage2']
-        num_channels = self.stage2_cfg['num_channels']
-        block_type = self.stage2_cfg['block']
-
-        block = self.blocks_dict[block_type]
-        num_channels = [channel * block.expansion for channel in num_channels]
-        self.transition1 = self._make_transition_layer([stage1_out_channels],
-                                                       num_channels)
-        self.stage2, pre_stage_channels = self._make_stage(
-            self.stage2_cfg, num_channels)
-
-        # stage 3
-        self.stage3_cfg = self.extra['stage3']
-        num_channels = self.stage3_cfg['num_channels']
-        block_type = self.stage3_cfg['block']
-
-        block = self.blocks_dict[block_type]
-        num_channels = [channel * block.expansion for channel in num_channels]
-        self.transition2 = self._make_transition_layer(pre_stage_channels,
-                                                       num_channels)
-        self.stage3, pre_stage_channels = self._make_stage(
-            self.stage3_cfg, num_channels)
-
-        # stage 4
-        self.stage4_cfg = self.extra['stage4']
-        num_channels = self.stage4_cfg['num_channels']
-        block_type = self.stage4_cfg['block']
-
-        block = self.blocks_dict[block_type]
-        num_channels = [channel * block.expansion for channel in num_channels]
-        self.transition3 = self._make_transition_layer(pre_stage_channels,
-                                                       num_channels)
-        self.stage4, pre_stage_channels = self._make_stage(
-            self.stage4_cfg, num_channels, multiscale_output=multiscale_output)
-
-    @property
-    def norm1(self):
-        """nn.Module: the normalization layer named "norm1" """
-        return getattr(self, self.norm1_name)
-
-    @property
-    def norm2(self):
-        """nn.Module: the normalization layer named "norm2" """
-        return getattr(self, self.norm2_name)
-
-    def _make_transition_layer(self, num_channels_pre_layer,
-                               num_channels_cur_layer):
-        num_branches_cur = len(num_channels_cur_layer)
-        num_branches_pre = len(num_channels_pre_layer)
-
-        transition_layers = []
-        for i in range(num_branches_cur):
-            if i < num_branches_pre:
-                if num_channels_cur_layer[i] != num_channels_pre_layer[i]:
-                    transition_layers.append(
-                        nn.Sequential(
-                            build_conv_layer(
-                                self.conv_cfg,
-                                num_channels_pre_layer[i],
-                                num_channels_cur_layer[i],
-                                kernel_size=3,
-                                stride=1,
-                                padding=1,
-                                bias=False),
-                            build_norm_layer(self.norm_cfg,
-                                             num_channels_cur_layer[i])[1],
-                            nn.ReLU(inplace=True)))
-                else:
-                    transition_layers.append(None)
-            else:
-                conv_downsamples = []
-                for j in range(i + 1 - num_branches_pre):
-                    in_channels = num_channels_pre_layer[-1]
-                    out_channels = num_channels_cur_layer[i] \
-                        if j == i - num_branches_pre else in_channels
-                    conv_downsamples.append(
-                        nn.Sequential(
-                            build_conv_layer(
-                                self.conv_cfg,
-                                in_channels,
-                                out_channels,
-                                kernel_size=3,
-                                stride=2,
-                                padding=1,
-                                bias=False),
-                            build_norm_layer(self.norm_cfg, out_channels)[1],
-                            nn.ReLU(inplace=True)))
-                transition_layers.append(nn.Sequential(*conv_downsamples))
-
-        return nn.ModuleList(transition_layers)
-
-    def _make_layer(self, block, inplanes, planes, blocks, stride=1):
-        downsample = None
-        if stride != 1 or inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                build_conv_layer(
-                    self.conv_cfg,
-                    inplanes,
-                    planes * block.expansion,
-                    kernel_size=1,
-                    stride=stride,
-                    bias=False),
-                build_norm_layer(self.norm_cfg, planes * block.expansion)[1])
-
-        layers = []
-        block_init_cfg = None
-        if self.pretrained is None and not hasattr(
-                self, 'init_cfg') and self.zero_init_residual:
-            if block is BasicBlock:
-                block_init_cfg = dict(
-                    type='Constant', val=0, override=dict(name='norm2'))
-            elif block is Bottleneck:
-                block_init_cfg = dict(
-                    type='Constant', val=0, override=dict(name='norm3'))
-        layers.append(
-            block(
-                inplanes,
-                planes,
-                stride,
-                downsample=downsample,
-                with_cp=self.with_cp,
-                norm_cfg=self.norm_cfg,
-                conv_cfg=self.conv_cfg,
-                init_cfg=block_init_cfg,
-            ))
-        inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(
-                block(
-                    inplanes,
-                    planes,
-                    with_cp=self.with_cp,
-                    norm_cfg=self.norm_cfg,
-                    conv_cfg=self.conv_cfg,
-                    init_cfg=block_init_cfg))
-
-        return Sequential(*layers)
-
-    def _make_stage(self, layer_config, in_channels, multiscale_output=True):
-        num_modules = layer_config['num_modules']
-        num_branches = layer_config['num_branches']
-        num_blocks = layer_config['num_blocks']
-        num_channels = layer_config['num_channels']
-        block = self.blocks_dict[layer_config['block']]
-
-        hr_modules = []
-        block_init_cfg = None
-        if self.pretrained is None and not hasattr(
-                self, 'init_cfg') and self.zero_init_residual:
-            if block is BasicBlock:
-                block_init_cfg = dict(
-                    type='Constant', val=0, override=dict(name='norm2'))
-            elif block is Bottleneck:
-                block_init_cfg = dict(
-                    type='Constant', val=0, override=dict(name='norm3'))
-
-        for i in range(num_modules):
-            # multi_scale_output is only used for the last module
-            if not multiscale_output and i == num_modules - 1:
-                reset_multiscale_output = False
-            else:
-                reset_multiscale_output = True
-
-            hr_modules.append(
-                HRModule(
-                    num_branches,
-                    block,
-                    num_blocks,
-                    in_channels,
-                    num_channels,
-                    reset_multiscale_output,
-                    with_cp=self.with_cp,
-                    norm_cfg=self.norm_cfg,
-                    conv_cfg=self.conv_cfg,
-                    block_init_cfg=block_init_cfg))
-
-        return Sequential(*hr_modules), in_channels
-
-    def forward(self, x):
-        """Forward function."""
-        x = self.conv1(x)
-        x = self.norm1(x)
-        x = self.relu(x)
-        x = self.conv2(x)
-        x = self.norm2(x)
-        x = self.relu(x)
-        x = self.layer1(x)
-
-        x_list = []
-        for i in range(self.stage2_cfg['num_branches']):
-            if self.transition1[i] is not None:
-                x_list.append(self.transition1[i](x))
-            else:
-                x_list.append(x)
-        y_list = self.stage2(x_list)
-
-        x_list = []
-        for i in range(self.stage3_cfg['num_branches']):
-            if self.transition2[i] is not None:
-                x_list.append(self.transition2[i](y_list[-1]))
-            else:
-                x_list.append(y_list[i])
-        y_list = self.stage3(x_list)
-
-        x_list = []
-        for i in range(self.stage4_cfg['num_branches']):
-            if self.transition3[i] is not None:
-                x_list.append(self.transition3[i](y_list[-1]))
-            else:
-                x_list.append(y_list[i])
-        y_list = self.stage4(x_list)
-
-        return y_list
-
-    def train(self, mode=True):
-        """Convert the model into training mode will keeping the normalization
-        layer freezed."""
-        super(HRNet, self).train(mode)
-        if mode and self.norm_eval:
-            for m in self.modules():
-                # trick: eval have effect on BatchNorm only
-                if isinstance(m, _BatchNorm):
-                    m.eval()
-
-
-if __name__ == "main":
-    model = hrnet_w32(use_conv=True)

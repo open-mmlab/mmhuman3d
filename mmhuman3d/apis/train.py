@@ -50,10 +50,6 @@ def train_model(model,
 
     # prepare data loaders
     dataset = dataset if isinstance(dataset, (list, tuple)) else [dataset]
-<<<<<<< Updated upstream
-    print(len(dataset[0]))
-=======
->>>>>>> Stashed changes
     data_loaders = [
         build_dataloader(
             ds,

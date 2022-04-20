@@ -42,6 +42,10 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
 ## 最新进展
+- 2022-04-01: MMHuman3D [v0.6.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.6.0) 已经发布. 主要更新包括:
+  - 增加HumanDataCache，大幅削减(96%)训练时内存占用
+  - 重构可微渲染器并支持UV map渲染
+  - HumanData支持slice/concat操作
 - 2022-02-11: MMHuman3D [v0.5.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.5.0) 已经发布. 主要更新包括:
   - 支持新的数据结构SMC以及即将发布的新数据集HuMMan
   - 支持在非slurm环境下的多GPU训练/测试

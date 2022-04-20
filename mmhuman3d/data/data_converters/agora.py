@@ -1,6 +1,7 @@
 import os
 from typing import List, Tuple
 
+import cv2
 import numpy as np
 import pickle5 as pickle
 from tqdm import tqdm
@@ -39,6 +40,101 @@ class AgoraConverter(BaseModeConverter):
             raise ValueError('Input resolution not in accepted resolution. \
                 Use either (1280, 720) or (3840, 2160)')
         self.res = res
+
+    def get_global_orient(self,
+                          imgPath,
+                          df,
+                          i,
+                          pNum,
+                          globalOrient=None,
+                          meanPose=False):
+        """Modified from https://github.com/pixelite1201/agora_evaluation/blob/
+        master/agora_evaluation/projection.py specific to AGORA.
+
+        Args:
+            imgPath: image path
+            df: annotation dataframe
+            i: frame index
+            pNum: person index
+            globalOrient: original global orientation
+            meanPose: Store True for mean pose from vposer
+
+        Returns:
+            globalOrient: rotated global orientation
+        """
+        if 'hdri' in imgPath:
+            camYaw = 0
+            camPitch = 0
+
+        elif 'cam00' in imgPath:
+            camYaw = 135
+            camPitch = 30
+        elif 'cam01' in imgPath:
+            camYaw = -135
+            camPitch = 30
+        elif 'cam02' in imgPath:
+            camYaw = -45
+            camPitch = 30
+        elif 'cam03' in imgPath:
+            camYaw = 45
+            camPitch = 30
+        elif 'ag2' in imgPath:
+            camYaw = 0
+            camPitch = 15
+        else:
+            camYaw = df.iloc[i]['camYaw']
+            camPitch = 0
+
+        if meanPose:
+            yawSMPL = 0
+        else:
+            yawSMPL = df.iloc[i]['Yaw'][pNum]
+
+        # scans have a 90deg rotation, but for mean pose from vposer there is
+        # no such rotation
+        if meanPose:
+            rotMat, _ = cv2.Rodrigues(
+                np.array([[0, (yawSMPL) / 180 * np.pi, 0]], dtype=float))
+        else:
+            rotMat, _ = cv2.Rodrigues(
+                np.array([[0, ((yawSMPL - 90) / 180) * np.pi, 0]],
+                         dtype=float))
+
+        camera_rotationMatrix, _ = cv2.Rodrigues(
+            np.array([0, ((-camYaw) / 180) * np.pi, 0]).reshape(3, 1))
+        camera_rotationMatrix2, _ = cv2.Rodrigues(
+            np.array([camPitch / 180 * np.pi, 0, 0]).reshape(3, 1))
+
+        # flip pose
+        R_mod = cv2.Rodrigues(np.array([np.pi, 0, 0]))[0]
+        R_root = cv2.Rodrigues(globalOrient.reshape(-1))[0]
+        new_root = R_root.dot(R_mod)
+        globalOrient = cv2.Rodrigues(new_root)[0].reshape(3)
+
+        # apply camera matrices
+        globalOrient = self.rotate_global_orient(rotMat, globalOrient)
+        globalOrient = self.rotate_global_orient(camera_rotationMatrix,
+                                                 globalOrient)
+        globalOrient = self.rotate_global_orient(camera_rotationMatrix2,
+                                                 globalOrient)
+
+        return globalOrient
+
+    @staticmethod
+    def rotate_global_orient(rotMat, global_orient):
+        """Transform global orientation given rotation matrix.
+
+        Args:
+            rotMat: rotation matrix
+            global_orient: original global orientation
+
+        Returns:
+            new_global_orient: transformed global orientation
+        """
+        new_global_orient = cv2.Rodrigues(
+            np.dot(rotMat,
+                   cv2.Rodrigues(global_orient.reshape(-1))[0]))[0].T[0]
+        return new_global_orient
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:
@@ -132,8 +228,7 @@ class AgoraConverter(BaseModeConverter):
                     if self.fit == 'smplx':
                         # obtain smplx data
                         body_model['body_pose'].append(ann['body_pose'])
-                        body_model['global_orient'].append(
-                            ann['global_orient'])
+                        global_orient = ann['global_orient']
                         body_model['betas'].append(
                             ann['betas'].reshape(-1)[:10])
                         body_model['transl'].append(ann['transl'])
@@ -150,13 +245,15 @@ class AgoraConverter(BaseModeConverter):
                         # obtain smpl data
                         body_model['body_pose'].append(
                             ann['body_pose'].cpu().detach().numpy())
-                        body_model['global_orient'].append(
-                            ann['root_pose'].cpu().detach().numpy())
+                        global_orient = ann['root_pose'].cpu().detach().numpy()
                         body_model['betas'].append(
                             ann['betas'].cpu().detach().numpy().reshape(
                                 -1)[:10])
                         body_model['transl'].append(
                             ann['translation'].cpu().detach().numpy())
+
+                    global_orient = self.get_global_orient(
+                        img_path, df, idx, pidx, global_orient.reshape(-1))
 
                     # add confidence column
                     keypoints2d = np.hstack(
@@ -177,7 +274,7 @@ class AgoraConverter(BaseModeConverter):
                     keypoints3d_.append(keypoints3d)
                     bbox_xywh_.append(bbox_xywh)
                     image_path_.append(img_path)
-
+                    body_model['global_orient'].append(global_orient)
                     meta['gender'].append(gender)
                     meta['age'].append(age)
                     meta['kid'].append(kid)

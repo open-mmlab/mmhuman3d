@@ -4,22 +4,22 @@
     You have smpl pose tensor or array shape of which is (frame, 72)
     ```python
     from mmhuman3d.core.visualization import visualize_smpl_pose
-
+    body_model_config = dict(
+        type='smpl', model_path=model_path)
     visualize_smpl_pose(
         poses=poses,
-        model_path=model_path,
         output_path='smpl.mp4',
-        model_type='smpl',
         resolution=(1024, 1024))
     ```
 
     Or you have smplx pose tensor or array shape of which is (frame, 165)
     ```python
+    body_model_config = dict(
+        type='smplx', model_path=model_path)
     visualize_smpl_pose(
         poses=poses,
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='smplx.mp4',
-        model_type='smplx',
         resolution=(1024, 1024))
     ```
     You could also feed dict tensor of smplx definitions. You could check that in [visualize_smpl](mmhuman3d/core/visualization/visualize_smpl.py#L166-211) or [original smplx](https://github.com/vchoutas/smplx/blob/master/smplx/body_models.py).
@@ -30,11 +30,11 @@
     ```python
     import torch
     from mmhuman3d.core.visualization import visualize_T_pose
-
+    body_model_config = dict(
+        type='smpl', model_path=model_path)
     visualize_T_pose(
         num_frames=100,
-        model_type='smpl',
-        model_path=model_path,
+        body_model_config=body_model_config,
         output_path='smpl_tpose.mp4',
         orbit_speed=(1, 0.5),
         resolution=(1024, 1024))
@@ -55,26 +55,26 @@
     gender = 'female'
 
     # pass pred_cam & bbox
+    body_model_config = dict(
+        type='smpl', model_path=model_path, gender=gender)
     visualize_smpl_vibe(
         poses=poses,
         betas=betas,
-        gender=gender,
+        body_model_config=body_model_config,
         pred_cam=pred_cam,
         bbox=bbox,
-        model_type='smpl',
-        model_path=model_path,
         output_path='vibe_demo.mp4',
         origin_frames='sample_video.mp4',
         resolution=(1024, 1024))
 
     # or pass orig_cam
+    body_model_config = dict(
+        type='smpl', model_path=model_path, gender=gender)
     visualize_smpl_vibe(
         poses=poses,
         betas=betas,
-        gender=gender,
+        body_model_config=body_model_config,
         orig_cam=orig_cam,
-        model_type='smpl',
-        model_path=model_path,
         output_path='vibe_demo.mp4',
         origin_frames='sample_video.mp4',
         resolution=(1024, 1024))
@@ -93,45 +93,47 @@
     det_height = 224
 
     # you can pass smpl poses & betas & gender
+    body_model_config = dict(
+        type='smpl', model_path=model_path, gender=gender)
     visualize_smpl_hmr(
         poses=poses,
         betas=betas,
-        gender=gender,
         bbox=bbox,
+        body_model_config=body_model_config,
         focal_length=focal_length,
         det_width=det_width,
         det_height=det_height,
         T=cam_translation,
-        model_type='smpl',
-        model_path=model_path,
         output_path='hmr_demo.mp4',
         origin_frames=image_folder,
         resolution=(1024, 1024))
 
     # or you can pass verts
+    body_model_config = dict(
+        type='smpl', model_path=model_path, gender=gender)
     visualize_smpl_hmr(
         verts=verts,
         bbox=bbox,
         focal_length=focal_length,
+        body_model_config=body_model_config,
         det_width=det_width,
         det_height=det_height,
         T=cam_translation,
-        model_type='smpl',
-        model_path=model_path,
         output_path='hmr_demo.mp4',
         origin_frames=image_folder,
         resolution=(1024, 1024))
 
     # you can also pass kp2d in replace of bbox.
+    body_model_config = dict(
+        type='smpl', model_path=model_path, gender=gender)
     visualize_smpl_hmr(
         verts=verts,
+        body_model_config=body_model_config,
         kp2d=kp2d,
         focal_length=focal_length,
         det_width=det_width,
         det_height=det_height,
         T=cam_translation,
-        model_type='smpl',
-        model_path=model_path,
         output_path='hmr_demo.mp4',
         origin_frames=image_folder,
         resolution=(1024, 1024))
@@ -141,17 +143,16 @@
     You should pass the opencv defined intrinsic matrix K and extrinsic matrix R, T.
     ```python
     from mmhuman3d.core.visualization import visualize_smpl_calibration
-
+    body_model_config = dict(
+        type='smpl', model_path=model_path, gender=gender)
     visualize_smpl_calibration(
         poses=poses,
         betas=betas,
-        gender=gender,
         transl=transl,
-        model_type='smpl',
+        body_model_config=body_model_config,
         K=K,
         R=R,
         T=T,
-        model_path=model_path,
         output_path='opencv.mp4',
         origin_frames='bg_video.mp4',
         resolution=(1024, 1024))
@@ -201,7 +202,7 @@
 
 - **body model:**
     There area two ways to pass body model:
-    1). You pass `model_path`, `model_type`(optional) and `gender`(optional).
+    1). You pass a dict `body_model_config` which containing the same configs as build_body_model
     2). You pass `body_model` directly and the above three will be ignored.
     The priority order is `body_model` > (`model_path` & `model_type` & `gender`).
     Check the docstring for details.

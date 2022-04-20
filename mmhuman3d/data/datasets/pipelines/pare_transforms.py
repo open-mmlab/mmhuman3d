@@ -1,22 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Max-Planck-Gesellschaft zur Förderung der Wissenschaften e.V. (MPG) is
-# holder of all proprietary rights on this computer program.
-# You can only use this computer program if you have closed
-# a license agreement with MPG or you get the right to use the computer
-# program from someone who is authorized to grant you that right.
-# Any use of the computer program without a valid license is prohibited and
-# liable to prosecution.
-#
-# Copyright©2019 Max-Planck-Gesellschaft zur Förderung
-# der Wissenschaften e.V. (MPG). acting on behalf of its Max Planck Institute
-# for Intelligent Systems. All rights reserved.
-#
-# Contact: ps-license@tuebingen.mpg.de
-
-# Adapted from https://github.com/isarandi/synthetic-occlusion/blob/master/augmentation.py
-
-#!/usr/bin/env python
+"""This script is modified from https://github.com/
+isarandi/synthetic-occlusion. 
+Original license please see docs/additional_licenses.md.
+"""
 
 import sys
 import cv2
@@ -53,7 +38,6 @@ def main(type='coco'):
 
     fig.tight_layout(h_pad=0)
     plt.savefig('examples.jpg', dpi=150, bbox_inches='tight')
-    # plt.show()
 
 
 def load_pascal_occluders(occluders_file,pascal_voc_root_path):
@@ -181,15 +165,7 @@ def occlude_with_coco_objects(im, kp2d, occluders, img_size=224, max_n_objects=4
             jid = np.random.multinomial(1, j_occ_prob, size=1).argmax()
             nonvis = kp2d[jid, 2] < 0.5
 
-        # if kp2d[jid, 2] < 0.5:
-        #     logger.warning(f'What the heck maaan!!')
-
-        # put occlusion to the center of joint
-        # TODO we can make wiser decision about this
-        center = kp2d[jid, :2]
-
-        # which object
-        # get object category, obj_height, scale (person_h/obj_h)
+      
         occluder_info = random.choice(occluders['stats'][joint_names[jid]])
         try:
             occluder_obj_id = random.choice(np.argwhere(occluders['obj_class'] == occluder_info[0]))[0]
@@ -198,19 +174,11 @@ def occlude_with_coco_objects(im, kp2d, occluders, img_size=224, max_n_objects=4
 
         occluder_obj_mask = occluders['object_with_mask'][occluder_obj_id]
 
-        # decide the scale of occlusion mask
-        # current_scale = img_size / occluder_obj_mask.shape[0]
-        # scale_factor = current_scale / occluder_obj_scale
-
+      
         occluder_obj_height = occluder_obj_mask.shape[0]
         scale_factor = 1. / (occluder_obj_mask.shape[0]/img_size) * np.random.uniform(0.05, 0.7)
 
-        # logger.debug(f'Selected joint: {joint_names[jid]}, position: {kp2d[jid]}, object: {occluder_info[0]}, '
-        #              f'scale: {occluder_info[2]}, scale_factor: {scale_factor}')
 
-        # which scale
-        # random_scale_factor = np.random.uniform(0.2, 1.0)
-        # scale_factor = random_scale_factor * im_scale_factor
         occluder_obj_mask = resize_by_factor(occluder_obj_mask, scale_factor)
 
         paste_over(im_src=occluder_obj_mask, im_dst=result, center=center)

@@ -434,9 +434,9 @@ def images_to_array(
         width, height = int(info['width']), int(info['height'])
 
     num_frames = len(os.listdir(input_folder))
-    start = (min(start, num_frames - 1) + num_frames) % num_frames
-    end = (min(end, num_frames - 1) +
-           num_frames) % num_frames if end is not None else num_frames
+    start = max(start, 0) % num_frames
+    end = min(end, num_frames) % (num_frames + 1) \
+        if end is not None else num_frames
     command = [
         'ffmpeg',
         '-y',

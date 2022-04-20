@@ -27,19 +27,19 @@ Optional:
 
 ## Prepare environment
 
-a. Install ffmpeg
+a. Create a conda virtual environment and activate it.
+
+```shell
+conda create -n open-mmlab python=3.8 -y
+conda activate open-mmlab
+```
+
+b. Install ffmpeg
 
 Install ffmpeg with conda directly and the libx264 will be built automatically.
 
 ```shell
 conda install ffmpeg
-```
-
-b. Create a conda virtual environment and activate it.
-
-```shell
-conda create -n open-mmlab python=3.8 -y
-conda activate open-mmlab
 ```
 
 c. Install PyTorch and torchvision following the [official instructions](https://pytorch.org/).

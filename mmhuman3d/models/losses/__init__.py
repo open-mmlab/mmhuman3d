@@ -3,7 +3,9 @@ from .mse_loss import KeypointMSELoss, MSELoss
 from .prior_loss import (
     CameraPriorLoss,
     JointPriorLoss,
+    LimbLengthLoss,
     MaxMixturePrior,
+    PoseRegLoss,
     ShapePriorLoss,
     SmoothJointLoss,
     SmoothPelvisLoss,
@@ -23,5 +25,6 @@ __all__ = [
     'reduce_loss', 'weight_reduce_loss', 'weighted_loss', 'convert_to_one_hot',
     'MSELoss', 'L1Loss', 'SmoothL1Loss', 'GANLoss', 'JointPriorLoss',
     'ShapePriorLoss', 'KeypointMSELoss', 'CameraPriorLoss', 'SmoothJointLoss',
-    'SmoothPelvisLoss', 'SmoothTranslationLoss', 'MaxMixturePrior','CrossEntropyLoss'
+    'SmoothPelvisLoss', 'SmoothTranslationLoss', 'MaxMixturePrior','CrossEntropyLoss',
+    'PoseRegLoss','LimbLengthLoss'
 ]

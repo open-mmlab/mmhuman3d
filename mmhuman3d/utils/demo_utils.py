@@ -101,8 +101,8 @@ def convert_crop_cam_to_orig_img(cam: np.ndarray,
                                  bbox_format: Literal['xyxy', 'xywh',
                                                       'cs'] = 'xyxy'):
     """This function is modified from [VIBE](https://github.com/
-    mkocabas/VIBE/blob/master/lib/utils/demo_utils.py#L242-L259). Original
-    license please see docs/additional_licenses.md.
+    mkocabas/VIBE/blob/master/lib/utils/demo_utils.py#L242-L259). 
+    Original license please see docs/additional_licenses.md.
 
     Args:
         cam (np.ndarray): cam (ndarray, shape=(frame, 3) or

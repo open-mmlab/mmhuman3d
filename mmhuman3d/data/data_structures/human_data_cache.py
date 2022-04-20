@@ -13,15 +13,21 @@ from .human_data import HumanData
 class HumanDataCacheReader():
 
     def __init__(self, npz_path: str):
-        self.npz_file = np.load(npz_path, allow_pickle=True)
-        self.slice_size = self.npz_file['slice_size'].item()
-        self.keypoints_info = self.npz_file['keypoints_info'].item()
+        self.npz_path = npz_path
+        npz_file = np.load(npz_path, allow_pickle=True)
+        self.slice_size = npz_file['slice_size'].item()
+        self.data_len = npz_file['data_len'].item()
+        self.keypoints_info = npz_file['keypoints_info'].item()
         self.non_sliced_data = None
+        self.npz_file = None
 
     def __del__(self):
-        self.npz_file.close()
+        if self.npz_file is not None:
+            self.npz_file.close()
 
     def get_item(self, index, required_keys: List[str] = []):
+        if self.npz_file is None:
+            self.npz_file = np.load(self.npz_path, allow_pickle=True)
         cache_key = str(int(index / self.slice_size))
         base_data = self.npz_file[cache_key].item()
         base_data.update(self.keypoints_info)
@@ -42,7 +48,11 @@ class HumanDataCacheReader():
 
     def get_non_sliced_data(self, key: str):
         if self.non_sliced_data is None:
-            self.non_sliced_data = self.npz_file['non_sliced_data'].item()
+            if self.npz_file is None:
+                npz_file = np.load(self.npz_path, allow_pickle=True)
+                self.non_sliced_data = npz_file['non_sliced_data'].item()
+            else:
+                self.non_sliced_data = self.npz_file['non_sliced_data'].item()
         return self.non_sliced_data[key]
 
 
@@ -50,10 +60,12 @@ class HumanDataCacheWriter():
 
     def __init__(self,
                  slice_size: int,
+                 data_len: int,
                  keypoints_info: dict,
                  non_sliced_data: dict,
                  key_strict: bool = True):
         self.slice_size = slice_size
+        self.data_len = data_len
         self.keypoints_info = keypoints_info
         self.non_sliced_data = non_sliced_data
         self.sliced_data = {}
@@ -85,6 +97,7 @@ class HumanDataCacheWriter():
                 raise FileExistsError
         dict_to_dump = {
             'slice_size': self.slice_size,
+            'data_len': self.data_len,
             'keypoints_info': self.keypoints_info,
             'non_sliced_data': self.non_sliced_data,
             'key_strict': self.key_strict,

@@ -60,24 +60,6 @@ def rot6d_to_rotmat(x):
     Output:
         (B,3,3) Batch of corresponding rotation matrices
     """
-    x = x.view(-1, 3, 2)
-    a1 = x[:, :, 0]
-    a2 = x[:, :, 1]
-    b1 = F.normalize(a1)
-    b2 = F.normalize(a2 - torch.einsum('bi,bi->b', b1, a2).unsqueeze(-1) * b1)
-    b3 = torch.cross(b1, b2)
-    return torch.stack((b1, b2, b3), dim=-1)
-
-def rot6d_to_rotmat_pare(x):
-    """Convert 6D rotation representation to 3x3 rotation matrix.
-
-    Based on Zhou et al., "On the Continuity of Rotation
-    Representations in Neural Networks", CVPR 2019
-    Input:
-        (B,6) Batch of 6-D rotation representations
-    Output:
-        (B,3,3) Batch of corresponding rotation matrices
-    """
     x = x.reshape(-1, 3, 2)
     a1 = x[:, :, 0]
     a2 = x[:, :, 1]
@@ -392,33 +374,3 @@ def project_points(points_3d, camera, focal_length, img_res):
     return keypoints_2d
 
 
-def get_coord_maps(size=56):
-    xx_ones = torch.ones([1, size], dtype=torch.int32)
-    xx_ones = xx_ones.unsqueeze(-1)
-
-    xx_range = torch.arange(size, dtype=torch.int32).unsqueeze(0)
-    xx_range = xx_range.unsqueeze(1)
-
-    xx_channel = torch.matmul(xx_ones, xx_range)
-    xx_channel = xx_channel.unsqueeze(-1)
-
-    yy_ones = torch.ones([1, size], dtype=torch.int32)
-    yy_ones = yy_ones.unsqueeze(1)
-
-    yy_range = torch.arange(size, dtype=torch.int32).unsqueeze(0)
-    yy_range = yy_range.unsqueeze(-1)
-
-    yy_channel = torch.matmul(yy_range, yy_ones)
-    yy_channel = yy_channel.unsqueeze(-1)
-
-    xx_channel = xx_channel.permute(0, 3, 1, 2)
-    yy_channel = yy_channel.permute(0, 3, 1, 2)
-
-    xx_channel = xx_channel.float() / (size - 1)
-    yy_channel = yy_channel.float() / (size - 1)
-
-    xx_channel = xx_channel * 2 - 1
-    yy_channel = yy_channel * 2 - 1
-
-    out = torch.cat([xx_channel, yy_channel], dim=1)
-    return out

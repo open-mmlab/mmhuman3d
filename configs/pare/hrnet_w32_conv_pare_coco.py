@@ -58,33 +58,26 @@ hrnet_extra = dict(
     final_conv_kernel = 1,
 
     )
-cfg = dict(
-    model = dict(
-        init_weights = True,
-        extra = hrnet_extra,
-        num_joints = 24
-    ),
-)
+
 
 find_unused_parameters = True
-
 
 model = dict(
     type='PARE',
     backbone=dict(
             type='PoseHighResolutionNet',
-            model_cfg=cfg,
-            init_cfg=dict(type='Pretrained', checkpoint='../pretrained_models/pose_coco/pose_hrnet_w32_256x192.pth')
+            extra = hrnet_extra,
+            num_joints = 24, 
+            init_cfg=dict(type='Pretrained', checkpoint='/mnt/lustre/wangyanjun/data/pretrained_models/pose_coco/pose_hrnet_w32_256x192.pth')
             ),
     head=dict(
         type='PareHead',
         num_joints = 24,
-        num_input_features = 480, # will change futer get_backbone_info
-        smpl_mean_params='../data/smpl_mean_params.npz',
+        num_input_features = 480, 
+        smpl_mean_params='/mnt/lustre/wangyanjun/data/smpl_mean_params.npz',
         num_deconv_layers = 2,
         num_deconv_filters = [128]*2, # num_deconv_filters = [num_deconv_filters] * num_deconv_layers
         num_deconv_kernels = [4]*2, # num_deconv_kernels = [num_deconv_kernels] * num_deconv_layers
-        use_coattention = False,
         shape_input_type = 'feats.shape.cam',
         pose_input_type = 'feats.self_pose.shape.cam',
         use_heatmaps = 'part_segm',
@@ -95,20 +88,20 @@ model = dict(
         type='SMPL',
         keypoint_src='smpl_54',
         keypoint_dst='smpl_49',
-        model_path='../data/body_models/smpl',
+        model_path='/mnt/lustre/wangyanjun/data/body_models/smpl',
         keypoint_approximate=True,
 
-        extra_joints_regressor='../data/J_regressor_extra.npy'),
+        extra_joints_regressor='/mnt/lustre/wangyanjun/data/J_regressor_extra.npy'),
     body_model_test=dict(
         type='SMPL',
         keypoint_src='h36m',
         keypoint_dst='h36m',
-        model_path='../data/body_models/smpl',
-        joints_regressor='../data/J_regressor_h36m.npy'),
+        model_path='/mnt/lustre/wangyanjun/data/body_models/smpl',
+        joints_regressor='/mnt/lustre/wangyanjun/data/J_regressor_h36m.npy'),
     convention='smpl_49',
+    loss_convention='smpl_24',
     loss_keypoints3d=dict(type='MSELoss', loss_weight=300),
-    loss_keypoints2d_openpose=dict(type='MSELoss', loss_weight=0),
-    loss_keypoints2d_smpl=dict(type='MSELoss', loss_weight=300),
+    loss_keypoints2d=dict(type='MSELoss', loss_weight=300),
     loss_smpl_pose=dict(type='MSELoss', loss_weight=60),
     loss_smpl_betas=dict(type='MSELoss', loss_weight=60*0.001),
     loss_segm_mask=dict(type='CrossEntropyLoss', loss_weight=60),
@@ -125,13 +118,13 @@ dataset_type = 'PareHumanImageDataset'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data_keys = [
-    'has_smpl','has_kp3d', 'smpl_body_pose', 'smpl_global_orient', 'smpl_betas',
+    'has_smpl','has_keypoints3d', 'smpl_body_pose', 'smpl_global_orient', 'smpl_betas',
     'smpl_transl', 'keypoints2d', 'keypoints3d', 'sample_idx'
 ]
 train_pipeline = [
     dict(type='LoadImageFromFile',file_client_args=dict(backend='petrel')),
     dict(type='RandomChannelNoise', noise_factor=0.4),
-    dict(type='SyntheticOcclusion',pascal_voc_root_path='../data/VOCdevkit/VOC2012/',occluders_file='../data/pascal_occluders.pkl'),
+    dict(type='SyntheticOcclusion',pascal_voc_root_path='/mnt/lustre/wangyanjun/data/VOCdevkit/VOC2012/',occluders_file='/mnt/lustre/wangyanjun/data/pascal_occluders.pkl'),
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_49'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='MeshAffine', img_res=224),
@@ -168,7 +161,7 @@ inference_pipeline = [
 ]
 
 
-data_root = '..'
+data_root = '/mnt/lustre/wangyanjun/'
 DATASET_NPZ_PATH = data_root+'data/dataset_extras/'
 
 data = dict(
@@ -195,23 +188,23 @@ data = dict(
             type='GenderedSMPL',
             keypoint_src='h36m',
             keypoint_dst='h36m',
-            model_path='../data/body_models/smpl',
-            joints_regressor='../data/J_regressor_h36m.npy'),
+            model_path='/mnt/lustre/wangyanjun/data/body_models/smpl',
+            joints_regressor='/mnt/lustre/wangyanjun/data/J_regressor_h36m.npy'),
         dataset_name='pw3d',
-        data_prefix='../data/dataset_folders/3dpw',
+        data_prefix='/mnt/lustre/wangyanjun/data/dataset_folders/3dpw',
         pipeline=test_pipeline,
-        ann_file='../data/dataset_extras_mmhuman/pw3d_test.npz'),
+        ann_file='/mnt/lustre/wangyanjun/data/dataset_extras_mmhuman/pw3d_test.npz'),
     val=dict(
         type=dataset_type,
         body_model=dict(
             type='GenderedSMPL',
             keypoint_src='h36m',
             keypoint_dst='h36m',
-            model_path='../data/body_models/smpl',
-            joints_regressor='../data/J_regressor_h36m.npy'),
+            model_path='/mnt/lustre/wangyanjun/data/body_models/smpl',
+            joints_regressor='/mnt/lustre/wangyanjun/data/J_regressor_h36m.npy'),
         dataset_name='pw3d',
-        data_prefix='../data/dataset_folders/3dpw',
+        data_prefix='/mnt/lustre/wangyanjun/data/dataset_folders/3dpw',
         pipeline=test_pipeline,
-        ann_file='../data/dataset_extras_mmhuman/pw3d_test.npz'),
+        ann_file='/mnt/lustre/wangyanjun/data/dataset_extras_mmhuman/pw3d_test.npz'),
 )
 
