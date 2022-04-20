@@ -1,8 +1,8 @@
 # isort: skip_file
-from abc import ABCMeta
-
 import torch
 
+from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import \
+    ParametricMeshes  # noqa:E501
 from mmhuman3d.data.datasets.pipelines.hybrik_transforms import heatmap2coord
 from mmhuman3d.utils.transforms import rotmat_to_quat
 from ..backbones.builder import build_backbone
@@ -13,39 +13,7 @@ from ..necks.builder import build_neck
 from .base_architecture import BaseArchitecture
 
 
-def set_requires_grad(nets, requires_grad=False):
-    """Set requies_grad for all the networks.
-
-    Args:
-        nets (nn.Module | list[nn.Module]): A list of networks or a single
-            network.
-        requires_grad (bool): Whether the networks require gradients or not
-    """
-    if not isinstance(nets, list):
-        nets = [nets]
-    for net in nets:
-        if net is not None:
-            for param in net.parameters():
-                param.requires_grad = requires_grad
-
-
-class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
-    """Hybrik_trainer Architecture.
-
-    Args:
-        backbone (dict | None, optional): Backbone config dict. Default: None.
-        neck (dict | None, optional): Neck config dict. Default: None
-        head (dict | None, optional): Regressor config dict. Default: None.
-        body_model (dict | None, optional): SMPL config dict. Default: None.
-        loss_beta (dict | None, optional): Losses config dict for
-                beta (shape parameters) estimation. Default: None
-        loss_theta (dict | None, optional): Losses config dict for
-                theta (pose parameters) estimation. Default: None
-        loss_twist (dict | None, optional): Losses config dict
-                for twist angles estimation. Default: None
-        init_cfg (dict or list[dict], optional): Initialization config dict.
-            Default: None
-    """
+class PareImportTestor(BaseArchitecture):
 
     def __init__(self,
                  backbone=None,
@@ -57,8 +25,9 @@ class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
                  loss_twist=None,
                  loss_uvd=None,
                  init_cfg=None):
-        super(HybrIK_trainer, self).__init__(init_cfg)
-
+        super(PareImportTestor, self).__init__(init_cfg)
+        assert not isinstance(backbone, ParametricMeshes)
+        print('Test done.')
         self.backbone = build_backbone(backbone)
 
         self.neck = build_neck(neck)

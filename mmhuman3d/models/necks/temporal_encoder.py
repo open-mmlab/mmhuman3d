@@ -3,10 +3,7 @@ from typing import Optional, Union
 import torch.nn as nn
 from mmcv.runner.base_module import BaseModule
 
-from ..builder import NECKS
 
-
-@NECKS.register_module()
 class TemporalGRUEncoder(BaseModule):
     """TemporalEncoder used for VIBE. Adapted from
     https://github.com/mkocabas/VIBE.
