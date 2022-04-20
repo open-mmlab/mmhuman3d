@@ -49,7 +49,6 @@ def cross_entropy(pred,
     return loss
 
 
-
 def _expand_onehot_labels(labels, label_weights, label_channels, ignore_index):
     """Expand onehot labels to match the size of prediction."""
     bin_labels = labels.new_full((labels.size(0), label_channels), 0)
@@ -113,7 +112,6 @@ def binary_cross_entropy(pred,
     return loss
 
 
-
 def mask_cross_entropy(pred,
                        target,
                        label,
@@ -165,7 +163,6 @@ def mask_cross_entropy(pred,
         pred_slice, target, weight=class_weight, reduction='mean')[None]
 
 
-
 @LOSSES.register_module()
 class CrossEntropyLoss(nn.Module):
 
@@ -206,6 +203,7 @@ class CrossEntropyLoss(nn.Module):
             self.cls_criterion = mask_cross_entropy
         else:
             self.cls_criterion = cross_entropy
+
     def forward(self,
                 cls_score,
                 label,

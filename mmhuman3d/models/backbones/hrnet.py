@@ -1,18 +1,21 @@
-import warnings
 import os
+import warnings
+
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from mmcv.cnn import build_conv_layer, build_norm_layer
 from mmcv.runner import BaseModule, ModuleList, Sequential
-from torch.nn.modules.batchnorm import _BatchNorm
 
 from ..builder import BACKBONES
 from .resnet import BasicBlock, Bottleneck
-import torch
-import torch.nn.functional as F
+
 BN_MOMENTUM = 0.1
-import warnings
+
+
 class HRModule(BaseModule):
     """High-Resolution Module for HRNet.
+
     In this module, every branch has 4 BasicBlocks/Bottlenecks. Fusion/Exchange
     is in this module.
     """
@@ -26,7 +29,7 @@ class HRModule(BaseModule):
                  multiscale_output=True,
                  with_cp=False,
                  conv_cfg=None,
-                 norm_cfg=dict(type='BN',momentum=BN_MOMENTUM),
+                 norm_cfg=dict(type='BN', momentum=BN_MOMENTUM),
                  block_init_cfg=None,
                  init_cfg=None):
         super(HRModule, self).__init__(init_cfg)
@@ -252,7 +255,7 @@ class PoseHighResolutionNet(BaseModule):
         super(PoseHighResolutionNet, self).__init__(init_cfg)
 
         self.pretrained = pretrained
-      
+
         assert not (init_cfg and pretrained), \
             'init_cfg and pretrained cannot be specified at the same time'
         if isinstance(pretrained, str):
@@ -287,7 +290,7 @@ class PoseHighResolutionNet(BaseModule):
         self.norm_eval = norm_eval
         self.with_cp = with_cp
         self.zero_init_residual = zero_init_residual
-        
+
         # stem net
         self.norm1_name, norm1 = build_norm_layer(self.norm_cfg, 64, postfix=1)
         self.norm2_name, norm2 = build_norm_layer(self.norm_cfg, 64, postfix=2)
@@ -359,27 +362,31 @@ class PoseHighResolutionNet(BaseModule):
                                                        num_channels)
         self.stage4, pre_stage_channels = self._make_stage(
             self.stage4_cfg, num_channels, multiscale_output=multiscale_output)
-        
-        
+
         self.final_layer = build_conv_layer(
-            cfg = self.conv_cfg,
+            cfg=self.conv_cfg,
             in_channels=pre_stage_channels[0],
             out_channels=num_joints,
             kernel_size=extra['final_conv_kernel'],
             stride=1,
-            padding=1 if extra['final_conv_kernel'] == 3 else 0
-        )
+            padding=1 if extra['final_conv_kernel'] == 3 else 0)
 
         self.pretrained_layers = extra['pretrained_layers']
 
         if extra['downsample'] and extra['use_conv']:
-            self.downsample_stage_1 = self._make_downsample_layer(3, num_channel=self.stage2_cfg['num_channels'][0])
-            self.downsample_stage_2 = self._make_downsample_layer(2, num_channel=self.stage2_cfg['num_channels'][-1])
-            self.downsample_stage_3 = self._make_downsample_layer(1, num_channel=self.stage3_cfg['num_channels'][-1])
+            self.downsample_stage_1 = self._make_downsample_layer(
+                3, num_channel=self.stage2_cfg['num_channels'][0])
+            self.downsample_stage_2 = self._make_downsample_layer(
+                2, num_channel=self.stage2_cfg['num_channels'][-1])
+            self.downsample_stage_3 = self._make_downsample_layer(
+                1, num_channel=self.stage3_cfg['num_channels'][-1])
         elif not extra['downsample'] and extra['use_conv']:
-            self.upsample_stage_2 = self._make_upsample_layer(1, num_channel=self.stage2_cfg['num_channels'][-1])
-            self.upsample_stage_3 = self._make_upsample_layer(2, num_channel=self.stage3_cfg['num_channels'][-1])
-            self.upsample_stage_4 = self._make_upsample_layer(3, num_channel=self.stage4_cfg['num_channels'][-1])
+            self.upsample_stage_2 = self._make_upsample_layer(
+                1, num_channel=self.stage2_cfg['num_channels'][-1])
+            self.upsample_stage_3 = self._make_upsample_layer(
+                2, num_channel=self.stage3_cfg['num_channels'][-1])
+            self.upsample_stage_4 = self._make_upsample_layer(
+                3, num_channel=self.stage4_cfg['num_channels'][-1])
 
     @property
     def norm1(self):
@@ -523,18 +530,24 @@ class PoseHighResolutionNet(BaseModule):
                     block_init_cfg=block_init_cfg))
 
         return Sequential(*hr_modules), in_channels
+
     def _make_upsample_layer(self, num_layers, num_channel, kernel_size=3):
         layers = []
         for i in range(num_layers):
-            layers.append(nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True))
             layers.append(
-
-                build_conv_layer(cfg=self.conv_cfg,
-                    in_channels=num_channel, out_channels=num_channel,
-                    kernel_size=kernel_size, stride=1, padding=1, bias=False,
-                )
-            )
-            layers.append(build_norm_layer(self.norm_cfg,num_channel)[1])
+                nn.Upsample(
+                    scale_factor=2, mode='bilinear', align_corners=True))
+            layers.append(
+                build_conv_layer(
+                    cfg=self.conv_cfg,
+                    in_channels=num_channel,
+                    out_channels=num_channel,
+                    kernel_size=kernel_size,
+                    stride=1,
+                    padding=1,
+                    bias=False,
+                ))
+            layers.append(build_norm_layer(self.norm_cfg, num_channel)[1])
             layers.append(nn.ReLU(inplace=True))
 
         return nn.Sequential(*layers)
@@ -543,15 +556,20 @@ class PoseHighResolutionNet(BaseModule):
         layers = []
         for i in range(num_layers):
             layers.append(
-                build_conv_layer(cfg=self.conv_cfg,
-                    in_channels=num_channel, out_channels=num_channel,
-                    kernel_size=kernel_size, stride=2, padding=1, bias=False,
-                )
-            )
-            layers.append(build_norm_layer(self.norm_cfg,num_channel)[1])
+                build_conv_layer(
+                    cfg=self.conv_cfg,
+                    in_channels=num_channel,
+                    out_channels=num_channel,
+                    kernel_size=kernel_size,
+                    stride=2,
+                    padding=1,
+                    bias=False,
+                ))
+            layers.append(build_norm_layer(self.norm_cfg, num_channel)[1])
             layers.append(nn.ReLU(inplace=True))
 
         return nn.Sequential(*layers)
+
     def forward(self, x):
         """Forward function."""
         x = self.conv1(x)
@@ -595,9 +613,21 @@ class PoseHighResolutionNet(BaseModule):
             else:
                 # Downsampling with interpolation
                 x0_h, x0_w = x[3].size(2), x[3].size(3)
-                x1 = F.interpolate(x[0], size=(x0_h, x0_w), mode='bilinear', align_corners=True)
-                x2 = F.interpolate(x[1], size=(x0_h, x0_w), mode='bilinear', align_corners=True)
-                x3 = F.interpolate(x[2], size=(x0_h, x0_w), mode='bilinear', align_corners=True)
+                x1 = F.interpolate(
+                    x[0],
+                    size=(x0_h, x0_w),
+                    mode='bilinear',
+                    align_corners=True)
+                x2 = F.interpolate(
+                    x[1],
+                    size=(x0_h, x0_w),
+                    mode='bilinear',
+                    align_corners=True)
+                x3 = F.interpolate(
+                    x[2],
+                    size=(x0_h, x0_w),
+                    mode='bilinear',
+                    align_corners=True)
                 x = torch.cat([x1, x2, x3, x[3]], 1)
         else:
             if self.extra['use_conv']:
@@ -609,20 +639,32 @@ class PoseHighResolutionNet(BaseModule):
             else:
                 # Upsampling with interpolation
                 x0_h, x0_w = x[0].size(2), x[0].size(3)
-                x1 = F.interpolate(x[1], size=(x0_h, x0_w), mode='bilinear', align_corners=True)
-                x2 = F.interpolate(x[2], size=(x0_h, x0_w), mode='bilinear', align_corners=True)
-                x3 = F.interpolate(x[3], size=(x0_h, x0_w), mode='bilinear', align_corners=True)
+                x1 = F.interpolate(
+                    x[1],
+                    size=(x0_h, x0_w),
+                    mode='bilinear',
+                    align_corners=True)
+                x2 = F.interpolate(
+                    x[2],
+                    size=(x0_h, x0_w),
+                    mode='bilinear',
+                    align_corners=True)
+                x3 = F.interpolate(
+                    x[3],
+                    size=(x0_h, x0_w),
+                    mode='bilinear',
+                    align_corners=True)
                 x = torch.cat([x[0], x1, x2, x3], 1)
         return x
 
-   
-    def init_weights(self,):
+    def init_weights(self, ):
         """This function is modified from [PARE](https://github.com/
-        mkocabas/PARE/blob/master/pare/models/backbone/hrnet.py#L529). 
-        Original license please see docs/additional_licenses.md."""
+        mkocabas/PARE/blob/master/pare/models/backbone/hrnet.py#L529).
+
+        Original license please see docs/additional_licenses.md.
+        """
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
                 nn.init.normal_(m.weight, std=0.001)
                 for name, _ in m.named_parameters():
                     if name in ['bias']:
@@ -635,19 +677,19 @@ class PoseHighResolutionNet(BaseModule):
                 for name, _ in m.named_parameters():
                     if name in ['bias']:
                         nn.init.constant_(m.bias, 0)
-        
-        if self.init_cfg['type'] == 'Pretrained' and os.path.isfile(self.init_cfg['checkpoint']):
+
+        if self.init_cfg['type'] == 'Pretrained' and os.path.isfile(
+                self.init_cfg['checkpoint']):
             pretrained = self.init_cfg['checkpoint']
             pretrained_state_dict = torch.load(pretrained)
             need_init_state_dict = {}
             for name, m in pretrained_state_dict.items():
-              
+
                 if name.split('.')[0] in self.pretrained_layers \
-                   or self.pretrained_layers[0] is '*':
-      
+                   or self.pretrained_layers[0] == '*':
+
                     need_init_state_dict[name] = m
             self.load_state_dict(need_init_state_dict, strict=False)
         elif self.init_cfg['type'] == 'Pretrained':
-            warnings.warn('IMPORTANT WARNING!! Please download pre-trained models if you are in TRAINING mode!')
-
-
+            warnings.warn('IMPORTANT WARNING!! Please download pre-trained \
+                models if you are in TRAINING mode!')

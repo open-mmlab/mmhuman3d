@@ -413,30 +413,30 @@ def update_frame_list(frame_list, origin_frames, img_format, start, end):
 
 
 def visualize_kp2d(
-        kp2d: np.ndarray,
-        output_path: Optional[str] = None,
-        frame_list: Optional[List[str]] = None,
-        origin_frames: Optional[str] = None,
-        image_array: Optional[np.ndarray] = None,
-        limbs: Optional[Union[np.ndarray, List[int]]] = None,
-        palette: Optional[Iterable[int]] = None,
-        data_source: str = 'coco',
-        mask: Optional[Union[list, np.ndarray]] = None,
-        img_format: str = '%06d.png',
-        start: int = 0,
-        end: int = -1,
-        overwrite: bool = False,
-        with_file_name: bool = True,
-        resolution: Optional[Union[Tuple[int, int], list]] = None,
-        fps: Union[float, int] = 30,
-        draw_bbox: bool = False,
-        with_number: bool = False,
-        pop_parts: Iterable[str] = None,
-        disable_tqdm: bool = False,
-        disable_limbs: bool = False,
-        return_array: Optional[bool] = False,
-        keypoints_factory: dict = KEYPOINTS_FACTORY,
-        remove_raw_file: bool = True,
+    kp2d: np.ndarray,
+    output_path: Optional[str] = None,
+    frame_list: Optional[List[str]] = None,
+    origin_frames: Optional[str] = None,
+    image_array: Optional[np.ndarray] = None,
+    limbs: Optional[Union[np.ndarray, List[int]]] = None,
+    palette: Optional[Iterable[int]] = None,
+    data_source: str = 'coco',
+    mask: Optional[Union[list, np.ndarray]] = None,
+    img_format: str = '%06d.png',
+    start: int = 0,
+    end: int = -1,
+    overwrite: bool = False,
+    with_file_name: bool = True,
+    resolution: Optional[Union[Tuple[int, int], list]] = None,
+    fps: Union[float, int] = 30,
+    draw_bbox: bool = False,
+    with_number: bool = False,
+    pop_parts: Iterable[str] = None,
+    disable_tqdm: bool = False,
+    disable_limbs: bool = False,
+    return_array: Optional[bool] = False,
+    keypoints_factory: dict = KEYPOINTS_FACTORY,
+    remove_raw_file: bool = True,
 ) -> Union[None, np.ndarray]:
     """Visualize 2d keypoints to a video or into a folder of frames.
 
@@ -444,13 +444,13 @@ def visualize_kp2d(
         kp2d (np.ndarray): should be array of shape (f * J * 2)
                                 or (f * n * J * 2)]
         output_path (str): output video path or image folder.
-        frame_list (Optional[List[str]], optional): list of origin brackground
+        frame_list (Optional[List[str]], optional): list of origin background
             frame paths, element in list each should be a image path like
             `*.jpg` or `*.png`. Higher priority than `origin_frames`.
             Use this when your file names is hard to sort or you only want to
             render a small number frames.
             Defaults to None.
-        origin_frames (Optional[str], optional): origin brackground frame path,
+        origin_frames (Optional[str], optional): origin background frame path,
             could be `.mp4`, `.gif`(will be sliced into a folder) or an image
             folder. Lower priority than `frame_list`.
             Defaults to None.
@@ -504,16 +504,16 @@ def visualize_kp2d(
         Union[None, np.ndarray].
     """
 
-    # check the input array shape, reshape to (num_frame, num_person, J, 2)
+    # check the input array shape, reshape to (num_frames, num_person, J, 2)
     kp2d = kp2d[..., :2].copy()
     if kp2d.ndim == 3:
         kp2d = kp2d[:, np.newaxis]
     assert kp2d.ndim == 4
-    num_frame, num_person = kp2d.shape[0], kp2d.shape[1]
+    num_frames, num_person = kp2d.shape[0], kp2d.shape[1]
     # slice the input array temporally
-    end = (min(num_frame - 1, end) + num_frame) % num_frame
+    end = (min(num_frames - 1, end) + num_frames) % num_frames
     kp2d = kp2d[start:end + 1]
-    
+
     if image_array is not None:
         origin_frames = None
         frame_list = None
@@ -614,5 +614,3 @@ def visualize_kp2d(
     if return_array:
         out_image_array = np.concatenate(out_image_array)
         return out_image_array
-
-

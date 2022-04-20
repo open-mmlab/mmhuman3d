@@ -68,6 +68,7 @@ def rot6d_to_rotmat(x):
     b3 = torch.cross(b1, b2)
     return torch.stack((b1, b2, b3), dim=-1)
 
+
 def rotation_matrix_to_angle_axis(rotation_matrix):
     """
     This function is borrowed from https://github.com/kornia/kornia
@@ -372,5 +373,3 @@ def project_points(points_3d, camera, focal_length, img_res):
         focal_length=focal_length,
         camera_center=camera_center)
     return keypoints_2d
-
-

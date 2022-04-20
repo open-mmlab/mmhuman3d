@@ -12,7 +12,7 @@ body_model = dict(
 stages = [
     # stage 1
     dict(
-        num_iter=20*10,
+        num_iter=20 * 10,
         fit_global_orient=True,
         fit_transl=True,
         fit_body_pose=False,
@@ -23,7 +23,7 @@ stages = [
         )),
     # stage 2
     dict(
-        num_iter=10*10,
+        num_iter=10 * 10,
         fit_global_orient=True,
         fit_transl=True,
         fit_body_pose=True,
@@ -32,7 +32,7 @@ stages = [
 ]
 
 optimizer = dict(
-    type='LBFGS', max_iter=20*10, lr=1e-2, line_search_fn='strong_wolfe')
+    type='LBFGS', max_iter=20 * 10, lr=1e-2, line_search_fn='strong_wolfe')
 
 keypoints2d_loss = dict(
     type='KeypointMSELoss', loss_weight=1.0, reduction='sum', sigma=100)

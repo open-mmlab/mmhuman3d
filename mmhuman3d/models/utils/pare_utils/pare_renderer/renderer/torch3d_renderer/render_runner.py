@@ -8,7 +8,6 @@ import torch.nn as nn
 from pytorch3d.renderer import MeshRenderer, SoftSilhouetteShader
 from pytorch3d.renderer.cameras import CamerasBase
 from pytorch3d.structures import Meshes
-from tqdm import trange
 
 from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.core.cameras.builder import build_cameras

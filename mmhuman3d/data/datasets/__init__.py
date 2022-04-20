@@ -9,11 +9,21 @@ from .mesh_dataset import MeshDataset
 from .mixed_dataset import MixedDataset
 from .pipelines import Compose
 from .samplers import DistributedSampler
-from .human_pare_dataset import PareHumanImageDataset
+
 __all__ = [
-    'BaseDataset', 'HumanImageDataset', 'build_dataloader', 'build_dataset',
-    'Compose', 'DistributedSampler', 'ConcatDataset', 'RepeatDataset',
-    'DATASETS', 'PIPELINES', 'MixedDataset', 'AdversarialDataset',
-    'MeshDataset', 'HumanVideoDataset', 'HybrIKHumanImageDataset',
-    'PareHumanImageDataset'
+    'BaseDataset',
+    'HumanImageDataset',
+    'build_dataloader',
+    'build_dataset',
+    'Compose',
+    'DistributedSampler',
+    'ConcatDataset',
+    'RepeatDataset',
+    'DATASETS',
+    'PIPELINES',
+    'MixedDataset',
+    'AdversarialDataset',
+    'MeshDataset',
+    'HumanVideoDataset',
+    'HybrIKHumanImageDataset',
 ]

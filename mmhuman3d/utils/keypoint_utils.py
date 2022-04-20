@@ -57,4 +57,3 @@ def search_limbs(
             else:
                 limbs_palette[k] = np.array(limbs_palette[k])
     return limbs_target, limbs_palette
-

@@ -22,11 +22,6 @@ from mmhuman3d.core.cameras import (
 from mmhuman3d.core.cameras.builder import build_cameras
 from mmhuman3d.core.conventions.cameras import convert_camera_matrix
 from mmhuman3d.core.conventions.segmentation import body_segmentation
-from .renderer import render_runner
-from .renderer.torch3d_renderer.meshes import \
-    ParametricMeshes  # noqa: E501
-from .renderer.torch3d_renderer.utils import \
-    align_input_to_padded  # noqa: E501
 from mmhuman3d.models.builder import build_body_model
 from mmhuman3d.utils import (
     check_input_path,
@@ -44,7 +39,10 @@ from mmhuman3d.utils import (
     video_to_array,
     video_to_images,
 )
-from .renderer import SMPLRenderer
+from .renderer import SMPLRenderer, render_runner
+from .renderer.torch3d_renderer.meshes import ParametricMeshes  # noqa: E501
+from .renderer.torch3d_renderer.utils import \
+    align_input_to_padded  # noqa: E501
 
 try:
     from typing import Literal

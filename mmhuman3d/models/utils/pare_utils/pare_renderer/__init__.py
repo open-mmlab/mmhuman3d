@@ -5,7 +5,6 @@ from .renderer.torch3d_renderer.builder import (
     build_shader,
     build_textures,
 )
-
 from .visualize_smpl import (
     render_smpl,
     visualize_smpl_calibration,
@@ -16,8 +15,8 @@ from .visualize_smpl import (
 )
 
 __all__ = [
-    'visualize_smpl_pose',
-    'visualize_T_pose', 'render_smpl', 'visualize_smpl_vibe',
-    'visualize_smpl_calibration', 'visualize_smpl_hmr', 'render_runner',
-    'build_lights', 'build_renderer', 'build_shader', 'build_textures'
+    'visualize_smpl_pose', 'visualize_T_pose', 'render_smpl',
+    'visualize_smpl_vibe', 'visualize_smpl_calibration', 'visualize_smpl_hmr',
+    'render_runner', 'build_lights', 'build_renderer', 'build_shader',
+    'build_textures'
 ]

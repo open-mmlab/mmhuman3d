@@ -219,7 +219,7 @@ This software includes the SMPL Body Model. By downloading this software, you ar
 
         https://smpl.is.tue.mpg.de/modellicense
 
-which is necessary to create SMPL body models. 
+which is necessary to create SMPL body models.
 
 SMPL bodies that are generated with PARE can be distributed freely under the SMPL Body License
 
