@@ -12,6 +12,5 @@ pickle5
 scikit-image
 scipy
 smplx
-star
 tqdm
 vedo

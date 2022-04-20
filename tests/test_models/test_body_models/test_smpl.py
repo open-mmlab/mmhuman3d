@@ -97,3 +97,6 @@ def test_smpl():
 #     gendered_smpl_output = gendered_smpl(betas=betas_concat, gender=gender)
 #
 #     assert torch.allclose(joint_concat, gendered_smpl_output['joints'])
+
+if __name__ == '__main__':
+    test_smpl()

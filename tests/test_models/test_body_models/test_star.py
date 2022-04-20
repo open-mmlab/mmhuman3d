@@ -1,3 +1,5 @@
+# Copyright (c) OpenMMLab. All rights reserved.
+
 import numpy as np
 import torch
 
@@ -5,9 +7,9 @@ from mmhuman3d.models.builder import build_body_model
 
 
 def test_star_init():
-    _ = build_body_model(dict(type='STAR'))
-    _ = build_body_model(dict(type='STAR', gender='male'))
-    _ = build_body_model(dict(type='STAR', gender='female'))
+    _ = build_body_model(dict(type='STAR', model_path=None))
+    _ = build_body_model(dict(type='STAR', model_path=None, gender='male'))
+    _ = build_body_model(dict(type='STAR', model_path=None, gender='female'))
 
 
 def test_star_forward():
@@ -25,3 +27,8 @@ def test_star_forward():
 
     trans = torch.cuda.FloatTensor(np.zeros((batch_size, 3)))
     _ = star.forward(poses, betas, trans)
+
+
+if __name__ == '__main__':
+    test_star_init()
+    test_star_forward()
