@@ -4,6 +4,7 @@ from typing import Optional, Union
 import torch
 import torch.nn.functional as F
 
+import mmhuman3d.core.visualization.visualize_smpl as visualize_smpl
 from mmhuman3d.core.conventions import convert_kps
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx
 from mmhuman3d.utils.geometry import (
@@ -19,7 +20,6 @@ from ..builder import (
     build_loss,
     build_neck,
 )
-from ..utils.pare_utils.pare_renderer import render_smpl
 from .base_architecture import BaseArchitecture
 
 
@@ -357,7 +357,7 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
 
         data_batch['gt_cam_t'] = gt_cam_t
         data_batch['vertices'] = gt_vertices
-        data_batch['gt_segm_mask'] = render_smpl(
+        data_batch['gt_segm_mask'] = visualize_smpl.render_smpl(
             verts=gt_vertices,
             R=self.R,
             K=self.K,
@@ -372,6 +372,7 @@ class PARE(BaseArchitecture, metaclass=ABCMeta):
             projection='perspective',
             no_grad=True,
             batch_size=batch_size,
+            vis_progress=False,
         )
         data_batch['gt_segm_mask'] = torch.flip(data_batch['gt_segm_mask'],
                                                 [1, 2]).squeeze(-1).detach()

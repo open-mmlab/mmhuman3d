@@ -6,7 +6,7 @@ from mmcv.runner.base_module import BaseModule
 from mmhuman3d.models.backbones.resnet import BasicBlock
 from mmhuman3d.utils.geometry import rot6d_to_rotmat
 from ..builder import HEADS
-from ..utils.pare_utils import (
+from ..utils import (
     KeypointAttention,
     LocallyConnected2d,
     interpolate,

@@ -1,6 +1,6 @@
 use_adversarial_train = True
 
-evaluation = dict(interval=1, metric=['pa-mpjpe', 'mpjpe'])
+evaluation = dict(interval=5, metric=['pa-mpjpe', 'mpjpe'])
 optimizer = dict(type='Adam', lr=5e-05)
 
 optimizer_config = dict(grad_clip=None)
@@ -72,14 +72,12 @@ model = dict(
         extra=hrnet_extra,
         num_joints=24,
         init_cfg=dict(
-            type='Pretrained',
-            checkpoint='/mnt/lustre/wangyanjun/data/\
-            pretrained_models/pose_coco/pose_hrnet_w32_256x192.pth')),
+            type='Pretrained', checkpoint='pose_hrnet_w32_256x192.pth')),
     head=dict(
         type='PareHead',
         num_joints=24,
         num_input_features=480,
-        smpl_mean_params='/mnt/lustre/wangyanjun/data/smpl_mean_params.npz',
+        smpl_mean_params='data/body_models/smpl_mean_params.npz',
         num_deconv_layers=2,
         num_deconv_filters=[128] *
         2,  # num_deconv_filters = [num_deconv_filters] * num_deconv_layers
@@ -93,16 +91,15 @@ model = dict(
         type='SMPL',
         keypoint_src='smpl_54',
         keypoint_dst='smpl_49',
-        model_path='/mnt/lustre/wangyanjun/data/body_models/smpl',
+        model_path='data/body_models/smpl',
         keypoint_approximate=True,
-        extra_joints_regressor='/mnt/lustre/wangyanjun/data\
-            /J_regressor_extra.npy'),
+        extra_joints_regressor='data/body_models/J_regressor_extra.npy'),
     body_model_test=dict(
         type='SMPL',
         keypoint_src='h36m',
         keypoint_dst='h36m',
-        model_path='/mnt/lustre/wangyanjun/data/body_models/smpl',
-        joints_regressor='/mnt/lustre/wangyanjun/data/J_regressor_h36m.npy'),
+        model_path='data/body_models/smpl',
+        joints_regressor='data/J_regressor_h36m.npy'),
     convention='smpl_49',
     loss_convention='smpl_24',
     loss_keypoints3d=dict(type='MSELoss', loss_weight=300),
@@ -111,10 +108,7 @@ model = dict(
     loss_smpl_betas=dict(type='MSELoss', loss_weight=60 * 0.001),
     loss_segm_mask=dict(type='CrossEntropyLoss', loss_weight=0),
     loss_camera=dict(type='CameraPriorLoss', loss_weight=1),
-    init_cfg=dict(
-        type='Pretrained',
-        checkpoint='/mnt/lustre/wangyanjun/\
-            data/pare/mmhuman3d/coco_epoch_190.pth'),
+    init_cfg=dict(type='Pretrained', checkpoint='pare_coco_pretrain.pth'),
 )
 
 # dataset settings
@@ -163,9 +157,6 @@ inference_pipeline = [
         meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 
-data_root = '/mnt/lustre/wangyanjun/'
-DATASET_NPZ_PATH = data_root + 'data/dataset_extras/'
-
 cache_files = {
     'h36m': 'data/cache/h36m_mosh_train_smpl_49.npz',
     'mpi-inf-3dhp': 'data/cache/mpi_inf_3dhp_train_smpl_49.npz',
@@ -175,7 +166,7 @@ cache_files = {
     'coco': 'data/cache/coco_2014_train_smpl_49.npz'
 }
 data = dict(
-    samples_per_gpu=32,
+    samples_per_gpu=8,
     workers_per_gpu=0,
     train=dict(
         type='MixedDataset',
@@ -183,44 +174,43 @@ data = dict(
             dict(
                 type=dataset_type,
                 dataset_name='h36m',
-                data_prefix='s3://Zoetrope/OpenHuman/human3.6m',
+                data_prefix='h36m',
                 pipeline=train_pipeline,
                 convention='smpl_49',
                 cache_data_path=cache_files['h36m'],
-                ann_file=DATASET_NPZ_PATH + 'h36m_mmhuman_train.npz'),
+                ann_file='h36m_mosh_train.npz'),
             dict(
                 type=dataset_type,
                 dataset_name='coco',
-                data_prefix='s3://Zoetrope/OpenHuman/COCO/2014/data/',
+                data_prefix='coco',
                 pipeline=train_pipeline,
                 convention='smpl_49',
                 cache_data_path=cache_files['coco'],
-                ann_file=DATASET_NPZ_PATH + 'eft_coco_all.npz'),
+                ann_file='eft_coco_all.npz'),
             dict(
                 type=dataset_type,
                 dataset_name='lspet',
-                data_prefix='s3://Zoetrope/OpenHuman/hr-lspet/',
+                data_prefix='lspet',
                 pipeline=train_pipeline,
                 convention='smpl_49',
                 cache_data_path=cache_files['lspet'],
-                ann_file=DATASET_NPZ_PATH + 'eft_lspet.npz'),
+                ann_file='eft_lspet.npz'),
             dict(
                 type=dataset_type,
                 dataset_name='mpii',
-                data_prefix='s3://Zoetrope/OpenHuman/MPII/data/',
+                data_prefix='mpii',
                 pipeline=train_pipeline,
                 convention='smpl_49',
                 cache_data_path=cache_files['mpii'],
-                ann_file=DATASET_NPZ_PATH + 'eft_mpii.npz'),
+                ann_file='eft_mpii.npz'),
             dict(
                 type=dataset_type,
                 dataset_name='mpi-inf-3dhp',
-                data_prefix='s3://Zoetrope/OpenHuman/mpi_inf_3dhp',
+                data_prefix='mpi_inf_3dhp',
                 pipeline=train_pipeline,
                 convention='smpl_49',
                 cache_data_path=cache_files['mpi-inf-3dhp'],
-                ann_file=DATASET_NPZ_PATH +
-                'mpi_inf_3dhp_train_mmhuman3d.npz'),
+                ann_file='mpi_inf_3dhp_train.npz'),
         ],
         partition=[0.5, 0.233, 0.046, 0.021, 0.2],
     ),
@@ -230,26 +220,22 @@ data = dict(
             type='GenderedSMPL',
             keypoint_src='h36m',
             keypoint_dst='h36m',
-            model_path='/mnt/lustre/wangyanjun/data/body_models/smpl',
-            joints_regressor='/mnt/lustre/wangyanjun/data/J_regressor_h36m.npy'
-        ),
+            model_path='data/body_models/smpl',
+            joints_regressor='data/J_regressor_h36m.npy'),
         dataset_name='pw3d',
-        data_prefix='/mnt/lustre/wangyanjun/data/dataset_folders/3dpw',
+        data_prefix='pw3d',
         pipeline=test_pipeline,
-        ann_file='/mnt/lustre/wangyanjun/data/\
-            dataset_extras_mmhuman/pw3d_test.npz'),
+        ann_file='pw3d_test.npz'),
     val=dict(
         type=dataset_type,
         body_model=dict(
             type='GenderedSMPL',
             keypoint_src='h36m',
             keypoint_dst='h36m',
-            model_path='/mnt/lustre/wangyanjun/data/body_models/smpl',
-            joints_regressor='/mnt/lustre/wangyanjun/data/J_regressor_h36m.npy'
-        ),
+            model_path='data/body_models/smpl',
+            joints_regressor='data/body_models/J_regressor_h36m.npy'),
         dataset_name='pw3d',
-        data_prefix='/mnt/lustre/wangyanjun/data/dataset_folders/3dpw',
+        data_prefix='pw3d',
         pipeline=test_pipeline,
-        ann_file='/mnt/lustre/wangyanjun/data/\
-            dataset_extras_mmhuman/pw3d_test.npz'),
+        ann_file='pw3d_test.npz'),
 )

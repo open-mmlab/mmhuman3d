@@ -471,6 +471,8 @@ def render_smpl(
     kp3d: Optional[Union[np.ndarray, torch.Tensor]] = None,
     mask: Optional[Union[np.ndarray, List[int]]] = None,
     vis_kp_index: bool = False,
+    # visualize render progress
+    vis_progress: bool = True,
 ) -> Union[None, torch.Tensor]:
     """Render SMPL or SMPL-X mesh or silhouette into differentiable tensors,
     and export video or images.
@@ -720,6 +722,9 @@ def render_smpl(
             Whether plot keypoint index number on human mesh.
 
             Defaults to False.
+        # visualize render progress
+        vis_progress (bool, optional):
+            Whether print the progress bar for rendering.
     Returns:
         Union[None, torch.Tensor]: return the rendered image tensors or None.
     """
@@ -1038,6 +1043,7 @@ def render_smpl(
         output_path=output_path,
         return_tensor=return_tensor,
         no_grad=no_grad,
+        vis_progress=vis_progress,
         **render_data)
 
     if remove_folder:
