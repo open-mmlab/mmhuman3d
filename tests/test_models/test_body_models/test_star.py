@@ -5,15 +5,19 @@ import torch
 
 from mmhuman3d.models.builder import build_body_model
 
+body_model_load_dir = 'data/body_models/star'
+
 
 def test_star_init():
-    _ = build_body_model(dict(type='STAR', model_path=None))
-    _ = build_body_model(dict(type='STAR', model_path=None, gender='male'))
-    _ = build_body_model(dict(type='STAR', model_path=None, gender='female'))
+    _ = build_body_model(dict(type='STAR', model_path=body_model_load_dir))
+    _ = build_body_model(
+        dict(type='STAR', model_path=body_model_load_dir, gender='male'))
+    _ = build_body_model(
+        dict(type='STAR', model_path=body_model_load_dir, gender='female'))
 
 
 def test_star_forward():
-    star = build_body_model(dict(type='STAR'))
+    star = build_body_model(dict(type='STAR', model_path=body_model_load_dir))
 
     betas = np.array([[
         2.25176191, -3.7883464, 0.46747496, 3.89178988, 2.20098416, 0.26102114,

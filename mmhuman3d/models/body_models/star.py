@@ -5,9 +5,26 @@
 # https://github.com/ahmedosman/STAR/blob/master/star/pytorch/star.py
 #
 #
+# -*- coding: utf-8 -*-
+#
+# LICENSE:
+# Max-Planck-Gesellschaft zur Förderung der Wissenschaften e.V. (MPG) is
+# holder of all proprietary rights on this computer program.
+# You can only use this computer program if you have closed
+# a license agreement with MPG or you get the right to use the computer
+# program from someone who is authorized to grant you that right.
+# Any use of the computer program without a valid license is prohibited and
+# liable to prosecution.
+#
+# Copyright©2019 Max-Planck-Gesellschaft zur Förderung
+# der Wissenschaften e.V. (MPG). acting on behalf of its Max Planck Institute
+# for Intelligent Systems. All rights reserved.
+#
+# Contact: ps-license@tuebingen.mpg.de
 
 from __future__ import division
 import os
+from typing import Optional
 
 import numpy as np
 import torch
@@ -20,17 +37,38 @@ from .utils import quat_feat, rodrigues, with_zeros
 @BODY_MODELS.register_module(name=['STAR', 'star'])
 class STAR(nn.Module):
 
-    def __init__(self, model_path, gender='female', num_betas=10):
+    def __init__(self,
+                 model_path: str,
+                 gender: str = 'neutral',
+                 num_betas: int = 10) -> None:
+        """STAR model constructor.
+
+        Parameters
+        ----------
+        model_path: str
+            The path to the folder or to the file where the model
+            parameters are stored
+        num_betas: int, optional
+            Number of shape components to use
+            (default = 10).
+        gender: str, optional
+            Which gender to load
+        """
+        if gender not in ['male', 'female', 'neutral']:
+            raise RuntimeError('Invalid gender! Should be one of '
+                               '[\'male\', \'female\', or \'neutral\']!')
+        self.gender = gender
+
+        if os.path.isdir(model_path):
+            star_path = os.path.join(model_path, '{}.npz'.format(gender))
+        else:
+            star_path = model_path
+        if not os.path.exists(star_path):
+            raise RuntimeError('Path {} does not exist!'.format(star_path))
+
         super(STAR, self).__init__()
 
-        if gender not in ['male', 'female', 'neutral']:
-            raise RuntimeError('Invalid Gender')
-
-        path_model = model_path
-        if not os.path.exists(path_model):
-            raise RuntimeError('Path does not exist %s' % (path_model))
-
-        star_model = np.load(path_model, allow_pickle=True)
+        star_model = np.load(star_path, allow_pickle=True)
         J_regressor = star_model['J_regressor']
         self.num_betas = num_betas
 
@@ -77,26 +115,30 @@ class STAR(nn.Module):
         self.J = None
         self.R = None
 
-    def forward(self, pose, betas, trans):
-        """STAR forward pass given pose, betas (shape) and trans return the
-        model vertices and transformed joints.
+    def forward(self,
+                pose: Optional[torch.Tensor] = None,
+                betas: Optional[torch.Tensor] = None,
+                trans: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Forward pass for the SMPL model.
 
+        Parameters
+        ----------
         :param pose: pose  parameters - A batch size x 72 tensor
             (3 numbers for each joint)
         :param beta: beta  parameters - A batch size x number of betas
         :param beta: trans parameters - A batch size x 3
         :return:
-                 v         : batch size x 6890 x 3
-                             The STAR model vertices
-                 v.v_vposed: batch size x 6890 x 3 model
-                             STAR vertices in T-pose after adding the shape
-                             blend shapes and pose blend shapes
-                 v.v_shaped: batch size x 6890 x 3
-                             STAR vertices in T-pose after adding the shape
-                             blend shapes and pose blend shapes
-                 v.J_transformed:batch size x 24 x 3
-                                Posed model joints.
-                 v.f: A numpy array of the model face.
+             v         : batch size x 6890 x 3
+                         The STAR model vertices
+             v.v_vposed: batch size x 6890 x 3 model
+                         STAR vertices in T-pose after adding the shape
+                         blend shapes and pose blend shapes
+             v.v_shaped: batch size x 6890 x 3
+                         STAR vertices in T-pose after adding the shape
+                         blend shapes and pose blend shapes
+             v.J_transformed:batch size x 24 x 3
+                            Posed model joints.
+             v.f: A numpy array of the model face.
         """
         device = pose.device
         batch_size = pose.shape[0]
