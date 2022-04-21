@@ -722,6 +722,7 @@ def render_smpl(
             Whether plot keypoint index number on human mesh.
 
             Defaults to False.
+
         # visualize render progress
         vis_progress (bool, optional):
             Whether print the progress bar for rendering.
