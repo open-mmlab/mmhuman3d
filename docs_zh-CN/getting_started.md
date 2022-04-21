@@ -167,5 +167,3 @@ python tools/train.py ${CONFIG_FILE} ${WORK_DIR} --gpus 1 --no-validate
 - [Keypoint conventions](./keypoints_convention.md)
 - [Custom keypoint conventions](./customize_keypoints_convention.md)
 - [HumanData](./human_data.md)
-- [Keypoint visualization](./visualize_keypoints.md)
-- [Mesh visualization](./visualize_smpl.md)
