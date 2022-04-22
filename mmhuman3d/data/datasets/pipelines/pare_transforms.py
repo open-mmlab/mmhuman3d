@@ -9,7 +9,6 @@ import sys
 import xml.etree.ElementTree
 
 import cv2
-import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL.Image
@@ -21,7 +20,6 @@ from ..builder import PIPELINES
 def main(type='coco'):
     """Demo of how to use the code."""
 
-    # path = 'something/something/VOCtrainval_11-May-2012/VOCdevkit/VOC2012'
     path = sys.argv[1]
 
     print('Loading occluders from Pascal VOC dataset...')
@@ -41,7 +39,7 @@ def main(type='coco'):
 
 def load_pascal_occluders(occluders_file, pascal_voc_root_path):
     if os.path.isfile(occluders_file):
-        return joblib.load(occluders_file)
+        return np.load(occluders_file, allow_pickle=True)
     else:
         occluders = []
         structuring_element = cv2.getStructuringElement(
@@ -102,8 +100,7 @@ def load_pascal_occluders(occluders_file, pascal_voc_root_path):
                 occluders.append(object_with_mask)
 
         print('Saving pascal occluders')
-        joblib.dump(occluders,
-                    './data/occlusion_augmentation/pascal_occluders.pkl')
+        np.save('./data/pascal_occluders.npy', occluders)
         return occluders
 
 

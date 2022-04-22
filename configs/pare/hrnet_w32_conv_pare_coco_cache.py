@@ -123,7 +123,7 @@ train_pipeline = [
     dict(
         type='SyntheticOcclusion',
         pascal_voc_root_path='data/VOCdevkit/VOC2012/',
-        occluders_file='data/pascal_occluders.pkl'),
+        occluders_file='data/pascal_occluders.npy'),
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_49'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='MeshAffine', img_res=224),
