@@ -13,7 +13,7 @@ from mmhuman3d.data.datasets.pipelines import (
 def test_human_image_dataset():
     # test auto padding for bbox_xywh
     train_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='h36m',
         ann_file='sample_3dpw_test.npz')
@@ -24,7 +24,7 @@ def test_human_image_dataset():
     assert sum(data['center']) == 0
 
     train_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='h36m',
         ann_file='sample_3dpw_test.npz')
@@ -39,7 +39,7 @@ def test_human_image_dataset():
 
     num_data = 1
     test_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='pw3d',
         body_model=dict(
@@ -89,7 +89,7 @@ def test_human_image_dataset():
     assert res['3DAUC'] >= 0
 
     test_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='pw3d',
         body_model=dict(
@@ -110,7 +110,7 @@ def test_human_image_dataset():
     assert res['PA-MPJPE'] > 0
 
     test_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='pw3d',
         body_model=dict(
@@ -134,7 +134,7 @@ def test_human_image_dataset():
 def test_cached_dataset():
     # dump cache files
     train_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='h36m',
         cache_data_path='sample_3dpw_test_cache.npz',
@@ -143,7 +143,7 @@ def test_cached_dataset():
 
     # directly read from cache files
     train_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='h36m',
         cache_data_path='sample_3dpw_test_cache.npz',
@@ -163,7 +163,7 @@ def test_cached_dataset():
 
 def test_pipeline():
     train_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='3dpw',
         ann_file='sample_3dpw_train.npz')
@@ -224,7 +224,7 @@ def test_pipeline():
 def test_human_image_dataset_smc():
     # test loading smc
     train_dataset = HumanImageDataset(
-        data_prefix='tests/data',
+        data_prefix='tests/data/preprocessed_dataset',
         pipeline=[],
         dataset_name='humman',
         ann_file='sample_humman_test_iphone_ds10.npz')
