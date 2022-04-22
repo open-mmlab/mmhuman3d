@@ -85,7 +85,13 @@ class NormalRenderer(BaseRenderer):
         return normal_map
 
     def tensor2rgba(self, tensor: torch.Tensor):
-        rgbs, valid_masks = tensor[..., :3], (tensor[..., 3:] > 0) * 1.0
-        rgbs = normalize(
-            rgbs, origin_value_range=(-1, 1), out_value_range=(0, 1))
+        if tensor.shape[-1]==4:
+            rgbs, valid_masks = tensor[..., :3], (tensor[..., 3:] > 0) * 1.0
+        else:
+            rgbs=tensor
+            valid_masks=(torch.sum(torch.abs(tensor),dim=-1) > 0) * 1.0
+            valid_masks=valid_masks.unsqueeze(-1).repeat(1,1,1,3)
+        
+        rgbs = normalize( rgbs, origin_value_range=(-1, 1), out_value_range=(0, 1))
+        
         return torch.cat([rgbs, valid_masks], -1)
