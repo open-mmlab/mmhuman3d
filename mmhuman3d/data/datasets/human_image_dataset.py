@@ -88,9 +88,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
     def get_annotation_file(self):
         """Get path of the annotation file."""
-        # ann_prefix = os.path.join(self.data_prefix, 'preprocessed_datasets')
-        # self.ann_file = os.path.join(ann_prefix, self.ann_file)
-        self.ann_file = self.ann_file
+        ann_prefix = os.path.join(self.data_prefix, 'preprocessed_datasets')
+        self.ann_file = os.path.join(ann_prefix, self.ann_file)
 
     def load_annotations(self):
         """Load annotation from the annotation file.
