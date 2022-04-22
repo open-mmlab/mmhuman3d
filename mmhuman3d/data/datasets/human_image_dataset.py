@@ -166,7 +166,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         info = {}
         info['img_prefix'] = None
         image_path = self.human_data['image_path'][idx]
-        info['image_path'] = os.path.join(self.data_prefix, image_path)
+        info['image_path'] = os.path.join(self.data_prefix, 'datasets',
+                                          self.dataset_name, image_path)
         if image_path.endswith('smc'):
             device, device_id, frame_id = self.human_data['image_id'][idx]
             info['image_id'] = (device, int(device_id), int(frame_id))
@@ -273,21 +274,16 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                     keypoints=out['keypoints_3d'][i],
                     poses=out['smpl_pose'][i],
                     betas=out['smpl_beta'][i],
-                    vertices=out['vertices'][i],
                 )
 
-        keypoints, poses, betas, vertices = [], [], [], []
+        keypoints, poses, betas = [], [], []
         for i in range(self.num_data):
             keypoints.append(res_dict[i]['keypoints'])
             poses.append(res_dict[i]['poses'])
             betas.append(res_dict[i]['betas'])
-            vertices.append(res_dict[i]['vertices'])
 
-        res = dict(
-            keypoints=keypoints, poses=poses, betas=betas, vertices=vertices)
-        res_dump = dict(keypoints=keypoints, poses=poses, betas=betas)
-
-        mmcv.dump(res_dump, res_file)
+        res = dict(keypoints=keypoints, poses=poses, betas=betas)
+        mmcv.dump(res, res_file)
 
         name_value_tuples = []
         for _metric in metrics:
@@ -346,10 +342,16 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             gt_vertices = gt_output['vertices'].detach().cpu().numpy() * 1000.
             gt_mask = np.ones(gt_vertices.shape[:-1])
             # pred
-            # pred_vertices = pred_output['vertices'].detach().cpu().numpy(
-            # ) * 1000.
-            pred_vertices = res['vertices']
-            pred_vertices = np.array(pred_vertices) * 1000.
+            pred_pose = torch.FloatTensor(res['poses'])
+            pred_beta = torch.FloatTensor(res['betas'])
+            pred_output = self.body_model(
+                betas=pred_beta,
+                body_pose=pred_pose[:, 1:],
+                global_orient=pred_pose[:, 0].unsqueeze(1),
+                pose2rot=False,
+                gender=gender)
+            pred_vertices = pred_output['vertices'].detach().cpu().numpy(
+            ) * 1000.
 
             assert len(pred_vertices) == self.num_data
 
