@@ -5,7 +5,7 @@ from pathlib import Path
 import mmcv
 import numpy as np
 
-from mmhuman3d.core.filter import build_filter
+from mmhuman3d.core.post_processing import build_post_processing
 from mmhuman3d.utils.path_utils import check_input_path
 
 try:
@@ -305,35 +305,106 @@ def conver_verts_to_cam_coord(verts,
     return verts, K0
 
 
-def smooth_process(x, smooth_type='savgol'):
-    """Smooth the array with the specified smoothing type.
+def inference_post_processing(x, smooth_type, cfg, device):
+    """Process the array with the specified post processing type.
 
     Args:
         x (np.ndarray): Shape should be (frame,num_person,K,C)
             or (frame,K,C).
-        smooth_type (str, optional): Smooth type.
-            choose in ['oneeuro', 'gaus1d', 'savgol'].
-            Defaults to 'savgol'.
+        smooth_type (str, optional): ['oneeuro', 'gaus1d', 'savgol', 'deciwatch'].
+        cfg (str or :obj:`mmcv.Config`): Config file path or the config
+            object.
     Raises:
         ValueError: check the input smoothing type.
 
     Returns:
         np.ndarray: Smoothed data. The shape should be
-            (frame,num_person,K,C) or (frame,K,C).
+            (frame,num_person,24,3,3) or (frame,24,3,3).
     """
+    assert smooth_type in ['oneeuro', 'gaus1d', 'savgol', 'deciwatch']
+
+    if isinstance(cfg, str):
+        cfg = mmcv.Config.fromfile(cfg)
+    elif not isinstance(cfg, mmcv.Config):
+        raise TypeError('config must be a filename or Config object, '
+                        f'but got {type(cfg)}')
+
+    inference_post_processing_cfg = cfg["inference_post_processing"]
+    for smooth_type_i in inference_post_processing_cfg:
+        if smooth_type_i['type'] == smooth_type:
+            inference_post_processing_cfg = smooth_type_i
+            break
+
     x = x.copy()
 
-    assert x.ndim == 3 or x.ndim == 4
+    smooth_func = build_post_processing(
+        dict(
+            type=smooth_type, cfg=inference_post_processing_cfg,
+            device=device))
 
-    smooth_func = build_filter(dict(type=smooth_type))
+    assert x.ndim == 4 or x.ndim == 5
 
     if x.ndim == 4:
-        for i in range(x.shape[1]):
-            x[:, i] = smooth_func(x[:, i])
-    elif x.ndim == 3:
-        x = smooth_func(x)
+        frame_num, pose_dim_0, pose_dim_1, pose_dim_2 = x.shape
+        assert pose_dim_0 == 24 or pose_dim_1 == 3 or pose_dim_2 == 3
+
+        if smooth_type in ["oneeuro", "gaus1d", "savgol"]:
+            x = x.reshape(frame_num, pose_dim_0, pose_dim_1 * pose_dim_2)
+            x = smooth_func(x)
+
+        elif smooth_type in ['deciwatch']:
+            x = smooth_func(x)
+
+        x = x.reshape(frame_num, pose_dim_0, pose_dim_1, pose_dim_2)
+
+    if x.ndim == 5:
+        frame_num, person_num, pose_dim_0, pose_dim_1, pose_dim_2 = x.shape
+        assert pose_dim_0 == 24 or pose_dim_1 == 3 or pose_dim_2 == 3
+
+        if smooth_type in ["oneeuro", "gaus1d", "savgol"]:
+            x = x.reshape(frame_num, person_num, pose_dim_0,
+                          pose_dim_1 * pose_dim_2)
+            for i in range(person_num):
+                x[:, i] = smooth_func(x[:, i])
+        elif smooth_type in ['deciwatch']:
+            for i in range(person_num):
+                x[:, i] = smooth_func(x[:, i])
+
+        x = x.reshape(frame_num, person_num, pose_dim_0, pose_dim_1,
+                      pose_dim_2)
 
     return x
+
+
+def get_post_processing_interval(post_processing_type, cfg):
+    """Get the interval of specific post processing type
+
+    Args:
+        smooth_type (str, optional): ['deciwatch'].
+        cfg (str or :obj:`mmcv.Config`): Config file path or the config
+            object.
+    Raises:
+        ValueError: check the input smoothing type.
+
+    Returns:
+        np.ndarray: Smoothed data. The shape should be
+            (frame,num_person,24,3,3) or (frame,24,3,3).
+    """
+
+    assert post_processing_type in ['deciwatch']
+
+    if isinstance(cfg, str):
+        cfg = mmcv.Config.fromfile(cfg)
+    elif not isinstance(cfg, mmcv.Config):
+        raise TypeError('config must be a filename or Config object, '
+                        f'but got {type(cfg)}')
+
+    inference_post_processing_cfg = cfg["inference_post_processing"]
+    for smooth_type_i in inference_post_processing_cfg:
+        if smooth_type_i['type'] == post_processing_type:
+            inference_post_processing_cfg = smooth_type_i
+
+    return inference_post_processing_cfg["interval"]
 
 
 def process_mmtracking_results(mmtracking_results, max_track_id):

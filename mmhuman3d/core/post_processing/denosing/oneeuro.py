@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 import torch
 
-from .builder import FILTERS
+from ..builder import POST_PROCESSING
 
 
 def smoothing_factor(t_e, cutoff):
@@ -56,8 +56,8 @@ class OneEuro:
         return x_hat
 
 
-@FILTERS.register_module(name=['OneEuroFilter', 'oneeuro'])
-class OneEuroFilter:
+@POST_PROCESSING.register_module(name=['OneEuroPostProcessing', 'oneeuro'])
+class OneEuroPostProcessing:
     """Oneeuro filter, source code: https://github.com/mkocabas/VIBE/blob/c0
     c3f77d587351c806e901221a9dc05d1ffade4b/lib/utils/smooth_pose.py.
 
@@ -71,11 +71,11 @@ class OneEuroFilter:
         np.ndarray: smoothed poses
     """
 
-    def __init__(self, min_cutoff=0.004, beta=0.7):
-        super(OneEuroFilter, self).__init__()
+    def __init__(self, cfg, device=None):
+        super(OneEuroPostProcessing, self).__init__()
 
-        self.min_cutoff = min_cutoff
-        self.beta = beta
+        self.min_cutoff = cfg["min_cutoff"]
+        self.beta = cfg["beta"]
 
     def __call__(self, x=None):
         # x (np.ndarray): input poses.

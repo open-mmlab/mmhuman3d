@@ -1,3 +1,5 @@
+from scipy.spatial.transform import Rotation as R
+
 import os
 import os.path as osp
 from argparse import ArgumentParser
@@ -6,6 +8,7 @@ from pathlib import Path
 import mmcv
 import numpy as np
 import torch
+import warnings
 
 from mmhuman3d.apis import (
     feature_extract,
@@ -19,7 +22,7 @@ from mmhuman3d.utils.demo_utils import (
     prepare_frames,
     process_mmdet_results,
     process_mmtracking_results,
-    smooth_process,
+    inference_post_processing,
 )
 
 try:
@@ -56,7 +59,7 @@ def single_person_with_mmdet(args, frames_iter):
     # Used to save the img index
     img_index = []
     person_results_list = []
-    pred_cams, verts, bboxes_xyxy = [], [], []
+    pred_cams, verts, bboxes_xyxy, poses, betas = [], [], [], [], []
 
     for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
         # test a single image, the resulting box is (x1, y1, x2, y2)
@@ -102,10 +105,14 @@ def single_person_with_mmdet(args, frames_iter):
         pred_cams.append(mesh_results[0]['camera'])
         verts.append(mesh_results[0]['vertices'])
         bboxes_xyxy.append(det_result['bbox'])
+        poses.append(mesh_results[0]['smpl_pose'])
+        betas.append(mesh_results[0]['smpl_beta'])
 
     pred_cams = np.array(pred_cams)
     verts = np.array(verts)
     bboxes_xyxy = np.array(bboxes_xyxy)
+    poses = np.array(poses)
+    betas = np.array(betas)
 
     del mesh_model
     del extractor
@@ -113,8 +120,17 @@ def single_person_with_mmdet(args, frames_iter):
     torch.cuda.empty_cache()
 
     # smooth
-    if args.smooth_type is not None:
-        verts = smooth_process(verts, smooth_type=args.smooth_type)
+    if args.post_processing is not None:
+        if args.post_processing == "deciwatch":
+            warnings.warn(
+                'deciwatch is not a good choice for video based estimation, '
+                'please try gaus1d, oneeuro, and savgol post processing methods.'
+            )
+        poses = inference_post_processing(
+            poses,
+            args.post_processing,
+            cfg=args.mesh_reg_config,
+            device=args.device.lower())
 
     if args.show_path is not None:
         frames_folder = osp.join(Path(args.show_path).parent, 'images')
@@ -124,7 +140,9 @@ def single_person_with_mmdet(args, frames_iter):
 
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_vibe(
-            verts=verts,
+            poses=R.from_matrix(poses.reshape(-1, 3, 3)).as_rotvec().reshape(
+                -1, 24 * 3),
+            betas=betas,
             pred_cam=pred_cams,
             bbox=bboxes_xyxy,
             output_path=args.show_path,
@@ -193,6 +211,8 @@ def multi_person_with_mmtracking(args, frames_iter):
     verts = np.zeros([frame_num, max_track_id + 1, 6890, 3])
     pred_cams = np.zeros([frame_num, max_track_id + 1, 3])
     bboxes_xyxy = np.zeros([frame_num, max_track_id + 1, 5])
+    poses = np.zeros([frame_num, max_track_id + 1, 24, 3, 3])
+    betas = np.zeros([frame_num, max_track_id + 1, 10])
     track_ids_lists = []
     # Second stage: estimate smpl parameters
     for i, person_results in enumerate(
@@ -212,6 +232,8 @@ def multi_person_with_mmtracking(args, frames_iter):
             bboxes_xyxy[i, instance_id] = det_result['bbox']
             pred_cams[i, instance_id] = mesh_result['camera']
             verts[i, instance_id] = mesh_result['vertices']
+            poses[i, instance_id] = mesh_result['smpl_pose']
+            betas[i, instance_id] = mesh_result['smpl_beta']
             track_ids.append(instance_id)
 
         track_ids_lists.append(track_ids)
@@ -222,18 +244,31 @@ def multi_person_with_mmtracking(args, frames_iter):
     torch.cuda.empty_cache()
 
     # smooth
-    if args.smooth_type is not None:
-        verts = smooth_process(verts, smooth_type=args.smooth_type)
+    if args.post_processing is not None:
+        if args.post_processing == "deciwatch":
+            warnings.warn(
+                'deciwatch is not a good choice for video based estimation, '
+                'please try gaus1d, oneeuro, and savgol post processing methods.'
+            )
+        poses = inference_post_processing(
+            poses,
+            args.post_processing,
+            cfg=args.mesh_reg_config,
+            device=args.device.lower())
 
     # To compress vertices array
     compressed_verts = np.zeros([frame_num, max_instance, 6890, 3])
     compressed_cams = np.zeros([frame_num, max_instance, 3])
     compressed_bboxs = np.zeros([frame_num, max_instance, 5])
+    compressed_poses = np.zeros([frame_num, max_instance, 24, 3, 3])
+    compressed_betas = np.zeros([frame_num, max_instance, 10])
     for i, track_ids_list in enumerate(track_ids_lists):
         instance_num = len(track_ids_list)
         compressed_verts[i, :instance_num] = verts[i, track_ids_list]
         compressed_cams[i, :instance_num] = pred_cams[i, track_ids_list]
         compressed_bboxs[i, :instance_num] = bboxes_xyxy[i, track_ids_list]
+        compressed_poses[i, :instance_num] = poses[i, track_ids_list]
+        compressed_betas[i, :instance_num] = betas[i, track_ids_list]
     assert len(img_index) > 0
 
     if args.show_path is not None:
@@ -243,7 +278,9 @@ def multi_person_with_mmtracking(args, frames_iter):
             np.array(frames_iter)[img_index], output_folder=frames_folder)
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_vibe(
-            verts=compressed_verts,
+            poses=R.from_matrix(compressed_poses.reshape(
+                -1, 3, 3)).as_rotvec().reshape(-1, max_instance, 24 * 3),
+            betas=compressed_betas,
             pred_cam=compressed_cams,
             bbox=compressed_bboxs,
             output_path=args.show_path,
@@ -301,7 +338,6 @@ if __name__ == '__main__':
         action='store_true',
         help='Multi person demo with MMTracking')
     parser.add_argument('--tracking_config', help='Config file for tracking')
-
     parser.add_argument(
         '--body_model_dir',
         type=str,
@@ -336,11 +372,10 @@ if __name__ == '__main__':
         action='store_true',
         help='Draw a bbox for each detected instance')
     parser.add_argument(
-        '--smooth_type',
+        '--post_processing',
         type=str,
         default=None,
-        help='Smooth the data through the specified type.\
-         Select in [oneeuro,gaus1d,savgol].')
+        help='Post processing the data through the specified type.')
     parser.add_argument(
         '--focal_length', type=float, default=5000., help='Focal lenght')
     parser.add_argument(

@@ -1,18 +1,19 @@
 # Getting Started
 
-* [Installation](#installation)
-* [Data Preparation](#data-preparation)
-* [Body Model Preparation](#body-model-preparation)
-* [Inference / Demo](#inference--demo)
-  + [Single-person](#single-person)
-  + [Multi-person](#multi-person)
-* [Evaluation](#evaluation)
-  + [Evaluate with a single GPU / multiple GPUs](#evaluate-with-a-single-gpu--multiple-gpus)
-  + [Evaluate with slurm](#evaluate-with-slurm)
-* [Training](#training)
-  + [Training with a single / multiple GPUs](#training-with-a-single--multiple-gpus)
-  + [Training with Slurm](#training-with-slurm)
-* [More Tutorials](#more-tutorials)
+- [Getting Started](#getting-started)
+  - [Installation](#installation)
+  - [Data Preparation](#data-preparation)
+  - [Body Model Preparation](#body-model-preparation)
+  - [Inference / Demo](#inference--demo)
+    - [Single-person](#single-person)
+    - [Multi-person](#multi-person)
+  - [Evaluation](#evaluation)
+    - [Evaluate with a single GPU / multiple GPUs](#evaluate-with-a-single-gpu--multiple-gpus)
+    - [Evaluate with slurm](#evaluate-with-slurm)
+  - [Training](#training)
+    - [Training with a single / multiple GPUs](#training-with-a-single--multiple-gpus)
+    - [Training with Slurm](#training-with-slurm)
+  - [More Tutorials](#more-tutorials)
 
 ## Installation
 
@@ -65,7 +66,7 @@ Optional arguments include:
 - `--det_checkpoint`: MMDetection checkpoint
 - `--input_path`: input path
 - `--show_path`: directory to save rendered images or video
-- `--smooth_type`: smoothing mode
+- `--post_processing`: post processing mode (we now support traditional filters 'gaus1d','oneeuro','savgol' for smoothing, and learning based method 'deciwatch' for speeding up)
 
 Example:
 ```shell
@@ -77,7 +78,7 @@ python demo/estimate_smpl_image.py \
     --det_checkpoint https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth \
     --input_path  demo/resources/single_person_demo.mp4 \
     --show_path vis_results/single_person_demo.mp4 \
-    --smooth_type savgol
+    --post_processing deciwatch
 ```
 
 Note that the MMHuman3D checkpoints can be downloaded from the [model zoo](model_zoo.md).
@@ -89,7 +90,7 @@ Optional arguments include:
 - `--mmtracking_config`: MMTracking config
 - `--input_path`: input path
 - `--show_path`: directory to save rendered images or video
-- `--smooth_type`: smoothing mode
+- `--post_processing`: post processing mode (we now support traditional filters 'gaus1d','oneeuro','savgol' for smoothing, and learning based method 'deciwatch' for speeding up)
 
 Example 2: multi-person estimation
 ```shell
@@ -100,8 +101,9 @@ python demo/estimate_smpl_image.py \
     --tracking_config demo/mmtracking_cfg/deepsort_faster-rcnn_fpn_4e_mot17-private-half.py \
     --input_path  demo/resources/multi_person_demo.mp4 \
     --show_path vis_results/multi_person_demo.mp4 \
-    --smooth_type savgol
+    --post_processing savgol
 ```
+We don't recommend you to use deciwatch with big interval for multi-person estimation due to performance decays in tracking.
 
 ## Evaluation
 

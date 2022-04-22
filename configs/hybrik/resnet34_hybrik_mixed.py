@@ -140,6 +140,30 @@ test_hp3d_pipeline = [
         meta_keys=['center', 'scale', 'rotation', 'image_path'])
 ]
 
+inference_post_processing = [
+    dict(
+        type='deciwatch',
+        checkpoint_dir='data/checkpoints/',
+        interval=5,
+        slide_window_q=3,
+    ),
+    dict(
+        type='gaus1d',
+        window_size=3,
+        sigma=3,
+    ),
+    dict(
+        type='oneeuro',
+        min_cutoff=0.004,
+        beta=0.7,
+    ),
+    dict(
+        type='savgol',
+        window_size=11,
+        polyorder=2,
+    )
+]
+
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=1,

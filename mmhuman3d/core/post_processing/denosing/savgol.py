@@ -4,11 +4,11 @@ import numpy as np
 import scipy.signal as signal
 import torch
 
-from .builder import FILTERS
+from ..builder import POST_PROCESSING
 
 
-@FILTERS.register_module(name=['SGFilter', 'savgol'])
-class SGFilter:
+@POST_PROCESSING.register_module(name=['SGPostProcessing', 'savgol'])
+class SGPostProcessing:
     """savgol_filter lib is from:
     https://docs.scipy.org/doc/scipy/reference/generated/
     scipy.signal.savgol_filter.html.
@@ -26,12 +26,12 @@ class SGFilter:
         smoothed poses (np.ndarray, torch.tensor)
     """
 
-    def __init__(self, window_size=11, polyorder=2):
-        super(SGFilter, self).__init__()
+    def __init__(self, cfg, device=None):
+        super(SGPostProcessing, self).__init__()
 
         # 1-D Savitzky-Golay filter
-        self.window_size = window_size
-        self.polyorder = polyorder
+        self.window_size = cfg["window_size"]
+        self.polyorder = cfg["polyorder"]
 
     def __call__(self, x=None):
         # x.shape: [t,k,c]

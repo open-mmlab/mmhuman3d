@@ -10,7 +10,7 @@ from mmhuman3d.utils.demo_utils import (
     prepare_frames,
     process_mmdet_results,
     process_mmtracking_results,
-    smooth_process,
+    inference_post_processing,
     xywh2xyxy,
     xyxy2xywh,
 )
@@ -157,7 +157,7 @@ __all__ = [
     'search_limbs',
     'sja_to_aa',
     'slice_video',
-    'smooth_process',
+    'inference_post_processing',
     'spatial_concat_video',
     'temporal_concat_video',
     'torch_to_numpy',
