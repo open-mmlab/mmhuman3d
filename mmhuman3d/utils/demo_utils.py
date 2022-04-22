@@ -336,14 +336,17 @@ def smooth_process(x, smooth_type='savgol'):
     return x
 
 
-def process_mmtracking_results(mmtracking_results, max_track_id):
+def process_mmtracking_results(mmtracking_results, bbox_thr, max_track_id):
     """Process mmtracking results.
 
     Args:
         mmtracking_results ([list]): mmtracking_results.
-
+        bbox_thr (float): threshold for bounding boxes.
+        max_track_id (int): the maximum track id.
     Returns:
-        list: a list of tracked bounding boxes
+        person_results ([list]): a list of tracked bounding boxes
+        max_track_id (int): the maximum track id.
+        instance_num (int): the number of instance.
     """
     person_results = []
     # 'track_results' is changed to 'track_bboxes'
@@ -354,6 +357,8 @@ def process_mmtracking_results(mmtracking_results, max_track_id):
         tracking_results = mmtracking_results['track_results'][0]
 
     for track in tracking_results:
+        if track[5] <= bbox_thr:
+            continue
         person = {}
         person['track_id'] = int(track[0])
         if max_track_id < int(track[0]):
@@ -361,15 +366,16 @@ def process_mmtracking_results(mmtracking_results, max_track_id):
         person['bbox'] = track[1:]
         person_results.append(person)
     person_results = sorted(person_results, key=lambda x: x.get('track_id', 0))
-    instance_num = len(tracking_results)
+    instance_num = len(person_results)
     return person_results, max_track_id, instance_num
 
 
-def process_mmdet_results(mmdet_results, cat_id=1):
+def process_mmdet_results(mmdet_results, bbox_thr, cat_id=1):
     """Process mmdet results, and return a list of bboxes.
 
     Args:
         mmdet_results (list|tuple): mmdet results.
+        bbox_thr (float): threshold for bounding boxes.
         cat_id (int): category id (default: 1 for human)
 
     Returns:
@@ -384,6 +390,8 @@ def process_mmdet_results(mmdet_results, cat_id=1):
 
     person_results = []
     for bbox in bboxes:
+        if bbox[4] <= bbox_thr:
+            continue
         person = {}
         person['bbox'] = bbox
         person_results.append(person)
