@@ -336,7 +336,9 @@ def smooth_process(x, smooth_type='savgol'):
     return x
 
 
-def process_mmtracking_results(mmtracking_results, bbox_thr, max_track_id):
+def process_mmtracking_results(mmtracking_results,
+                               max_track_id,
+                               bbox_thr=None):
     """Process mmtracking results.
 
     Args:
@@ -356,9 +358,14 @@ def process_mmtracking_results(mmtracking_results, bbox_thr, max_track_id):
     elif 'track_results' in mmtracking_results:
         tracking_results = mmtracking_results['track_results'][0]
 
+    tracking_results = np.array(tracking_results)
+
+    if bbox_thr is not None:
+        assert tracking_results.shape[-1] == 6
+        valid_idx = np.where(tracking_results[:, 5] > bbox_thr)[0]
+        tracking_results = tracking_results[valid_idx]
+
     for track in tracking_results:
-        if track[5] <= bbox_thr:
-            continue
         person = {}
         person['track_id'] = int(track[0])
         if max_track_id < int(track[0]):
@@ -370,7 +377,7 @@ def process_mmtracking_results(mmtracking_results, bbox_thr, max_track_id):
     return person_results, max_track_id, instance_num
 
 
-def process_mmdet_results(mmdet_results, bbox_thr, cat_id=1):
+def process_mmdet_results(mmdet_results, cat_id=1, bbox_thr=None):
     """Process mmdet results, and return a list of bboxes.
 
     Args:
@@ -389,9 +396,14 @@ def process_mmdet_results(mmdet_results, bbox_thr, cat_id=1):
     bboxes = det_results[cat_id - 1]
 
     person_results = []
+    bboxes = np.array(bboxes)
+
+    if bbox_thr is not None:
+        assert bboxes.shape[-1] == 5
+        valid_idx = np.where(bboxes[:, 4] > bbox_thr)[0]
+        bboxes = bboxes[valid_idx]
+
     for bbox in bboxes:
-        if bbox[4] <= bbox_thr:
-            continue
         person = {}
         person['bbox'] = bbox
         person_results.append(person)

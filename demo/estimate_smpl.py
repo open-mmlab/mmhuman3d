@@ -57,8 +57,8 @@ def get_tracking_result(args, frames_iter, mesh_model, extractor):
         result, max_track_id, instance_num = \
             process_mmtracking_results(
                 mmtracking_results,
-                bbox_thr=args.bbox_thr,
-                max_track_id=max_track_id)
+                max_track_id=max_track_id,
+                bbox_thr=args.bbox_thr)
 
         # extract features from the input video or image sequences
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator' \
@@ -96,7 +96,7 @@ def get_detection_result(args, frames_iter, mesh_model, extractor):
         mmdet_results = inference_detector(person_det_model, frame)
         # keep the person class bounding boxes.
         results = process_mmdet_results(
-            mmdet_results, bbox_thr=args.bbox_thr, cat_id=args.det_cat_id)
+            mmdet_results, cat_id=args.det_cat_id, bbox_thr=args.bbox_thr)
 
         # extract features from the input video or image sequences
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator' \
