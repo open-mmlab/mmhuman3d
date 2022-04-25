@@ -219,7 +219,6 @@ class MMCamerasBase(cameras.CamerasBase):
             image_size=self.get_image_size()[index]
             if self.get_image_size() is not None else None,
             in_ndc=self.in_ndc(),
-            _is_perspective=self._is_perspective,
             convention='pytorch3d',
             device=self.device)
 
@@ -237,8 +236,7 @@ class MMCamerasBase(cameras.CamerasBase):
             R=self.R.repeat(N, 1, 1),
             T=self.T.repeat(N, 1),
             image_size=self.get_image_size(),
-            _in_ndc=self.in_ndc(),
-            _is_perspective=self._is_perspective,
+            in_ndc=self.in_ndc(),
             convention='pytorch3d',
             device=self.device)
 
@@ -311,8 +309,7 @@ class MMCamerasBase(cameras.CamerasBase):
                 R=self.R,
                 T=self.T,
                 in_ndc=False,
-                resolution=self.image_size,
-                is_perspective=self._is_perspective)
+                resolution=self.image_size)
         else:
             print('Redundant operation, already in screen.')
 
@@ -334,8 +331,7 @@ class MMCamerasBase(cameras.CamerasBase):
                 R=self.R,
                 T=self.T,
                 in_ndc=True,
-                resolution=self.image_size,
-                is_perspective=self._is_perspective)
+                resolution=self.image_size)
 
     def detach(self) -> 'MMCamerasBase':
         image_size = self.image_size.detach(
@@ -346,8 +342,7 @@ class MMCamerasBase(cameras.CamerasBase):
             T=self.T.detach(),
             in_ndc=self.in_ndc(),
             device=self.device,
-            resolution=image_size,
-            is_perspective=self._is_perspective)
+            resolution=image_size)
 
     def concat(self, others) -> 'MMCamerasBase':
         if isinstance(others, type(self)):
