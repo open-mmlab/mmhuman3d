@@ -234,6 +234,9 @@ class H36mConverter(BaseModeConverter):
         for user_i in tqdm(user_list, desc='user id'):
             user_name = f'S{user_i}'
             # path with GT bounding boxes
+            # sometimes the path of GT bbox may be ground_truth_bb, so it need to rename as ground_truth_bs
+            if os.path.exists(os.path.join(dataset_path, user_name, 'MySegmentsMat','ground_truth_bb')):
+                os.rename(os.path.join(dataset_path, user_name, 'MySegmentsMat','ground_truth_bb'),os.path.join(dataset_path, user_name, 'MySegmentsMat','ground_truth_bs'))
             bbox_path = os.path.join(dataset_path, user_name, 'MySegmentsMat',
                                      'ground_truth_bs')
             # path with GT 2D pose
