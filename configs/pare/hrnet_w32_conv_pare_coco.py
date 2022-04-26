@@ -77,7 +77,7 @@ model = dict(
         num_joints=24,
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/hrnet_pretrain.pth')),
+            checkpoint='data/pretrained_models/hrnet_w32_pretrain.pth')),
     head=dict(
         type='PareHead',
         num_joints=24,
@@ -164,8 +164,6 @@ inference_pipeline = [
         meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 
-cache_files = {'coco': 'data/cache/coco_2014_train_smpl_24.npz'}
-
 data = dict(
     samples_per_gpu=64,
     workers_per_gpu=0,
@@ -178,7 +176,6 @@ data = dict(
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_24',
-                cache_data_path=cache_files['coco'],
                 ann_file='eft_coco_all.npz'),
         ],
         partition=[1.0],

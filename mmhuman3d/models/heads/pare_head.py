@@ -1,3 +1,8 @@
+"""This script is modified from [PARE](https://github.com/
+mkocabas/PARE/tree/master/pare/models/layers).
+
+Original license please see docs/additional_licenses.md.
+"""
 import numpy as np
 import torch
 import torch.nn as nn
@@ -7,13 +12,6 @@ from torch.nn.modules.utils import _pair
 
 from mmhuman3d.utils.geometry import rot6d_to_rotmat
 from ..builder import HEADS
-
-BN_MOMENTUM = 0.1
-"""This script is modified from [PARE](https://github.com/
-mkocabas/PARE/tree/master/pare/models/layers).
-
-Original license please see docs/additional_licenses.md.
-"""
 
 
 class LocallyConnected2d(nn.Module):
@@ -179,6 +177,7 @@ class PareHead(BaseModule):
         shape_mlp_num_layers=1,
         pose_mlp_hidden_size=256,
         shape_mlp_hidden_size=256,
+        bn_momentum=0.1,
         use_heatmaps='part_segm',
         use_keypoint_attention=False,
         use_postconv_keypoint_attention=False,
@@ -223,6 +222,8 @@ class PareHead(BaseModule):
                 Hidden size for pose mpl layers.
             shape_mlp_hidden_size (int):
                 Hidden size for pose mpl layers.
+            bn_momemtum (float):
+                Momemtum for batch normalization.
             use_heatmaps (str):
                 Types of heat maps to use.
             use_keypoint_attention (bool)
@@ -252,7 +253,7 @@ class PareHead(BaseModule):
         self.use_keypoint_attention = use_keypoint_attention
 
         self.num_input_features = num_input_features
-
+        self.bn_momentum = bn_momentum
         if self.use_heatmaps == 'part_segm':
 
             self.use_keypoint_attention = True
@@ -431,7 +432,7 @@ class PareHead(BaseModule):
                     stride=1,
                     padding=padding,
                     bias=self.deconv_with_bias))
-            layers.append(nn.BatchNorm2d(planes, momentum=BN_MOMENTUM))
+            layers.append(nn.BatchNorm2d(planes, momentum=self.bn_momentum))
             layers.append(nn.ReLU(inplace=True))
             self.num_input_features = planes
 
@@ -458,7 +459,7 @@ class PareHead(BaseModule):
                     padding=padding,
                     output_padding=output_padding,
                     bias=self.deconv_with_bias))
-            layers.append(nn.BatchNorm2d(planes, momentum=BN_MOMENTUM))
+            layers.append(nn.BatchNorm2d(planes, momentum=self.bn_momentum))
             layers.append(nn.ReLU(inplace=True))
             # if self.use_self_attention:
             #     layers.append(SelfAttention(planes))

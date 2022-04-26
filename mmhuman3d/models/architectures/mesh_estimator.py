@@ -440,6 +440,15 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
         loss = self.loss_keypoints3d(
             pred_keypoints3d, gt_keypoints3d, reduction_override='none')
+
+        # If has_keypoints3d is not None, then computes the losses on the
+        # instances that have ground-truth keypoints3d.
+        # But the zero confidence keypoints will be included in mean.
+        # Otherwise, only compute the keypoints3d
+        # which have positive confidence.
+
+        # has_keypoints3d is None when the key has_keypoints3d
+        # is not in the datasets
         if has_keypoints3d is None:
 
             valid_pos = keypoints3d_conf > 0
@@ -482,6 +491,15 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         gt_keypoints2d = 2 * gt_keypoints2d / (img_res - 1) - 1
         loss = self.loss_keypoints2d(
             pred_keypoints2d, gt_keypoints2d, reduction_override='none')
+
+        # If has_keypoints2d is not None, then computes the losses on the
+        # instances that have ground-truth keypoints2d.
+        # But the zero confidence keypoints will be included in mean.
+        # Otherwise, only compute the keypoints2d
+        # which have positive confidence.
+        # has_keypoints2d is None when the key has_keypoints2d
+        # is not in the datasets
+
         if has_keypoints2d is None:
             valid_pos = keypoints2d_conf > 0
             if keypoints2d_conf[valid_pos].numel() == 0:

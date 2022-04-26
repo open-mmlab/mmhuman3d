@@ -1,16 +1,19 @@
-# SPIN
+# PARE
 
 ## Introduction
 
 We provide the config files for PARE: [Part Attention Regressor for 3D Human Body Estimation](https://arxiv.org/abs/2104.08527).
 
 ```BibTeX
-@inproceedings{kocabas2021pare,
-  title={Pare: Part attention regressor for 3d human body estimation},
-  author={Kocabas, Muhammed and Huang, Chun-Hao P and Hilliges, Otmar and Black, Michael J},
-  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
-  pages={11127--11137},
-  year={2021}
+@inproceedings{Kocabas_PARE_2021,
+  title = {{PARE}: Part Attention Regressor for {3D} Human Body Estimation},
+  author = {Kocabas, Muhammed and Huang, Chun-Hao P. and Hilliges, Otmar and Black, Michael J.},
+  booktitle = {Proc. International Conference on Computer Vision (ICCV)},
+  pages = {11127--11137},
+  month = oct,
+  year = {2021},
+  doi = {},
+  month_numeric = {10}
 }
 ```
 
@@ -22,7 +25,7 @@ We provide the config files for PARE: [Part Attention Regressor for 3D Human Bod
 - [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
 - Pascal Occluders for the pretraining:
     - [pascal_occluders.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/coco_fits.npy?versionId=CAEQHhiBgMCr4ZvV6xciIGY1OTZjM2NlZWI3ZDRjMzI5ODE0MWQxYjM2M2Y4NTVk)
-As for pretrained model (pare_pretrain.pth). You can download it from [here]() and change the path of pretrained model in the config).
+As for pretrained model (hrnet_w32_conv_pare_coco.pth). You can download it from [here]() and change the path of pretrained model in the config.
 You can also pretrain the model using [hrnet_w32_conv_pare_coco.py]([hrnet_w32_conv_pare_coco.py]). Then download the hrnet pretrain from [here]()
 
 Download the above resources and arrange them in the following file structure:
@@ -70,7 +73,7 @@ mmhuman3d
 
 ## Results and Models
 
-We evaluate SPIN on 3DPW. Values are MPJPE/PA-MPJPE.
+We evaluate PARE on 3DPW. Values are MPJPE/PA-MPJPE.
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
