@@ -186,6 +186,7 @@ class PareHead(BaseModule):
         use_scale_keypoint_attention=False,
         backbone='hrnet_w32-conv',  # hrnet, resnet
         smpl_mean_params=None,
+        deconv_with_bias=False,
     ):
         """PARE parameters regressor head. This class is modified from.
 
@@ -231,6 +232,8 @@ class PareHead(BaseModule):
             use_scale_keypoint_attention (str):
                 Whether to scale the attention
                 according to the size of the attention map.
+            deconv_with_bias (bool)
+                Whether to deconv with bias.
             backbone (str):
                 Types of the backbone.
             smpl_mean_params (str):
@@ -240,7 +243,7 @@ class PareHead(BaseModule):
         super(PareHead, self).__init__()
         self.backbone = backbone
         self.num_joints = num_joints
-        self.deconv_with_bias = False
+        self.deconv_with_bias = deconv_with_bias
         self.use_heatmaps = use_heatmaps
         self.pose_mlp_num_layers = pose_mlp_num_layers
         self.shape_mlp_num_layers = shape_mlp_num_layers

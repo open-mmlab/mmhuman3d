@@ -115,33 +115,20 @@ class SyntheticOcclusion:
         occluders_file (str): occluders file.
     """
 
-    def __init__(self,
-                 occ_aug_dataset='pascal',
-                 pascal_voc_root_path='data/VOCtrainval_11-May-2012/ \
-                                    VOCdevkit/VOC2012',
-                 occluders_file='',
-                 occluders=None):
+    def __init__(self, occluders_file='', occluders=None):
         self.occluders = None
-        self.occ_aug_dataset = occ_aug_dataset
         if occluders is not None:
             self.occluders = occluders
 
-        elif self.occ_aug_dataset == 'pascal':
-            self.occluders = load_pascal_occluders(
-                occluders_file=occluders_file,
-                pascal_voc_root_path=pascal_voc_root_path)
         else:
-            raise NotImplementedError()
+            self.occluders = load_pascal_occluders(
+                occluders_file=occluders_file, )
 
     def __call__(self, results):
         """Perform data augmentation with random channel noise."""
         img = results['img']
-        # Each channel is multiplied with a number
-        # in the area [1-self.noise_factor, 1+self.noise_factor]
 
-        if self.occ_aug_dataset == 'pascal':
-            img = occlude_with_pascal_objects(img, self.occluders)
-        else:
-            raise NotImplementedError()
+        img = occlude_with_pascal_objects(img, self.occluders)
+
         results['img'] = img
         return results

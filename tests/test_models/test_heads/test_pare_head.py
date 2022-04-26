@@ -4,7 +4,6 @@ import tempfile
 
 import numpy as np
 import pytest
-import torch
 
 from mmhuman3d.models.heads import PareHead
 
@@ -43,9 +42,6 @@ def test_PARE_head():
         use_keypoint_attention=True,
         smpl_mean_params=osp.join(tmpdir.name, 'h36m_mean.npz'))
 
-    if torch.cuda.is_available():
-        head = head.cuda()
-
     with pytest.raises(TypeError):
         _ = PareHead()
 
@@ -54,12 +50,28 @@ def test_PARE_head():
     input_shape = (batch_size, 480, 64, 64)
     features = _demo_head_inputs(input_shape)
 
-    if torch.cuda.is_available():
-        predictions = head(features)
-        pred_keys = ['pred_pose', 'pred_cam', 'pred_shape']
-        for k in pred_keys:
-            assert k in predictions
-            assert predictions[k].shape[0] == batch_size
+    predictions = head(features)
+    pred_keys = ['pred_pose', 'pred_cam', 'pred_shape']
+    for k in pred_keys:
+        assert k in predictions
+        assert predictions[k].shape[0] == batch_size
+
+    head = PareHead(
+        backbone='hrnet_w32-conv',
+        use_keypoint_attention=True,
+        smpl_mean_params=osp.join(tmpdir.name, 'h36m_mean.npz'),
+        deconv_with_bias=True)
+
+    # mock inputs
+    batch_size = 4
+    input_shape = (batch_size, 480, 64, 64)
+    features = _demo_head_inputs(input_shape)
+
+    predictions = head(features)
+    pred_keys = ['pred_pose', 'pred_cam', 'pred_shape']
+    for k in pred_keys:
+        assert k in predictions
+        assert predictions[k].shape[0] == batch_size
 
     tmpdir.cleanup()
 

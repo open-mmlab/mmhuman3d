@@ -1,10 +1,10 @@
 import pytest
 import torch
 
-from mmhuman3d.models.losses import L1Loss, MSELoss
+from mmhuman3d.models.losses import CrossEntropyLoss, L1Loss, MSELoss
 
 
-@pytest.mark.parametrize('loss_class', [MSELoss, L1Loss])
+@pytest.mark.parametrize('loss_class', [MSELoss, L1Loss, CrossEntropyLoss])
 def test_loss_with_reduction_override(loss_class):
     pred = torch.rand((10, 3))
     target = torch.rand((10, 3)),
@@ -52,3 +52,43 @@ def test_regression_losses(loss_class):
         loss_class()(
             pred, target, avg_factor=10, reduction_override=reduction_override)
         assert isinstance(loss, torch.Tensor)
+
+
+@pytest.mark.parametrize('use_sigmoid', [True, False])
+@pytest.mark.parametrize('reduction', ['sum', 'mean', None])
+def test_loss_with_ignore_index(use_sigmoid, reduction):
+    # Test cross_entropy loss
+
+    loss_class = CrossEntropyLoss(
+        use_sigmoid=use_sigmoid,
+        use_mask=False,
+        ignore_index=255,
+    )
+    pred = torch.rand((10, 5))
+    target = torch.randint(0, 5, (10, ))
+
+    ignored_indices = torch.randint(0, 10, (2, ), dtype=torch.long)
+    target[ignored_indices] = 255
+
+    # Test loss forward with default ignore
+    loss_with_ignore = loss_class(pred, target, reduction_override=reduction)
+    assert isinstance(loss_with_ignore, torch.Tensor)
+
+    # Test loss forward with forward ignore
+    target[ignored_indices] = 255
+    loss_with_forward_ignore = loss_class(
+        pred, target, ignore_index=255, reduction_override=reduction)
+    assert isinstance(loss_with_forward_ignore, torch.Tensor)
+
+    # Verify correctness
+
+    loss = loss_class(pred, target, reduction_override=reduction)
+
+    assert torch.allclose(loss, loss_with_ignore)
+    assert torch.allclose(loss, loss_with_forward_ignore)
+
+    # test ignore all target
+    pred = torch.rand((10, 5))
+    target = torch.ones((10, ), dtype=torch.long) * 255
+    loss = loss_class(pred, target, reduction_override=reduction)
+    assert loss == 0
