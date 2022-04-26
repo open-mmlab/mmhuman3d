@@ -1,4 +1,4 @@
-# import pytest
+import pytest
 import torch
 
 from mmhuman3d.models.backbones.hrnet import HRModule, PoseHighResolutionNet
@@ -17,7 +17,7 @@ def all_zeros(modules):
     return weight_zero and bias_zero
 
 
-# @pytest.mark.parametrize('block', [BasicBlock, Bottleneck])
+@pytest.mark.parametrize('block', [HRModule])
 def test_hrmodule(block):
     # Test multiscale forward
     num_channles = (32, 64)
@@ -89,9 +89,9 @@ def test_hrnet_backbone():
         final_conv_kernel=1,
     )
 
-    # with pytest.raises(AssertionError):
-    #     # HRNet now only support 4 stages
-    #     HRNet(extra=extra)
+    with pytest.raises(AssertionError):
+        # HRNet now only support 4 stages
+        PoseHighResolutionNet(extra=extra)
     extra['stage4'] = dict(
         num_modules=3,
         num_branches=3,  # should be 4
@@ -99,9 +99,9 @@ def test_hrnet_backbone():
         num_blocks=(4, 4, 4, 4),
         num_channels=(32, 64, 128, 256))
 
-    # with pytest.raises(AssertionError):
-    #     # len(num_blocks) should equal num_branches
-    #     HRNet(extra=extra)
+    with pytest.raises(AssertionError):
+        # len(num_blocks) should equal num_branches
+        PoseHighResolutionNet(extra=extra)
 
     extra['stage4']['num_branches'] = 4
 
@@ -155,13 +155,6 @@ def test_hrnet_backbone():
     assert feats.shape == torch.Size([1, 480, 8, 8])
     extra['use_conv'] = False
 
-    # model = PoseHighResolutionNet(extra=extra,zero_init_residual=True)
-    # model.init_weights()
-
-    # for name,m in model.named_modules():
-    #     print(name)
-    #     if isinstance(m, Bottleneck):
-    #         assert all_zeros(m.norm3)
     model.train()
 
 
