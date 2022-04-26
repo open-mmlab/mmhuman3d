@@ -6,7 +6,7 @@ body_model = dict(
     num_betas=10,
     keypoint_src='smpl_45',
     keypoint_dst='smpl_45',
-    model_path='/mnt/cache/wangyanjun/mmhuman3d_old/data/body_models/smpl',
+    model_path='data/body_models/smpl',
     batch_size=1)
 
 stages = [
