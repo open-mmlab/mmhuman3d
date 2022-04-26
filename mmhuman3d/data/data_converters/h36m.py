@@ -174,17 +174,12 @@ class H36mConverter(BaseModeConverter):
                  modes: List = [],
                  protocol: int = 1,
                  extract_img: bool = False,
-                 mosh_dir=None,
-                 algorithm='hmr') -> None:
+                 mosh_dir=None) -> None:
         super(H36mConverter, self).__init__(modes)
         accepted_protocol = [1, 2]
         if protocol not in accepted_protocol:
             raise ValueError('Input protocol not in accepted protocol. \
                 Use either 1 or 2')
-        accepted_algorithms = ['hmr', 'spin']
-        if algorithm not in accepted_algorithms:
-            raise ValueError('Input algorithm not in accepted algorithms. \
-                Use either hmr or spin')
         self.protocol = protocol
         self.extract_img = extract_img
         self.get_mosh = False
@@ -197,7 +192,6 @@ class H36mConverter(BaseModeConverter):
             '58860488': 2,
             '60457274': 3,
         }
-        self.algorithm = algorithm
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:
@@ -405,14 +399,9 @@ class H36mConverter(BaseModeConverter):
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
-        if self.algorithm == 'hmr':
-            prefix = 'h36m'
-        else:
-            prefix = f'{self.algorithm}_h36m'
-
         if mode == 'train':
-            out_file = os.path.join(out_path, f'{prefix}_train.npz')
+            out_file = os.path.join(out_path, 'h36m_train.npz')
         elif mode == 'valid':
-            out_file = os.path.join(
-                out_path, f'{prefix}_valid_protocol{self.protocol}.npz')
+            out_file = os.path.join(out_path,
+                                    f'h36m_valid_protocol{self.protocol}.npz')
         human_data.dump(out_file)
