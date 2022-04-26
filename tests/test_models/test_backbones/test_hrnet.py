@@ -2,6 +2,7 @@ import pytest
 import torch
 
 from mmhuman3d.models.backbones.hrnet import HRModule, PoseHighResolutionNet
+from mmhuman3d.models.backbones.resnet import BasicBlock, Bottleneck
 
 
 def all_zeros(modules):
@@ -17,7 +18,7 @@ def all_zeros(modules):
     return weight_zero and bias_zero
 
 
-@pytest.mark.parametrize('block', [HRModule])
+@pytest.mark.parametrize('block', [BasicBlock, Bottleneck])
 def test_hrmodule(block):
     # Test multiscale forward
     num_channles = (32, 64)
@@ -156,7 +157,3 @@ def test_hrnet_backbone():
     extra['use_conv'] = False
 
     model.train()
-
-
-test_hrmodule
-test_hrnet_backbone()

@@ -242,7 +242,7 @@ def test_compute_part_segm_loss():
         type='SMPL',
         keypoint_src='smpl_54',
         keypoint_dst='smpl_49',
-        model_path='mmhuman3d/data/body_models/smpl',
+        model_path='data/body_models/smpl',
         extra_joints_regressor='data/body_models/J_regressor_extra.npy')
     body_model = build_body_model(body_model_train)
 

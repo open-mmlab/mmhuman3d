@@ -56,6 +56,4 @@ def test_synthetic_occlusion():
     pipeline = SyntheticOcclusion(occluders=occluders)
 
     results = pipeline(results)
-    with pytest.raises(AssertionError):
-        results = pipeline(results)
     assert results['img'].shape == (224, 224, 3)
