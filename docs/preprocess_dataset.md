@@ -205,7 +205,7 @@ spin, h36m_spin
 
 **Alternatively**, you may download the preprocessed files directly:
 - [spin_coco_2014_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_coco_2014_train.npz?versionId=CAEQHhiBgICb6bfT6xciIGM2NmNmZDYyNDMxMDRiNTVhNDk3YzY1N2Y2ODdlMTAy)
-- [spin_h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
+- [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
 - [spin_lsp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_lsp_train.npz?versionId=CAEQHhiBgIDu57fT6xciIDQ0ODAzNjUyNjJkMzQyNzQ5Y2IzNGNhOTZmZGI2NzBm)
 - [spin_lspet_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_lspet_train.npz?versionId=CAEQHhiBgMCe6LfT6xciIDc3NzZiYzA1ZGJkYzQwNzRhYjg3ZDMwYTdjZDZmNTAw)
 - [spin_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgMCV6LfT6xciIDliYTJhM2FkNDkyYjRiOWFiYTUwOTk0MGRlNThlZWRk)
@@ -225,7 +225,7 @@ mmhuman3d
     ├── datasets
     └── preprocessed_datasets
         ├── spin_coco_2014_train.npz
-        ├── spin_h36m_train.npz
+        ├── h36m_train.npz
         ├── spin_lsp_train.npz
         ├── spin_lspet_train.npz
         ├── spin_mpi_inf_3dhp_train.npz
@@ -640,7 +640,7 @@ mmhuman3d
             |   ├── images
             |   |    |── S1_Directions_1.54138969
             |   |    |  ├── S1_Directions_1.54138969_00001.jpg
-            |   |    |  ├── S1_Directions_1.54138969_00002.jpg
+            |   |    |  ├── S1_Directions_1.54138969_00006.jpg
             |   |    |  └── ...
             |   |    └── ...
             |   ├── MyPoseFeatures
@@ -669,7 +669,6 @@ h36m_p1=dict(
     modes=['train', 'valid'],
     protocol=1,
     extract_img=True, # set to true to extract images from raw videos
-    algorithm='hmr',
     prefix='h36m'),
 ```
 
@@ -688,7 +687,6 @@ h36m_p1=dict(
     modes=['train', 'valid'],
     protocol=1,
     extract_img=True,  # this is to specify you want to extract images from videos
-    algorithm='hmr',
     prefix='h36m'),
 ```
 
@@ -700,7 +698,6 @@ h36m_p1=dict(
     protocol=1,
     extract_img=True,  # this is to specify you want to extract images from videos
     mosh_dir='data/datasets/h36m_mosh', # supply the directory to the mosh if available
-    algorithm='hmr',
     prefix='h36m'),
 ```
 
