@@ -72,7 +72,6 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
             image_array = image_array[None]
         if image_array.shape[0] == 1:
             image_array = image_array.repeat(num_frames, 1, 1, 1)
-        image_array
         frame_list = None
         origin_frames = None
         image_array = image_array[start:end]
