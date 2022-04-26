@@ -4,6 +4,7 @@ import tempfile
 
 import numpy as np
 import pytest
+import torch
 
 from mmhuman3d.models.heads import PareHead
 
@@ -30,7 +31,8 @@ def generate_weights(output_dir):
     return
 
 
-def test_PARE_head():
+@pytest.mark.parametrize('deconv_with_bias', [True, False])
+def test_PARE_head(deconv_with_bias):
 
     tmpdir = tempfile.TemporaryDirectory()
     # generate weight file for SMPL model.
@@ -40,35 +42,48 @@ def test_PARE_head():
     head = PareHead(
         backbone='hrnet_w32-conv',
         use_keypoint_attention=True,
-        smpl_mean_params=osp.join(tmpdir.name, 'h36m_mean.npz'))
-
-    with pytest.raises(TypeError):
-        _ = PareHead()
+        smpl_mean_params=osp.join(tmpdir.name, 'h36m_mean.npz'),
+        deconv_with_bias=deconv_with_bias)
 
     # mock inputs
     batch_size = 4
     input_shape = (batch_size, 480, 64, 64)
     features = _demo_head_inputs(input_shape)
+    features = torch.tensor(features).float()
 
     predictions = head(features)
     pred_keys = ['pred_pose', 'pred_cam', 'pred_shape']
+
     for k in pred_keys:
         assert k in predictions
         assert predictions[k].shape[0] == batch_size
 
+    tmpdir.cleanup()
+
+
+def test_PARE_head_no_attention():
+
+    tmpdir = tempfile.TemporaryDirectory()
+    # generate weight file for SMPL model.
+    generate_weights(tmpdir.name)
+
+    # initialize models
     head = PareHead(
         backbone='hrnet_w32-conv',
-        use_keypoint_attention=True,
+        use_keypoint_attention=False,
+        use_heatmaps='',
         smpl_mean_params=osp.join(tmpdir.name, 'h36m_mean.npz'),
-        deconv_with_bias=True)
+    )
 
     # mock inputs
     batch_size = 4
     input_shape = (batch_size, 480, 64, 64)
     features = _demo_head_inputs(input_shape)
+    features = torch.tensor(features).float()
 
     predictions = head(features)
     pred_keys = ['pred_pose', 'pred_cam', 'pred_shape']
+
     for k in pred_keys:
         assert k in predictions
         assert predictions[k].shape[0] == batch_size
