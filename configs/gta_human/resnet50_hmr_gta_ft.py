@@ -189,8 +189,7 @@ data = dict(
                     ann_file='gta_human_4x.npz'),
             ],
             partition=[0.35, 0.15, 0.1, 0.10, 0.10, 0.2, 1],
-            num_data=100000
-        ),
+            num_data=100000),
         adv_dataset=dict(
             type='MeshDataset',
             dataset_name='cmu_mosh',

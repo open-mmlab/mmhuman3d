@@ -58,7 +58,7 @@ mmhuman3d
     │   ├── lsp_train.npz
     │   ├── mpi_inf_3dhp_train.npz
     │   ├── mpii_train.npz
-    │   ├── gta_human_4x.npz   
+    │   ├── gta_human_4x.npz  
     │   └── pw3d_test.npz
     ├── pretrained
     │   └── resnet50_hmr-2672873c_20220415.pth
