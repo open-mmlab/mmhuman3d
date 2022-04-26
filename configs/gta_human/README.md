@@ -5,8 +5,8 @@
 We provide the config files for GTA-Human: Playing for 3D Human Recovery.
 [[Homepage]](https://caizhongang.github.io/projects/GTA-Human/) [[Preprint]](https://arxiv.org/pdf/2110.07588.pdf)
 
-Notes: 
-- the pretrained models for HMR baseline is currently available. 
+Notes:
+- the pretrained models for HMR baseline is currently available.
 - more baselines (HMR+, SPIN, VIBE, and PARE) are coming soon.  
 - we are working on the release of data, which is not available for downloads yet
 
