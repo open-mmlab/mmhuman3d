@@ -177,6 +177,15 @@ def test_compute_keypoints3d_loss():
     loss = model.compute_keypoints3d_loss(pred_keypoints3d, gt_keypoints3d)
     assert loss > 0
 
+    has_keypoints3d = torch.ones(32)
+    loss = model.compute_keypoints3d_loss(
+        pred_keypoints3d, gt_keypoints3d, has_keypoints3d=has_keypoints3d)
+    assert loss > 0
+    has_keypoints3d = torch.zeros(32)
+    loss = model.compute_keypoints3d_loss(
+        pred_keypoints3d, gt_keypoints3d, has_keypoints3d=has_keypoints3d)
+    assert loss == 0
+
 
 def test_compute_keypoints2d_loss():
     model = ImageBodyModelEstimator(
@@ -197,6 +206,22 @@ def test_compute_keypoints2d_loss():
     loss = model.compute_keypoints2d_loss(pred_keypoints3d, pred_cam,
                                           gt_keypoints2d)
     assert loss > 0
+
+    has_keypoints2d = torch.ones((32))
+    loss = model.compute_keypoints2d_loss(
+        pred_keypoints3d,
+        pred_cam,
+        gt_keypoints2d,
+        has_keypoints2d=has_keypoints2d)
+    assert loss > 0
+
+    has_keypoints2d = torch.zeros((32))
+    loss = model.compute_keypoints2d_loss(
+        pred_keypoints3d,
+        pred_cam,
+        gt_keypoints2d,
+        has_keypoints2d=has_keypoints2d)
+    assert loss == 0
 
 
 def test_compute_vertex_loss():

@@ -156,4 +156,18 @@ def test_hrnet_backbone():
     assert feats.shape == torch.Size([1, 480, 8, 8])
     extra['use_conv'] = False
 
+    model = PoseHighResolutionNet(extra=extra, zero_init_residual=True)
+    model.init_weights()
+
     model.train()
+    init_cfg = {type: 'Pretrained'}
+    pretrained = '.'
+    with pytest.raises(AssertionError):
+        #     # len(num_blocks) should equal num_branches
+        PoseHighResolutionNet(
+            extra=extra, init_cfg=init_cfg, pretrained=pretrained)
+    with pytest.raises(TypeError):
+        #     # len(num_blocks) should equal num_branches
+        PoseHighResolutionNet(extra=extra, pretrained=1)
+
+    PoseHighResolutionNet(extra=extra, pretrained=pretrained)

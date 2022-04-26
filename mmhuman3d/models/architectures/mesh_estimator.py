@@ -490,8 +490,11 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             loss /= keypoints2d_conf[valid_pos].numel()
         else:
             keypoints2d_conf = keypoints2d_conf[has_keypoints2d == 1]
+            if keypoints2d_conf.shape[0] == 0:
+                return torch.Tensor([0]).type_as(gt_keypoints2d)
             loss = loss[has_keypoints2d == 1]
             loss = (loss * keypoints2d_conf).mean()
+
         return loss
 
     def compute_vertex_loss(self, pred_vertices: torch.Tensor,
