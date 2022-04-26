@@ -300,6 +300,49 @@ mmhuman3d
         └── hybrik_pw3d_test.npz
 ```
 
+For PARE training, the following datasets are required:
+
+  - [Human3.6M Mosh](#human36mmosh)
+  - [MPI-INF-3DHP](#mpi-inf-3dhp)
+  - [EFT-COCO](#EFT)
+  - [EFT-MPII](#EFT)
+  - [EFT-LSPET](#EFT)
+  - [PW3D](#pw3d)
+
+
+Convert datasets with the following `dataset-names`:
+```
+h36m, coco, mpii, lspet, mpi-inf-3dhp, pw3d
+```
+
+**Alternatively**, you may download the preprocessed files directly:
+- [h36m_mosh_train.npz]()
+- [mpi_inf_3dhp_train.npz]()
+- [eft_mpii.npz]()
+- [eft_lspet.npz]()
+- [eft_coco_all.npz]()
+- [pw3d_test.npz]()
+
+
+The preprocessed datasets should have this structure:
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── datasets
+    └── preprocessed_datasets
+        ├── h36m_mosh_train.npz
+        ├── mpi_inf_3dhp_train.npz
+        ├── eft_mpii.npz
+        ├── eft_lspet.npz
+        ├── eft_coco_all.npz
+        ├── pw3d_test.npz
+```
+
 ## Folder structure
 
 ### AGORA

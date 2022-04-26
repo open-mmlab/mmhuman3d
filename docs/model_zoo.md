@@ -21,3 +21,7 @@ Please refer to [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs
 ### HybrIK
 
 Please refer to [HybrIK](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hybrik/) for details.
+
+### PARE
+
+Please refer to [PARE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/pare/) for details.

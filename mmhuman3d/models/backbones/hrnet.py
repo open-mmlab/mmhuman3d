@@ -1,4 +1,4 @@
-import os
+# Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 
 import torch
@@ -6,11 +6,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn import build_conv_layer, build_norm_layer
 from mmcv.runner import BaseModule, ModuleList, Sequential
+from torch.nn.modules.batchnorm import _BatchNorm
 
 from ..builder import BACKBONES
 from .resnet import BasicBlock, Bottleneck
-
-BN_MOMENTUM = 0.1
 
 
 class HRModule(BaseModule):
@@ -29,7 +28,7 @@ class HRModule(BaseModule):
                  multiscale_output=True,
                  with_cp=False,
                  conv_cfg=None,
-                 norm_cfg=dict(type='BN', momentum=BN_MOMENTUM),
+                 norm_cfg=dict(type='BN'),
                  block_init_cfg=None,
                  init_cfg=None):
         super(HRModule, self).__init__(init_cfg)
@@ -247,15 +246,14 @@ class PoseHighResolutionNet(BaseModule):
                  norm_cfg=dict(type='BN'),
                  norm_eval=True,
                  with_cp=False,
+                 num_joints=24,
                  zero_init_residual=False,
                  multiscale_output=True,
-                 num_joints=24,
                  pretrained=None,
                  init_cfg=None):
         super(PoseHighResolutionNet, self).__init__(init_cfg)
 
         self.pretrained = pretrained
-
         assert not (init_cfg and pretrained), \
             'init_cfg and pretrained cannot be specified at the same time'
         if isinstance(pretrained, str):
@@ -362,7 +360,7 @@ class PoseHighResolutionNet(BaseModule):
                                                        num_channels)
         self.stage4, pre_stage_channels = self._make_stage(
             self.stage4_cfg, num_channels, multiscale_output=multiscale_output)
-
+        # self.pretrained_layers = extra['pretrained_layers']
         self.final_layer = build_conv_layer(
             cfg=self.conv_cfg,
             in_channels=pre_stage_channels[0],
@@ -370,9 +368,6 @@ class PoseHighResolutionNet(BaseModule):
             kernel_size=extra['final_conv_kernel'],
             stride=1,
             padding=1 if extra['final_conv_kernel'] == 3 else 0)
-
-        self.pretrained_layers = extra['pretrained_layers']
-
         if extra['downsample'] and extra['use_conv']:
             self.downsample_stage_1 = self._make_downsample_layer(
                 3, num_channel=self.stage2_cfg['num_channels'][0])
@@ -602,94 +597,69 @@ class PoseHighResolutionNet(BaseModule):
                 x_list.append(self.transition3[i](y_list[-1]))
             else:
                 x_list.append(y_list[i])
-        x = self.stage4(x_list)
-        if self.extra['downsample']:
+        y_list = self.stage4(x_list)
+        if self.extra['return_list']:
+            return y_list
+        elif self.extra['downsample']:
             if self.extra['use_conv']:
                 # Downsampling with strided convolutions
-                x1 = self.downsample_stage_1(x[0])
-                x2 = self.downsample_stage_2(x[1])
-                x3 = self.downsample_stage_3(x[2])
-                x = torch.cat([x1, x2, x3, x[3]], 1)
+                x1 = self.downsample_stage_1(y_list[0])
+                x2 = self.downsample_stage_2(y_list[1])
+                x3 = self.downsample_stage_3(y_list[2])
+                x = torch.cat([x1, x2, x3, y_list[3]], 1)
             else:
                 # Downsampling with interpolation
-                x0_h, x0_w = x[3].size(2), x[3].size(3)
+                x0_h, x0_w = y_list[3].size(2), y_list[3].size(3)
                 x1 = F.interpolate(
-                    x[0],
+                    y_list[0],
                     size=(x0_h, x0_w),
                     mode='bilinear',
                     align_corners=True)
                 x2 = F.interpolate(
-                    x[1],
+                    y_list[1],
                     size=(x0_h, x0_w),
                     mode='bilinear',
                     align_corners=True)
                 x3 = F.interpolate(
-                    x[2],
+                    y_list[2],
                     size=(x0_h, x0_w),
                     mode='bilinear',
                     align_corners=True)
-                x = torch.cat([x1, x2, x3, x[3]], 1)
+                x = torch.cat([x1, x2, x3, y_list[3]], 1)
         else:
             if self.extra['use_conv']:
                 # Upsampling with interpolations + convolutions
-                x1 = self.upsample_stage_2(x[1])
-                x2 = self.upsample_stage_3(x[2])
-                x3 = self.upsample_stage_4(x[3])
-                x = torch.cat([x[0], x1, x2, x3], 1)
+                x1 = self.upsample_stage_2(y_list[1])
+                x2 = self.upsample_stage_3(y_list[2])
+                x3 = self.upsample_stage_4(y_list[3])
+                x = torch.cat([y_list[0], x1, x2, x3], 1)
             else:
                 # Upsampling with interpolation
-                x0_h, x0_w = x[0].size(2), x[0].size(3)
+                x0_h, x0_w = y_list[0].size(2), y_list[0].size(3)
                 x1 = F.interpolate(
-                    x[1],
+                    y_list[1],
                     size=(x0_h, x0_w),
                     mode='bilinear',
                     align_corners=True)
                 x2 = F.interpolate(
-                    x[2],
+                    y_list[2],
                     size=(x0_h, x0_w),
                     mode='bilinear',
                     align_corners=True)
                 x3 = F.interpolate(
-                    x[3],
+                    y_list[3],
                     size=(x0_h, x0_w),
                     mode='bilinear',
                     align_corners=True)
-                x = torch.cat([x[0], x1, x2, x3], 1)
+                x = torch.cat([y_list[0], x1, x2, x3], 1)
         return x
 
-    def init_weights(self, ):
-        """This function is modified from [PARE](https://github.com/
-        mkocabas/PARE/blob/master/pare/models/backbone/hrnet.py#L529).
-
-        Original license please see docs/additional_licenses.md.
-        """
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.normal_(m.weight, std=0.001)
-                for name, _ in m.named_parameters():
-                    if name in ['bias']:
-                        nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.ConvTranspose2d):
-                nn.init.normal_(m.weight, std=0.001)
-                for name, _ in m.named_parameters():
-                    if name in ['bias']:
-                        nn.init.constant_(m.bias, 0)
-
-        if self.init_cfg['type'] == 'Pretrained' and os.path.isfile(
-                self.init_cfg['checkpoint']):
-            pretrained = self.init_cfg['checkpoint']
-            pretrained_state_dict = torch.load(pretrained)
-            need_init_state_dict = {}
-            for name, m in pretrained_state_dict.items():
-
-                if name.split('.')[0] in self.pretrained_layers \
-                   or self.pretrained_layers[0] == '*':
-
-                    need_init_state_dict[name] = m
-            self.load_state_dict(need_init_state_dict, strict=False)
-        elif self.init_cfg['type'] == 'Pretrained':
-            warnings.warn('IMPORTANT WARNING!! Please download pre-trained \
-                models if you are in TRAINING mode!')
+    def train(self, mode=True):
+        """Convert the model into training mode will keeping the normalization
+        layer freezed."""
+        super(PoseHighResolutionNet, self).train(mode)
+        if mode and self.norm_eval:
+            for m in self.modules():
+                # trick: eval have effect on BatchNorm only
+                if isinstance(m, _BatchNorm):
+                    m.eval()

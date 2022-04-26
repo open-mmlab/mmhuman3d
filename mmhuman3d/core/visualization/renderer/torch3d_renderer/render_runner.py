@@ -29,7 +29,7 @@ def render(renderer: Union[nn.Module, dict],
            batch_size: int = 5,
            return_tensor: bool = False,
            no_grad: bool = False,
-           vis_progress: bool = True,
+           verbose: bool = True,
            **forward_params):
 
     if isinstance(renderer, dict):
@@ -97,7 +97,7 @@ def render(renderer: Union[nn.Module, dict],
         if isinstance(forward_params[k], np.ndarray):
             forward_params.update(
                 {k: torch.tensor(forward_params[k]).to(device)})
-    if vis_progress:
+    if verbose:
         iter_func = trange
     else:
         iter_func = range

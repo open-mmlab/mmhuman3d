@@ -3,16 +3,20 @@ use_adversarial_train = True
 # evaluate
 evaluation = dict(interval=10, metric=['pa-mpjpe', 'mpjpe'])
 # optimizer
-optimizer = dict(type='Adam', lr=5.0e-05)
+
+optimizer = dict(
+    backbone=dict(type='Adam', lr=2.0e-4),
+    head=dict(type='Adam', lr=2.0e-4),
+)
 optimizer_config = dict(grad_clip=None)
 
 lr_config = dict(policy='Fixed', by_epoch=False)
 runner = dict(type='EpochBasedRunner', max_epochs=200)
 
 log_config = dict(
-    interval=50,
-    hooks=[dict(type='TextLoggerHook'),
-           dict(type='TensorboardLoggerHook')])
+    interval=50, hooks=[
+        dict(type='TextLoggerHook'),
+    ])
 
 _base_ = ['../_base_/default_runtime.py']
 checkpoint_config = dict(interval=10)
@@ -60,23 +64,25 @@ hrnet_extra = dict(
         'stage4',
     ],
     final_conv_kernel=1,
+    return_list=False,
 )
 
 find_unused_parameters = True
 
 model = dict(
-    type='PARE',
+    type='ImageBodyModelEstimator',
     backbone=dict(
         type='PoseHighResolutionNet',
         extra=hrnet_extra,
         num_joints=24,
         init_cfg=dict(
-            type='Pretrained', checkpoint='pose_hrnet_w32_256x192.pth')),
+            type='Pretrained',
+            checkpoint='data/pretrained_models/hrnet_pretrain.pth')),
     head=dict(
         type='PareHead',
         num_joints=24,
         num_input_features=480,
-        smpl_mean_params='data/body_models/smpl_mean_params.npz',
+        smpl_mean_params='data/smpl_mean_params.npz',
         num_deconv_layers=2,
         num_deconv_filters=[128] *
         2,  # num_deconv_filters = [num_deconv_filters] * num_deconv_layers
@@ -89,18 +95,17 @@ model = dict(
     body_model_train=dict(
         type='SMPL',
         keypoint_src='smpl_54',
-        keypoint_dst='smpl_49',
+        keypoint_dst='smpl_24',
         model_path='data/body_models/smpl',
         keypoint_approximate=True,
-        extra_joints_regressor='data/body_models/J_regressor_extra.npy'),
+        extra_joints_regressor='data/J_regressor_extra.npy'),
     body_model_test=dict(
         type='SMPL',
         keypoint_src='h36m',
         keypoint_dst='h36m',
         model_path='data/body_models/smpl',
         joints_regressor='data/J_regressor_h36m.npy'),
-    convention='smpl_49',
-    loss_convention='smpl_24',
+    convention='smpl_24',
     loss_keypoints3d=dict(type='MSELoss', loss_weight=300),
     loss_keypoints2d=dict(type='MSELoss', loss_weight=300),
     loss_smpl_pose=dict(type='MSELoss', loss_weight=60),
@@ -114,17 +119,17 @@ dataset_type = 'HumanImageDataset'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data_keys = [
-    'has_smpl', 'has_keypoints3d', 'smpl_body_pose', 'smpl_global_orient',
-    'smpl_betas', 'smpl_transl', 'keypoints2d', 'keypoints3d', 'sample_idx'
+    'has_smpl', 'has_keypoints3d', 'has_keypoints2d', 'smpl_body_pose',
+    'smpl_global_orient', 'smpl_betas', 'smpl_transl', 'keypoints2d',
+    'keypoints3d', 'sample_idx'
 ]
 train_pipeline = [
     dict(type='LoadImageFromFile', file_client_args=dict(backend='petrel')),
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(
         type='SyntheticOcclusion',
-        pascal_voc_root_path='data/VOCdevkit/VOC2012/',
-        occluders_file='data/pascal_occluders.npy'),
-    dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_49'),
+        occluders_file='data/occluders/pascal_occluders.npy'),
+    dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_24'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='MeshAffine', img_res=224),
     dict(type='Normalize', **img_norm_cfg),
@@ -159,17 +164,10 @@ inference_pipeline = [
         meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 
-cache_files = {
-    'h36m': 'data/cache/h36m_mosh_train_smpl_49.npz',
-    'mpi-inf-3dhp': 'data/cache/mpi_inf_3dhp_train_smpl_49.npz',
-    'lsp': 'data/cache/lsp_train_smpl_49.npz',
-    'lspet': 'data/cache/lspet_train_smpl_49.npz',
-    'mpii': 'data/cache/mpii_train_smpl_49.npz',
-    'coco': 'data/cache/coco_2014_train_smpl_49.npz'
-}
+cache_files = {'coco': 'data/cache/coco_2014_train_smpl_24.npz'}
 
 data = dict(
-    samples_per_gpu=8,
+    samples_per_gpu=64,
     workers_per_gpu=0,
     train=dict(
         type='MixedDataset',
@@ -179,7 +177,7 @@ data = dict(
                 dataset_name='coco',
                 data_prefix='data',
                 pipeline=train_pipeline,
-                convention='smpl_49',
+                convention='smpl_24',
                 cache_data_path=cache_files['coco'],
                 ann_file='eft_coco_all.npz'),
         ],
@@ -191,10 +189,10 @@ data = dict(
             type='GenderedSMPL',
             keypoint_src='h36m',
             keypoint_dst='h36m',
-            model_path='data',
-            joints_regressor='data/body_models/J_regressor_h36m.npy'),
+            model_path='data/body_models/smpl',
+            joints_regressor='data/J_regressor_h36m.npy'),
         dataset_name='pw3d',
-        data_prefix='pw3d',
+        data_prefix='data',
         pipeline=test_pipeline,
         ann_file='pw3d_test.npz'),
     val=dict(
@@ -204,9 +202,9 @@ data = dict(
             keypoint_src='h36m',
             keypoint_dst='h36m',
             model_path='data/body_models/smpl',
-            joints_regressor='data/body_models/J_regressor_h36m.npy'),
+            joints_regressor='data/J_regressor_h36m.npy'),
         dataset_name='pw3d',
-        data_prefix='pw3d',
+        data_prefix='data',
         pipeline=test_pipeline,
         ann_file='pw3d_test.npz'),
 )
