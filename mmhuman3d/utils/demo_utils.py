@@ -6,7 +6,6 @@ import mmcv
 import numpy as np
 
 from mmhuman3d.core.filter import build_filter
-from mmhuman3d.utils.path_utils import check_input_path
 
 try:
     from typing import Literal
@@ -336,14 +335,19 @@ def smooth_process(x, smooth_type='savgol'):
     return x
 
 
-def process_mmtracking_results(mmtracking_results, max_track_id):
+def process_mmtracking_results(mmtracking_results,
+                               max_track_id,
+                               bbox_thr=None):
     """Process mmtracking results.
 
     Args:
         mmtracking_results ([list]): mmtracking_results.
-
+        bbox_thr (float): threshold for bounding boxes.
+        max_track_id (int): the maximum track id.
     Returns:
-        list: a list of tracked bounding boxes
+        person_results ([list]): a list of tracked bounding boxes
+        max_track_id (int): the maximum track id.
+        instance_num (int): the number of instance.
     """
     person_results = []
     # 'track_results' is changed to 'track_bboxes'
@@ -353,6 +357,13 @@ def process_mmtracking_results(mmtracking_results, max_track_id):
     elif 'track_results' in mmtracking_results:
         tracking_results = mmtracking_results['track_results'][0]
 
+    tracking_results = np.array(tracking_results)
+
+    if bbox_thr is not None:
+        assert tracking_results.shape[-1] == 6
+        valid_idx = np.where(tracking_results[:, 5] > bbox_thr)[0]
+        tracking_results = tracking_results[valid_idx]
+
     for track in tracking_results:
         person = {}
         person['track_id'] = int(track[0])
@@ -361,15 +372,16 @@ def process_mmtracking_results(mmtracking_results, max_track_id):
         person['bbox'] = track[1:]
         person_results.append(person)
     person_results = sorted(person_results, key=lambda x: x.get('track_id', 0))
-    instance_num = len(tracking_results)
+    instance_num = len(person_results)
     return person_results, max_track_id, instance_num
 
 
-def process_mmdet_results(mmdet_results, cat_id=1):
+def process_mmdet_results(mmdet_results, cat_id=1, bbox_thr=None):
     """Process mmdet results, and return a list of bboxes.
 
     Args:
         mmdet_results (list|tuple): mmdet results.
+        bbox_thr (float): threshold for bounding boxes.
         cat_id (int): category id (default: 1 for human)
 
     Returns:
@@ -383,6 +395,13 @@ def process_mmdet_results(mmdet_results, cat_id=1):
     bboxes = det_results[cat_id - 1]
 
     person_results = []
+    bboxes = np.array(bboxes)
+
+    if bbox_thr is not None:
+        assert bboxes.shape[-1] == 5
+        valid_idx = np.where(bboxes[:, 4] > bbox_thr)[0]
+        bboxes = bboxes[valid_idx]
+
     for bbox in bboxes:
         person = {}
         person['bbox'] = bbox
@@ -404,24 +423,13 @@ def prepare_frames(input_path=None):
         List[np.ndarray]: prepared frames
     """
     if Path(input_path).is_file():
-        if input_path.lower().endswith(('.mp4')):
-            input_type = 'video'
-        elif input_path.lower().endswith(('.png', '.jpg')):
-            input_type = 'image'
-        else:
-            raise ValueError('The input file should be an image or a video.'
-                             f' Got invalid file: {input_path}')
+        img_list = [mmcv.imread(input_path)]
+        if img_list[0] is None:
+            video = mmcv.VideoReader(input_path)
+            assert video.opened, f'Failed to load file {input_path}'
+            img_list = list(video)
     elif Path(input_path).is_dir():
-        input_type = 'folder'
-    else:
-        raise ValueError('Input path should be an file or folder.'
-                         f' Got invalid input path: {input_path}')
-    # prepare input
-    if input_type == 'image':
-        file_list = [input_path]
-        img_list = [mmcv.imread(img_path) for img_path in file_list]
-        assert len(img_list), f'Failed to load image from {input_path}'
-    elif input_type == 'folder':
+        # input_type = 'folder'
         file_list = [
             os.path.join(input_path, fn) for fn in os.listdir(input_path)
             if fn.lower().endswith(('.png', '.jpg'))
@@ -430,12 +438,8 @@ def prepare_frames(input_path=None):
         img_list = [mmcv.imread(img_path) for img_path in file_list]
         assert len(img_list), f'Failed to load image from {input_path}'
     else:
-        check_input_path(
-            input_path=input_path, path_type='file', allowed_suffix=['.mp4'])
-        video = mmcv.VideoReader(input_path)
-        assert video.opened, f'Failed to load video file {input_path}'
-        img_list = list(video)
-
+        raise ValueError('Input path should be an file or folder.'
+                         f' Got invalid input path: {input_path}')
     return img_list
 
 

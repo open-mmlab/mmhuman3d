@@ -64,13 +64,14 @@ def test_inference_video_based_model():
 
 
 def test_process_mmdet_results():
-    det_results = [np.array([0, 0, 100, 100])]
+    det_results = [[np.array([0, 0, 100, 100, 0.99])]]
     det_mask_results = None
 
     _ = process_mmdet_results(
-        mmdet_results=(det_results, det_mask_results), cat_id=1)
+        mmdet_results=(det_results, det_mask_results), cat_id=1, bbox_thr=0.9)
 
-    _ = process_mmdet_results(mmdet_results=det_results, cat_id=1)
+    _ = process_mmdet_results(
+        mmdet_results=det_results, cat_id=1, bbox_thr=0.9)
 
 
 def test_convert_crop_cam_to_orig_img():
@@ -101,11 +102,11 @@ def test_prepare_frames():
 
 def test_process_mmtracking_results():
     track_bboxes = {
-        'track_bboxes': [[np.array([1, 0, 0, 100, 100])]],
+        'track_bboxes': [[np.array([1, 0, 0, 100, 100, 0.99])]],
     }
-    process_mmtracking_results(track_bboxes, 0)
+    process_mmtracking_results(track_bboxes, max_track_id=0, bbox_thr=0.9)
 
     person_results = {
-        'track_results': [[np.array([1, 0, 0, 100, 100])]],
+        'track_results': [[np.array([1, 0, 0, 100, 100, 0.99])]],
     }
-    process_mmtracking_results(person_results, 0)
+    process_mmtracking_results(person_results, max_track_id=0, bbox_thr=0.9)
