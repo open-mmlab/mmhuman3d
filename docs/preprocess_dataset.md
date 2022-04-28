@@ -301,7 +301,7 @@ mmhuman3d
 ```
 
 For PARE training, the following datasets are required:
-
+  - [Human3.6M](#human36m)
   - [Human3.6M Mosh](#human36mmosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [EFT-COCO](#EFT)
@@ -316,12 +316,13 @@ h36m, coco, mpii, lspet, mpi-inf-3dhp, pw3d
 ```
 
 **Alternatively**, you may download the preprocessed files directly:
-- [h36m_mosh_train.npz]()
-- [mpi_inf_3dhp_train.npz]()
-- [eft_mpii.npz]()
-- [eft_lspet.npz]()
-- [eft_coco_all.npz]()
-- [pw3d_test.npz]()
+- [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
+- [mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgMD3q_bS6xciIGQwYjc4NTRjYTllMzRkODU5NTNiZDQyOTBlYmRhODg5)
+- [eft_mpii.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/eft_mpii.npz?versionId=CAEQOhiBgMCXlty_gxgiIDYxNDc5YTIzZjBjMDRhMGM5ZjBiZmYzYjFjMTU1ZTRm)
+- [eft_lspet.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/eft_lspet.npz?versionId=CAEQOhiBgMC339u_gxgiIDZlNzk1YjMxMWRmMzRkNWJiNjg1OTI2Mjg5OTA1YzJh
+)
+- [eft_coco_all.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/eft_coco_all.npz?versionId=CAEQOhiBgID3iuS_gxgiIDgwYzU4NTc3ZWRkNDQyNGJiYzU4MGViYTFhYTFmMmUx)
+- [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
 
 
 The preprocessed datasets should have this structure:

@@ -53,6 +53,22 @@ class LocallyConnected2d(nn.Module):
 
 
 class KeypointAttention(nn.Module):
+    """Keypoint Attention Layer.
+
+    Args:
+        use_conv (bool):
+            whether to use conv for the attended feature map.
+            Default: False
+        in_channels (List[int]):
+            the in channel of shape_cam features and pose features.
+            Default: (256, 64)
+        out_channels (List[int]):
+            the out channel of shape_cam features and pose features.
+            Default: (256, 64)
+    Returns:
+        attended_features (torch.Tensor):
+            attended feature maps
+    """
 
     def __init__(self,
                  use_conv=False,
@@ -101,11 +117,15 @@ class KeypointAttention(nn.Module):
 
 
 def interpolate(feat, uv):
-    '''
-    :param feat: [B, C, H, W] image features
-    :param uv: [B, 2, N] uv coordinates in the image plane, range [-1, 1]
-    :return: [B, C, N] image features at the uv coordinates
-    '''
+    """
+    Args:
+        feat (torch.Tensor): [B, C, H, W] image features
+        uv (torch.Tensor): [B, 2, N] uv coordinates
+            in the image plane, range [-1, 1]
+    Returns:
+        samples[:, :, :, 0] (torch.Tensor):
+            [B, C, N] image features at the uv coordinates
+    """
     if uv.shape[-1] != 2:
         uv = uv.transpose(1, 2)  # [B, N, 2]
     uv = uv.unsqueeze(2)  # [B, N, 1, 2]

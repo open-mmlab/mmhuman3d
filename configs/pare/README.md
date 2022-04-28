@@ -24,9 +24,10 @@ We provide the config files for PARE: [Part Attention Regressor for 3D Human Bod
 - [J_regressor_h36m.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_h36m.npy?versionId=CAEQHhiBgIDE6c3V6xciIDdjYzE3MzQ4MmU4MzQyNmRiZDA5YTg2YTI5YWFkNjRi)
 - [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
 - Pascal Occluders for the pretraining:
-    - [pascal_occluders.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/coco_fits.npy?versionId=CAEQHhiBgMCr4ZvV6xciIGY1OTZjM2NlZWI3ZDRjMzI5ODE0MWQxYjM2M2Y4NTVk)
+    - [pascal_occluders.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/pascal_occluders.npy?versionId=CAEQOhiBgMCH2fqigxgiIDY0YzRiNThkMjU1MzRjZTliMTBhZmFmYWY0MTViMTIx)
 As for pretrained model (hrnet_w32_conv_pare_coco.pth). You can download it from [here]() and change the path of pretrained model in the config.
-You can also pretrain the model using [hrnet_w32_conv_pare_coco.py]([hrnet_w32_conv_pare_coco.py]). Then download the hrnet pretrain from [here]()
+You can also pretrain the model using [hrnet_w32_conv_pare_coco.py]([hrnet_w32_conv_pare_coco.py]). Then download the hrnet pretrain from [here](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/hrnet_pretrain.pth?versionId=CAEQOhiBgMC26fSigxgiIGViMTFiZmJkZDljMDRhMWY4Mjc5Y2UzNzBmYzU1MGVk
+)
 
 Download the above resources and arrange them in the following file structure:
 
