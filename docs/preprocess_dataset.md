@@ -166,6 +166,9 @@ coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
 - [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
 
 
+Unfortunately, we are unable to distribute `h36m_mosh_train.npz` due to license limitations. However, we provide the
+conversion tools should you posses the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36mmosh) on details for conversion.
+
 The preprocessed datasets should have this structure:
 ```text
 mmhuman3d
@@ -178,7 +181,7 @@ mmhuman3d
     ├── datasets
     └── preprocessed_datasets
         ├── coco_2014_train.npz
-        ├── h36m_train.npz
+        ├── h36m_train.npz or h36m_mosh_train.npz (if mosh is available)
         ├── lspet_train.npz
         ├── lsp_train.npz
         ├── mpi_inf_3dhp_train.npz
@@ -200,7 +203,7 @@ For SPIN training, the following datasets are required:
 
 Convert datasets with the following `dataset-names`:
 ```
-spin, h36m_spin
+spin, h36m
 ```
 
 **Alternatively**, you may download the preprocessed files directly:
@@ -212,6 +215,8 @@ spin, h36m_spin
 - [spin_mpii_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_mpii_train.npz?versionId=CAEQHhiBgMDz57fT6xciIGJjMzAwMDdlYTBmMTQ0MDg4ZGE4YjhiZGNkNWQwZmM1)
 - [spin_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_pw3d_test.npz?versionId=CAEQHhiBgMCL6LfT6xciIGUxNjY3OTBiODU5ZDQxODliYTQ4NzU0OGVjMzJkYmRm)
 
+Unfortunately, we are unable to distribute `h36m_mosh_train.npz` due to license limitations. However, we provide the
+conversion tools should you posses the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36mmosh) on details for conversion.
 
 The preprocessed datasets should have this structure:
 ```text
@@ -225,7 +230,7 @@ mmhuman3d
     ├── datasets
     └── preprocessed_datasets
         ├── spin_coco_2014_train.npz
-        ├── h36m_train.npz
+        ├── h36m_train.npz or h36m_mosh_train.npz (if mosh is available)
         ├── spin_lsp_train.npz
         ├── spin_lspet_train.npz
         ├── spin_mpi_inf_3dhp_train.npz
