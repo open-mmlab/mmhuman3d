@@ -29,8 +29,11 @@ def test_preprocess():
     cfg = dict(type='H36mConverter', modes=['valid'], protocol=2)
     data_converter = build_data_converter(cfg)
     data_converter.convert(H36M_ROOT, output_path)
-
+    cfg = dict(type='H36mConverter', modes=['train'], protocol=1)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(H36M_ROOT, output_path)
     assert osp.exists(osp.join(output_path, 'h36m_train.npz'))
+    assert osp.exists(osp.join(output_path, 'h36m_mosh_train.npz'))
     assert osp.exists(osp.join(output_path, 'h36m_valid_protocol1.npz'))
     assert osp.exists(osp.join(output_path, 'h36m_valid_protocol2.npz'))
 
