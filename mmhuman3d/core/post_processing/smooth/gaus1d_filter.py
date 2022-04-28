@@ -1,14 +1,13 @@
-import warnings
-
 import numpy as np
 import scipy.signal as signal
 import torch
+import warnings
 from scipy.ndimage.filters import gaussian_filter1d
 
-from .builder import FILTERS
+from ..builder import POST_PROCESSING
 
 
-@FILTERS.register_module(name=['Gaus1dFilter', 'gaus1d'])
+@POST_PROCESSING.register_module(name=['Gaus1dFilter', 'gaus1d'])
 class Gaus1dFilter:
     """Applies median filter and then gaussian filter. code from:
     https://github.com/akanazawa/human_dynamics/blob/mas

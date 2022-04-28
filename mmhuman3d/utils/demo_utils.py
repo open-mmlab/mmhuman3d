@@ -1,11 +1,11 @@
 import colorsys
-import os
-from pathlib import Path
-
 import mmcv
 import numpy as np
+import os
+from pathlib import Path
+from scipy import interpolate
 
-from mmhuman3d.core.filter import build_filter
+from mmhuman3d.core.post_processing import build_post_processing
 
 try:
     from typing import Literal
@@ -304,7 +304,9 @@ def conver_verts_to_cam_coord(verts,
     return verts, K0
 
 
-def smooth_process(x, smooth_type='savgol'):
+def smooth_process(x,
+                   smooth_type='savgol',
+                   cfg_base_dir="configs/_base_/post_processing/"):
     """Smooth the array with the specified smoothing type.
 
     Args:
@@ -313,6 +315,7 @@ def smooth_process(x, smooth_type='savgol'):
         smooth_type (str, optional): Smooth type.
             choose in ['oneeuro', 'gaus1d', 'savgol'].
             Defaults to 'savgol'.
+        cfg_base_dir (str, optional): Config base dir, default configs/_base_/post_processing/
     Raises:
         ValueError: check the input smoothing type.
 
@@ -320,11 +323,21 @@ def smooth_process(x, smooth_type='savgol'):
         np.ndarray: Smoothed data. The shape should be
             (frame,num_person,K,C) or (frame,K,C).
     """
+
+    assert smooth_type in ['oneeuro', 'gaus1d', 'savgol']
+
+    cfg = os.path.join(cfg_base_dir, smooth_type + ".py")
+    if isinstance(cfg, str):
+        cfg = mmcv.Config.fromfile(cfg)
+    elif not isinstance(cfg, mmcv.Config):
+        raise TypeError('config must be a filename or Config object, '
+                        f'but got {type(cfg)}')
+
     x = x.copy()
 
     assert x.ndim == 3 or x.ndim == 4
 
-    smooth_func = build_filter(dict(type=smooth_type))
+    smooth_func = build_post_processing(dict(cfg["smooth_cfg"]))
 
     if x.ndim == 4:
         for i in range(x.shape[1]):
@@ -333,6 +346,145 @@ def smooth_process(x, smooth_type='savgol'):
         x = smooth_func(x)
 
     return x
+
+
+def speed_up_process(x,
+                     speed_up_type='deciwatch',
+                     cfg_base_dir="configs/_base_/post_processing/"):
+    """Speed up the process with the specified speed up type.
+
+    Args:
+        x (np.ndarray): Shape should be (frame,num_person,K,C)
+            or (frame,K,C).
+        speed_up_type (str, optional): Speed up type.
+            choose in ['deciwatch',
+                        'deciwatch_interval5_q1',
+                        'deciwatch_interval5_q2',
+                        'deciwatch_interval5_q3',
+                        'deciwatch_interval5_q4',
+                        'deciwatch_interval5_q5',
+                        'deciwatch_interval10_q1',
+                        'deciwatch_interval10_q2',
+                        'deciwatch_interval10_q3',
+                        'deciwatch_interval10_q4',
+                        'deciwatch_interval10_q5',]. Defaults to 'deciwatch'.
+        device (str,optional): learning based methods device. Defaults to 'cpu'
+        cfg_base_dir (str, optional): Config base dir. Defaults to 'configs/_base_/post_processing/'
+
+    Raises:
+        ValueError: check the input speed up type.
+
+    Returns:
+        np.ndarray: Completed data. The shape should be
+            (frame,num_person,K,C) or (frame,K,C).
+    """
+
+    if speed_up_type == "deciwatch":
+        speed_up_type = 'deciwatch_interval5_q3'
+    assert speed_up_type in [
+        'deciwatch_interval5_q1',
+        'deciwatch_interval5_q2',
+        'deciwatch_interval5_q3',
+        'deciwatch_interval5_q4',
+        'deciwatch_interval5_q5',
+        'deciwatch_interval10_q1',
+        'deciwatch_interval10_q2',
+        'deciwatch_interval10_q3',
+        'deciwatch_interval10_q4',
+        'deciwatch_interval10_q5',
+    ]
+
+    cfg = os.path.join(cfg_base_dir, speed_up_type + ".py")
+    if isinstance(cfg, str):
+        cfg = mmcv.Config.fromfile(cfg)
+    elif not isinstance(cfg, mmcv.Config):
+        raise TypeError('config must be a filename or Config object, '
+                        f'but got {type(cfg)}')
+    x = x.clone()
+
+    assert x.ndim == 4 or x.ndim == 5
+
+    cfg_dict = cfg["speed_up_cfg"]
+    cfg_dict["device"] = x.device
+
+    speed_up_func = build_post_processing(cfg_dict)
+
+    if x.ndim == 5:
+        for i in range(x.shape[1]):
+            x[:, i] = speed_up_func(x[:, i])
+    elif x.ndim == 4:
+        x = speed_up_func(x)
+
+    return np.array(x.cpu())
+
+
+def get_speed_up_interval(speed_up_type,
+                          cfg_base_dir="configs/_base_/post_processing/"):
+    """Get the interval of specific speed up type
+
+    Args:
+        speed_up_type (str, optional): Speed up type.
+            choose in ['deciwatch',
+                        'deciwatch_interval5_q1',
+                        'deciwatch_interval5_q2',
+                        'deciwatch_interval5_q3',
+                        'deciwatch_interval5_q4',
+                        'deciwatch_interval5_q5',
+                        'deciwatch_interval10_q1',
+                        'deciwatch_interval10_q2',
+                        'deciwatch_interval10_q3',
+                        'deciwatch_interval10_q4',
+                        'deciwatch_interval10_q5',]. Defaults to 'deciwatch'.
+        cfg_base_dir (str, optional): Config base dir, default configs/_base_/post_processing/
+
+    Raises:
+        ValueError: check the input speed up type.
+
+    Returns:
+        int: speed up interval
+    """
+
+    if speed_up_type == "deciwatch":
+        speed_up_type = 'deciwatch_interval5_q3'
+    assert speed_up_type in [
+        'deciwatch_interval5_q1',
+        'deciwatch_interval5_q2',
+        'deciwatch_interval5_q3',
+        'deciwatch_interval5_q4',
+        'deciwatch_interval5_q5',
+        'deciwatch_interval10_q1',
+        'deciwatch_interval10_q2',
+        'deciwatch_interval10_q3',
+        'deciwatch_interval10_q4',
+        'deciwatch_interval10_q5',
+    ]
+    cfg = os.path.join(cfg_base_dir, speed_up_type + ".py")
+    if isinstance(cfg, str):
+        cfg = mmcv.Config.fromfile(cfg)
+    elif not isinstance(cfg, mmcv.Config):
+        raise TypeError('config must be a filename or Config object, '
+                        f'but got {type(cfg)}')
+
+    return cfg["speed_up_cfg"]["interval"]
+
+
+def speed_up_interpolate(selected_frames, speed_up_frames, smpl_poses,
+                         smpl_betas, pred_cams, bboxes_xyxy):
+    pred_cams[:speed_up_frames, :] = interpolate.interp1d(
+        selected_frames, pred_cams[selected_frames, :], kind="linear", axis=0)(
+            np.arange(0, max(selected_frames)))
+    bboxes_xyxy[:speed_up_frames, :] = interpolate.interp1d(
+        selected_frames,
+        bboxes_xyxy[selected_frames, :],
+        kind="linear",
+        axis=0)(
+            np.arange(0, max(selected_frames)))
+    smpl_betas[:speed_up_frames, :] = interpolate.interp1d(
+        selected_frames, smpl_betas[selected_frames, :], kind="linear",
+        axis=0)(
+            np.arange(0, max(selected_frames)))
+
+    return smpl_poses, smpl_betas, pred_cams, bboxes_xyxy
 
 
 def process_mmtracking_results(mmtracking_results,
