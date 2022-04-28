@@ -10,10 +10,6 @@ body_model_load_dir = 'data/body_models/star'
 
 def test_star_init():
     _ = build_body_model(dict(type='STAR', model_path=body_model_load_dir))
-    _ = build_body_model(
-        dict(type='STAR', model_path=body_model_load_dir, gender='male'))
-    _ = build_body_model(
-        dict(type='STAR', model_path=body_model_load_dir, gender='female'))
 
 
 def test_star_forward():
