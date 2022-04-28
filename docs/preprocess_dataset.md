@@ -143,7 +143,7 @@ python tools/convert_datasets.py \
 For HMR training and testing, the following datasets are required:
   - [COCO](#coco)
   - [Human3.6M](#human36m)
-  - [Human3.6M Mosh](#human36mmosh)
+  - [Human3.6M Mosh](#human36m-mosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [MPII](#mpii)
   - [LSP](#lsp)
@@ -167,7 +167,7 @@ coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
 
 
 Unfortunately, we are unable to distribute `h36m_mosh_train.npz` due to license limitations. However, we provide the
-conversion tools should you posses the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36mmosh) on details for conversion.
+conversion tools should you posses the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36m-mosh) on details for conversion.
 
 The preprocessed datasets should have this structure:
 ```text
@@ -192,7 +192,7 @@ mmhuman3d
 For SPIN training, the following datasets are required:
   - [COCO](#coco)
   - [Human3.6M](#human36m)
-  - [Human3.6M Mosh](#human36mmosh)
+  - [Human3.6M Mosh](#human36m-mosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [MPII](#mpii)
   - [LSP](#lsp)
@@ -216,7 +216,7 @@ spin, h36m
 - [spin_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_pw3d_test.npz?versionId=CAEQHhiBgMCL6LfT6xciIGUxNjY3OTBiODU5ZDQxODliYTQ4NzU0OGVjMzJkYmRm)
 
 Unfortunately, we are unable to distribute `h36m_mosh_train.npz` due to license limitations. However, we provide the
-conversion tools should you posses the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36mmosh) on details for conversion.
+conversion tools should you posses the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36m-mosh) on details for conversion.
 
 The preprocessed datasets should have this structure:
 ```text
