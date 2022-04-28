@@ -1,4 +1,4 @@
-# Config for DeciWatch trained on PW3D dataset with an interval of 5, window size of 1 + 5*1(where q=1). The model is trained only on SMPL pose parameters.
+# Config for DeciWatch trained on PW3D dataset with an interval of 5, window size of 1 + 5*2(where q=2). The model is trained only on SMPL pose parameters.
 speed_up_cfg = dict(
     type='deciwatch',
     interval=5,
