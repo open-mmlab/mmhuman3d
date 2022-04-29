@@ -1,18 +1,19 @@
 # Getting Started
 
-* [Installation](#installation)
-* [Data Preparation](#data-preparation)
-* [Body Model Preparation](#body-model-preparation)
-* [Inference / Demo](#inference--demo)
-  + [Single-person](#single-person)
-  + [Multi-person](#multi-person)
-* [Evaluation](#evaluation)
-  + [Evaluate with a single GPU / multiple GPUs](#evaluate-with-a-single-gpu--multiple-gpus)
-  + [Evaluate with slurm](#evaluate-with-slurm)
-* [Training](#training)
-  + [Training with a single / multiple GPUs](#training-with-a-single--multiple-gpus)
-  + [Training with Slurm](#training-with-slurm)
-* [More Tutorials](#more-tutorials)
+- [Getting Started](#getting-started)
+  - [Installation](#installation)
+  - [Data Preparation](#data-preparation)
+  - [Body Model Preparation](#body-model-preparation)
+  - [Inference / Demo](#inference--demo)
+    - [Single-person](#single-person)
+    - [Multi-person](#multi-person)
+  - [Evaluation](#evaluation)
+    - [Evaluate with a single GPU / multiple GPUs](#evaluate-with-a-single-gpu--multiple-gpus)
+    - [Evaluate with slurm](#evaluate-with-slurm)
+  - [Training](#training)
+    - [Training with a single / multiple GPUs](#training-with-a-single--multiple-gpus)
+    - [Training with Slurm](#training-with-slurm)
+  - [More Tutorials](#more-tutorials)
 
 ## Installation
 
@@ -53,7 +54,13 @@ mmhuman3d
 ```
 
 ## Inference / Demo
-We provide a demo script to estimate SMPL parameters for single-person or multi-person from the input image or video with the bounding box detected by MMDetection or MMTracking. With this demo script, you only need to choose a pre-trained model (we currently only support [HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/), [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/), and [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/), more SOTA methods will be added in the future) from our model zoo and specify a few arguments, and then you can get the estimated results. Moreover, if you specify `--output` and `--show_path`, the demo script will save the estimated results into `human_data` and render the estimated human mesh.
+We provide a demo script to estimate SMPL parameters for single-person or multi-person from the input image or video with the bounding box detected by MMDetection or MMTracking. With this demo script, you only need to choose a pre-trained model (we currently only support [HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/), [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/), and [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/), more SOTA methods will be added in the future) from our model zoo and specify a few arguments, and then you can get the estimated results.
+
+Some useful configs are explained here:
+
+- If you specify `--output` and `--show_path`, the demo script will save the estimated results into `human_data` and render the estimated human mesh.
+- If you specify `--smooth_type`, the demo will be smoothed using specific method. We now support `guas1d`,`oneeuro`, and `savgol`.
+- If you specify `--speed_up_type`, the demo will be processed more quickly using specific method. We now support learning-based method `deciwatch`, more information can be find  [here](../configs/_base_/post_processing/README.md).
 ### Single-person
 
 ```shell
@@ -67,6 +74,7 @@ python demo/estimate_smpl.py \
     [--show_path ${VIS_OUT_PATH}] \
     [--output ${RESULT_OUT_PATH}] \
     [--smooth_type ${SMOOTH_TYPE}] \
+    [--speed_up_type ${SPEED_UP_TYPE}] \
     [--draw_bbox] \
 ```
 
@@ -82,6 +90,7 @@ python demo/estimate_smpl.py \
     --show_path vis_results/single_person_demo.mp4 \
     --output demo_result \
     --smooth_type savgol \
+    --speed_up_type deciwatch \
     --draw_bbox
 ```
 ### Multi-person
@@ -97,6 +106,7 @@ python demo/estimate_smpl.py \
     [--show_path ${VIS_OUT_PATH}] \
     [--output ${RESULT_OUT_PATH}] \
     [--smooth_type ${SMOOTH_TYPE}] \
+    [--speed_up_type ${SPEED_UP_TYPE}] \
     [--draw_bbox]
 ```
 Example:
@@ -109,6 +119,7 @@ python demo/estimate_smpl_image.py \
     --input_path  demo/resources/multi_person_demo.mp4 \
     --show_path vis_results/multi_person_demo.mp4 \
     --smooth_type savgol \
+    --speed_up_type deciwatch \
     [--draw_bbox]
 
 ```

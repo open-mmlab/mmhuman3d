@@ -1,6 +1,7 @@
 import os
 import os.path as osp
 import shutil
+import warnings
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -19,10 +20,13 @@ from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.utils import array_to_images
 from mmhuman3d.utils.demo_utils import (
     extract_feature_sequence,
+    get_speed_up_interval,
     prepare_frames,
     process_mmdet_results,
     process_mmtracking_results,
     smooth_process,
+    speed_up_interpolate,
+    speed_up_process,
 )
 from mmhuman3d.utils.transforms import rotmat_to_aa
 
@@ -138,9 +142,21 @@ def single_person_with_mmdet(args, frames_iter):
     frame_id_list, result_list = \
         get_detection_result(args, frames_iter, mesh_model, extractor)
 
+    frame_num = len(frame_id_list)
+    # speed up
+    if args.speed_up_type:
+        speed_up_interval = get_speed_up_interval(args.speed_up_type)
+        speed_up_frames = (frame_num -
+                           1) // speed_up_interval * speed_up_interval
+
     for i, result in enumerate(mmcv.track_iter_progress(result_list)):
         frame_id = frame_id_list[i]
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator':
+            if args.speed_up_type:
+                warnings.warn(
+                    'Video based models do not support speed up. '
+                    'By default we will inference with original speed.',
+                    UserWarning)
             feature_results_seq = extract_feature_sequence(
                 result_list, frame_idx=i, causal=True, seq_len=16, step=1)
             mesh_results = inference_video_based_model(
@@ -148,23 +164,29 @@ def single_person_with_mmdet(args, frames_iter):
                 extracted_results=feature_results_seq,
                 with_track_id=False)
         elif mesh_model.cfg.model.type == 'ImageBodyModelEstimator':
-            mesh_results = inference_image_based_model(
-                mesh_model,
-                frames_iter[frame_id],
-                result,
-                bbox_thr=args.bbox_thr,
-                format='xyxy')
+            if args.speed_up_type and i % speed_up_interval != 0\
+                 and i <= speed_up_frames:
+                mesh_results = [{
+                    'bbox': np.zeros((5)),
+                    'camera': np.zeros((3)),
+                    'smpl_pose': np.zeros((24, 3, 3)),
+                    'smpl_beta': np.zeros((10)),
+                    'vertices': np.zeros((6890, 3)),
+                    'keypoints_3d': np.zeros((17, 3)),
+                }]
+            else:
+                mesh_results = inference_image_based_model(
+                    mesh_model,
+                    frames_iter[frame_id],
+                    result,
+                    bbox_thr=args.bbox_thr,
+                    format='xyxy')
         else:
             raise (f'{mesh_model.cfg.model.type} is not supported yet')
 
         smpl_betas.append(mesh_results[0]['smpl_beta'])
         smpl_pose = mesh_results[0]['smpl_pose']
-        if smpl_pose.shape == (24, 3, 3):
-            smpl_poses.append(rotmat_to_aa(smpl_pose))
-        elif smpl_pose.shape == (24, 3):
-            smpl_poses.append(smpl_pose)
-        else:
-            raise (f'Wrong shape of `smpl_pose`: {smpl_pose.shape}')
+        smpl_poses.append(smpl_pose)
         pred_cams.append(mesh_results[0]['camera'])
         verts.append(mesh_results[0]['vertices'])
         bboxes_xyxy.append(mesh_results[0]['bbox'])
@@ -180,14 +202,30 @@ def single_person_with_mmdet(args, frames_iter):
     del extractor
     torch.cuda.empty_cache()
 
+    # speed up
+    if args.speed_up_type:
+        smpl_poses = speed_up_process(
+            torch.tensor(smpl_poses).to(args.device.lower()),
+            args.speed_up_type)
+
+        selected_frames = np.arange(0, len(frames_iter), speed_up_interval)
+        smpl_poses, smpl_betas, pred_cams, bboxes_xyxy = speed_up_interpolate(
+            selected_frames, speed_up_frames, smpl_poses, smpl_betas,
+            pred_cams, bboxes_xyxy)
+
     # smooth
     if args.smooth_type is not None:
-        smpl_poses = smooth_process(smpl_poses, smooth_type=args.smooth_type)
-        smpl_betas = smooth_process(
-            smpl_betas[:, None], smooth_type=args.smooth_type).squeeze()
-        bboxes_xyxy = smooth_process(
-            bboxes_xyxy[:, None], smooth_type=args.smooth_type).squeeze()
+        smpl_poses = smooth_process(
+            smpl_poses.reshape(frame_num, 24, 9), smooth_type=args.smooth_type)
         verts = smooth_process(verts, smooth_type=args.smooth_type)
+        smpl_poses = smpl_poses.reshape(frame_num, 24, 3, 3)
+
+    if smpl_poses.shape[1:] == (24, 3, 3):
+        smpl_poses = rotmat_to_aa(smpl_poses)
+    elif smpl_poses.shape[1:] == (24, 3):
+        smpl_poses = smpl_pose
+    else:
+        raise (f'Wrong shape of `smpl_pose`: {smpl_pose.shape}')
 
     if args.output is not None:
         body_pose_, global_orient_, smpl_betas_, verts_, pred_cams_, \
@@ -235,9 +273,10 @@ def single_person_with_mmdet(args, frames_iter):
 
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_hmr(
+            poses=smpl_poses.reshape(-1, 24 * 3),
+            betas=smpl_betas,
             cam_transl=pred_cams,
             bbox=bboxes_xyxy,
-            verts=verts,
             output_path=args.show_path,
             render_choice=args.render_choice,
             resolution=frames_iter[0].shape[:2],
@@ -268,13 +307,24 @@ def multi_person_with_mmtracking(args, frames_iter):
     verts = np.zeros([frame_num, max_track_id + 1, 6890, 3])
     pred_cams = np.zeros([frame_num, max_track_id + 1, 3])
     bboxes_xyxy = np.zeros([frame_num, max_track_id + 1, 5])
-    smpl_poses = np.zeros([frame_num, max_track_id + 1, 24, 3])
+    smpl_poses = np.zeros([frame_num, max_track_id + 1, 24, 3, 3])
     smpl_betas = np.zeros([frame_num, max_track_id + 1, 10])
+
+    # speed up
+    if args.speed_up_type:
+        speed_up_interval = get_speed_up_interval(args.speed_up_type)
+        speed_up_frames = (frame_num -
+                           1) // speed_up_interval * speed_up_interval
 
     track_ids_lists = []
     for i, result in enumerate(mmcv.track_iter_progress(result_list)):
         frame_id = frame_id_list[i]
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator':
+            if args.speed_up_type:
+                warnings.warn(
+                    'Video based models do not support speed up. '
+                    'By default we will inference with original speed.',
+                    UserWarning)
             feature_results_seq = extract_feature_sequence(
                 result_list, frame_idx=i, causal=True, seq_len=16, step=1)
 
@@ -283,12 +333,26 @@ def multi_person_with_mmtracking(args, frames_iter):
                 extracted_results=feature_results_seq,
                 with_track_id=True)
         elif mesh_model.cfg.model.type == 'ImageBodyModelEstimator':
-            mesh_results = inference_image_based_model(
-                mesh_model,
-                frames_iter[frame_id],
-                result,
-                bbox_thr=args.bbox_thr,
-                format='xyxy')
+            if args.speed_up_type and i % speed_up_interval != 0\
+                 and i <= speed_up_frames:
+                mesh_results = []
+                for idx in range(len(result)):
+                    mesh_result = result[idx].copy()
+                    mesh_result['bbox'] = np.zeros((5))
+                    mesh_result['camera'] = np.zeros((3))
+                    mesh_result['smpl_pose'] = np.zeros((24, 3, 3))
+                    mesh_result['smpl_beta'] = np.zeros((10))
+                    mesh_result['vertices'] = np.zeros((6890, 3))
+                    mesh_result['keypoints_3d'] = np.zeros((17, 3))
+                    mesh_results.append(mesh_result)
+
+            else:
+                mesh_results = inference_image_based_model(
+                    mesh_model,
+                    frames_iter[frame_id],
+                    result,
+                    bbox_thr=args.bbox_thr,
+                    format='xyxy')
         else:
             raise (f'{mesh_model.cfg.model.type} is not supported yet')
 
@@ -299,13 +363,7 @@ def multi_person_with_mmtracking(args, frames_iter):
             pred_cams[i, instance_id] = mesh_result['camera']
             verts[i, instance_id] = mesh_result['vertices']
             smpl_betas[i, instance_id] = mesh_result['smpl_beta']
-            smpl_pose = mesh_result['smpl_pose']
-            if smpl_pose.shape == (24, 3, 3):
-                smpl_poses[i, instance_id] = rotmat_to_aa(smpl_pose)
-            elif smpl_pose.shape == (24, 3):
-                smpl_poses[i, instance_id] = smpl_pose
-            else:
-                raise (f'Wrong shape of `smpl_pose`: {smpl_pose.shape}')
+            smpl_poses[i, instance_id] = mesh_result['smpl_pose']
             track_ids.append(instance_id)
         track_ids_lists.append(track_ids)
 
@@ -314,12 +372,31 @@ def multi_person_with_mmtracking(args, frames_iter):
     del extractor
     torch.cuda.empty_cache()
 
+    # speed up
+    if args.speed_up_type:
+        smpl_poses = speed_up_process(
+            torch.tensor(smpl_poses).to(args.device.lower()),
+            args.speed_up_type)
+
+        selected_frames = np.arange(0, len(frames_iter), speed_up_interval)
+        smpl_poses, smpl_betas, pred_cams, bboxes_xyxy = speed_up_interpolate(
+            selected_frames, speed_up_frames, smpl_poses, smpl_betas,
+            pred_cams, bboxes_xyxy)
+
     # smooth
     if args.smooth_type is not None:
-        smpl_poses = smooth_process(smpl_poses, smooth_type=args.smooth_type)
-        smpl_betas = smooth_process(smpl_betas, smooth_type=args.smooth_type)
-        bboxes_xyxy = smooth_process(bboxes_xyxy, smooth_type=args.smooth_type)
+        smpl_poses = smooth_process(
+            smpl_poses.reshape(frame_num, max_instance, 24, 9),
+            smooth_type=args.smooth_type)
         verts = smooth_process(verts, smooth_type=args.smooth_type)
+        smpl_poses = smpl_poses.reshape(frame_num, max_instance, 24, 3, 3)
+
+    if smpl_poses.shape[2:] == (24, 3, 3):
+        smpl_poses = rotmat_to_aa(smpl_poses)
+    elif smpl_poses.shape[2:] == (24, 3):
+        smpl_poses = smpl_poses
+    else:
+        raise (f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
 
     if args.output is not None:
         body_pose_, global_orient_, smpl_betas_, verts_, pred_cams_, \
@@ -380,7 +457,8 @@ def multi_person_with_mmtracking(args, frames_iter):
                 output_folder=frames_folder)
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_hmr(
-            verts=compressed_verts,
+            poses=smpl_poses.reshape(-1, instance_num, 24 * 3),
+            betas=smpl_betas,
             cam_transl=compressed_cams,
             bbox=compressed_bboxs,
             output_path=args.show_path,
@@ -475,8 +553,14 @@ if __name__ == '__main__':
         '--smooth_type',
         type=str,
         default=None,
-        help='Smooth the data through the specified type.\
-         Select in [oneeuro,gaus1d,savgol].')
+        help='Smooth the data through the specified type.'
+        'Select in [oneeuro,gaus1d,savgol].')
+    parser.add_argument(
+        '--speed_up_type',
+        type=str,
+        default=None,
+        help='Speed up data processing through the specified type.'
+        'Select in [deciwatch].')
     parser.add_argument(
         '--focal_length', type=float, default=5000., help='Focal lenght')
     parser.add_argument(

@@ -1,6 +1,7 @@
 import mmcv
 import numpy as np
 import pytest
+import torch
 
 from mmhuman3d.apis import (
     feature_extract,
@@ -12,10 +13,12 @@ from mmhuman3d.utils.demo_utils import (
     conver_verts_to_cam_coord,
     convert_crop_cam_to_orig_img,
     extract_feature_sequence,
+    get_speed_up_interval,
     prepare_frames,
     process_mmdet_results,
     process_mmtracking_results,
     smooth_process,
+    speed_up_process,
 )
 
 
@@ -33,6 +36,8 @@ def test_inference_image_based_model():
     verts = mesh_results[0]['vertices'][None]
     bboxes_xy = mesh_results[0]['bbox'][None]
     smooth_process(verts.repeat(20, 0))
+    speed_up_process(torch.ones(100, 24, 3, 3))
+    get_speed_up_interval('deciwatch')
     _, _ = conver_verts_to_cam_coord(verts, pred_cams, bboxes_xy)
 
 
