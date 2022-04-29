@@ -476,7 +476,7 @@ def speed_up_interpolate(selected_frames, speed_up_frames, smpl_poses,
     """Interpolate smpl_betas, pred_cams, and bboxes_xyxyx for speed up.
 
     Args:
-        selected_frames (np.ndarray): Shape should be (selectedframe number).
+        selected_frames (np.ndarray): Shape should be (selected frame number).
         speed_up_frames (int): Total speed up frame number
         smpl_poses (np.ndarray): selected frame smpl poses parameter
         smpl_betas (np.ndarray): selected frame smpl shape paeameter
