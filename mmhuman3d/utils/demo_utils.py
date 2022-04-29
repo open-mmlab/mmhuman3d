@@ -492,6 +492,7 @@ def speed_up_interpolate(selected_frames, speed_up_frames, smpl_poses,
         pred_cams (np.ndarray): interpolated frame camera parameter
         bboxes_xyxy (np.ndarray): interpolated frame bbox
     """
+    selected_frames = selected_frames[selected_frames <= speed_up_frames]
     pred_cams[:speed_up_frames, :] = interpolate.interp1d(
         selected_frames, pred_cams[selected_frames, :], kind="linear", axis=0)(
             np.arange(0, max(selected_frames)))
