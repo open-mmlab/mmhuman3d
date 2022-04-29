@@ -1,4 +1,4 @@
-from .crossentropy_loss import CrossEntropyLoss
+from .cross_entropy_loss import CrossEntropyLoss
 from .gan_loss import GANLoss
 from .mse_loss import KeypointMSELoss, MSELoss
 from .prior_loss import (

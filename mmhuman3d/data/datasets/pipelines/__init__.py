@@ -17,7 +17,7 @@ from .hybrik_transforms import (
     RandomOcclusion,
 )
 from .loading import LoadImageFromFile
-from .pare_transforms import SyntheticOcclusion
+from .synthetic_occlusion_augmentation import SyntheticOcclusion
 from .transforms import (
     CenterCrop,
     ColorJitter,
