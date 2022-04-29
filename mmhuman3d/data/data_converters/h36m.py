@@ -400,7 +400,10 @@ class H36mConverter(BaseModeConverter):
             os.makedirs(out_path)
 
         if mode == 'train':
-            out_file = os.path.join(out_path, 'h36m_train.npz')
+            if self.get_mosh:
+                out_file = os.path.join(out_path, 'h36m_mosh_train.npz')
+            else:
+                out_file = os.path.join(out_path, 'h36m_train.npz')
         elif mode == 'valid':
             out_file = os.path.join(out_path,
                                     f'h36m_valid_protocol{self.protocol}.npz')
