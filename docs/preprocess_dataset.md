@@ -167,7 +167,7 @@ coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
 
 
 Unfortunately, we are unable to distribute `h36m_mosh_train.npz` due to license limitations. However, we provide the
-conversion tools should you posses the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36m-mosh) on details for conversion.
+conversion tools should you possess the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36m-mosh) on details for conversion.
 
 The preprocessed datasets should have this structure:
 ```text
