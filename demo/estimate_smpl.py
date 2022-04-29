@@ -1,9 +1,13 @@
 import mmcv
+
 import numpy as np
+
 import os
 import os.path as osp
 import shutil
+
 import torch
+
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
@@ -27,7 +31,7 @@ from mmhuman3d.utils.demo_utils import (
     speed_up_interpolate,
     speed_up_process,
 )
-from mmhuman3d.utils.transforms import rotmat_to_aa, rotmat_to_ee
+from mmhuman3d.utils.transforms import rotmat_to_aa
 
 try:
     from mmdet.apis import inference_detector, init_detector
@@ -153,7 +157,8 @@ def single_person_with_mmdet(args, frames_iter):
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator':
             if args.speed_up_type:
                 warnings.warn(
-                    'At present, we don\'t support speed up for video based estimation models.'
+                    'At present, we don\'t support speed up for video based\
+                         estimation models.'
                     'By default we will inference with original speed.')
             feature_results_seq = extract_feature_sequence(
                 result_list, frame_idx=i, causal=True, seq_len=16, step=1)
@@ -162,7 +167,8 @@ def single_person_with_mmdet(args, frames_iter):
                 extracted_results=feature_results_seq,
                 with_track_id=False)
         elif mesh_model.cfg.model.type == 'ImageBodyModelEstimator':
-            if args.speed_up_type and i % speed_up_interval != 0 and i <= speed_up_frames:
+            if args.speed_up_type and i % speed_up_interval != 0\
+                 and i <= speed_up_frames:
                 mesh_results = [{
                     'bbox': np.zeros((5)),
                     'camera': np.zeros((3)),
@@ -319,7 +325,8 @@ def multi_person_with_mmtracking(args, frames_iter):
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator':
             if args.speed_up_type:
                 warnings.warn(
-                    'At present, we don\'t support speed up for video based estimation models.'
+                    'At present, we don\'t support speed up for video based\
+                         estimation models.'
                     'By default we will inference with original speed.')
             feature_results_seq = extract_feature_sequence(
                 result_list, frame_idx=i, causal=True, seq_len=16, step=1)
@@ -329,7 +336,8 @@ def multi_person_with_mmtracking(args, frames_iter):
                 extracted_results=feature_results_seq,
                 with_track_id=True)
         elif mesh_model.cfg.model.type == 'ImageBodyModelEstimator':
-            if args.speed_up_type and i % speed_up_interval != 0 and i <= speed_up_frames:
+            if args.speed_up_type and i % speed_up_interval != 0\
+                 and i <= speed_up_frames:
                 mesh_results = []
                 for idx in range(len(result)):
                     mesh_result = result[idx].copy()
@@ -389,9 +397,9 @@ def multi_person_with_mmtracking(args, frames_iter):
     if smpl_poses.shape[2:] == (24, 3, 3):
         smpl_poses = rotmat_to_aa(smpl_poses)
     elif smpl_poses.shape[2:] == (24, 3):
-        smpl_poses = smpl_pose
+        smpl_poses = smpl_poses
     else:
-        raise (f'Wrong shape of `smpl_pose`: {smpl_pose.shape}')
+        raise (f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
 
     if args.output is not None:
         body_pose_, global_orient_, smpl_betas_, verts_, pred_cams_, \
