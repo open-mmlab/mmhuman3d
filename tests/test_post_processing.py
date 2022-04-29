@@ -21,9 +21,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=5,
         slide_window_q=1,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q1.pth.tar?versionId= \
-            CAEQOhiBgIDfocS9gxgiIDkxN2Y3OWQzZmJiMTQyMTM5NWZhZTYxYmI0MDlmMDBh',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q1.pth.tar?versionId='
+        'CAEQOhiBgIDfocS9gxgiIDkxN2Y3OWQzZmJiMTQyMTM5NWZhZTYxYmI0MDlmMDBh',
         device="cpu")
     deciwatch_5_1 = build_post_processing(cfg)
     out_d_5_1 = deciwatch_5_1(noisy_input)
@@ -31,9 +31,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=5,
         slide_window_q=2,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q1.pth.tar?versionId= \
-            CAEQOhiBgIDfocS9gxgiIDkxN2Y3OWQzZmJiMTQyMTM5NWZhZTYxYmI0MDlmMDBh',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q1.pth.tar?versionId='
+        'CAEQOhiBgIDfocS9gxgiIDkxN2Y3OWQzZmJiMTQyMTM5NWZhZTYxYmI0MDlmMDBh',
         device="cpu")
     deciwatch_5_2 = build_post_processing(cfg)
     out_d_5_2 = deciwatch_5_2(noisy_input)
@@ -41,9 +41,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=5,
         slide_window_q=3,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q3.pth.tar?versionId= \
-            CAEQOhiBgIDJs8O9gxgiIDk1MDExMjI5Y2U1MDRmZjViMDBjOGU5YzY3OTRlNmE5',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q3.pth.tar?versionId='
+        'CAEQOhiBgIDJs8O9gxgiIDk1MDExMjI5Y2U1MDRmZjViMDBjOGU5YzY3OTRlNmE5',
         device="cpu")
     deciwatch_5_3 = build_post_processing(cfg)
     out_d_5_3 = deciwatch_5_3(noisy_input)
@@ -51,9 +51,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=5,
         slide_window_q=4,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q4.pth.tar?versionId= \
-            CAEQOhiBgMC.t8O9gxgiIGZjZWY3OTdhNGRjZjQyNjY5MGU5YzkxZTZjMWU1MTA2',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q4.pth.tar?versionId='
+        'CAEQOhiBgMC.t8O9gxgiIGZjZWY3OTdhNGRjZjQyNjY5MGU5YzkxZTZjMWU1MTA2',
         device="cpu")
     deciwatch_5_4 = build_post_processing(cfg)
     out_d_5_4 = deciwatch_5_4(noisy_input)
@@ -61,9 +61,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=5,
         slide_window_q=5,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q5.pth.tar?versionId= \
-            CAEQOhiBgMCyq8O9gxgiIDRjMzViMjllNWRiNjRlMzA5ZjczYWIxOGU2OGFkYjdl',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q5.pth.tar?versionId='
+        'CAEQOhiBgMCyq8O9gxgiIDRjMzViMjllNWRiNjRlMzA5ZjczYWIxOGU2OGFkYjdl',
         device="cpu")
     deciwatch_5_5 = build_post_processing(cfg)
     out_d_5_5 = deciwatch_5_5(noisy_input)
@@ -71,9 +71,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=10,
         slide_window_q=1,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q1.pth.tar?versionId= \
-            CAEQOhiBgMChhsS9gxgiIDM5OGUwZGY0MTc4NTQ2M2NhZDEwMzU5MWUzMWNmZjY1',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q1.pth.tar?versionId='
+        'CAEQOhiBgMChhsS9gxgiIDM5OGUwZGY0MTc4NTQ2M2NhZDEwMzU5MWUzMWNmZjY1',
         device="cpu")
     deciwatch_10_1 = build_post_processing(cfg)
     out_d_10_1 = deciwatch_10_1(noisy_input)
@@ -81,9 +81,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=10,
         slide_window_q=2,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q2.pth.tar?versionId= \
-            CAEQOhiBgICau8O9gxgiIDk1Y2Y0MzUxMmY0MDQzZThiYzhkMGJlMjc3ZDQ2NTQ2',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q2.pth.tar?versionId='
+        'CAEQOhiBgICau8O9gxgiIDk1Y2Y0MzUxMmY0MDQzZThiYzhkMGJlMjc3ZDQ2NTQ2',
         device="cpu")
     deciwatch_10_2 = build_post_processing(cfg)
     out_d_10_2 = deciwatch_10_2(noisy_input)
@@ -91,9 +91,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=10,
         slide_window_q=3,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q3.pth.tar?versionId= \
-            CAEQOhiBgICIq8O9gxgiIDZiMjEzMjY3ODA4MTQwNGY5NTU3OWNkZjRjZjI2ZDFi',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q3.pth.tar?versionId='
+        'CAEQOhiBgICIq8O9gxgiIDZiMjEzMjY3ODA4MTQwNGY5NTU3OWNkZjRjZjI2ZDFi',
         device="cpu")
     deciwatch_10_3 = build_post_processing(cfg)
     out_d_10_3 = deciwatch_10_3(noisy_input)
@@ -101,9 +101,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=10,
         slide_window_q=4,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q4.pth.tar?versionId= \
-            CAEQOhiBgICUq8O9gxgiIDJkZjUwYWJmNTRkNjQxMDE4YmUyNWMwNTcwNGQ4M2Ix',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q4.pth.tar?versionId='
+        'CAEQOhiBgICUq8O9gxgiIDJkZjUwYWJmNTRkNjQxMDE4YmUyNWMwNTcwNGQ4M2Ix',
         device="cpu")
     deciwatch_10_4 = build_post_processing(cfg)
     out_d_10_4 = deciwatch_10_4(noisy_input)
@@ -111,9 +111,9 @@ def test_data_type_torch():
         type='deciwatch',
         interval=10,
         slide_window_q=5,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q5.pth.tar?versionId= \
-            CAEQOhiBgMCN7MS9gxgiIDUwNGFhM2Y0MGI3MjRiYWQ5NzZjODMwMDk3ZjU1OTk3',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q5.pth.tar?versionId='
+        'CAEQOhiBgMCN7MS9gxgiIDUwNGFhM2Y0MGI3MjRiYWQ5NzZjODMwMDk3ZjU1OTk3',
         device="cpu")
     deciwatch_10_5 = build_post_processing(cfg)
     out_d_10_5 = deciwatch_10_5(noisy_input)
@@ -192,9 +192,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=5,
         slide_window_q=1,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q1.pth.tar?versionId= \
-            CAEQOhiBgIDfocS9gxgiIDkxN2Y3OWQzZmJiMTQyMTM5NWZhZTYxYmI0MDlmMDBh',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q1.pth.tar?versionId='
+        'CAEQOhiBgIDfocS9gxgiIDkxN2Y3OWQzZmJiMTQyMTM5NWZhZTYxYmI0MDlmMDBh',
         device="cuda:0")
     deciwatch_5_1 = build_post_processing(cfg)
     out_d_5_1 = deciwatch_5_1(noisy_input)
@@ -202,9 +202,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=5,
         slide_window_q=2,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q1.pth.tar?versionId= \
-            CAEQOhiBgIDfocS9gxgiIDkxN2Y3OWQzZmJiMTQyMTM5NWZhZTYxYmI0MDlmMDBh',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q1.pth.tar?versionId='
+        'CAEQOhiBgIDfocS9gxgiIDkxN2Y3OWQzZmJiMTQyMTM5NWZhZTYxYmI0MDlmMDBh',
         device="cuda:0")
     deciwatch_5_2 = build_post_processing(cfg)
     out_d_5_2 = deciwatch_5_2(noisy_input)
@@ -212,9 +212,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=5,
         slide_window_q=3,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q3.pth.tar?versionId= \
-            CAEQOhiBgIDJs8O9gxgiIDk1MDExMjI5Y2U1MDRmZjViMDBjOGU5YzY3OTRlNmE5',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q3.pth.tar?versionId='
+        'CAEQOhiBgIDJs8O9gxgiIDk1MDExMjI5Y2U1MDRmZjViMDBjOGU5YzY3OTRlNmE5',
         device="cuda:0")
     deciwatch_5_3 = build_post_processing(cfg)
     out_d_5_3 = deciwatch_5_3(noisy_input)
@@ -222,9 +222,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=5,
         slide_window_q=4,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q4.pth.tar?versionId= \
-            CAEQOhiBgMC.t8O9gxgiIGZjZWY3OTdhNGRjZjQyNjY5MGU5YzkxZTZjMWU1MTA2',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q4.pth.tar?versionId='
+        'CAEQOhiBgMC.t8O9gxgiIGZjZWY3OTdhNGRjZjQyNjY5MGU5YzkxZTZjMWU1MTA2',
         device="cuda:0")
     deciwatch_5_4 = build_post_processing(cfg)
     out_d_5_4 = deciwatch_5_4(noisy_input)
@@ -232,9 +232,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=5,
         slide_window_q=5,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q5.pth.tar?versionId= \
-            CAEQOhiBgMCyq8O9gxgiIDRjMzViMjllNWRiNjRlMzA5ZjczYWIxOGU2OGFkYjdl',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q5.pth.tar?versionId='
+        'CAEQOhiBgMCyq8O9gxgiIDRjMzViMjllNWRiNjRlMzA5ZjczYWIxOGU2OGFkYjdl',
         device="cuda:0")
     deciwatch_5_5 = build_post_processing(cfg)
     out_d_5_5 = deciwatch_5_5(noisy_input)
@@ -242,9 +242,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=10,
         slide_window_q=1,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q1.pth.tar?versionId= \
-            CAEQOhiBgMChhsS9gxgiIDM5OGUwZGY0MTc4NTQ2M2NhZDEwMzU5MWUzMWNmZjY1',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q1.pth.tar?versionId='
+        'CAEQOhiBgMChhsS9gxgiIDM5OGUwZGY0MTc4NTQ2M2NhZDEwMzU5MWUzMWNmZjY1',
         device="cuda:0")
     deciwatch_10_1 = build_post_processing(cfg)
     out_d_10_1 = deciwatch_10_1(noisy_input)
@@ -252,9 +252,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=10,
         slide_window_q=2,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q2.pth.tar?versionId= \
-            CAEQOhiBgICau8O9gxgiIDk1Y2Y0MzUxMmY0MDQzZThiYzhkMGJlMjc3ZDQ2NTQ2',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q2.pth.tar?versionId='
+        'CAEQOhiBgICau8O9gxgiIDk1Y2Y0MzUxMmY0MDQzZThiYzhkMGJlMjc3ZDQ2NTQ2',
         device="cuda:0")
     deciwatch_10_2 = build_post_processing(cfg)
     out_d_10_2 = deciwatch_10_2(noisy_input)
@@ -262,9 +262,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=10,
         slide_window_q=3,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q3.pth.tar?versionId= \
-            CAEQOhiBgICIq8O9gxgiIDZiMjEzMjY3ODA4MTQwNGY5NTU3OWNkZjRjZjI2ZDFi',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q3.pth.tar?versionId='
+            'CAEQOhiBgICIq8O9gxgiIDZiMjEzMjY3ODA4MTQwNGY5NTU3OWNkZjRjZjI2ZDFi',
         device="cuda:0")
     deciwatch_10_3 = build_post_processing(cfg)
     out_d_10_3 = deciwatch_10_3(noisy_input)
@@ -272,9 +272,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=10,
         slide_window_q=4,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q4.pth.tar?versionId= \
-            CAEQOhiBgICUq8O9gxgiIDJkZjUwYWJmNTRkNjQxMDE4YmUyNWMwNTcwNGQ4M2Ix',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q4.pth.tar?versionId='
+        'CAEQOhiBgICUq8O9gxgiIDJkZjUwYWJmNTRkNjQxMDE4YmUyNWMwNTcwNGQ4M2Ix',
         device="cuda:0")
     deciwatch_10_4 = build_post_processing(cfg)
     out_d_10_4 = deciwatch_10_4(noisy_input)
@@ -282,9 +282,9 @@ def test_data_type_torch_cuda():
         type='deciwatch',
         interval=10,
         slide_window_q=5,
-        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/ \
-        mmhuman3d/models/deciwatch/deciwatch_interval10_q5.pth.tar?versionId= \
-            CAEQOhiBgMCN7MS9gxgiIDUwNGFhM2Y0MGI3MjRiYWQ5NzZjODMwMDk3ZjU1OTk3',
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval10_q5.pth.tar?versionId='
+        'CAEQOhiBgMCN7MS9gxgiIDUwNGFhM2Y0MGI3MjRiYWQ5NzZjODMwMDk3ZjU1OTk3',
         device="cuda:0")
     deciwatch_10_5 = build_post_processing(cfg)
     out_d_10_5 = deciwatch_10_5(noisy_input)
@@ -337,3 +337,6 @@ def test_data_type_np():
     savgol = build_post_processing(cfg)
     out_o = savgol(noisy_input)
     assert out_g.shape == noisy_input.shape == out_s.shape == out_o.shape
+
+if __name__=="__main__":
+    test_data_type_torch()
