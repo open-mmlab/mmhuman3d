@@ -157,7 +157,7 @@ class PositionEmbeddingSine_1D(nn.Module):
 
         dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32)
         dim_t = self.temperature**(
-            2 * (torch.div(dim_t, 1, rounding_mode='trunc')) /
+            2 * (torch.div(dim_t, 1)) /
             self.num_pos_feats)
 
         pe = torch.zeros(B, L, self.num_pos_feats * 2)
@@ -348,7 +348,7 @@ class DeciWatchTransformer(nn.Module):
         tmp = input.clone()
         seq_len = input.shape[0]
         indice = torch.arange(seq_len, dtype=int).to(self.device)
-        chunk = torch.div(indice, rate, rounding_mode='trunc')
+        chunk = torch.div(indice, rate).type(torch.long)
         remain = indice % rate
 
         prev = tmp[chunk * rate]
