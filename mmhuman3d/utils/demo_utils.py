@@ -373,8 +373,6 @@ def speed_up_process(x,
                         'deciwatch_interval10_q3',
                         'deciwatch_interval10_q4',
                         'deciwatch_interval10_q5',]. Defaults to 'deciwatch'.
-        device (str,optional): learning based methods device.
-                                Defaults to 'cpu'
         cfg_base_dir (str, optional): Config base dir.
                                 Defaults to 'configs/_base_/post_processing/'
 
@@ -478,6 +476,22 @@ def get_speed_up_interval(speed_up_type,
 
 def speed_up_interpolate(selected_frames, speed_up_frames, smpl_poses,
                          smpl_betas, pred_cams, bboxes_xyxy):
+    """Interpolate smpl_betas, pred_cams, and bboxes_xyxyx for speed up
+
+    Args:
+        selected_frames (np.ndarray): Shape should be (selectedframe number).
+        speed_up_frames (int): Total speed up frame number
+        smpl_poses (np.ndarray): selected frame smpl poses parameter
+        smpl_betas (np.ndarray): selected frame smpl shape paeameter
+        pred_cams (np.ndarray): selected frame camera parameter
+        bboxes_xyxy (np.ndarray): selected frame bbox
+
+    Returns:
+        smpl_poses (np.ndarray): interpolated frame smpl poses parameter
+        smpl_betas (np.ndarray): interpolated frame smpl shape paeameter
+        pred_cams (np.ndarray): interpolated frame camera parameter
+        bboxes_xyxy (np.ndarray): interpolated frame bbox
+    """
     pred_cams[:speed_up_frames, :] = interpolate.interp1d(
         selected_frames, pred_cams[selected_frames, :], kind="linear", axis=0)(
             np.arange(0, max(selected_frames)))
