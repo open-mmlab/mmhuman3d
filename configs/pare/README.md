@@ -81,7 +81,7 @@ Trained with MoShed Human3.6M Datasets:
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [hrnet_w32_conv_pare_mix.py](hrnet_w32_conv_pare_mix.py) | 81.79 / 49.35 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/with_mosh/hrnet_w32_conv_pare_mosh.pth?versionId=CAEQOhiBgIDooeHSgxgiIDkwYzViMTUyNjM1MjQ3ZDNiNzNjMjJlOGFlNjgxYjlh) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/with_mosh/20220427_113717.log?versionId=CAEQOhiBgMClqr3PgxgiIGRjZWU0NzFhMmVkMDQzN2I5ZmY5Y2MxMzJiZDM3MGQ0) |
+| [hrnet_w32_conv_pare_mix_cache.py](hrnet_w32_conv_pare_mix_cache.py) | 81.79 / 49.35 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/with_mosh/hrnet_w32_conv_pare_mosh.pth?versionId=CAEQOhiBgIDooeHSgxgiIDkwYzViMTUyNjM1MjQ3ZDNiNzNjMjJlOGFlNjgxYjlh) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/with_mosh/20220427_113717.log?versionId=CAEQOhiBgMClqr3PgxgiIGRjZWU0NzFhMmVkMDQzN2I5ZmY5Y2MxMzJiZDM3MGQ0) |
 
 
 Trained without MoShed Human3.6M Datasets:

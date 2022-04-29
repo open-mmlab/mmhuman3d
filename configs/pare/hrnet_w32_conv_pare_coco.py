@@ -77,12 +77,12 @@ model = dict(
         num_joints=24,
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/hrnet_w32_pretrain.pth')),
+            checkpoint='data/pretrained_models/hrnet_pretrain.pth')),
     head=dict(
         type='PareHead',
         num_joints=24,
         num_input_features=480,
-        smpl_mean_params='data/smpl_mean_params.npz',
+        smpl_mean_params='data/body_models/smpl_mean_params.npz',
         num_deconv_layers=2,
         num_deconv_filters=[128] *
         2,  # num_deconv_filters = [num_deconv_filters] * num_deconv_layers
@@ -95,17 +95,17 @@ model = dict(
     body_model_train=dict(
         type='SMPL',
         keypoint_src='smpl_54',
-        keypoint_dst='smpl_24',
+        keypoint_dst='smpl_49',
         model_path='data/body_models/smpl',
         keypoint_approximate=True,
-        extra_joints_regressor='data/J_regressor_extra.npy'),
+        extra_joints_regressor='data/body_models/J_regressor_extra.npy'),
     body_model_test=dict(
         type='SMPL',
         keypoint_src='h36m',
         keypoint_dst='h36m',
         model_path='data/body_models/smpl',
-        joints_regressor='data/J_regressor_h36m.npy'),
-    convention='smpl_24',
+        joints_regressor='data/body_models/J_regressor_h36m.npy'),
+    convention='smpl_49',
     loss_keypoints3d=dict(type='MSELoss', loss_weight=300),
     loss_keypoints2d=dict(type='MSELoss', loss_weight=300),
     loss_smpl_pose=dict(type='MSELoss', loss_weight=60),
@@ -124,12 +124,12 @@ data_keys = [
     'keypoints3d', 'sample_idx'
 ]
 train_pipeline = [
-    dict(type='LoadImageFromFile', file_client_args=dict(backend='petrel')),
+    dict(type='LoadImageFromFile'),
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(
         type='SyntheticOcclusion',
         occluders_file='data/occluders/pascal_occluders.npy'),
-    dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_24'),
+    dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_49'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='MeshAffine', img_res=224),
     dict(type='Normalize', **img_norm_cfg),
@@ -175,7 +175,7 @@ data = dict(
                 dataset_name='coco',
                 data_prefix='data',
                 pipeline=train_pipeline,
-                convention='smpl_24',
+                convention='smpl_49',
                 ann_file='eft_coco_all.npz'),
         ],
         partition=[1.0],
@@ -187,7 +187,7 @@ data = dict(
             keypoint_src='h36m',
             keypoint_dst='h36m',
             model_path='data/body_models/smpl',
-            joints_regressor='data/J_regressor_h36m.npy'),
+            joints_regressor='data/body_models/J_regressor_h36m.npy'),
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
@@ -199,7 +199,7 @@ data = dict(
             keypoint_src='h36m',
             keypoint_dst='h36m',
             model_path='data/body_models/smpl',
-            joints_regressor='data/J_regressor_h36m.npy'),
+            joints_regressor='data/body_models/J_regressor_h36m.npy'),
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,

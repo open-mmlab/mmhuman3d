@@ -29,4 +29,4 @@ Models:
         Metrics:
           MPJPE: 81.74
           PA-MPJPE: 48.69
-    Weights:
+    Weights: https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/with_mosh/hrnet_w32_conv_pare_mosh.pth?versionId=CAEQOhiBgIDooeHSgxgiIDkwYzViMTUyNjM1MjQ3ZDNiNzNjMjJlOGFlNjgxYjlh

@@ -1,6 +1,6 @@
 use_adversarial_train = True
 
-evaluation = dict(interval=1, metric=['pa-mpjpe', 'mpjpe'])
+evaluation = dict(interval=6, metric=['pa-mpjpe', 'mpjpe'])
 optimizer = dict(
     backbone=dict(type='Adam', lr=5.0e-5),
     head=dict(type='Adam', lr=5.0e-5),
@@ -79,7 +79,7 @@ model = dict(
         type='PareHead',
         num_joints=24,
         num_input_features=480,
-        smpl_mean_params='data/smpl_mean_params.npz',
+        smpl_mean_params='data/body_models/smpl_mean_params.npz',
         num_deconv_layers=2,
         num_deconv_filters=[128] *
         2,  # num_deconv_filters = [num_deconv_filters] * num_deconv_layers
@@ -95,13 +95,13 @@ model = dict(
         keypoint_dst='smpl_24',
         model_path='data/body_models/smpl',
         keypoint_approximate=True,
-        extra_joints_regressor='data/J_regressor_extra.npy'),
+        extra_joints_regressor='data/body_models/J_regressor_extra.npy'),
     body_model_test=dict(
         type='SMPL',
         keypoint_src='h36m',
         keypoint_dst='h36m',
         model_path='data/body_models/smpl',
-        joints_regressor='data/J_regressor_h36m.npy'),
+        joints_regressor='data/body_models/J_regressor_h36m.npy'),
     convention='smpl_24',
     loss_keypoints3d=dict(type='MSELoss', loss_weight=300),
     loss_keypoints2d=dict(type='MSELoss', loss_weight=150),
@@ -123,7 +123,7 @@ data_keys = [
     'keypoints3d', 'sample_idx'
 ]
 train_pipeline = [
-    dict(type='LoadImageFromFile', file_client_args=dict(backend='petrel')),
+    dict(type='LoadImageFromFile'),
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_24'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
@@ -224,7 +224,7 @@ data = dict(
             keypoint_src='h36m',
             keypoint_dst='h36m',
             model_path='data/body_models/smpl',
-            joints_regressor='data/J_regressor_h36m.npy'),
+            joints_regressor='data/body_models/J_regressor_h36m.npy'),
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
@@ -236,7 +236,7 @@ data = dict(
             keypoint_src='h36m',
             keypoint_dst='h36m',
             model_path='data/body_models/smpl',
-            joints_regressor='data/J_regressor_h36m.npy'),
+            joints_regressor='data/body_models/J_regressor_h36m.npy'),
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
