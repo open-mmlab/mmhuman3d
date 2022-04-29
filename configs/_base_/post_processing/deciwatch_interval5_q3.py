@@ -5,7 +5,6 @@ speed_up_cfg = dict(
     type='deciwatch',
     interval=5,
     slide_window_q=3,
-    checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/\
-        mmhuman3d/models/deciwatch/deciwatch_interval5_q3.pth.tar?versionId=\
-            CAEQOhiBgIDJs8O9gxgiIDk1MDExMjI5Y2U1MDRmZjViMDBjOGU5YzY3OTRlNmE5'
-)
+    checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/deciwatch/deciwatch_interval5_q3.pth.tar?versionId='
+        'CAEQOhiBgIDJs8O9gxgiIDk1MDExMjI5Y2U1MDRmZjViMDBjOGU5YzY3OTRlNmE5')
