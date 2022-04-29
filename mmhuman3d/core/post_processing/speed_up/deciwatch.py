@@ -1,10 +1,11 @@
 import copy
 import math
 import numpy as np
-import os
+
 import torch
 import torch.nn.functional as F
 from mmcv.runner import load_checkpoint
+
 from pytorch3d.transforms import (
     euler_angles_to_matrix,
     matrix_to_euler_angles,
@@ -12,6 +13,7 @@ from pytorch3d.transforms import (
     rotation_6d_to_matrix,
 )
 from torch import Tensor, nn
+
 from typing import Optional
 
 from ..builder import POST_PROCESSING
@@ -124,8 +126,9 @@ class DeciWatchPostProcessing:
 
 class PositionEmbeddingSine_1D(nn.Module):
     """
-    This is a more standard version of the position embedding, very similar to the one
-    used by the Attention is all you need paper, generalized to work on images.
+    This is a more standard version of the position embedding, very similar to
+    the one used by the Attention is all you need paper, generalized to work
+    on images.
     """
 
     def __init__(self,
@@ -212,7 +215,8 @@ class DeciWatch(nn.Module):
         seq_len = L
         if (seq_len - 1) % sample_interval != 0:
             raise Exception(
-                "The following equation should be satisfied: [Window size] = [sample interval] * Q + 1, where Q is an integer."
+                "The following equation should be satisfied: [Window size] \
+                    = [sample interval] * Q + 1, where Q is an integer."
             )
 
         sample_mask = np.ones(seq_len, dtype=np.int32)
@@ -362,7 +366,7 @@ class DeciWatchTransformer(nn.Module):
         self.device = device
 
         # flatten NxCxL to LxNxC
-        bs, c, l = input_seq.shape
+        bs, c, _ = input_seq.shape
         input_seq = input_seq.permute(2, 0, 1)
         input_seq_interp = input_seq_interp.permute(2, 0, 1)
 
@@ -371,7 +375,7 @@ class DeciWatchTransformer(nn.Module):
         # mask on all sequences:
         trans_src = self.encoder_embed(input_seq)
         mem = self.encode(trans_src, encoder_mask,
-                          encoder_pos_embed)  #[l,n,hid]
+                          encoder_pos_embed)
         reco = self.encoder_joints_embed(mem) + input
 
         interp = self.interpolate_embedding(reco, sample_interval)
@@ -521,7 +525,7 @@ class DeciWatchTransformerEncoderLayer(nn.Module):
                     src_key_padding_mask: Optional[Tensor] = None,
                     pos: Optional[Tensor] = None):
         src2 = self.norm1(src)
-        q = k = self.with_pos_embed(src2, pos)  #todo. linear
+        q = k = self.with_pos_embed(src2, pos)
         src2 = self.self_attn(
             q,
             k,
