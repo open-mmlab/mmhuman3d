@@ -6,12 +6,7 @@ import torch
 import torch.nn.functional as F
 from mmcv.runner import load_checkpoint
 
-from pytorch3d.transforms import (
-    euler_angles_to_matrix,
-    matrix_to_euler_angles,
-    matrix_to_rotation_6d,
-    rotation_6d_to_matrix,
-)
+from mmhuman3d.utils.transforms import aa_to_rotmat,rotmat_to_aa,rot6d_to_rotmat,rotmat_to_rot6d
 from torch import Tensor, nn
 
 from typing import Optional
@@ -25,8 +20,9 @@ class DeciWatchPostProcessing:
     https://arxiv.org/abs/2203.08713
 
     Args:
-        config (str or :obj:`mmcv.Config`): Config file path or the config
-            object.
+        interval (int): The interval of Visible frames.
+        slide_window_q (int): frames per slide window contains + 1.
+        checkpoint (str): model checkpoint path
         device (Union[torch.device, str], optional):
                 You can pass a str or torch.device for cpu or gpu render.
                 Defaults to 'cpu'.
@@ -62,13 +58,12 @@ class DeciWatchPostProcessing:
         if x.shape[1:] == (24, 3, 3):
             input_type = "matrix"
             x = torch.tensor(x).to(self.device)
-            x = matrix_to_rotation_6d(x).reshape(-1, self.input_dimension)
+            x = rotmat_to_rot6d(x).reshape(-1, self.input_dimension)
         elif x.shape[1:] == (24, 3):
-            input_type = "euler_angles"
+            input_type = "axis_angles"
             x = torch.tensor(x).to(self.device)
-            x = matrix_to_rotation_6d(
-                euler_angles_to_matrix(x.reshape(-1, 3),
-                                       convention="XYZ")).reshape(
+            x = rotmat_to_rot6d(
+                aa_to_rotmat(x.reshape(-1, 3))).reshape(
                                            -1, self.input_dimension)
         else:
             x = torch.tensor(x).to(self.device)
@@ -114,12 +109,12 @@ class DeciWatchPostProcessing:
                                      dim=0)
 
         if input_type == "matrix":
-            output_poses = rotation_6d_to_matrix(output_poses.reshape(
+            output_poses = rot6d_to_rotmat(output_poses.reshape(
                 -1, 6)).reshape(-1, 24, 3, 3)
-        elif input_type == "euler_angles":
-            output_poses = matrix_to_euler_angles(
-                rotation_6d_to_matrix(output_poses.reshape(-1, 6)),
-                convention="XYZ").reshape(-1, 24, 3)
+        elif input_type == "axis_angles":
+            output_poses = rotmat_to_aa(
+                rot6d_to_rotmat(output_poses.reshape(-1, 6))
+                ).reshape(-1, 24, 3)
 
         return output_poses
 
