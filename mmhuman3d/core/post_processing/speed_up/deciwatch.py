@@ -232,7 +232,7 @@ class DeciWatch(nn.Module):
 
         seq_len = motion.shape[-1]
         indice = torch.arange(seq_len, dtype=int)
-        chunk = torch.div(indice, rate)
+        chunk = torch.div(indice, rate).type(torch.long)
         remain = indice % rate
 
         prev = motion[:, :, chunk * rate]
