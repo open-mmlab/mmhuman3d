@@ -77,7 +77,7 @@ mmhuman3d
 
 We evaluate PARE on 3DPW. Values are MPJPE/PA-MPJPE.
 
-Trained with MoShed Human3.6M Datasets:
+Trained with MoShed Human3.6M Datasets and Cache:
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
