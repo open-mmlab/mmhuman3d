@@ -1,16 +1,13 @@
-import mmcv
-
-import numpy as np
-
 import os
 import os.path as osp
 import shutil
-
-import torch
-
 import warnings
 from argparse import ArgumentParser
 from pathlib import Path
+
+import mmcv
+import numpy as np
+import torch
 
 from mmhuman3d.apis import (
     feature_extract,

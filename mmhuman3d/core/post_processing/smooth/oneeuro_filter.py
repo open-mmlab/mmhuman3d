@@ -1,7 +1,8 @@
 import math
+import warnings
+
 import numpy as np
 import torch
-import warnings
 
 from ..builder import POST_PROCESSING
 

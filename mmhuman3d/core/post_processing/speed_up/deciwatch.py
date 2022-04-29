@@ -1,23 +1,25 @@
 import copy
 import math
-import numpy as np
+from typing import Optional
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from mmcv.runner import load_checkpoint
-
-from mmhuman3d.utils.transforms import aa_to_rotmat,rotmat_to_aa,rot6d_to_rotmat,rotmat_to_rot6d
 from torch import Tensor, nn
 
-from typing import Optional
-
+from mmhuman3d.utils.transforms import (
+    aa_to_rotmat,
+    rot6d_to_rotmat,
+    rotmat_to_aa,
+    rotmat_to_rot6d,
+)
 from ..builder import POST_PROCESSING
 
 
 @POST_PROCESSING.register_module(name=['DeciWatchPostProcessing', 'deciwatch'])
 class DeciWatchPostProcessing:
-    """DeciWatchFilter lib is from:
-    https://arxiv.org/abs/2203.08713
+    """DeciWatchFilter lib is from: https://arxiv.org/abs/2203.08713.
 
     Args:
         interval (int): The interval of Visible frames.
@@ -44,7 +46,7 @@ class DeciWatchPostProcessing:
 
         self.checkpoint_path = checkpoint
 
-        print(f"load checkpoint from local path: {self.checkpoint_path}")
+        print(f'load checkpoint from local path: {self.checkpoint_path}')
         load_checkpoint(
             self.model, self.checkpoint_path, map_location=self.device)
 
@@ -56,19 +58,18 @@ class DeciWatchPostProcessing:
             self.input_dimension) or x.shape[1:] == (24, 3)
 
         if x.shape[1:] == (24, 3, 3):
-            input_type = "matrix"
+            input_type = 'matrix'
             x = torch.tensor(x).to(self.device)
             x = rotmat_to_rot6d(x).reshape(-1, self.input_dimension)
         elif x.shape[1:] == (24, 3):
-            input_type = "axis_angles"
+            input_type = 'axis_angles'
             x = torch.tensor(x).to(self.device)
-            x = rotmat_to_rot6d(
-                aa_to_rotmat(x.reshape(-1, 3))).reshape(
-                                           -1, self.input_dimension)
+            x = rotmat_to_rot6d(aa_to_rotmat(x.reshape(-1, 3))).reshape(
+                -1, self.input_dimension)
         else:
             x = torch.tensor(x).to(self.device)
             x = x.reshape(-1, self.input_dimension)
-            input_type = "rotation_6d"
+            input_type = 'rotation_6d'
 
         input = x.clone()
 
@@ -108,23 +109,21 @@ class DeciWatchPostProcessing:
             output_poses = torch.cat((output_poses, x[smoothed_len:, :]),
                                      dim=0)
 
-        if input_type == "matrix":
+        if input_type == 'matrix':
             output_poses = rot6d_to_rotmat(output_poses.reshape(
                 -1, 6)).reshape(-1, 24, 3, 3)
-        elif input_type == "axis_angles":
+        elif input_type == 'axis_angles':
             output_poses = rotmat_to_aa(
-                rot6d_to_rotmat(output_poses.reshape(-1, 6))
-                ).reshape(-1, 24, 3)
+                rot6d_to_rotmat(output_poses.reshape(-1,
+                                                     6))).reshape(-1, 24, 3)
 
         return output_poses
 
 
 class PositionEmbeddingSine_1D(nn.Module):
-    """
-    This is a more standard version of the position embedding, very similar to
-    the one used by the Attention is all you need paper, generalized to work
-    on images.
-    """
+    """This is a more standard version of the position embedding, very similar
+    to the one used by the Attention is all you need paper, generalized to work
+    on images."""
 
     def __init__(self,
                  num_pos_feats=64,
@@ -136,7 +135,7 @@ class PositionEmbeddingSine_1D(nn.Module):
         self.temperature = temperature
         self.normalize = normalize
         if scale is not None and normalize is False:
-            raise ValueError("normalize should be True if scale is passed")
+            raise ValueError('normalize should be True if scale is passed')
         if scale is None:
             scale = 2 * math.pi
         self.scale = scale
@@ -151,9 +150,8 @@ class PositionEmbeddingSine_1D(nn.Module):
             position = position / (position[:, -1:] + eps) * self.scale
 
         dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32)
-        dim_t = self.temperature**(
-            2 * (torch.div(dim_t, 1)) /
-            self.num_pos_feats)
+        dim_t = self.temperature**(2 * (torch.div(dim_t, 1)) /
+                                   self.num_pos_feats)
 
         pe = torch.zeros(B, L, self.num_pos_feats * 2)
         pe[:, :, 0::2] = torch.sin(position[:, :, None] / dim_t)
@@ -176,7 +174,7 @@ class DeciWatch(nn.Module):
                  dim_feedforward=256,
                  enc_layers=3,
                  dec_layers=3,
-                 activation="leaky_relu",
+                 activation='leaky_relu',
                  pre_norm=False):
         super(DeciWatch, self).__init__()
         self.pos_embed_dim = encoder_hidden_dim
@@ -185,16 +183,16 @@ class DeciWatch(nn.Module):
         self.sample_interval = sample_interval
 
         self.deciwatch_par = {
-            "input_dim": input_dim,
-            "encoder_hidden_dim": encoder_hidden_dim,
-            "decoder_hidden_dim": decoder_hidden_dim,
-            "dropout": dropout,
-            "nheads": nheads,
-            "dim_feedforward": dim_feedforward,
-            "enc_layers": enc_layers,
-            "dec_layers": dec_layers,
-            "activation": activation,
-            "pre_norm": pre_norm
+            'input_dim': input_dim,
+            'encoder_hidden_dim': encoder_hidden_dim,
+            'decoder_hidden_dim': decoder_hidden_dim,
+            'dropout': dropout,
+            'nheads': nheads,
+            'dim_feedforward': dim_feedforward,
+            'enc_layers': enc_layers,
+            'dec_layers': dec_layers,
+            'activation': activation,
+            'pre_norm': pre_norm
         }
 
         self.transformer = build_model(self.deciwatch_par)
@@ -210,9 +208,8 @@ class DeciWatch(nn.Module):
         seq_len = L
         if (seq_len - 1) % sample_interval != 0:
             raise Exception(
-                "The following equation should be satisfied: [Window size] \
-                    = [sample interval] * Q + 1, where Q is an integer."
-            )
+                'The following equation should be satisfied: [Window size] \
+                    = [sample interval] * Q + 1, where Q is an integer.')
 
         sample_mask = np.ones(seq_len, dtype=np.int32)
         sample_mask[::sample_interval] = 0
@@ -220,8 +217,7 @@ class DeciWatch(nn.Module):
         encoder_mask = sample_mask
         decoder_mask = np.array([0] * L, dtype=np.int32)
 
-        return torch.tensor(encoder_mask), torch.tensor(
-            decoder_mask)
+        return torch.tensor(encoder_mask), torch.tensor(decoder_mask)
 
     def seqence_interpolation(self, motion, rate):
 
@@ -287,7 +283,7 @@ class DeciWatchTransformer(nn.Module):
                  num_decoder_layers=6,
                  dim_feedforward=2048,
                  dropout=0.1,
-                 activation="relu",
+                 activation='relu',
                  pre_norm=False):
         super(DeciWatchTransformer, self).__init__()
 
@@ -371,8 +367,7 @@ class DeciWatchTransformer(nn.Module):
 
         # mask on all sequences:
         trans_src = self.encoder_embed(input_seq)
-        mem = self.encode(trans_src, encoder_mask,
-                          encoder_pos_embed)
+        mem = self.encode(trans_src, encoder_mask, encoder_pos_embed)
         reco = self.encoder_joints_embed(mem) + input
 
         interp = self.interpolate_embedding(reco, sample_interval)
@@ -476,7 +471,7 @@ class DeciWatchTransformerEncoderLayer(nn.Module):
                  nhead,
                  dim_feedforward=2048,
                  dropout=0.1,
-                 activation="relu",
+                 activation='relu',
                  pre_norm=False):
         super().__init__()
         self.self_attn = nn.MultiheadAttention(
@@ -552,7 +547,7 @@ class DeciWatchTransformerDecoderLayer(nn.Module):
                  nhead,
                  dim_feedforward=2048,
                  dropout=0.1,
-                 activation="relu",
+                 activation='relu',
                  pre_norm=False):
         super().__init__()
         self.self_attn = nn.MultiheadAttention(
@@ -664,27 +659,27 @@ def _get_clones(module, N):
 
 def build_model(args):
     return DeciWatchTransformer(
-        input_nc=args["input_dim"],
-        decoder_hidden_dim=args["decoder_hidden_dim"],
-        encoder_hidden_dim=args["encoder_hidden_dim"],
-        dropout=args["dropout"],
-        nhead=args["nheads"],
-        dim_feedforward=args["dim_feedforward"],
-        num_encoder_layers=args["enc_layers"],
-        num_decoder_layers=args["dec_layers"],
-        activation=args["activation"],
-        pre_norm=args["pre_norm"],
+        input_nc=args['input_dim'],
+        decoder_hidden_dim=args['decoder_hidden_dim'],
+        encoder_hidden_dim=args['encoder_hidden_dim'],
+        dropout=args['dropout'],
+        nhead=args['nheads'],
+        dim_feedforward=args['dim_feedforward'],
+        num_encoder_layers=args['enc_layers'],
+        num_decoder_layers=args['dec_layers'],
+        activation=args['activation'],
+        pre_norm=args['pre_norm'],
     )
 
 
 def _get_activation_fn(activation):
-    """Return an activation function given a string"""
-    if activation == "relu":
+    """Return an activation function given a string."""
+    if activation == 'relu':
         return F.relu
-    if activation == "gelu":
+    if activation == 'gelu':
         return F.gelu
-    if activation == "glu":
+    if activation == 'glu':
         return F.glu
-    if activation == "leaky_relu":
+    if activation == 'leaky_relu':
         return F.leaky_relu
-    raise RuntimeError(F"activation should be relu/gelu, not {activation}.")
+    raise RuntimeError(F'activation should be relu/gelu, not {activation}.')

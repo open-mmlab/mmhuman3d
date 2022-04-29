@@ -1,12 +1,9 @@
 import colorsys
-
-import mmcv
-
-import numpy as np
-
 import os
 from pathlib import Path
 
+import mmcv
+import numpy as np
 from scipy import interpolate
 
 from mmhuman3d.core.post_processing import build_post_processing
@@ -310,7 +307,7 @@ def conver_verts_to_cam_coord(verts,
 
 def smooth_process(x,
                    smooth_type='savgol',
-                   cfg_base_dir="configs/_base_/post_processing/"):
+                   cfg_base_dir='configs/_base_/post_processing/'):
     """Smooth the array with the specified smoothing type.
 
     Args:
@@ -331,7 +328,7 @@ def smooth_process(x,
 
     assert smooth_type in ['oneeuro', 'gaus1d', 'savgol']
 
-    cfg = os.path.join(cfg_base_dir, smooth_type + ".py")
+    cfg = os.path.join(cfg_base_dir, smooth_type + '.py')
     if isinstance(cfg, str):
         cfg = mmcv.Config.fromfile(cfg)
     elif not isinstance(cfg, mmcv.Config):
@@ -342,7 +339,7 @@ def smooth_process(x,
 
     assert x.ndim == 3 or x.ndim == 4
 
-    smooth_func = build_post_processing(dict(cfg["smooth_cfg"]))
+    smooth_func = build_post_processing(dict(cfg['smooth_cfg']))
 
     if x.ndim == 4:
         for i in range(x.shape[1]):
@@ -355,7 +352,7 @@ def smooth_process(x,
 
 def speed_up_process(x,
                      speed_up_type='deciwatch',
-                     cfg_base_dir="configs/_base_/post_processing/"):
+                     cfg_base_dir='configs/_base_/post_processing/'):
     """Speed up the process with the specified speed up type.
 
     Args:
@@ -384,7 +381,7 @@ def speed_up_process(x,
             (frame,num_person,K,C) or (frame,K,C).
     """
 
-    if speed_up_type == "deciwatch":
+    if speed_up_type == 'deciwatch':
         speed_up_type = 'deciwatch_interval5_q3'
     assert speed_up_type in [
         'deciwatch_interval5_q1',
@@ -399,7 +396,7 @@ def speed_up_process(x,
         'deciwatch_interval10_q5',
     ]
 
-    cfg = os.path.join(cfg_base_dir, speed_up_type + ".py")
+    cfg = os.path.join(cfg_base_dir, speed_up_type + '.py')
     if isinstance(cfg, str):
         cfg = mmcv.Config.fromfile(cfg)
     elif not isinstance(cfg, mmcv.Config):
@@ -409,8 +406,8 @@ def speed_up_process(x,
 
     assert x.ndim == 4 or x.ndim == 5
 
-    cfg_dict = cfg["speed_up_cfg"]
-    cfg_dict["device"] = x.device
+    cfg_dict = cfg['speed_up_cfg']
+    cfg_dict['device'] = x.device
 
     speed_up_func = build_post_processing(cfg_dict)
 
@@ -424,8 +421,8 @@ def speed_up_process(x,
 
 
 def get_speed_up_interval(speed_up_type,
-                          cfg_base_dir="configs/_base_/post_processing/"):
-    """Get the interval of specific speed up type
+                          cfg_base_dir='configs/_base_/post_processing/'):
+    """Get the interval of specific speed up type.
 
     Args:
         speed_up_type (str, optional): Speed up type.
@@ -450,7 +447,7 @@ def get_speed_up_interval(speed_up_type,
         int: speed up interval
     """
 
-    if speed_up_type == "deciwatch":
+    if speed_up_type == 'deciwatch':
         speed_up_type = 'deciwatch_interval5_q3'
     assert speed_up_type in [
         'deciwatch_interval5_q1',
@@ -464,19 +461,19 @@ def get_speed_up_interval(speed_up_type,
         'deciwatch_interval10_q4',
         'deciwatch_interval10_q5',
     ]
-    cfg = os.path.join(cfg_base_dir, speed_up_type + ".py")
+    cfg = os.path.join(cfg_base_dir, speed_up_type + '.py')
     if isinstance(cfg, str):
         cfg = mmcv.Config.fromfile(cfg)
     elif not isinstance(cfg, mmcv.Config):
         raise TypeError('config must be a filename or Config object, '
                         f'but got {type(cfg)}')
 
-    return cfg["speed_up_cfg"]["interval"]
+    return cfg['speed_up_cfg']['interval']
 
 
 def speed_up_interpolate(selected_frames, speed_up_frames, smpl_poses,
                          smpl_betas, pred_cams, bboxes_xyxy):
-    """Interpolate smpl_betas, pred_cams, and bboxes_xyxyx for speed up
+    """Interpolate smpl_betas, pred_cams, and bboxes_xyxyx for speed up.
 
     Args:
         selected_frames (np.ndarray): Shape should be (selectedframe number).
@@ -494,16 +491,16 @@ def speed_up_interpolate(selected_frames, speed_up_frames, smpl_poses,
     """
     selected_frames = selected_frames[selected_frames <= speed_up_frames]
     pred_cams[:speed_up_frames, :] = interpolate.interp1d(
-        selected_frames, pred_cams[selected_frames, :], kind="linear", axis=0)(
+        selected_frames, pred_cams[selected_frames, :], kind='linear', axis=0)(
             np.arange(0, max(selected_frames)))
     bboxes_xyxy[:speed_up_frames, :] = interpolate.interp1d(
         selected_frames,
         bboxes_xyxy[selected_frames, :],
-        kind="linear",
+        kind='linear',
         axis=0)(
             np.arange(0, max(selected_frames)))
     smpl_betas[:speed_up_frames, :] = interpolate.interp1d(
-        selected_frames, smpl_betas[selected_frames, :], kind="linear",
+        selected_frames, smpl_betas[selected_frames, :], kind='linear',
         axis=0)(
             np.arange(0, max(selected_frames)))
 

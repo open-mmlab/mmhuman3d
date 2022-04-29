@@ -54,11 +54,11 @@ mmhuman3d
 ```
 
 ## Inference / Demo
-We provide a demo script to estimate SMPL parameters for single-person or multi-person from the input image or video with the bounding box detected by MMDetection or MMTracking. With this demo script, you only need to choose a pre-trained model (we currently only support [HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/), [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/), and [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/), more SOTA methods will be added in the future) from our model zoo and specify a few arguments, and then you can get the estimated results. 
+We provide a demo script to estimate SMPL parameters for single-person or multi-person from the input image or video with the bounding box detected by MMDetection or MMTracking. With this demo script, you only need to choose a pre-trained model (we currently only support [HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/), [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/), and [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/), more SOTA methods will be added in the future) from our model zoo and specify a few arguments, and then you can get the estimated results.
 
 Some useful configs are explained here:
 
-- If you specify `--output` and `--show_path`, the demo script will save the estimated results into `human_data` and render the estimated human mesh. 
+- If you specify `--output` and `--show_path`, the demo script will save the estimated results into `human_data` and render the estimated human mesh.
 - If you specify `--smooth_type`, the demo will be smoothed using specific method. We now support `guas1d`,`oneeuro`, and `savgol`.
 - If you specify `--speed_up_type`, the demo will be processed more quickly using specific method. We now support learning-based method `deciwatch`, more information can be find  [here](../configs/_base_/post_processing/README.md).
 ### Single-person

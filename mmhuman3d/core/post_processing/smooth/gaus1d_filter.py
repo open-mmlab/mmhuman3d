@@ -1,7 +1,8 @@
+import warnings
+
 import numpy as np
 import scipy.signal as signal
 import torch
-import warnings
 from scipy.ndimage.filters import gaussian_filter1d
 
 from ..builder import POST_PROCESSING
