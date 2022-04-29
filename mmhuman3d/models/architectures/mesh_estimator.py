@@ -568,6 +568,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                                        has_smpl: torch.Tensor,
                                        img_res: Optional[int] = 224,
                                        focal_length: Optional[int] = 500):
+        """Compute loss for part segmentations."""
         device = gt_keypoints2d.device
         gt_keypoints2d_valid = gt_keypoints2d[has_smpl == 1]
         batch_size = gt_keypoints2d_valid.shape[0]

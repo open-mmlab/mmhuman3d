@@ -15,6 +15,23 @@ from ..builder import HEADS
 
 
 class LocallyConnected2d(nn.Module):
+    """Locally Connected Layer.
+
+    Args:
+        in_channels (int):
+            the in channel of the features.
+        out_channels (int):
+            the out channel of the features.
+        output_size (int):
+            the output size of the features.
+        kernel_size (int):
+            the size of the kernel.
+        stride (int):
+            the stride of the kernel.
+    Returns:
+        attended_features (torch.Tensor):
+            attended feature maps
+    """
 
     def __init__(self,
                  in_channels,
