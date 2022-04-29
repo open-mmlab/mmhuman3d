@@ -154,7 +154,7 @@ def single_person_with_mmdet(args, frames_iter):
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator':
             if args.speed_up_type:
                 warnings.warn(
-                    'Video based models do not support speed up.'
+                    'Video based models do not support speed up. '
                     'By default we will inference with original speed.',
                     UserWarning)
             feature_results_seq = extract_feature_sequence(
@@ -322,7 +322,7 @@ def multi_person_with_mmtracking(args, frames_iter):
         if mesh_model.cfg.model.type == 'VideoBodyModelEstimator':
             if args.speed_up_type:
                 warnings.warn(
-                    'Video based models do not support speed up.'
+                    'Video based models do not support speed up. '
                     'By default we will inference with original speed.',
                     UserWarning)
             feature_results_seq = extract_feature_sequence(
