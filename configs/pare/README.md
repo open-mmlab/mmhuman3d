@@ -24,10 +24,11 @@ We provide the config files for PARE: [Part Attention Regressor for 3D Human Bod
 - [J_regressor_h36m.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_h36m.npy?versionId=CAEQHhiBgIDE6c3V6xciIDdjYzE3MzQ4MmU4MzQyNmRiZDA5YTg2YTI5YWFkNjRi)
 - [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
 - Pascal Occluders for the pretraining:
-    - [pascal_occluders.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/pascal_occluders.npy?versionId=CAEQOhiBgMCH2fqigxgiIDY0YzRiNThkMjU1MzRjZTliMTBhZmFmYWY0MTViMTIx)
-As for pretrained model (hrnet_w32_conv_pare_coco.pth). You can download it from [here]() and change the path of pretrained model in the config.
-You can also pretrain the model using [hrnet_w32_conv_pare_coco.py]([hrnet_w32_conv_pare_coco.py]). Then download the hrnet pretrain from [here](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/hrnet_pretrain.pth?versionId=CAEQOhiBgMC26fSigxgiIGViMTFiZmJkZDljMDRhMWY4Mjc5Y2UzNzBmYzU1MGVk
-)
+  - [pascal_occluders.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/pascal_occluders.npy?versionId=CAEQOhiBgMCH2fqigxgiIDY0YzRiNThkMjU1MzRjZTliMTBhZmFmYWY0MTViMTIx)
+
+As for pretrained model (hrnet_w32_conv_pare_coco.pth). You can download it from [here](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/hrnet_w32_conv_pare_coco.pth?versionId=CAEQOhiBgMCxmv_RgxgiIDkxNWJhOWMxNDEyMzQ1OGQ4YTQ3NjgwNjA0MWUzNDE5) and change the path of pretrained model in the config.
+You can also pretrain the model using [hrnet_w32_conv_pare_coco.py]([hrnet_w32_conv_pare_coco.py]). Download the hrnet pretrain from [here](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/hrnet_pretrain.pth?versionId=CAEQOhiBgMC26fSigxgiIGViMTFiZmJkZDljMDRhMWY4Mjc5Y2UzNzBmYzU1MGVk
+) for pretrain.
 
 Download the above resources and arrange them in the following file structure:
 
@@ -50,16 +51,16 @@ mmhuman3d
     │       └── SMPL_NEUTRAL.pkl
     ├── pretrained
     │   ├── hrnet_pretrain.pth
-    │   └── pare_pretrain.pth
-
+    │   └── hrnet_w32_conv_pare_coco.pth
     ├── preprocessed_datasets
     │   ├── h36m_mosh_train.npz
+    │   ├── h36m_train.npz
     │   ├── mpi_inf_3dhp_train.npz
     │   ├── eft_mpii.npz
     │   ├── eft_lspet.npz
     │   ├── eft_coco_all.npz
-    |   ├── pw3d_test.npz
-    └── occluders
+    │   ├── pw3d_test.npz
+    ├── occluders
     │   ├── pascal_occluders.npy
     └── datasets
         ├── coco
@@ -76,6 +77,14 @@ mmhuman3d
 
 We evaluate PARE on 3DPW. Values are MPJPE/PA-MPJPE.
 
+Trained with MoShed Human3.6M Datasets:
+
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [hrnet_w32_conv_pare_mix.py](hrnet_w32_conv_pare_mix.py) | 81.74 / 48.69 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/resnet50_spin_pw3d-e1857270_20211201.pth?versionId=CAEQHhiBgMDyvYnS6xciIDZhNTg4NmM4OGE4MTQ0ODRhY2JlY2JmZDI4ZWQ0ZmU3) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/20211129_160633.log?versionId=CAEQHhiBgICCvYnS6xciIDIwMmVlNjZiYzFjOTQ1ZjBiMjg3NTJkY2U5YWMwZDJl) |
+| [hrnet_w32_conv_pare_mix.py](hrnet_w32_conv_pare_mix.py) | 81.79 / 49.35 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/with_mosh/hrnet_w32_conv_pare_mosh.pth?versionId=CAEQOhiBgIDooeHSgxgiIDkwYzViMTUyNjM1MjQ3ZDNiNzNjMjJlOGFlNjgxYjlh) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/with_mosh/20220427_113717.log?versionId=CAEQOhiBgMClqr3PgxgiIGRjZWU0NzFhMmVkMDQzN2I5ZmY5Y2MxMzJiZDM3MGQ0) |
+
+
+Trained without MoShed Human3.6M Datasets:
+| Config | 3DPW    | Download |
+|:------:|:-------:|:------:|
+| [hrnet_w32_conv_pare_mix_no_mosh.py](hrnet_w32_conv_pare_mix_no_mosh.py) | 81.81 / 50.78 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/without_mosh/hrnet_w32_conv_pare.pth?versionId=CAEQOhiBgMCi4YbVgxgiIDgzYzFhMWNlNDE2NTQwN2ZiOTQ1ZGJmYTM4OTNmYWY5) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/without_mosh/20220427_113844.log?versionId=CAEQOhiBgMCHwcTPgxgiIGI0NjI0M2JiM2ViMzRhMTFiMWQxZDJmMGI5MmQwMjgw) |

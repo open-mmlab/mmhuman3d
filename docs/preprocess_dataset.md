@@ -337,11 +337,12 @@ mmhuman3d
     ├── datasets
     └── preprocessed_datasets
         ├── h36m_mosh_train.npz
+        ├── h36m_train.npz
         ├── mpi_inf_3dhp_train.npz
         ├── eft_mpii.npz
         ├── eft_lspet.npz
         ├── eft_coco_all.npz
-        ├── pw3d_test.npz
+        └── pw3d_test.npz
 ```
 
 ## Folder structure
@@ -721,7 +722,7 @@ h36m_p1=dict(
 
 <!-- [DATASET] -->
 
-For data preparation of [Human3.6M](http://vision.imar.ro/human3.6m/description.php) for HMR and SPIN training, we use the [MoShed](https://mosh.is.tue.mpg.de/) data provided in [HMR](https://github.com/akanazawa/hmr) for training. However, due to license limitations, we are not allowed to redistribute the data. Even if you do not have access to these parameters, you can still generate the preprocessed h36m npz file without mosh parameters using our [converter](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py).
+For data preparation of [Human3.6M](http://vision.imar.ro/human3.6m/description.php) for HMR, SPIN and PARE training, we use the [MoShed](https://mosh.is.tue.mpg.de/) data provided in [HMR](https://github.com/akanazawa/hmr) for training. However, due to license limitations, we are not allowed to redistribute the data. Even if you do not have access to these parameters, you can still generate the preprocessed h36m npz file without mosh parameters using our [converter](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py).
 
 You will need to extract images from raw videos for training. Do note that preprocessing can take a long time if image extraction is required. To do so, modify the `h36m_p1` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
 
