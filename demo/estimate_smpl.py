@@ -556,14 +556,14 @@ if __name__ == '__main__':
         '--smooth_type',
         type=str,
         default=None,
-        help='Smooth the data through the specified type.\
-         Select in [oneeuro,gaus1d,savgol].')
+        help='Smooth the data through the specified type.'
+        'Select in [oneeuro,gaus1d,savgol].')
     parser.add_argument(
         '--speed_up_type',
         type=str,
         default=None,
-        help='Speed up data processing through the specified type.\
-         Select in [deciwatch].')
+        help='Speed up data processing through the specified type.'
+        'Select in [deciwatch].')
     parser.add_argument(
         '--focal_length', type=float, default=5000., help='Focal lenght')
     parser.add_argument(
