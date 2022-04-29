@@ -22,7 +22,7 @@ class LocallyConnected2d(nn.Module):
             the in channel of the features.
         out_channels (int):
             the out channel of the features.
-        output_size (int):
+        output_size (List[int]):
             the output size of the features.
         kernel_size (int):
             the size of the kernel.
@@ -166,6 +166,7 @@ def softargmax2d(
     temperature=None,
     normalize_keypoints=True,
 ):
+    """Softargmax layer for heatmaps."""
     dtype, device = heatmaps.dtype, heatmaps.device
     if temperature is None:
         temperature = torch.tensor(1.0, dtype=dtype, device=device)
@@ -377,6 +378,7 @@ class PareHead(BaseModule):
         )
 
     def _get_shape_mlp(self, output_size):
+        """mlp layers for shape regression."""
         if self.shape_mlp_num_layers == 1:
             return nn.Linear(self.shape_mlp_inp_dim, output_size)
 
@@ -396,6 +398,7 @@ class PareHead(BaseModule):
         return nn.Sequential(*module_list)
 
     def _get_pose_mlp(self, num_joints, output_size):
+        """mlp layers for pose regression."""
         if self.pose_mlp_num_layers == 1:
 
             return LocallyConnected2d(
@@ -451,6 +454,7 @@ class PareHead(BaseModule):
         return deconv_kernel, padding, output_padding
 
     def _make_conv_layer(self, num_layers, num_filters, num_kernels):
+        """make convolution layers."""
         assert num_layers == len(num_filters), \
             'ERROR: num_conv_layers is different len(num_conv_filters)'
         assert num_layers == len(num_kernels), \
@@ -476,6 +480,7 @@ class PareHead(BaseModule):
         return nn.Sequential(*layers)
 
     def _make_deconv_layer(self, num_layers, num_filters, num_kernels):
+        """make deconvolution layers."""
         assert num_layers == len(num_filters), \
             'ERROR: num_deconv_layers is different len(num_deconv_filters)'
         assert num_layers == len(num_kernels), \
@@ -549,18 +554,20 @@ class PareHead(BaseModule):
         return point_local_feat, cam_shape_feats
 
     def _get_2d_branch_feats(self, features):
+
         part_feats = self.keypoint_deconv_layers(features)
 
         return part_feats
 
     def _get_3d_smpl_feats(self, features, part_feats):
+        """get smpl feature maps from backbone features."""
 
         smpl_feats = self.smpl_deconv_layers(features)
 
         return smpl_feats
 
     def _get_part_attention_map(self, part_feats, output):
-
+        """get attention map from part feature map."""
         heatmaps = self.keypoint_final_layer(part_feats)
 
         if self.use_heatmaps == 'part_segm':
@@ -576,11 +583,13 @@ class PareHead(BaseModule):
 
     def _get_final_preds(self, pose_feats, cam_shape_feats, init_pose,
                          init_shape, init_cam):
+        """get final preds."""
         return self._pare_get_final_preds(pose_feats, cam_shape_feats,
                                           init_pose, init_shape, init_cam)
 
     def _pare_get_final_preds(self, pose_feats, cam_shape_feats, init_pose,
                               init_shape, init_cam):
+        """get final preds."""
         pose_feats = pose_feats.unsqueeze(-1)  #
 
         if init_pose.shape[-1] == 6:
