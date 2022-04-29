@@ -35,7 +35,7 @@ class DeciWatchPostProcessing:
         smoothed poses (np.ndarray, torch.tensor)
     """
 
-    def __init__(self, interval, slide_window_q, checkpoint, device):
+    def __init__(self, interval, slide_window_q, checkpoint, device=None):
         super(DeciWatchPostProcessing, self).__init__()
         self.interval = interval
         self.slide_window_q = slide_window_q
@@ -225,8 +225,8 @@ class DeciWatch(nn.Module):
         encoder_mask = sample_mask
         decoder_mask = np.array([0] * L, dtype=np.int32)
 
-        return torch.tensor(encoder_mask).cuda(), torch.tensor(
-            decoder_mask).cuda()
+        return torch.tensor(encoder_mask), torch.tensor(
+            decoder_mask)
 
     def seqence_interpolation(self, motion, rate):
 
@@ -240,7 +240,7 @@ class DeciWatch(nn.Module):
         next = torch.cat([
             motion[:, :, (chunk[:-1] + 1) * rate], motion[:, :, -1, np.newaxis]
         ], -1)
-        remain = remain.cuda()
+        remain = remain.to(motion.device)
 
         interpolate = (prev / rate * (rate - remain)) + (next / rate * remain)
 
@@ -252,6 +252,8 @@ class DeciWatch(nn.Module):
 
         encoder_mask, decoder_mask = self.generate_unifrom_mask(
             L, sample_interval=self.sample_interval)
+        encoder_mask = encoder_mask.to(seq.device)
+        decoder_mask = decoder_mask.to(seq.device)
 
         self.input_seq = seq * (1 - encoder_mask.int())
         self.input_seq_interp = self.seqence_interpolation(
@@ -391,7 +393,7 @@ class DeciWatchTransformer(nn.Module):
 
     def encode(self, src, src_mask, pos_embed):
 
-        mask = torch.eye(src.shape[0]).bool().cuda()
+        mask = torch.eye(src.shape[0]).bool().to(src.device)
         memory = self.encoder(
             src, mask=mask, src_key_padding_mask=src_mask, pos=pos_embed)
 
