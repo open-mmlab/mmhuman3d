@@ -413,29 +413,30 @@ def update_frame_list(frame_list, origin_frames, img_format, start, end):
 
 
 def visualize_kp2d(
-        kp2d: np.ndarray,
-        output_path: Optional[str] = None,
-        frame_list: Optional[List[str]] = None,
-        origin_frames: Optional[str] = None,
-        image_array: Optional[np.ndarray] = None,
-        limbs: Optional[Union[np.ndarray, List[int]]] = None,
-        palette: Optional[Iterable[int]] = None,
-        data_source: str = 'coco',
-        mask: Optional[Union[list, np.ndarray]] = None,
-        img_format: str = '%06d.png',
-        start: int = 0,
-        end: Optional[int] = None,
-        overwrite: bool = False,
-        with_file_name: bool = True,
-        resolution: Optional[Union[Tuple[int, int], list]] = None,
-        fps: Union[float, int] = 30,
-        draw_bbox: bool = False,
-        with_number: bool = False,
-        pop_parts: Iterable[str] = None,
-        disable_tqdm: bool = False,
-        disable_limbs: bool = False,
-        return_array: Optional[bool] = False,
-        keypoints_factory: dict = KEYPOINTS_FACTORY
+    kp2d: np.ndarray,
+    output_path: Optional[str] = None,
+    frame_list: Optional[List[str]] = None,
+    origin_frames: Optional[str] = None,
+    image_array: Optional[np.ndarray] = None,
+    limbs: Optional[Union[np.ndarray, List[int]]] = None,
+    palette: Optional[Iterable[int]] = None,
+    data_source: str = 'coco',
+    mask: Optional[Union[list, np.ndarray]] = None,
+    img_format: str = '%06d.png',
+    start: int = 0,
+    end: int = -1,
+    overwrite: bool = False,
+    with_file_name: bool = True,
+    resolution: Optional[Union[Tuple[int, int], list]] = None,
+    fps: Union[float, int] = 30,
+    draw_bbox: bool = False,
+    with_number: bool = False,
+    pop_parts: Iterable[str] = None,
+    disable_tqdm: bool = False,
+    disable_limbs: bool = False,
+    return_array: Optional[bool] = False,
+    keypoints_factory: dict = KEYPOINTS_FACTORY,
+    remove_raw_file: bool = True,
 ) -> Union[None, np.ndarray]:
     """Visualize 2d keypoints to a video or into a folder of frames.
 
@@ -467,9 +468,7 @@ def visualize_kp2d(
                 Defaults to None.
         img_format (str, optional): input image format. Default to '%06d.png',
         start (int, optional): start frame index. Defaults to 0.
-        end (int, optional): end frame index. Exclusive.
-                Could be positive int or negative int or None.
-                None represents include all the frames.
+        end (int, optional): end frame index. Defaults to -1.
         overwrite (bool, optional): whether replace the origin frames.
                 Defaults to False.
         with_file_name (bool, optional): whether write origin frame name on
@@ -512,9 +511,8 @@ def visualize_kp2d(
     assert kp2d.ndim == 4
     num_frames, num_person = kp2d.shape[0], kp2d.shape[1]
     # slice the input array temporally
-    end = (min(num_frames - 1, end) +
-           num_frames) % num_frames if end is not None else num_frames
-    kp2d = kp2d[start:end]
+    end = (min(num_frames - 1, end) + num_frames) % num_frames
+    kp2d = kp2d[start:end + 1]
 
     if image_array is not None:
         origin_frames = None
@@ -554,9 +552,10 @@ def visualize_kp2d(
     if disable_limbs:
         limbs_target, limbs_palette = None, None
     else:
+        # *** changed by wyj ***
         limbs_target, limbs_palette = _prepare_limb_palette(
             limbs, palette, pop_parts, data_source, mask)
-
+        # limbs_target, limbs_palette = limbs, palette
     canvas_producer = _CavasProducer(frame_list, resolution, kp2d, image_array)
 
     out_image_array = []
@@ -608,7 +607,7 @@ def visualize_kp2d(
             images_to_video(
                 input_folder=output_temp_folder,
                 output_path=output_path,
-                remove_raw_file=True,
+                remove_raw_file=remove_raw_file,
                 img_format=img_format,
                 fps=fps)
 

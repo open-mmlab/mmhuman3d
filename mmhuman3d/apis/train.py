@@ -50,7 +50,6 @@ def train_model(model,
 
     # prepare data loaders
     dataset = dataset if isinstance(dataset, (list, tuple)) else [dataset]
-
     data_loaders = [
         build_dataloader(
             ds,
@@ -95,7 +94,6 @@ def train_model(model,
 
     # build runner
     optimizer = build_optimizers(model, cfg.optimizer)
-
     if cfg.get('runner') is None:
         cfg.runner = {
             'type': 'EpochBasedRunner',
