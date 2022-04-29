@@ -13,6 +13,8 @@ from ..builder import PIPELINES
 
 
 def load_pascal_occluders(occluders_file):
+    """load pascal occluders from the occluder file."""
+
     if os.path.isfile(occluders_file):
         return np.load(occluders_file, allow_pickle=True)
     else:
@@ -95,6 +97,7 @@ def resize_by_factor(im, factor):
 
 
 def list_filepaths(dirpath):
+    """list the file paths."""
     names = os.listdir(dirpath)
     paths = [os.path.join(dirpath, name) for name in names]
     return sorted(filter(os.path.isfile, paths))

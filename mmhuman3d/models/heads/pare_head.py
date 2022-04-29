@@ -441,6 +441,7 @@ class PareHead(BaseModule):
         return nn.Sequential(*module_list)
 
     def _get_deconv_cfg(self, deconv_kernel):
+        """get deconv padding, output padding according to kernel size."""
         if deconv_kernel == 4:
             padding = 1
             output_padding = 0
@@ -541,6 +542,8 @@ class PareHead(BaseModule):
 
     def _get_local_feats(self, smpl_feats, part_attention, output):
         # 1x1 conv
+        """get keypoints and camera features from backbone features."""
+
         cam_shape_feats = self.smpl_final_layer(smpl_feats)
 
         if self.use_keypoint_attention:
@@ -554,7 +557,7 @@ class PareHead(BaseModule):
         return point_local_feat, cam_shape_feats
 
     def _get_2d_branch_feats(self, features):
-
+        """get part features from backbone features."""
         part_feats = self.keypoint_deconv_layers(features)
 
         return part_feats
