@@ -1,8 +1,12 @@
 import colorsys
+
 import mmcv
+
 import numpy as np
+
 import os
 from pathlib import Path
+
 from scipy import interpolate
 
 from mmhuman3d.core.post_processing import build_post_processing
@@ -315,7 +319,8 @@ def smooth_process(x,
         smooth_type (str, optional): Smooth type.
             choose in ['oneeuro', 'gaus1d', 'savgol'].
             Defaults to 'savgol'.
-        cfg_base_dir (str, optional): Config base dir, default configs/_base_/post_processing/
+        cfg_base_dir (str, optional): Config base dir,
+                            default configs/_base_/post_processing/
     Raises:
         ValueError: check the input smoothing type.
 
@@ -368,8 +373,10 @@ def speed_up_process(x,
                         'deciwatch_interval10_q3',
                         'deciwatch_interval10_q4',
                         'deciwatch_interval10_q5',]. Defaults to 'deciwatch'.
-        device (str,optional): learning based methods device. Defaults to 'cpu'
-        cfg_base_dir (str, optional): Config base dir. Defaults to 'configs/_base_/post_processing/'
+        device (str,optional): learning based methods device.
+                                Defaults to 'cpu'
+        cfg_base_dir (str, optional): Config base dir.
+                                Defaults to 'configs/_base_/post_processing/'
 
     Raises:
         ValueError: check the input speed up type.
@@ -435,7 +442,8 @@ def get_speed_up_interval(speed_up_type,
                         'deciwatch_interval10_q3',
                         'deciwatch_interval10_q4',
                         'deciwatch_interval10_q5',]. Defaults to 'deciwatch'.
-        cfg_base_dir (str, optional): Config base dir, default configs/_base_/post_processing/
+        cfg_base_dir (str, optional): Config base dir,
+                            default configs/_base_/post_processing/
 
     Raises:
         ValueError: check the input speed up type.
