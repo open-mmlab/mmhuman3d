@@ -60,7 +60,8 @@ class STAR(nn.Module):
         self.gender = gender
 
         if os.path.isdir(model_path):
-            star_path = os.path.join(model_path, '{}.npz'.format(gender))
+            star_path = os.path.join(model_path,
+                                     'STAR_{}.npz'.format(gender.upper()))
         else:
             star_path = model_path
         if not os.path.exists(star_path):
