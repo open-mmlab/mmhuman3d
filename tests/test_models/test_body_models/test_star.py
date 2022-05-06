@@ -27,8 +27,3 @@ def test_star_forward():
 
     trans = torch.cuda.FloatTensor(np.zeros((batch_size, 3)))
     _ = star.forward(poses, betas, trans)
-
-
-if __name__ == '__main__':
-    test_star_init()
-    test_star_forward()
