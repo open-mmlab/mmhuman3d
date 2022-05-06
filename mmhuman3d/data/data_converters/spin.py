@@ -86,7 +86,7 @@ class SpinConverter(BaseModeConverter):
             keypoints3d_ = data['S']
             keypoints3d_ = np.array(keypoints3d_).reshape((-1, 24, 4))
             keypoints3d_, keypoints3d_mask = convert_kps(
-                keypoints3d_, 'smpl', 'human_data')
+                keypoints3d_, 'smpl_24', 'human_data')
             human_data['keypoints3d_mask'] = keypoints3d_mask
             human_data['keypoints3d'] = keypoints3d_
 

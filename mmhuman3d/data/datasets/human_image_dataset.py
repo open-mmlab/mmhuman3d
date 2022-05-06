@@ -192,12 +192,16 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         if 'keypoints2d' in self.human_data:
             info['keypoints2d'] = self.human_data['keypoints2d'][idx]
+            info['has_keypoints2d'] = 1
         else:
             info['keypoints2d'] = np.zeros((self.num_keypoints, 3))
+            info['has_keypoints2d'] = 0
         if 'keypoints3d' in self.human_data:
             info['keypoints3d'] = self.human_data['keypoints3d'][idx]
+            info['has_keypoints3d'] = 1
         else:
             info['keypoints3d'] = np.zeros((self.num_keypoints, 4))
+            info['has_keypoints3d'] = 0
 
         if 'smpl' in self.human_data:
             smpl_dict = self.human_data['smpl']

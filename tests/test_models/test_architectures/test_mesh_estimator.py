@@ -6,6 +6,7 @@ from mmhuman3d.models.architectures.mesh_estimator import (
     VideoBodyModelEstimator,
 )
 from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.utils.geometry import project_points
 
 
 def test_image_body_mesh_estimator():
@@ -176,6 +177,15 @@ def test_compute_keypoints3d_loss():
     loss = model.compute_keypoints3d_loss(pred_keypoints3d, gt_keypoints3d)
     assert loss > 0
 
+    has_keypoints3d = torch.ones(32)
+    loss = model.compute_keypoints3d_loss(
+        pred_keypoints3d, gt_keypoints3d, has_keypoints3d=has_keypoints3d)
+    assert loss > 0
+    has_keypoints3d = torch.zeros(32)
+    loss = model.compute_keypoints3d_loss(
+        pred_keypoints3d, gt_keypoints3d, has_keypoints3d=has_keypoints3d)
+    assert loss == 0
+
 
 def test_compute_keypoints2d_loss():
     model = ImageBodyModelEstimator(
@@ -196,6 +206,22 @@ def test_compute_keypoints2d_loss():
     loss = model.compute_keypoints2d_loss(pred_keypoints3d, pred_cam,
                                           gt_keypoints2d)
     assert loss > 0
+
+    has_keypoints2d = torch.ones((32))
+    loss = model.compute_keypoints2d_loss(
+        pred_keypoints3d,
+        pred_cam,
+        gt_keypoints2d,
+        has_keypoints2d=has_keypoints2d)
+    assert loss > 0
+
+    has_keypoints2d = torch.zeros((32))
+    loss = model.compute_keypoints2d_loss(
+        pred_keypoints3d,
+        pred_cam,
+        gt_keypoints2d,
+        has_keypoints2d=has_keypoints2d)
+    assert loss == 0
 
 
 def test_compute_vertex_loss():
@@ -231,6 +257,43 @@ def test_compute_smpl_pose_loss():
     gt_pose = torch.randn((32, 24, 3))
     has_smpl = torch.ones((32))
     loss = model.compute_smpl_pose_loss(pred_rotmat, gt_pose, has_smpl)
+    assert loss > 0
+
+
+def test_compute_part_segm_loss():
+    N = 1
+    random_body_pose = torch.rand((N, 69))
+    body_model_train = dict(
+        type='SMPL',
+        keypoint_src='smpl_54',
+        keypoint_dst='smpl_49',
+        model_path='data/body_models/smpl',
+        extra_joints_regressor='data/body_models/J_regressor_extra.npy')
+    body_model = build_body_model(body_model_train)
+
+    body_model_output = body_model(body_pose=random_body_pose, )
+    gt_model_joins = body_model_output['joints'].detach()
+    cam = torch.ones(N, 3)
+    gt_keypoints2d = project_points(
+        gt_model_joins, cam, focal_length=5000, img_res=224)
+    loss_segm_mask = dict(type='CrossEntropyLoss', loss_weight=60)
+
+    gt_keypoints2d = torch.cat([gt_keypoints2d, torch.ones(N, 49, 1)], dim=-1)
+    model = ImageBodyModelEstimator(
+        body_model_train=body_model_train,
+        loss_segm_mask=loss_segm_mask,
+    )
+    gt_vertices = torch.randn(N, 6890, 3)
+    pred_heatmap = torch.zeros(N, 25, 224, 224)
+    pred_heatmap[:, 0, :, :] = 1
+    has_smpl = torch.ones((N))
+
+    loss = model.compute_part_segmentation_loss(
+        pred_heatmap,
+        gt_vertices,
+        has_smpl=has_smpl,
+        gt_keypoints2d=gt_keypoints2d,
+        gt_model_joints=gt_model_joins)
     assert loss > 0
 
 

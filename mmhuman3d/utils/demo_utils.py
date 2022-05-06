@@ -4,9 +4,9 @@ from pathlib import Path
 
 import mmcv
 import numpy as np
+from scipy import interpolate
 
-from mmhuman3d.core.filter import build_filter
-from mmhuman3d.utils.path_utils import check_input_path
+from mmhuman3d.core.post_processing import build_post_processing
 
 try:
     from typing import Literal
@@ -305,7 +305,9 @@ def conver_verts_to_cam_coord(verts,
     return verts, K0
 
 
-def smooth_process(x, smooth_type='savgol'):
+def smooth_process(x,
+                   smooth_type='savgol',
+                   cfg_base_dir='configs/_base_/post_processing/'):
     """Smooth the array with the specified smoothing type.
 
     Args:
@@ -314,6 +316,8 @@ def smooth_process(x, smooth_type='savgol'):
         smooth_type (str, optional): Smooth type.
             choose in ['oneeuro', 'gaus1d', 'savgol'].
             Defaults to 'savgol'.
+        cfg_base_dir (str, optional): Config base dir,
+                            default configs/_base_/post_processing/
     Raises:
         ValueError: check the input smoothing type.
 
@@ -321,11 +325,21 @@ def smooth_process(x, smooth_type='savgol'):
         np.ndarray: Smoothed data. The shape should be
             (frame,num_person,K,C) or (frame,K,C).
     """
+
+    assert smooth_type in ['oneeuro', 'gaus1d', 'savgol']
+
+    cfg = os.path.join(cfg_base_dir, smooth_type + '.py')
+    if isinstance(cfg, str):
+        cfg = mmcv.Config.fromfile(cfg)
+    elif not isinstance(cfg, mmcv.Config):
+        raise TypeError('config must be a filename or Config object, '
+                        f'but got {type(cfg)}')
+
     x = x.copy()
 
     assert x.ndim == 3 or x.ndim == 4
 
-    smooth_func = build_filter(dict(type=smooth_type))
+    smooth_func = build_post_processing(dict(cfg['smooth_cfg']))
 
     if x.ndim == 4:
         for i in range(x.shape[1]):
@@ -336,14 +350,176 @@ def smooth_process(x, smooth_type='savgol'):
     return x
 
 
-def process_mmtracking_results(mmtracking_results, max_track_id):
+def speed_up_process(x,
+                     speed_up_type='deciwatch',
+                     cfg_base_dir='configs/_base_/post_processing/'):
+    """Speed up the process with the specified speed up type.
+
+    Args:
+        x (np.ndarray): Shape should be (frame,num_person,K,C)
+            or (frame,K,C).
+        speed_up_type (str, optional): Speed up type.
+            choose in ['deciwatch',
+                        'deciwatch_interval5_q1',
+                        'deciwatch_interval5_q2',
+                        'deciwatch_interval5_q3',
+                        'deciwatch_interval5_q4',
+                        'deciwatch_interval5_q5',
+                        'deciwatch_interval10_q1',
+                        'deciwatch_interval10_q2',
+                        'deciwatch_interval10_q3',
+                        'deciwatch_interval10_q4',
+                        'deciwatch_interval10_q5',]. Defaults to 'deciwatch'.
+        cfg_base_dir (str, optional): Config base dir.
+                                Defaults to 'configs/_base_/post_processing/'
+
+    Raises:
+        ValueError: check the input speed up type.
+
+    Returns:
+        np.ndarray: Completed data. The shape should be
+            (frame,num_person,K,C) or (frame,K,C).
+    """
+
+    if speed_up_type == 'deciwatch':
+        speed_up_type = 'deciwatch_interval5_q3'
+    assert speed_up_type in [
+        'deciwatch_interval5_q1',
+        'deciwatch_interval5_q2',
+        'deciwatch_interval5_q3',
+        'deciwatch_interval5_q4',
+        'deciwatch_interval5_q5',
+        'deciwatch_interval10_q1',
+        'deciwatch_interval10_q2',
+        'deciwatch_interval10_q3',
+        'deciwatch_interval10_q4',
+        'deciwatch_interval10_q5',
+    ]
+
+    cfg = os.path.join(cfg_base_dir, speed_up_type + '.py')
+    if isinstance(cfg, str):
+        cfg = mmcv.Config.fromfile(cfg)
+    elif not isinstance(cfg, mmcv.Config):
+        raise TypeError('config must be a filename or Config object, '
+                        f'but got {type(cfg)}')
+    x = x.clone()
+
+    assert x.ndim == 4 or x.ndim == 5
+
+    cfg_dict = cfg['speed_up_cfg']
+    cfg_dict['device'] = x.device
+
+    speed_up_func = build_post_processing(cfg_dict)
+
+    if x.ndim == 5:
+        for i in range(x.shape[1]):
+            x[:, i] = speed_up_func(x[:, i])
+    elif x.ndim == 4:
+        x = speed_up_func(x)
+
+    return np.array(x.cpu())
+
+
+def get_speed_up_interval(speed_up_type,
+                          cfg_base_dir='configs/_base_/post_processing/'):
+    """Get the interval of specific speed up type.
+
+    Args:
+        speed_up_type (str, optional): Speed up type.
+            choose in ['deciwatch',
+                        'deciwatch_interval5_q1',
+                        'deciwatch_interval5_q2',
+                        'deciwatch_interval5_q3',
+                        'deciwatch_interval5_q4',
+                        'deciwatch_interval5_q5',
+                        'deciwatch_interval10_q1',
+                        'deciwatch_interval10_q2',
+                        'deciwatch_interval10_q3',
+                        'deciwatch_interval10_q4',
+                        'deciwatch_interval10_q5',]. Defaults to 'deciwatch'.
+        cfg_base_dir (str, optional): Config base dir,
+                            default configs/_base_/post_processing/
+
+    Raises:
+        ValueError: check the input speed up type.
+
+    Returns:
+        int: speed up interval
+    """
+
+    if speed_up_type == 'deciwatch':
+        speed_up_type = 'deciwatch_interval5_q3'
+    assert speed_up_type in [
+        'deciwatch_interval5_q1',
+        'deciwatch_interval5_q2',
+        'deciwatch_interval5_q3',
+        'deciwatch_interval5_q4',
+        'deciwatch_interval5_q5',
+        'deciwatch_interval10_q1',
+        'deciwatch_interval10_q2',
+        'deciwatch_interval10_q3',
+        'deciwatch_interval10_q4',
+        'deciwatch_interval10_q5',
+    ]
+    cfg = os.path.join(cfg_base_dir, speed_up_type + '.py')
+    if isinstance(cfg, str):
+        cfg = mmcv.Config.fromfile(cfg)
+    elif not isinstance(cfg, mmcv.Config):
+        raise TypeError('config must be a filename or Config object, '
+                        f'but got {type(cfg)}')
+
+    return cfg['speed_up_cfg']['interval']
+
+
+def speed_up_interpolate(selected_frames, speed_up_frames, smpl_poses,
+                         smpl_betas, pred_cams, bboxes_xyxy):
+    """Interpolate smpl_betas, pred_cams, and bboxes_xyxyx for speed up.
+
+    Args:
+        selected_frames (np.ndarray): Shape should be (selected frame number).
+        speed_up_frames (int): Total speed up frame number
+        smpl_poses (np.ndarray): selected frame smpl poses parameter
+        smpl_betas (np.ndarray): selected frame smpl shape paeameter
+        pred_cams (np.ndarray): selected frame camera parameter
+        bboxes_xyxy (np.ndarray): selected frame bbox
+
+    Returns:
+        smpl_poses (np.ndarray): interpolated frame smpl poses parameter
+        smpl_betas (np.ndarray): interpolated frame smpl shape paeameter
+        pred_cams (np.ndarray): interpolated frame camera parameter
+        bboxes_xyxy (np.ndarray): interpolated frame bbox
+    """
+    selected_frames = selected_frames[selected_frames <= speed_up_frames]
+    pred_cams[:speed_up_frames, :] = interpolate.interp1d(
+        selected_frames, pred_cams[selected_frames, :], kind='linear', axis=0)(
+            np.arange(0, max(selected_frames)))
+    bboxes_xyxy[:speed_up_frames, :] = interpolate.interp1d(
+        selected_frames,
+        bboxes_xyxy[selected_frames, :],
+        kind='linear',
+        axis=0)(
+            np.arange(0, max(selected_frames)))
+    smpl_betas[:speed_up_frames, :] = interpolate.interp1d(
+        selected_frames, smpl_betas[selected_frames, :], kind='linear',
+        axis=0)(
+            np.arange(0, max(selected_frames)))
+
+    return smpl_poses, smpl_betas, pred_cams, bboxes_xyxy
+
+
+def process_mmtracking_results(mmtracking_results,
+                               max_track_id,
+                               bbox_thr=None):
     """Process mmtracking results.
 
     Args:
         mmtracking_results ([list]): mmtracking_results.
-
+        bbox_thr (float): threshold for bounding boxes.
+        max_track_id (int): the maximum track id.
     Returns:
-        list: a list of tracked bounding boxes
+        person_results ([list]): a list of tracked bounding boxes
+        max_track_id (int): the maximum track id.
+        instance_num (int): the number of instance.
     """
     person_results = []
     # 'track_results' is changed to 'track_bboxes'
@@ -353,6 +529,13 @@ def process_mmtracking_results(mmtracking_results, max_track_id):
     elif 'track_results' in mmtracking_results:
         tracking_results = mmtracking_results['track_results'][0]
 
+    tracking_results = np.array(tracking_results)
+
+    if bbox_thr is not None:
+        assert tracking_results.shape[-1] == 6
+        valid_idx = np.where(tracking_results[:, 5] > bbox_thr)[0]
+        tracking_results = tracking_results[valid_idx]
+
     for track in tracking_results:
         person = {}
         person['track_id'] = int(track[0])
@@ -361,15 +544,16 @@ def process_mmtracking_results(mmtracking_results, max_track_id):
         person['bbox'] = track[1:]
         person_results.append(person)
     person_results = sorted(person_results, key=lambda x: x.get('track_id', 0))
-    instance_num = len(tracking_results)
+    instance_num = len(person_results)
     return person_results, max_track_id, instance_num
 
 
-def process_mmdet_results(mmdet_results, cat_id=1):
+def process_mmdet_results(mmdet_results, cat_id=1, bbox_thr=None):
     """Process mmdet results, and return a list of bboxes.
 
     Args:
         mmdet_results (list|tuple): mmdet results.
+        bbox_thr (float): threshold for bounding boxes.
         cat_id (int): category id (default: 1 for human)
 
     Returns:
@@ -383,6 +567,13 @@ def process_mmdet_results(mmdet_results, cat_id=1):
     bboxes = det_results[cat_id - 1]
 
     person_results = []
+    bboxes = np.array(bboxes)
+
+    if bbox_thr is not None:
+        assert bboxes.shape[-1] == 5
+        valid_idx = np.where(bboxes[:, 4] > bbox_thr)[0]
+        bboxes = bboxes[valid_idx]
+
     for bbox in bboxes:
         person = {}
         person['bbox'] = bbox
@@ -404,24 +595,13 @@ def prepare_frames(input_path=None):
         List[np.ndarray]: prepared frames
     """
     if Path(input_path).is_file():
-        if input_path.lower().endswith(('.mp4')):
-            input_type = 'video'
-        elif input_path.lower().endswith(('.png', '.jpg')):
-            input_type = 'image'
-        else:
-            raise ValueError('The input file should be an image or a video.'
-                             f' Got invalid file: {input_path}')
+        img_list = [mmcv.imread(input_path)]
+        if img_list[0] is None:
+            video = mmcv.VideoReader(input_path)
+            assert video.opened, f'Failed to load file {input_path}'
+            img_list = list(video)
     elif Path(input_path).is_dir():
-        input_type = 'folder'
-    else:
-        raise ValueError('Input path should be an file or folder.'
-                         f' Got invalid input path: {input_path}')
-    # prepare input
-    if input_type == 'image':
-        file_list = [input_path]
-        img_list = [mmcv.imread(img_path) for img_path in file_list]
-        assert len(img_list), f'Failed to load image from {input_path}'
-    elif input_type == 'folder':
+        # input_type = 'folder'
         file_list = [
             os.path.join(input_path, fn) for fn in os.listdir(input_path)
             if fn.lower().endswith(('.png', '.jpg'))
@@ -430,12 +610,8 @@ def prepare_frames(input_path=None):
         img_list = [mmcv.imread(img_path) for img_path in file_list]
         assert len(img_list), f'Failed to load image from {input_path}'
     else:
-        check_input_path(
-            input_path=input_path, path_type='file', allowed_suffix=['.mp4'])
-        video = mmcv.VideoReader(input_path)
-        assert video.opened, f'Failed to load video file {input_path}'
-        img_list = list(video)
-
+        raise ValueError('Input path should be an file or folder.'
+                         f' Got invalid input path: {input_path}')
     return img_list
 
 

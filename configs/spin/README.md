@@ -56,7 +56,7 @@ mmhuman3d
     │   └── spin_pretrain.pth
     ├── preprocessed_datasets
     │   ├── spin_coco_2014_train.npz
-    │   ├── spin_h36m_mosh_train.npz
+    │   ├── h36m_mosh_train.npz
     │   ├── spin_lspet_train.npz
     │   ├── spin_lsp_train.npz
     │   ├── spin_mpi_inf_3dhp_train.npz

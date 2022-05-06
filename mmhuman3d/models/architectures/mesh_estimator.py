@@ -2,7 +2,9 @@ from abc import ABCMeta, abstractmethod
 from typing import Optional, Tuple, Union
 
 import torch
+import torch.nn.functional as F
 
+import mmhuman3d.core.visualization.visualize_smpl as visualize_smpl
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx
 from mmhuman3d.models.utils import FitsDict
 from mmhuman3d.utils.geometry import (
@@ -70,6 +72,8 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             camera parameters. Default: None
         loss_adv (dict | None, optional): Losses config for adversial
             training. Default: None.
+        loss_segm_mask (dict | None, optional): Losses config for predicted
+        part segmentation. Default: None.
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None.
     """
@@ -90,6 +94,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                  loss_smpl_betas: Optional[Union[dict, None]] = None,
                  loss_camera: Optional[Union[dict, None]] = None,
                  loss_adv: Optional[Union[dict, None]] = None,
+                 loss_segm_mask: Optional[Union[dict, None]] = None,
                  init_cfg: Optional[Union[list, dict, None]] = None):
         super(BodyModelEstimator, self).__init__(init_cfg)
         self.backbone = build_backbone(backbone)
@@ -109,12 +114,13 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         self.loss_keypoints2d = build_loss(loss_keypoints2d)
         self.loss_keypoints3d = build_loss(loss_keypoints3d)
+
         self.loss_vertex = build_loss(loss_vertex)
         self.loss_smpl_pose = build_loss(loss_smpl_pose)
         self.loss_smpl_betas = build_loss(loss_smpl_betas)
         self.loss_adv = build_loss(loss_adv)
         self.loss_camera = build_loss(loss_camera)
-
+        self.loss_segm_mask = build_loss(loss_segm_mask)
         set_requires_grad(self.body_model_train, False)
         set_requires_grad(self.body_model_test, False)
 
@@ -410,8 +416,11 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         loss = dict(adv_loss=loss_adv)
         return loss
 
-    def compute_keypoints3d_loss(self, pred_keypoints3d: torch.Tensor,
-                                 gt_keypoints3d: torch.Tensor):
+    def compute_keypoints3d_loss(
+            self,
+            pred_keypoints3d: torch.Tensor,
+            gt_keypoints3d: torch.Tensor,
+            has_keypoints3d: Optional[torch.Tensor] = None):
         """Compute loss for 3d keypoints."""
         keypoints3d_conf = gt_keypoints3d[:, :, 3].float().unsqueeze(-1)
         keypoints3d_conf = keypoints3d_conf.repeat(1, 1, 3)
@@ -431,19 +440,39 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
         loss = self.loss_keypoints3d(
             pred_keypoints3d, gt_keypoints3d, reduction_override='none')
-        valid_pos = keypoints3d_conf > 0
-        if keypoints3d_conf[valid_pos].numel() == 0:
-            return torch.Tensor([0]).type_as(gt_keypoints3d)
-        loss = torch.sum(loss * keypoints3d_conf)
-        loss /= keypoints3d_conf[valid_pos].numel()
+
+        # If has_keypoints3d is not None, then computes the losses on the
+        # instances that have ground-truth keypoints3d.
+        # But the zero confidence keypoints will be included in mean.
+        # Otherwise, only compute the keypoints3d
+        # which have positive confidence.
+
+        # has_keypoints3d is None when the key has_keypoints3d
+        # is not in the datasets
+        if has_keypoints3d is None:
+
+            valid_pos = keypoints3d_conf > 0
+            if keypoints3d_conf[valid_pos].numel() == 0:
+                return torch.Tensor([0]).type_as(gt_keypoints3d)
+            loss = torch.sum(loss * keypoints3d_conf)
+            loss /= keypoints3d_conf[valid_pos].numel()
+        else:
+
+            keypoints3d_conf = keypoints3d_conf[has_keypoints3d == 1]
+            if keypoints3d_conf.shape[0] == 0:
+                return torch.Tensor([0]).type_as(gt_keypoints3d)
+            loss = loss[has_keypoints3d == 1]
+            loss = (loss * keypoints3d_conf).mean()
         return loss
 
-    def compute_keypoints2d_loss(self,
-                                 pred_keypoints3d: torch.Tensor,
-                                 pred_cam: torch.Tensor,
-                                 gt_keypoints2d: torch.Tensor,
-                                 img_res: Optional[int] = 224,
-                                 focal_length: Optional[int] = 5000):
+    def compute_keypoints2d_loss(
+            self,
+            pred_keypoints3d: torch.Tensor,
+            pred_cam: torch.Tensor,
+            gt_keypoints2d: torch.Tensor,
+            img_res: Optional[int] = 224,
+            focal_length: Optional[int] = 5000,
+            has_keypoints2d: Optional[torch.Tensor] = None):
         """Compute loss for 2d keypoints."""
         keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
         keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
@@ -462,11 +491,28 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         gt_keypoints2d = 2 * gt_keypoints2d / (img_res - 1) - 1
         loss = self.loss_keypoints2d(
             pred_keypoints2d, gt_keypoints2d, reduction_override='none')
-        valid_pos = keypoints2d_conf > 0
-        if keypoints2d_conf[valid_pos].numel() == 0:
-            return torch.Tensor([0]).type_as(gt_keypoints2d)
-        loss = torch.sum(loss * keypoints2d_conf)
-        loss /= keypoints2d_conf[valid_pos].numel()
+
+        # If has_keypoints2d is not None, then computes the losses on the
+        # instances that have ground-truth keypoints2d.
+        # But the zero confidence keypoints will be included in mean.
+        # Otherwise, only compute the keypoints2d
+        # which have positive confidence.
+        # has_keypoints2d is None when the key has_keypoints2d
+        # is not in the datasets
+
+        if has_keypoints2d is None:
+            valid_pos = keypoints2d_conf > 0
+            if keypoints2d_conf[valid_pos].numel() == 0:
+                return torch.Tensor([0]).type_as(gt_keypoints2d)
+            loss = torch.sum(loss * keypoints2d_conf)
+            loss /= keypoints2d_conf[valid_pos].numel()
+        else:
+            keypoints2d_conf = keypoints2d_conf[has_keypoints2d == 1]
+            if keypoints2d_conf.shape[0] == 0:
+                return torch.Tensor([0]).type_as(gt_keypoints2d)
+            loss = loss[has_keypoints2d == 1]
+            loss = (loss * keypoints2d_conf).mean()
+
         return loss
 
     def compute_vertex_loss(self, pred_vertices: torch.Tensor,
@@ -514,6 +560,69 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         loss = self.loss_camera(cameras)
         return loss
 
+    def compute_part_segmentation_loss(self,
+                                       pred_heatmap: torch.Tensor,
+                                       gt_vertices: torch.Tensor,
+                                       gt_keypoints2d: torch.Tensor,
+                                       gt_model_joints: torch.Tensor,
+                                       has_smpl: torch.Tensor,
+                                       img_res: Optional[int] = 224,
+                                       focal_length: Optional[int] = 500):
+        """Compute loss for part segmentations."""
+        device = gt_keypoints2d.device
+        gt_keypoints2d_valid = gt_keypoints2d[has_smpl == 1]
+        batch_size = gt_keypoints2d_valid.shape[0]
+
+        gt_vertices_valid = gt_vertices[has_smpl == 1]
+        gt_model_joints_valid = gt_model_joints[has_smpl == 1]
+
+        if batch_size == 0:
+            return torch.Tensor([0]).type_as(gt_keypoints2d)
+        gt_cam_t = estimate_translation(
+            gt_model_joints_valid,
+            gt_keypoints2d_valid,
+            focal_length=focal_length,
+            img_size=img_res,
+        )
+
+        K = torch.eye(3)
+        K[0, 0] = focal_length
+        K[1, 1] = focal_length
+        K[2, 2] = 1
+        K[0, 2] = img_res / 2.
+        K[1, 2] = img_res / 2.
+        K = K[None, :, :]
+
+        R = torch.eye(3)[None, :, :]
+        device = gt_keypoints2d.device
+        gt_sem_mask = visualize_smpl.render_smpl(
+            verts=gt_vertices_valid,
+            R=R,
+            K=K,
+            T=gt_cam_t,
+            render_choice='part_silhouette',
+            resolution=img_res,
+            return_tensor=True,
+            body_model=self.body_model_train,
+            device=device,
+            in_ndc=False,
+            convention='pytorch3d',
+            projection='perspective',
+            no_grad=True,
+            batch_size=batch_size,
+            verbose=False,
+        )
+        gt_sem_mask = torch.flip(gt_sem_mask, [1, 2]).squeeze(-1).detach()
+        pred_heatmap_valid = pred_heatmap[has_smpl == 1]
+        ph, pw = pred_heatmap_valid.size(2), pred_heatmap_valid.size(3)
+        h, w = gt_sem_mask.size(1), gt_sem_mask.size(2)
+        if ph != h or pw != w:
+            pred_heatmap_valid = F.interpolate(
+                input=pred_heatmap_valid, size=(h, w), mode='bilinear')
+
+        loss = self.loss_segm_mask(pred_heatmap_valid, gt_sem_mask)
+        return loss
+
     def compute_losses(self, predictions: dict, targets: dict):
         """Compute losses."""
         pred_betas = predictions['pred_shape'].view(-1, 10)
@@ -559,14 +668,29 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                     global_orient=gt_pose[:, :3],
                     num_joints=gt_keypoints2d.shape[1])
                 gt_vertices = gt_output['vertices']
-
+                gt_model_joints = gt_output['joints']
+        if 'has_keypoints3d' in targets:
+            has_keypoints3d = targets['has_keypoints3d'].squeeze(-1)
+        else:
+            has_keypoints3d = None
+        if 'has_keypoints2d' in targets:
+            has_keypoints2d = targets['has_keypoints2d'].squeeze(-1)
+        else:
+            has_keypoints2d = None
+        if 'pred_segm_mask' in predictions:
+            pred_segm_mask = predictions['pred_segm_mask']
         losses = {}
         if self.loss_keypoints3d is not None:
             losses['keypoints3d_loss'] = self.compute_keypoints3d_loss(
-                pred_keypoints3d, gt_keypoints3d)
+                pred_keypoints3d,
+                gt_keypoints3d,
+                has_keypoints3d=has_keypoints3d)
         if self.loss_keypoints2d is not None:
             losses['keypoints2d_loss'] = self.compute_keypoints2d_loss(
-                pred_keypoints3d, pred_cam, gt_keypoints2d)
+                pred_keypoints3d,
+                pred_cam,
+                gt_keypoints2d,
+                has_keypoints2d=has_keypoints2d)
         if self.loss_vertex is not None:
             losses['vertex_loss'] = self.compute_vertex_loss(
                 pred_vertices, gt_vertices, has_smpl)
@@ -578,6 +702,10 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                 pred_betas, gt_betas, has_smpl)
         if self.loss_camera is not None:
             losses['camera_loss'] = self.compute_camera_loss(pred_cam)
+        if self.loss_segm_mask is not None:
+            losses['loss_segm_mask'] = self.compute_part_segmentation_loss(
+                pred_segm_mask, gt_vertices, gt_keypoints2d, gt_model_joints,
+                has_smpl)
 
         return losses
 
