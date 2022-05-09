@@ -28,6 +28,7 @@ class SMPLRenderer(BaseRenderer):
                  device: Union[torch.device, str] = 'cpu',
                  output_path: Optional[str] = None,
                  return_tensor: bool = False,
+                 return_render_img: bool = False,
                  alpha: float = 1.0,
                  out_img_format: str = '%06d.png',
                  read_img_format: str = None,
@@ -50,6 +51,7 @@ class SMPLRenderer(BaseRenderer):
         self.out_img_format = out_img_format
         self.final_resolution = final_resolution
         self.return_tensor = return_tensor
+        self.return_render_img = return_render_img
         if output_path is not None:
             if check_path_suffix(output_path, ['.mp4', '.gif']):
                 self.temp_path = osp.join(
