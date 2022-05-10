@@ -1,12 +1,18 @@
+_base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
+# evaluate
 evaluation = dict(interval=6, metric=['pa-mpjpe', 'mpjpe'])
+
+img_res = 224
+
+# optimizer
 optimizer = dict(
     backbone=dict(type='Adam', lr=5.0e-5),
     head=dict(type='Adam', lr=5.0e-5),
 )
 optimizer_config = dict(grad_clip=None)
-
+# learning policy
 lr_config = dict(policy='Fixed', by_epoch=False)
 runner = dict(type='EpochBasedRunner', max_epochs=50)
 
@@ -17,8 +23,7 @@ log_config = dict(
 
 checkpoint_config = dict(interval=6)
 
-_base_ = ['../_base_/default_runtime.py']
-
+# model settings
 width = 32
 downsample = False
 use_conv = True
