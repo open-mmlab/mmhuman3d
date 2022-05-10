@@ -6,14 +6,15 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from mmcv.runner import load_checkpoint
+from pytorch3d.transforms import (
+    axis_angle_to_matrix,
+    matrix_to_quaternion,
+    matrix_to_rotation_6d,
+    quaternion_to_axis_angle,
+    rotation_6d_to_matrix,
+)
 from torch import Tensor, nn
 
-from mmhuman3d.utils.transforms import (
-    aa_to_rotmat,
-    rot6d_to_rotmat,
-    rotmat_to_aa,
-    rotmat_to_rot6d,
-)
 from ..builder import POST_PROCESSING
 
 
@@ -60,12 +61,12 @@ class DeciWatchPostProcessing:
         if x.shape[1:] == (24, 3, 3):
             input_type = 'matrix'
             x = torch.tensor(x).to(self.device)
-            x = rotmat_to_rot6d(x).reshape(-1, self.input_dimension)
+            x = matrix_to_rotation_6d(x).reshape(-1, self.input_dimension)
         elif x.shape[1:] == (24, 3):
             input_type = 'axis_angles'
             x = torch.tensor(x).to(self.device)
-            x = rotmat_to_rot6d(aa_to_rotmat(x.reshape(-1, 3))).reshape(
-                -1, self.input_dimension)
+            x = matrix_to_rotation_6d(axis_angle_to_matrix(x.reshape(
+                -1, 3))).reshape(-1, self.input_dimension)
         else:
             x = torch.tensor(x).to(self.device)
             x = x.reshape(-1, self.input_dimension)
@@ -110,12 +111,14 @@ class DeciWatchPostProcessing:
                                      dim=0)
 
         if input_type == 'matrix':
-            output_poses = rot6d_to_rotmat(output_poses.reshape(
+            output_poses = rotation_6d_to_matrix(output_poses.reshape(
                 -1, 6)).reshape(-1, 24, 3, 3)
         elif input_type == 'axis_angles':
-            output_poses = rotmat_to_aa(
-                rot6d_to_rotmat(output_poses.reshape(-1,
-                                                     6))).reshape(-1, 24, 3)
+            output_poses = quaternion_to_axis_angle(
+                matrix_to_quaternion(
+                    rotation_6d_to_matrix(output_poses.reshape(-1,
+                                                               6)))).reshape(
+                                                                   -1, 24, 3)
 
         return output_poses
 
