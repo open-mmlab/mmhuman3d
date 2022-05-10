@@ -8,7 +8,9 @@ img_res = 224
 
 # optimizer
 optimizer = dict(
-    backbone=dict(type='Adam', lr=2.0e-4), head=dict(type='Adam', lr=2.0e-4), )
+    backbone=dict(type='Adam', lr=2.0e-4),
+    head=dict(type='Adam', lr=2.0e-4),
+)
 optimizer_config = dict(grad_clip=None)
 # learning policy
 lr_config = dict(policy='Fixed', by_epoch=False)
