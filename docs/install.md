@@ -44,12 +44,12 @@ conda install ffmpeg
 
 c. Install PyTorch and torchvision following the [official instructions](https://pytorch.org/).
 ```shell
-conda install pytorch=={torch_version} torchvision cudatoolkit={cu_version} -c pytorch
+conda install pytorch={torch_version} torchvision cudatoolkit={cu_version} -c pytorch
 ```
 
 E.g., install PyTorch 1.8.0 & CUDA 10.2.
 ```shell
-conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch
+conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 ```
 
 **Important:** Make sure that your compilation CUDA version and runtime CUDA version match.

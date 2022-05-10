@@ -20,3 +20,7 @@
 ### HybrIK
 
 详情请参考[HybrIK](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hybrik/)。
+
+### PARE
+
+详情请参考[PARE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/pare/)。

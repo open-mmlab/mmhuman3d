@@ -26,7 +26,7 @@
   * [SURREAL](#surreal)
 
 
-## Overview
+## 总览
 
 我们使用 [HumanData](./human_data.md) 结构用于存储和加载数据。经过处理的.npz可以使用我们提供的数据转换脚本从原始数据格式获取，详情请参考[convert_datasets.py](https://github.com/open-mmlab/mmhuman3d/tree/main/tools/convert_datasets.py).
 
@@ -142,11 +142,10 @@ python tools/convert_datasets.py \
 
 使用时，请指定具体的`dataset-name`.
 
-### HMR
 训练HMR算法，需要如下的数据集
   - [COCO](#coco)
   - [Human3.6M](#human36m)
-  - [Human3.6M Mosh](#human36mmosh)
+  - [Human3.6M Mosh](#human36m-mosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [MPII](#mpii)
   - [LSP](#lsp)
@@ -158,7 +157,7 @@ python tools/convert_datasets.py \
 coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
 ```
 
-**选择**, 您可以首先下载处理好的.npz文件:
+**或者**, 您可以下载处理好的.npz文件:
 - [cmu_mosh.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/cmu_mosh.npz?versionId=CAEQHhiBgIDoof_37BciIDU0OGU0MGNhMjAxMjRiZWI5YzdkMWEzMzc3YzBiZDM2)
 - [coco_2014_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/coco_2014_train.npz?versionId=CAEQHhiBgICUrvbS6xciIDFmZmFhMDk5OGQ3YzQ5ZDE5NzJkMGQxNzdmMmQzZDdi)
 - [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
@@ -168,6 +167,7 @@ coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
 - [mpii_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/mpii_train.npz?versionId=CAEQHhiBgIDhq_bS6xciIDEwMmE0ZDc0NWI1NjQ2NWZhYTA5ZjEyODBiNWFmODg1)
 - [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
 
+由于许可证的限制，我们无法上传`h36m_mosh_train.npz`。但是我们提供了相关的转换工具, 如果您拥有原始的`mosh`数据, 您可以参考[Human3.6M Mosh](#human36m-mosh)。
 
 处理好的数据集应该具有如下的结构:
 ```text
@@ -181,7 +181,7 @@ mmhuman3d
     ├── datasets
     └── preprocessed_datasets
         ├── coco_2014_train.npz
-        ├── h36m_train.npz
+        ├── h36m_train.npz (h36m_mosh_train.npz)
         ├── lspet_train.npz
         ├── lsp_train.npz
         ├── mpi_inf_3dhp_train.npz
@@ -189,12 +189,10 @@ mmhuman3d
         └── pw3d_test.npz
 ```
 
-### SPIN
-
 训练SPIN算法, 需要如下的数据集:
   - [COCO](#coco)
   - [Human3.6M](#human36m)
-  - [Human3.6M Mosh](#human36mmosh)
+  - [Human3.6M Mosh](#human36m-mosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [MPII](#mpii)
   - [LSP](#lsp)
@@ -205,18 +203,19 @@ mmhuman3d
 
 使用如下的数据集名称替换`dataset-names`进行数据转换:
 ```
-spin, h36m_spin
+spin, h36m
 ```
 
-**选择**, 您可以首先下载处理好的.npz文件:
+**或者**, 您可以先下载处理好的.npz文件:
 - [spin_coco_2014_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_coco_2014_train.npz?versionId=CAEQHhiBgICb6bfT6xciIGM2NmNmZDYyNDMxMDRiNTVhNDk3YzY1N2Y2ODdlMTAy)
-- [spin_h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_h36m_train.npz?versionId=CAEQHhiBgID657fT6xciIDM4ZDc5YjIwZjQwOTQ4ODRhOWZhMWQwZmVhNWZkZTQ3)
+- [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
 - [spin_lsp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_lsp_train.npz?versionId=CAEQHhiBgIDu57fT6xciIDQ0ODAzNjUyNjJkMzQyNzQ5Y2IzNGNhOTZmZGI2NzBm)
 - [spin_lspet_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_lspet_train.npz?versionId=CAEQHhiBgMCe6LfT6xciIDc3NzZiYzA1ZGJkYzQwNzRhYjg3ZDMwYTdjZDZmNTAw)
 - [spin_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgMCV6LfT6xciIDliYTJhM2FkNDkyYjRiOWFiYTUwOTk0MGRlNThlZWRk)
 - [spin_mpii_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_mpii_train.npz?versionId=CAEQHhiBgMDz57fT6xciIGJjMzAwMDdlYTBmMTQ0MDg4ZGE4YjhiZGNkNWQwZmM1)
 - [spin_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_pw3d_test.npz?versionId=CAEQHhiBgMCL6LfT6xciIGUxNjY3OTBiODU5ZDQxODliYTQ4NzU0OGVjMzJkYmRm)
 
+由于许可证的限制，我们无法上传`h36m_mosh_train.npz`。但是我们提供了相关的转换工具, 如果您拥有原始的`mosh`数据, 您可以参考[Human3.6M Mosh](#human36m-mosh)。
 
 处理好的数据集应该具有如下的结构:
 ```text
@@ -230,7 +229,7 @@ mmhuman3d
     ├── datasets
     └── preprocessed_datasets
         ├── spin_coco_2014_train.npz
-        ├── spin_h36m_train.npz
+        ├── h36m_train.npz (h36m_mosh_train.npz)
         ├── spin_lsp_train.npz
         ├── spin_lspet_train.npz
         ├── spin_mpi_inf_3dhp_train.npz
@@ -238,15 +237,13 @@ mmhuman3d
         └── spin_pw3d_test.npz
 ```
 
-### VIBE
-
 训练VIBE算法, 需要如下的数据集:
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [PW3D](#pw3d)
 
 数据转换暂时不可用.
 
-**选择**, 您可以首先下载处理好的.npz文件:
+**或者**, 您可以先下载处理好的.npz文件:
 - [vibe_insta_variety.npz](https://pjlab-my.sharepoint.cn/:u:/g/personal/openmmlab_pjlab_org_cn/EYnlkp-69NBNlXDH-5ELZikBXDbSg8SZHqmdSX_3hK4EYg?e=QUl5nI)
 - [vibe_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/vibe_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgICTnq3U6xciIGUwMTc5YWQ2MjNhZDQ3NGE5MmYxOWJhMGQxMTcwNTll)
 - [vibe_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/vibe_pw3d_test.npz?versionId=CAEQHhiBgMD5na3U6xciIGQ4MmU0MjczYTYzODQ1NDQ5M2JiNzY1N2E5MTNlOWY5)
@@ -268,8 +265,6 @@ mmhuman3d
         └── vibe_pw3d_test.npz
 ```
 
-### HybrIK
-
 训练HybrIK算法, 需要如下的数据集:
   - [HybrIK](#hybrik)
   - [COCO](#coco)
@@ -282,7 +277,7 @@ mmhuman3d
 h36m_hybrik, pw3d_hybrik, mpi_inf_3dhp_hybrik, coco_hybrik
 ```
 
-**选择**, 您可以首先下载处理好的.npz文件:
+**或者**, 您可以先下载处理好的.npz文件:
 - [hybriK_coco_2017_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_coco_2017_train.npz?versionId=CAEQHhiBgMDA6rjT6xciIDE3N2FiZDkxYTkyZDRjN2ZiYjc1ODQ2YTc5NjY0ZmFl)
 - [hybrik_h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_h36m_train.npz?versionId=CAEQHhiBgIC_iLjT6xciIGE4NmQ5YzUxMzY0ZjQ0Y2U5MWFkOTkwNmIwMGI4NTNm)
 - [hybrik_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgICogLjT6xciIDQwYzRlYTVlOTE0YTQ4ZDRhYTljOGRkZDc1MDhjNDgy)
@@ -304,6 +299,51 @@ mmhuman3d
         ├── hybrik_h36m_train.npz
         ├── hybrik_mpi_inf_3dhp_train.npz
         └── hybrik_pw3d_test.npz
+```
+
+训练PARE算法, 需要如下的数据集:
+  - [Human3.6M](#human36m)
+  - [Human3.6M Mosh](#human36m-mosh)
+  - [MPI-INF-3DHP](#mpi-inf-3dhp)
+  - [EFT-COCO](#EFT)
+  - [EFT-MPII](#EFT)
+  - [EFT-LSPET](#EFT)
+  - [PW3D](#pw3d)
+
+
+使用如下的数据集名称替换`dataset-names`进行数据转换:
+```
+h36m, coco, mpii, lspet, mpi-inf-3dhp, pw3d
+```
+
+**或者**, 您可以先下载处理好的.npz文件:
+- [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
+- [mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgMD3q_bS6xciIGQwYjc4NTRjYTllMzRkODU5NTNiZDQyOTBlYmRhODg5)
+- [eft_mpii.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/eft_mpii.npz?versionId=CAEQOhiBgMCXlty_gxgiIDYxNDc5YTIzZjBjMDRhMGM5ZjBiZmYzYjFjMTU1ZTRm)
+- [eft_lspet.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/eft_lspet.npz?versionId=CAEQOhiBgMC339u_gxgiIDZlNzk1YjMxMWRmMzRkNWJiNjg1OTI2Mjg5OTA1YzJh
+)
+- [eft_coco_all.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/eft_coco_all.npz?versionId=CAEQOhiBgID3iuS_gxgiIDgwYzU4NTc3ZWRkNDQyNGJiYzU4MGViYTFhYTFmMmUx)
+- [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
+
+
+处理好的数据集应该具有如下的结构:
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── datasets
+    └── preprocessed_datasets
+        ├── h36m_mosh_train.npz
+        ├── h36m_train.npz
+        ├── mpi_inf_3dhp_train.npz
+        ├── eft_mpii.npz
+        ├── eft_lspet.npz
+        ├── eft_coco_all.npz
+        └── pw3d_test.npz
 ```
 
 ## 文件夹结构
@@ -391,7 +431,7 @@ mmhuman3d
 
 未来会添加更多关于处理AMASS数据集的细节。
 
-**选择**, 您可以直接下载处理好的.npz文件:
+**或者**, 您可以直接下载处理好的.npz文件:
 - [amass_smplh.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/amass_smplh.npz?versionId=CAEQIhiBgICS4Mrt7xciIGU5MDBmZmE4Y2I0NjRiYTc4ZWY2NzY2MzU1ZmIwZTQ2)
 - [amass_smplx.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/amass_smplx.npz?versionId=CAEQIhiBgIDh387t7xciIGRlN2JlZjA0ZGM0YzRkNmM5OWJhNmVjMmZlN2RiN2E1)
 
@@ -674,7 +714,7 @@ h36m_p1=dict(
     type='H36mConverter',
     modes=['train', 'valid'],
     protocol=1,
-    extract_img=True, # set to true to extract images from raw videos
+    extract_img=True, # 从原视频中提取图像，设置为True
     prefix='h36m'),
 ```
 
@@ -682,7 +722,7 @@ h36m_p1=dict(
 
 <!-- [DATASET] -->
 
-我们使用[HMR](https://github.com/akanazawa/hmr)提供的[MoShed](https://mosh.is.tue.mpg.de/)数据集训练`HMR`和`SPIN`。由于版权的限制，我们无法上传该数据集。即使没有使用mosh参数的许可，仍可使用我们提供的[转换脚本](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py)生成h36m的.npz文件。
+我们使用[HMR](https://github.com/akanazawa/hmr)提供的[MoShed](https://mosh.is.tue.mpg.de/)数据集训练`HMR`、`SPIN`和`PARE`。由于版权的限制，我们无法上传该数据集。即使没有使用mosh参数的许可，仍可使用我们提供的[转换脚本](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py)生成h36m的.npz文件。
 
 修改[配置文件](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py)中的`h36m_p1`，从原始的[Human3.6M](http://vision.imar.ro/human3.6m/description.php)数据集中的视频提取图像。
 
@@ -692,7 +732,7 @@ h36m_p1=dict(
     type='H36mConverter',
     modes=['train', 'valid'],
     protocol=1,
-    extract_img=True,  # this is to specify you want to extract images from videos
+    extract_img=True,  # 从原视频中提取图像，设置为True
     prefix='h36m'),
 ```
 
@@ -702,12 +742,12 @@ h36m_p1=dict(
     type='H36mConverter',
     modes=['train', 'valid'],
     protocol=1,
-    extract_img=True,  # this is to specify you want to extract images from videos
-    mosh_dir='data/datasets/h36m_mosh', # supply the directory to the mosh if available
+    extract_img=True,  # 从原视频中提取图像，设置为True
+    mosh_dir='data/datasets/h36m_mosh', # 如果拥有mosh数据，指定其的路径
     prefix='h36m'),
 ```
 
-如果你可以获取到Human3.6m的Mosh数据，整个文件夹应该具有如下的架构：
+如果您可以获取到Human3.6m的Mosh数据，整个文件夹应该具有如下的架构：
 
 ```text
 mmhuman3d
@@ -887,7 +927,7 @@ Config:
 mpi_inf_3dhp=dict(
   type='MpiInf3dhpConverter',
   modes=['train', 'test'],
-  extract_img=True),  # this is to specify you want to extract images from videos
+  extract_img=True),  # 从原视频中提取图像，设置为True
 ```
 
 下载[MPI-INF-3DHP](http://gvv.mpi-inf.mpg.de/3dhp-dataset/)数据集, 解压至文件夹`$MMHUMAN3D/data/datasets`, 使其具有如下的结构:

@@ -1,17 +1,17 @@
-# 关键点种类
+# 关键点类型
 
 ## 总览
 
-MMHuamn3D中的关键点种类试图整合各种常用数据集中不同关键点的定义。由于标注数据的过程不尽相同，不同数据集中具有相同名字的关键点可能会对应不同的身体部位。相对的，拥有不同名字的关键点可能对应相同的身体部位。
-为了统一不同数据集中不同关键点的对应关系，我们采用 human_data 结构作为转换和存储关键点的基本种类。
+MMHuamn3D中的关键点类型整合了各种常用数据集中不同关键点的定义。由于标注数据的过程不尽相同，不同数据集中具有相同名字的关键点可能会对应不同的身体部位。相对的，拥有不同名字的关键点可能对应相同的身体部位。
+为了统一不同数据集中不同关键点的对应关系，我们采用`human_data`结构作为转换和存储关键点的基本类型。
 
 ## 使用方法
 
-### 不同种类之间的转换
+### 不同类型之间的转换
 
-使用 `convert_kps` 函数可以轻松地转换不同数据集中的关键点。
+使用 `convert_kps` 函数可以转换不同数据集中的关键点。
 
-为了将`human_data`转换为`coco`，需要指定源种类和目标种类。
+为了将`human_data`转换为`coco`的格式，需要指定源类型和目标类型。
 
 
 ```python
@@ -22,11 +22,11 @@ keypoints_coco, mask = convert_kps(keypoints_human_data, src='human_data', dst='
 assert mask.all()==1
 ```
 
-如果目标种类是源种类的子集，输出的`mask`应该全为1。可以使用`mask`作为关键点的置信度，因为没有对应关系的关键点的置信度会被设置为0。
+如果目标类型是源类型的子集合，输出的`mask`应该全为1。没有对应关系的关键点的置信度会被设置为0, 可以使用`mask`作为关键点的置信度。
 
 ### 通过置信度进行转换
 
-如果拥有关键点的置信度，可以使用原始mask对其进行标记，然后将信息更新为返回的mask。例如，想要将`smpl`的关键点转换为`coco`的关键点，并且已知`left_shoulder`被遮挡。想要在转换过程中继承该信息，可以像如下这样设置原始`mask`并且转换为`coco`种类:
+如果获得了关键点的置信度，可以使用原始`mask`对其进行标记，然后将信息更新为返回的`mask`。例如，想要将`smpl`的关键点转换为`coco`的关键点，并且已知`left_shoulder`被遮挡。想要在转换过程中继承该信息，可以像如下这样设置原始`mask`并且转换为`coco`类型:
 
 ```python
 import numpy as np
@@ -35,7 +35,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import KEYPOINTS_FACTORY, conv
 keypoints = np.zeros((1, len(KEYPOINTS_FACTORY['smpl']), 3))
 confidence = np.ones((len(KEYPOINTS_FACTORY['smpl'])))
 
-# assume that 'left_shoulder' point is invalid.
+# 假设 'left_shoulder' 是无效的.
 confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] = 0
 
 _, conf_coco = convert_kps(
@@ -87,7 +87,7 @@ assert new_confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] == 0.5
 
 `HumanData` 中的前 144 个关键点对应于 `SMPL-X` 中的关键点。后缀为`_extra`的关键点是指从`Jregressor_extra`获得的关键点。 后缀为`_openpose`的关键点是指从`OpenPose`预测中获得的关键点。
 
-`MPI-INF-3DHP`、`Human3.6M` 和 `Posetrack` 中有几个关键点具有相同的名称，但在含义上与 `SMPL-X` 中的关键点不同。 因此，我们添加了一个额外的后缀来区分这些关键点，即 `head_h36m`。
+`MPI-INF-3DHP`、`Human3.6M` 和 `Posetrack` 中有几个关键点具有相同的名称，但在含义上与 `SMPL-X` 中的关键点不同。 因此，我们添加了一个额外的后缀`head_h36m`来区分这些关键点。
 
 ### AGORA
 
@@ -374,4 +374,4 @@ assert new_confidence[KEYPOINTS_FACTORY['smpl'].index('left_shoulder')] == 0.5
 
 ### 客制化关键点种类
 
-请参考[customize_keypoints_convention](./customize_keypoints_convention.md).
+请参考[customize_keypoints_convention](../docs_zh-CN/customize_keypoints_convention.md).

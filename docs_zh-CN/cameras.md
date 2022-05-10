@@ -2,11 +2,11 @@
 
 ## 相机初始化
 
-MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为相机坐标系到世界坐标系的变化。外参矩阵使用右乘，内参矩阵使用左乘。我们还提供了`OpenCV`中的相机约定，如果您更熟悉`OpenCV`，这可能会起到帮助。
+MMHuman3D遵循 `PyTorch3D` 中的相机规范：其外参矩阵定义为从相机坐标系到世界坐标系的变化。外参矩阵使用右乘，内参矩阵使用左乘。我们还提供了`OpenCV`中的相机规范，如果您更熟悉`OpenCV`，您也可以选择`OpenCV`规范来进行操作。
 
 - **相机切片:**
 
-    MMHuman3D中，推荐的初始化相机的方式为直接传递`K`, `R`, `T`矩阵。
+    MMHuman3D中，推荐的相机初始化的方式为直接传递`K`, `R`, `T`矩阵。
     可以按索引对相机进行切片，也可以在batch维度进行拼接。
 
       ```python
@@ -15,7 +15,7 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
       K = torch.eye(4, 4)[None]
       R = torch.eye(3, 3)[None]
       T = torch.zeros(100, 3)
-      # Batch of K, R, T should all be the same or some of them could be 1. The final batch size will be the biggest one.
+      # K, R, T的Batch大小应该相同，或者为1。如果不同，最终的batch大小会是三者中最大的那一个。
       cam = PerspectiveCameras(K=K, R=R, T=T)
       assert cam.R.shape == (100, 3, 3)
       assert cam.K.shape == (100, 4, 4)
@@ -28,13 +28,13 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
 
     MMHuman3D中，推荐的初始化相机的方式为直接传递`K`, `R`, `T`矩阵, 但是也可以传递`focal_length` 和 `principle_point` 作为输入。
 
-    以常用的`PerspectiveCameras`为例。如果`K`, `R`, `T`没有被确定，`K`将会使用`compute_default_projection_matrix`中默认的，`principal_point` 和 `R` 将会是单位矩阵，`T`将会是零矩阵。你也可以通过重写`compute_default_projection_matrix`来指定。
+    以常用的`PerspectiveCameras`为例。如果`K`, `R`, `T`没有被确定，`K`将会使用`compute_default_projection_matrix`中默认的，`principal_point` 和 `R` 将会被设置为单位矩阵，`T`将会被设置为零矩阵。您也可以通过重写`compute_default_projection_matrix`来指定具体的数值。
 
     ```python
     from mmhuman3d.core.cameras import build_cameras
 
-    # Initialize a perspective camera with given K, R, T matrix.
-    # It is recommended that the batches of K, R, T either the same or be 1.
+    # 使用给定的K, R, T矩阵初始化相机(PerspectiveCameras)。
+    # K, R, T的batch大小应该相同，或者为1。
     K = torch.eye(4, 4)[None]
     R = torch.eye(3, 3)[None]
     T = torch.zeros(10, 3)
@@ -57,15 +57,15 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
             R=R,
             T=T,
             in_ndc=True,
-            image_size=1000, # single number represents square images.
+            image_size=1000, # 图像尺度指定为单数时，表示正方形图像。
             convention='opencv',
             )
     assert cam1.K.shape == cam2.K.shape == (10, 4, 4)
     assert cam1.R.shape == cam2.R.shape == (10, 3, 3)
     assert cam1.T.shape == cam2.T.shape == (10, 3)
 
-    # Initialize a perspective camera with specific `image_size`, `principal_points`, `focal_length`.
-    # `in_ndc = False` means the intrinsic matrix `K` defined in screen space. The `focal_length` and `principal_point` in `K` is defined in scale of pixels. This `principal_points` is (500, 500) pixels and `focal_length` is 1000 pixels.
+    # 使用给定的`image_size`, `principal_points`, `focal_length`初始化相机(PerspectiveCameras)。
+    # `in_ndc = False` 意味着内参矩阵 `K` 在screen space中被定义。 `K`中的`focal_length`和`principal_point`被定义为像素个数。 下例中， `principal_points` 为 (500, 500) 像素， `focal_length` 为 1000 像素。
     cam = build_cameras(
         dict(
             type='PerspectiveCameras',
@@ -81,7 +81,7 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
                                       [0.,    0.,    0.,    1.],
                                       [0.,    0.,    1.,    0.]]).view(4, 4)).all()
 
-    # Initialize a weakperspective camera with given K, R, T. weakperspective camera support `in_ndc = True` only.
+    # 使用给定的K, R, T初始化相机(WeakPerspectiveCameras)。Weakperspective Camera 只支持`in_ndc = True`(默认)。
     cam = build_cameras(
         dict(
             type='WeakPerspectiveCameras',
@@ -91,8 +91,7 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
             image_size=(1000, 1000)
             ))
 
-    # If no `K`, `R`, `T` information provided
-    # Initialize a `in_ndc` perspective camera with default matrix.
+    # 如果`K`, `R`, `T`矩阵没有给定，将会使用默认矩阵初始化`in_ndc`的相机(PerspectiveCameras)。
     cam = build_cameras(
         dict(
             type='PerspectiveCameras',
@@ -131,7 +130,7 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
     ```
     `WeakPerspectiveCameras` 事实上是正交投影, 主要用于 SMPL(x) 模型的重投影。
     更多信息请参考[mmhuman3d cameras](mmhuman3d/core/cameras/cameras.py#L40)。
-    这可以通过SMPL预测的相机参数进行转换:
+    可以通过SMPL预测的相机参数进行转换:
     ```python
     from mmhuman3d.core.cameras import WeakPerspectiveCameras
     K = WeakPerspectiveCameras.convert_orig_cam_to_matrix(orig_cam)
@@ -175,14 +174,14 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
     ```
     scale_x, scale_y, scale_z, mid_x, mid_y, mid_z 由 FoV parameters(`min_x`, `min_y`, `max_x`, `max_y`, `znear`, `zfar`, 等)定义, 更多信息请参考[Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/pytorch3d/renderer/cameras.py).
 
-## 相机约定
+## 相机规范
 - **在不同相机之间进行转换:**
 
     我们命名内参矩阵为`K`, 旋转矩阵为`R` 平移矩阵为`T`。
-    不同的相机约定有着不同的轴向, 有些使用矩阵左乘，有些使用矩阵右乘。 内参矩阵和外参矩阵应该使用相同的矩阵乘法约定，但是`PyTorch3D`在计算过程中使用矩阵右乘，在相机初始化的时候传递左乘矩阵`K`(主要是为了便于理解)。
-    `NDC`和`screen`之间的转换也会影响内参矩阵, 这与相机约定无关。
-    如果要使用现有的约定，请指定`['opengl', 'opencv', 'pytorch3d', 'pyrender', 'open3d']`中的一个。If you want to use an existing convention, choose in `['opengl', 'opencv', 'pytorch3d', 'pyrender', 'open3d']`.
-    例如, 可以进行如下的操作，将使用OpenCV标定的相机转化为PyTorch3D NDC定义的相机以进行渲染:
+    不同的相机规范有着不同的轴向, 有些使用矩阵左乘，有些使用矩阵右乘。 内参矩阵和外参矩阵应该使用相同的矩阵乘法规范，但是`PyTorch3D`在计算过程中使用矩阵右乘，在相机初始化的时候传递左乘矩阵`K`(这主要是为了便于理解)。
+    `NDC`和`screen`之间的转换也会影响内参矩阵, 这与相机规范无关。
+    如果要使用现有的规范，请指定`['opengl', 'opencv', 'pytorch3d', 'pyrender', 'open3d']`中的一个。
+    例如, 可以进行如下的操作，将使用`OpenCV`标定的相机转化为`PyTorch3D NDC`定义的相机以进行渲染:
     ```python
     from mmhuman3d.core.conventions.cameras import convert_cameras
     import torch
@@ -211,9 +210,9 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
 
     更多关于`NDC`和`screen`相机空间的信息，请参考[Pytorch3D](https://github.com/facebookresearch/pytorch3d/blob/main/docs/notes/cameras.md)。
 
-- **定义个人的相机约定:**
+- **定义个人的相机规范:**
 
-    如果使用新的相机约定, 请在[CAMERA_CONVENTION_FACTORY](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/cameras/__init__.py)按照向右, 向上, 和远离屏幕的顺序定义相机约定。例如, 下方第一个pyrender的约定应该为'+x+y+z'。第二个opencv的约定应该为'+x-y-z'。 第三个Pytorch3D的约定为'-xyz'.
+    如果使用新的相机规范, 请在[CAMERA_CONVENTION_FACTORY](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/conventions/cameras/__init__.py)中, 按照向右, 向上, 和远离屏幕的顺序进行定义。例如, 下方第一个`PyRender`的顺序应该为'+x+y+z'。第二个`OpenCV`的顺序应该为'+x-y-z'。 第三个`Pytorch3D`的顺序为'-xyz'。
     ```
     OpenGL(PyRender)       OpenCV             Pytorch3D
         y                   z                     y
@@ -226,7 +225,7 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
     ```
 
 ## 部分转换函数
-转换函数定义在`conventions.cameras`。
+转换函数定义在`conventions.cameras`中。
 - **NDC & screen:**
 
     ```python
@@ -257,8 +256,9 @@ MMHuman3D遵循 `PyTorch3D` 中的相机约定。相机的外参矩阵定义为�
     ```
 - **weakperspective & perspective:**
 
-    在weakperspective 和 perspective中进行转换。 `zmean` 是必须的。
-    WeakperspectiveCameras is in_ndc, so you should pass resolution if perspective not in ndc.
+    在weakperspective 和 perspective中进行转换,  `zmean` 参数是必须的。
+
+    <!--弱透视相机是基于in_ndc的，如果透视关系ndc=False，必须传递分辨率参数。-->
 
     ```python
     from mmhuman3d.core.conventions.cameras import (
