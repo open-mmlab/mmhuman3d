@@ -6,10 +6,14 @@ from queue import Queue
 from threading import Event, Lock, Thread
 
 import cv2
-from mmpose.apis import init_pose_model
+# from mmpose.apis import init_pose_model
+from mmhuman3d.models.builder import build_body_model
 from mmpose.utils import StopWatch
+from torch import tensor
+from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import tensor2array
+from mmhuman3d.utils.transforms import rotmat_to_aa
 
-from mmhuman3d.apis import inference_image_based_model
+from mmhuman3d.apis import inference_image_based_model,init_model
 from mmhuman3d.core.visualization import visualize_smpl_hmr
 from mmhuman3d.utils.demo_utils import process_mmdet_results
 
@@ -28,6 +32,16 @@ except (ImportError, ModuleNotFoundError):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+    'mesh_reg_config',
+    type=str,
+    default=None,
+    help='Config file for mesh regression')
+    parser.add_argument(
+        'mesh_reg_checkpoint',
+        type=str,
+        default=None,
+        help='Checkpoint file for mesh regression')
     parser.add_argument('--cam-id', type=str, default='0')
     parser.add_argument(
         '--det-config',
@@ -43,25 +57,15 @@ def parse_args():
         'scratch_600e_coco_20210629_110627-974d9307.pth',
         help='Checkpoint file for detection')
     parser.add_argument(
-        '--human-pose-config',
+        '--body_model_dir',
         type=str,
-        default='configs/wholebody/2d_kpt_sview_rgb_img/topdown_heatmap/'
-        'coco-wholebody/vipnas_res50_coco_wholebody_256x192_dark.py',
-        help='Config file for human pose')
+        default='data/body_models/',
+        help='Body models file path')
     parser.add_argument(
-        '--human-pose-checkpoint',
-        type=str,
-        default='https://download.openmmlab.com/'
-        'mmpose/top_down/vipnas/'
-        'vipnas_res50_wholebody_256x192_dark-67c0ce35_20211112.pth',
-        help='Checkpoint file for human pose')
-    parser.add_argument(
-        '--human-det-ids',
+        '--det_cat_id',
         type=int,
-        default=[1],
-        nargs='+',
-        help='Object category label of human in detection results.'
-        'Default is [1(person)], following COCO definition.')
+        default=1,
+        help='Category id for bounding box detection model')
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
@@ -70,19 +74,10 @@ def parse_args():
         default=0.5,
         help='bbox score threshold')
     parser.add_argument(
-        '--kpt-thr', type=float, default=0.3, help='bbox score threshold')
-    parser.add_argument(
-        '--vis-mode',
-        type=int,
-        default=2,
-        help='0-none. 1-detection only. 2-detection and pose.')
-
-    parser.add_argument(
-        '--out-video-file',
-        type=str,
-        default=None,
-        help='Record the video into a file. This may reduce the frame rate')
-
+        '--bbox_thr',
+        type=float,
+        default=0.6,
+        help='Bounding box score threshold')        
     parser.add_argument(
         '--out-video-fps',
         type=int,
@@ -107,7 +102,7 @@ def parse_args():
     parser.add_argument(
         '--display-delay',
         type=int,
-        default=0,
+        default=100,
         help='Delay the output video in milliseconds. This can be used to '
         'align the output video and inference results. The delay can be '
         'disabled by setting a non-positive delay time. Default: 0')
@@ -212,11 +207,19 @@ def inference_mesh():
                 det_results,
                 bbox_thr=args.bbox_thr,
                 format='xyxy')
+            if mesh_results == []:
+                continue
 
         t_info += stop_watch.report_strings()
         with mesh_result_queue_mutex:
             smpl_betas = mesh_results[0]['smpl_beta']
             smpl_poses = mesh_results[0]['smpl_pose']
+            if smpl_poses.shape == (24, 3, 3):
+                smpl_poses = rotmat_to_aa(smpl_poses).reshape(-1)
+            elif smpl_poses.shape == (24, 3):
+                smpl_poses = smpl_poses.reshape(-1)
+            else:
+                raise (f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
             pred_cams = mesh_results[0]['camera']
             verts = mesh_results[0]['vertices']
             bboxes_xyxy = mesh_results[0]['bbox']
@@ -234,7 +237,7 @@ def display():
     ts_inference = None  # timestamp of the latest inference result
     fps_inference = 0.  # infenrece FPS
     t_delay_inference = 0.  # inference result time delay
-    mesh_results = None  # latest inference result
+    smpl_poses = None  # latest inference result
     t_info = []  # upstream time information (list[str])
 
     # initialize visualization and output
@@ -272,16 +275,60 @@ def display():
             # visualize detection and pose results
             body_model_config = dict(
                 model_path=args.body_model_dir, type='smpl')
-            if mesh_results is not None:
-                img = visualize_smpl_hmr(
-                    poses=smpl_poses.reshape(-1, 24 * 3),
-                    betas=smpl_betas,
-                    cam_transl=pred_cams,
-                    bbox=bboxes_xyxy,
-                    image_array=img,
-                    body_model_config=body_model_config,
-                    return_render_img=True)
+            if smpl_poses is not None:
+                body_model = build_body_model(
+                    dict(
+                        type='SMPL',
+                        gender='neutral',
+                        num_betas=10,
+                        keypoint_src='smpl_45',
+                        keypoint_dst='smpl_45',
+                        model_path='data/body_models/smpl',                        
+                    )
+                )
+                import torch
+                smpl = body_model(
+                    betas=torch.FloatTensor(smpl_betas[None]),
+                    body_pose=torch.FloatTensor(smpl_poses[3:][None]),
+                    global_orient=torch.FloatTensor(smpl_poses[:3][None]),
+                    pose2rot=True)
+                kp3d = smpl['joints']
+                from mmhuman3d.utils.geometry import perspective_projection
+                import numpy as np
+                pred_cams = torch.tensor(pred_cams)
+                kp2d = perspective_projection(
+                    kp3d,
+                    rotation=torch.eye(3)[None],
+                    translation=torch.stack(
+                        [
+                            pred_cams[1],
+                            pred_cams[2], 
+                            2 * 5000/(224*pred_cams[0] + 1e-9)
+                        ]
+                    )[None],
+                    focal_length=5000,
+                    camera_center=torch.tensor([112,112])).detach().numpy()[0]
+                for kp in kp2d:
+                    cv2.circle(
+                        img,
+                        (int(kp[0]),int(kp[1])),
+                        3,
+                        (0,0,0),
+                        thickness=-1
+                    )
 
+                # img = visualize_smpl_hmr(
+                #     poses=smpl_poses[None],
+                #     betas=smpl_betas,
+                #     cam_transl=pred_cams[None],
+                #     bbox=bboxes_xyxy,
+                #     image_array=img,
+                #     body_model_config=body_model_config,
+                #     return_render_img=True,
+                #     render_choice='lq',
+                #     resolution=[img.shape[0]/4,img.shape[1]/4])
+                # img = tensor2array(img[0])
+                # pass 
             # delay control
             if args.display_delay > 0:
                 t_sleep = args.display_delay * 0.001 - (time.time() - ts_input)
@@ -313,15 +360,15 @@ def display():
                         0.3, text_color, 1)
 
             # save the output video frame
-            if args.out_video_file is not None:
-                if vid_out is None:
-                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                    fps = args.out_video_fps
-                    frame_size = (img.shape[1], img.shape[0])
-                    vid_out = cv2.VideoWriter(args.out_video_file, fourcc, fps,
-                                              frame_size)
+            # if args.out_video_file is not None:
+            #     if vid_out is None:
+            #         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            #         fps = args.out_video_fps
+            #         frame_size = (img.shape[1], img.shape[0])
+            #         vid_out = cv2.VideoWriter(args.out_video_file, fourcc, fps,
+            #                                   frame_size)
 
-                vid_out.write(img)
+            #     vid_out.write(img)
 
             # display
             cv2.imshow('mmpose webcam demo', img)
@@ -363,7 +410,7 @@ def main():
 
     # build human3d models
 
-    mesh_model, extractor = init_pose_model(
+    mesh_model, extractor = init_model(
         args.mesh_reg_config,
         args.mesh_reg_checkpoint,
         device=args.device.lower())

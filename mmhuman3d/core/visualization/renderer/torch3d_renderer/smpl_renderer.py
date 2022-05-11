@@ -198,17 +198,16 @@ class SMPLRenderer(BaseRenderer):
 
         bgrs = rgb2bgr(rgbs)
 
+        if images is not None:
+            output_images = bgrs * valid_masks * self.alpha + \
+                images * valid_masks * (
+                    1 - self.alpha) + (1 - valid_masks) * images
+
+        else:
+            output_images = bgrs
+
         # write temp images for the output video
         if self.output_path is not None:
-
-            if images is not None:
-                output_images = bgrs * valid_masks * self.alpha + \
-                    images * valid_masks * (
-                        1 - self.alpha) + (1 - valid_masks) * images
-
-            else:
-                output_images = bgrs
-
             if self.plot_kps:
 
                 joints = joints.to(self.device)
@@ -273,5 +272,7 @@ class SMPLRenderer(BaseRenderer):
                 rendered_map = interpolate(
                     rendered_map, size=self.final_resolution, mode='bilinear')
             return rendered_map
+        elif self.return_render_img:
+            return output_images
         else:
             return None
