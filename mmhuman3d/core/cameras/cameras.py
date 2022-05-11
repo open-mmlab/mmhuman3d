@@ -7,8 +7,8 @@ from pytorch3d.renderer import cameras
 from pytorch3d.structures import Meshes
 from pytorch3d.transforms import Transform3d
 
-from mmhuman3d.core.conventions.cameras import convert_camera_matrix
 from mmhuman3d.core.conventions.cameras.convert_convention import (
+    convert_camera_matrix,
     convert_ndc_to_screen,
     convert_screen_to_ndc,
     convert_world_view,

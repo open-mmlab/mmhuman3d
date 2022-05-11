@@ -20,7 +20,8 @@ from mmhuman3d.core.cameras import (
     compute_orbit_cameras,
 )
 from mmhuman3d.core.cameras.builder import build_cameras
-from mmhuman3d.core.conventions.cameras import convert_camera_matrix
+from mmhuman3d.core.conventions.cameras.convert_convention import \
+    convert_camera_matrix  # prevent yapf isort conflict
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.core.visualization.renderer import render_runner
 from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import \

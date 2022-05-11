@@ -42,6 +42,11 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   A suite of differentiale visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
 
 ## News
+- 2022-04-30: MMHuman3D [v0.7.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.7.0) is released. Major updates include:
+  - Support PARE (better than the official implementation)
+  - Support DeciWatch (added by paper authors)
+  - Add GTA-Human HMR baseline (official release)
+  - Support saving inference results
 - 2022-04-01: MMHuman3D [v0.6.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.6.0) is released. Major updates include:
   - Add HumanDataCache that requires 96% less RAM during training
   - Refactor differentiable renderers and support UV map rendering
@@ -78,6 +83,8 @@ Supported methods:
 - [x] [SPIN](https://www.seas.upenn.edu/~nkolot/projects/spin/) (ICCV'2019)
 - [x] [VIBE](https://github.com/mkocabas/VIBE) (CVPR'2020)
 - [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
+- [x] [PARE](https://pare.is.tue.mpg.de/) (ICCV'2021)
+- [x] [DeciWatch](https://ailingzeng.site/deciwatch) (arXiv'2022)
 
 </details>
 

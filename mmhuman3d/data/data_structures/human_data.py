@@ -804,9 +804,11 @@ class HumanData(dict):
             if type(val) != supported_keys[key]['type']:
                 ret_bool = False
         if not ret_bool:
+            expected_type = supported_keys[key]['type']
             err_msg = 'Type check Failed:\n'
             err_msg += f'key={str(key)}\n'
             err_msg += f'type(val)={type(val)}\n'
+            err_msg += f'expected type={expected_type}\n'
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
@@ -846,9 +848,12 @@ class HumanData(dict):
                         ret_bool = False
                         break
         if not ret_bool:
+            expected_shape = str(supported_keys[key]['shape'])
+            expected_shape = expected_shape.replace('-1', 'Any')
             err_msg = 'Shape check Failed:\n'
             err_msg += f'key={str(key)}\n'
             err_msg += f'val.shape={val_shape}\n'
+            err_msg += f'expected shape={expected_shape}\n'
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
@@ -912,6 +917,7 @@ class HumanData(dict):
             err_msg = 'Temporal check Failed:\n'
             err_msg += f'key={str(key)}\n'
             err_msg += f'val\'s data_len={val_data_len}\n'
+            err_msg += f'expected data_len={self.data_len}\n'
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
