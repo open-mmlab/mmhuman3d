@@ -437,12 +437,16 @@ def multi_person_with_mmtracking(args, frames_iter):
     compressed_verts = np.zeros([frame_num, max_instance, 6890, 3])
     compressed_cams = np.zeros([frame_num, max_instance, 3])
     compressed_bboxs = np.zeros([frame_num, max_instance, 5])
+    compressed_poses = np.zeros([frame_num, max_instance, 24, 3])
+    compressed_betas = np.zeros([frame_num, max_instance, 10])
 
     for i, track_ids_list in enumerate(track_ids_lists):
         instance_num = len(track_ids_list)
         compressed_verts[i, :instance_num] = verts[i, track_ids_list]
         compressed_cams[i, :instance_num] = pred_cams[i, track_ids_list]
         compressed_bboxs[i, :instance_num] = bboxes_xyxy[i, track_ids_list]
+        compressed_poses[i, :instance_num] = smpl_poses[i, track_ids_list]
+        compressed_betas[i, :instance_num] = smpl_betas[i, track_ids_list]
 
     assert len(frame_id_list) > 0
 
@@ -457,8 +461,8 @@ def multi_person_with_mmtracking(args, frames_iter):
                 output_folder=frames_folder)
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_hmr(
-            poses=smpl_poses.reshape(-1, instance_num, 24 * 3),
-            betas=smpl_betas,
+            poses=compressed_poses.reshape(-1, max_instance, 24 * 3),
+            betas=compressed_betas,
             cam_transl=compressed_cams,
             bbox=compressed_bboxs,
             output_path=args.show_path,
