@@ -128,7 +128,7 @@ Warp a gray texture image to smpl_mesh.
 
 ```python
 import torch
-from mmhuman3d.models import build_body_model
+from mmhuman3d.models.body_models.builder import build_body_model
 from pytorch3d.structures import meshes
 from mmhuman3d.core.visualization.renderer import build_renderer
 body_model = build_body_model(dict(type='smpl', model_path=model_path)).to(device)

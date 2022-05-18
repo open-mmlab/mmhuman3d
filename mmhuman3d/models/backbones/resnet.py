@@ -337,7 +337,7 @@ class ResNet(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None
     Example:
-        >>> from mmhuman3d.models import ResNet
+        >>> from mmhuman3d.models.backbones.resnet import ResNet
         >>> import torch
         >>> self = ResNet(depth=18)
         >>> self.eval()

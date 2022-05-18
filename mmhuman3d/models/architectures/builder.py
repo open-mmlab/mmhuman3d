@@ -5,7 +5,6 @@ from mmcv.utils import Registry
 
 from .hybrik import HybrIK_trainer
 from .mesh_estimator import ImageBodyModelEstimator, VideoBodyModelEstimator
-from .pare_test import PareImportTestor
 
 
 def build_from_cfg(cfg, registry, default_args=None):
@@ -22,7 +21,6 @@ ARCHITECTURES.register_module(
     name='ImageBodyModelEstimator', module=ImageBodyModelEstimator)
 ARCHITECTURES.register_module(
     name='VideoBodyModelEstimator', module=VideoBodyModelEstimator)
-ARCHITECTURES.register_module(name='PareImportTestor', module=PareImportTestor)
 
 
 def build_architecture(cfg):

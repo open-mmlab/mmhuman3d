@@ -1,6 +1,6 @@
 import torch
 
-from mmhuman3d.models import build_loss
+from mmhuman3d.models.losses.builder import build_loss
 
 
 def test_smooth_l1_loss():

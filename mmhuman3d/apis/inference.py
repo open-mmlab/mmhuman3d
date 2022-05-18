@@ -6,7 +6,8 @@ from mmcv.parallel import collate
 from mmcv.runner import load_checkpoint
 
 from mmhuman3d.data.datasets.pipelines import Compose
-from mmhuman3d.models import build_architecture, build_backbone
+from mmhuman3d.models.architectures.builder import build_architecture
+from mmhuman3d.models.backbones.builder import build_backbone
 from mmhuman3d.utils.demo_utils import box2cs, xywh2xyxy, xyxy2xywh
 
 

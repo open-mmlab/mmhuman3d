@@ -11,7 +11,6 @@ from mmcv.runner.base_module import BaseModule
 from torch.nn.modules.utils import _pair
 
 from mmhuman3d.utils.geometry import rot6d_to_rotmat
-from ..builder import HEADS
 
 
 class LocallyConnected2d(nn.Module):
@@ -197,7 +196,6 @@ def softargmax2d(
     return keypoints, normalized_heatmap.reshape(batch_size, -1, height, width)
 
 
-@HEADS.register_module()
 class PareHead(BaseModule):
 
     def __init__(

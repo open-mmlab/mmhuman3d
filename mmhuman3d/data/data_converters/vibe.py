@@ -10,7 +10,7 @@ from tqdm import tqdm
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.data.datasets.pipelines import Compose
-from mmhuman3d.models import build_architecture
+from mmhuman3d.models.architectures.builder import build_architecture
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
