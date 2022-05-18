@@ -5,16 +5,18 @@ import pytest
 import torch
 
 from mmhuman3d.core.cameras.cameras import FoVPerspectiveCameras
-from mmhuman3d.core.conventions.cameras import (
+from mmhuman3d.core.conventions.cameras.convert_convention import (
     CAMERA_CONVENTIONS,
     convert_camera_matrix,
     convert_K_3x3_to_4x4,
     convert_K_4x4_to_3x3,
     convert_ndc_to_screen,
-    convert_perspective_to_weakperspective,
     convert_screen_to_ndc,
-    convert_weakperspective_to_perspective,
     convert_world_view,
+)
+from mmhuman3d.core.conventions.cameras.convert_projection import (
+    convert_perspective_to_weakperspective,
+    convert_weakperspective_to_perspective,
 )
 from mmhuman3d.utils.camera_utils import convert_smpl_from_opencv_calibration
 from mmhuman3d.utils.transforms import ee_to_rotmat

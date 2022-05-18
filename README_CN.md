@@ -42,6 +42,11 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
 ## 最新进展
+- 2022-04-30: MMHuman3D [v0.7.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.7.0) 已经发布. 主要更新包括:
+  - 支持PARE算法 (优于官方实现）
+  - 支持DeciWatch（由论文作者添加）
+  - 添加GTA-Human的HMR基线（官方开源）
+  - 支持存储推理结果
 - 2022-04-01: MMHuman3D [v0.6.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.6.0) 已经发布. 主要更新包括:
   - 增加HumanDataCache，大幅削减(96%)训练时内存占用
   - 重构可微渲染器并支持UV map渲染
@@ -78,6 +83,8 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [SPIN](https://www.seas.upenn.edu/~nkolot/projects/spin/) (ICCV'2019)
 - [x] [VIBE](https://github.com/mkocabas/VIBE) (CVPR'2020)
 - [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
+- [x] [PARE](https://pare.is.tue.mpg.de/) (ICCV'2021)
+- [x] [DeciWatch](https://ailingzeng.site/deciwatch) (arXiv'2022)
 
 </details>
 

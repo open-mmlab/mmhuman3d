@@ -4,10 +4,10 @@ import numpy as np
 import scipy.signal as signal
 import torch
 
-from .builder import FILTERS
+from ..builder import POST_PROCESSING
 
 
-@FILTERS.register_module(name=['SGFilter', 'savgol'])
+@POST_PROCESSING.register_module(name=['SGFilter', 'savgol'])
 class SGFilter:
     """savgol_filter lib is from:
     https://docs.scipy.org/doc/scipy/reference/generated/

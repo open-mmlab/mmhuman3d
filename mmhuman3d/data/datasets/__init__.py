@@ -11,8 +11,19 @@ from .pipelines import Compose
 from .samplers import DistributedSampler
 
 __all__ = [
-    'BaseDataset', 'HumanImageDataset', 'build_dataloader', 'build_dataset',
-    'Compose', 'DistributedSampler', 'ConcatDataset', 'RepeatDataset',
-    'DATASETS', 'PIPELINES', 'MixedDataset', 'AdversarialDataset',
-    'MeshDataset', 'HumanVideoDataset', 'HybrIKHumanImageDataset'
+    'BaseDataset',
+    'HumanImageDataset',
+    'build_dataloader',
+    'build_dataset',
+    'Compose',
+    'DistributedSampler',
+    'ConcatDataset',
+    'RepeatDataset',
+    'DATASETS',
+    'PIPELINES',
+    'MixedDataset',
+    'AdversarialDataset',
+    'MeshDataset',
+    'HumanVideoDataset',
+    'HybrIKHumanImageDataset',
 ]

@@ -135,8 +135,8 @@ def test_HybrIK_trainer():
     if torch.cuda.is_available():
         output = model.forward_train(img, img_metas, **mm_inputs)
         assert isinstance(output, dict)
-        assert 'loss' in output
-        assert output['loss'].dtype == torch.float32
+        assert 'loss_beta' in output
+        assert output['loss_beta'].dtype == torch.float32
 
         with torch.no_grad():
             output = model.forward_test(img, img_metas, **mm_inputs)

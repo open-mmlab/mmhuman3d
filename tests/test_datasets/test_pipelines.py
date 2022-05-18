@@ -1,7 +1,10 @@
 import numpy as np
 import pytest
 
-from mmhuman3d.data.datasets.pipelines import LoadImageFromFile
+from mmhuman3d.data.datasets.pipelines import (
+    LoadImageFromFile,
+    SyntheticOcclusion,
+)
 
 test_image_path = 'tests/data/dataset_sample/3DPW/imageFiles/' \
                   'courtyard_arguing_00/image_00000.jpg'
@@ -43,3 +46,14 @@ def test_load_image_from_file_smc():
     assert isinstance(results['img'], np.ndarray)
     assert results['img_shape'] == results['ori_shape'] == (1920, 1440)
     assert isinstance(results['img_norm_cfg'], dict)
+
+
+def test_synthetic_occlusion():
+    results = {'img': None}
+    results['img'] = np.ones((224, 224, 3))
+    occluders = [np.zeros((18, 18, 4))]
+    occluders[0][2:5, 2:5, 3] = 255
+    pipeline = SyntheticOcclusion(occluders=occluders)
+
+    results = pipeline(results)
+    assert results['img'].shape == (224, 224, 3)
