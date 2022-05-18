@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import torch
@@ -132,17 +132,17 @@ def convert_kps(
             return data.astype(np.uint8)
 
     else:
-        raise TypeError(
-            'Type of keypoints is neither' +
-            ' torch.Tensor nor np.ndarray.\n' +
-            f'Type of keypoints: {type(keypoints)}')
+        raise TypeError('Type of keypoints is neither' +
+                        ' torch.Tensor nor np.ndarray.\n' +
+                        f'Type of keypoints: {type(keypoints)}')
 
     if mask is not None:
         assert type(mask) == type(keypoints)
     else:
         mask = new_array_func(
             shape=(keypoints.shape[-2], ),
-            value=1, device_data=keypoints,
+            value=1,
+            device_data=keypoints,
             if_uint8=True)
 
     if src == dst:
