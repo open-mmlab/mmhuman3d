@@ -21,7 +21,7 @@ We use checkpoints trained on SPIN-3DPW for demo speed up. Checkpoints with diff
 
 
 | Interval |  Window Q  |Config  | Download | Speed Up | Precision Improvement (MPJPE In/Out) |
-|:------:|:-------:|:------:|:------:|:------:|:------:|
+|:------:|:-------:|:------:|:------:|:------:|
 | 10 | 1 |[deciwatch_interval10_q1](deciwatch_interval10_q1.py)| [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/deciwatch/deciwatch_interval10_q1.pth.tar?versionId=CAEQOhiBgMChhsS9gxgiIDM5OGUwZGY0MTc4NTQ2M2NhZDEwMzU5MWUzMWNmZjY1)| 10X |99.35 / 95.85|
 | 10 | 2 |[deciwatch_interval10_q2](deciwatch_interval10_q2.py)| [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/deciwatch/deciwatch_interval10_q2.pth.tar?versionId=CAEQOhiBgICau8O9gxgiIDk1Y2Y0MzUxMmY0MDQzZThiYzhkMGJlMjc3ZDQ2NTQ2)| 10X | 99.45 / 96.37|
 | 10 | 3 |[deciwatch_interval10_q3](deciwatch_interval10_q3.py)| [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/deciwatch/deciwatch_interval10_q3.pth.tar?versionId=CAEQOhiBgICIq8O9gxgiIDZiMjEzMjY3ODA4MTQwNGY5NTU3OWNkZjRjZjI2ZDFi)| 10X | 99.60 / 96.98 |
@@ -55,7 +55,7 @@ We use checkpoints trained on SPIN-3DPW for demo pose smoothing. Checkpoints wit
 
 
 | Window Size  |Config  | Download | Precision Improvement (MPJPE In/Out) | Smoothness Improvement (Accel In/Out) |
-|:------:|:-------:|:------:|:------:|:------:|:------:|
+|:------:|:-------:|:------:|:------:|:------:|
 | 8 |[smoothnet_windowsize8](smoothnet_windowsize8.py)| [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smoothnet/smoothnet_windowsize8.pth.tar?versionId=CAEQPhiBgMDo0s7shhgiIDgzNTRmNWM2ZWEzYTQyYzRhNzUwYTkzZWZkMmU5MWEw)| 96.85 / 95.84 | 34.62 / 7.13 |
 | 16 |[smoothnet_windowsize16](smoothnet_windowsize16.py)| [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smoothnet/smoothnet_windowsize16.pth.tar?versionId=CAEQPhiBgMC.s87shhgiIGM3ZTI1ZGY1Y2NhNDQ2YzRiNmEyOGZhY2VjYWFiN2Zi)| 96.85 / 95.61| 34.62 / 6.35 |
 | 32 |[smoothnet_windowsize32](smoothnet_windowsize32.py)| [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smoothnet/smoothnet_windowsize32.pth.tar?versionId=CAEQPhiBgIDf0s7shhgiIDhmYmM3YWQ0ZGI3NjRmZTc4NTk2NDE1MTA2MTUyMGRm)| 96.85 / 95.03 |34.62 / 6.11 |
