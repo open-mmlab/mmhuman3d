@@ -433,3 +433,7 @@ def test_data_type_np():
     savgol = build_post_processing(cfg)
     out_o = savgol(noisy_input)
     assert out_g.shape == noisy_input.shape == out_s.shape == out_o.shape
+
+
+if __name__ == '__main__':
+    test_data_type_torch()
