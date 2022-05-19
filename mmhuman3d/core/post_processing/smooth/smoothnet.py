@@ -164,16 +164,16 @@ class SmoothNetFilter:
         hidden_size: int = 512,
         res_hidden_size: int = 512,
         num_blocks: int = 3,
-        device: str = 'cuda',
+        device: str = 'cpu',
     ):
         super(SmoothNetFilter, self).__init__()
         self.window_size = window_size
         self.device = device
         self.smoothnet = SmoothNet(window_size, output_size, hidden_size,
                                    res_hidden_size, num_blocks)
+        self.smoothnet.to(device)
         if checkpoint:
             load_checkpoint(self.smoothnet, checkpoint)
-        self.smoothnet.to(device)
         self.smoothnet.eval()
 
         for p in self.smoothnet.parameters():
