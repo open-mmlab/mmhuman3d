@@ -432,8 +432,45 @@ def test_data_type_np():
     cfg = dict(type='SGFilter', window_size=5, polyorder=2)
     savgol = build_post_processing(cfg)
     out_o = savgol(noisy_input)
-    assert out_g.shape == noisy_input.shape == out_s.shape == out_o.shape
-
-
-if __name__ == '__main__':
-    test_data_type_torch()
+    cfg = dict(
+        type='smoothnet',
+        window_size=8,
+        output_size=8,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize8.pth.tar?versionId'
+        '=CAEQPhiBgMDo0s7shhgiIDgzNTRmNWM2ZWEzYTQyYzRhNzUwYTkzZWZkMmU5MWEw',
+        device='cpu')
+    smoothenet_8 = build_post_processing(cfg)
+    out_s_8 = smoothenet_8(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=16,
+        output_size=16,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize16.pth.tar?versionId'
+        '=CAEQPhiBgMC.s87shhgiIGM3ZTI1ZGY1Y2NhNDQ2YzRiNmEyOGZhY2VjYWFiN2Zi',
+        device='cpu')
+    smoothenet_16 = build_post_processing(cfg)
+    out_s_16 = smoothenet_16(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=32,
+        output_size=32,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize32.pth.tar?versionId'
+        '=CAEQPhiBgIDf0s7shhgiIDhmYmM3YWQ0ZGI3NjRmZTc4NTk2NDE1MTA2MTUyMGRm',
+        device='cpu')
+    smoothenet_32 = build_post_processing(cfg)
+    out_s_32 = smoothenet_32(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=64,
+        output_size=64,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize64.pth.tar?versionId'
+        '=CAEQPhiBgMCyw87shhgiIGEwODI4ZjdiYmFkYTQ0NzZiNDVkODk3MDBlYzE1Y2Rh',
+        device='cpu')
+    smoothenet_64 = build_post_processing(cfg)
+    out_s_64 = smoothenet_64(noisy_input)
+    assert out_g.shape == noisy_input.shape == out_s.shape == out_o.shape \
+        == out_s_8.shape == out_s_16.shape == out_s_32.shape == out_s_64.shape
