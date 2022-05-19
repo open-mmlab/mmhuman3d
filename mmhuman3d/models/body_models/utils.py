@@ -196,3 +196,4 @@ def with_zeros(input):
     padded_tensor = torch.cat(
         [input, row_append.view(1, 1, 4).repeat(batch_size, 1, 1)], 1)
     return padded_tensor
+
