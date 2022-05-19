@@ -20,7 +20,7 @@ class SmoothNetResBlock(nn.Module):
         Output: (*, in_channels)
     """
 
-    def __init__(self, in_channels, hidden_channels, dropout=0.5):
+    def __init__(self, in_channels, hidden_channels, dropout=0.1):
         super().__init__()
         self.linear1 = nn.Linear(in_channels, hidden_channels)
         self.linear2 = nn.Linear(hidden_channels, in_channels)
@@ -68,9 +68,9 @@ class SmoothNet(nn.Module):
                  window_size: int,
                  output_size: int,
                  hidden_size: int = 512,
-                 res_hidden_size: int = 256,
-                 num_blocks: int = 3,
-                 dropout: float = 0.5):
+                 res_hidden_size: int = 512,
+                 num_blocks: int = 5,
+                 dropout: float = 0.1):
         super().__init__()
         self.window_size = window_size
         self.output_size = output_size
@@ -163,7 +163,7 @@ class SmoothNetFilter:
         checkpoint: Optional[str] = None,
         hidden_size: int = 512,
         res_hidden_size: int = 512,
-        num_blocks: int = 3,
+        num_blocks: int = 5,
         device: str = 'cpu',
     ):
         super(SmoothNetFilter, self).__init__()
@@ -173,7 +173,8 @@ class SmoothNetFilter:
                                    res_hidden_size, num_blocks)
         self.smoothnet.to(device)
         if checkpoint:
-            load_checkpoint(self.smoothnet, checkpoint)
+            load_checkpoint(
+                self.smoothnet, checkpoint, map_location=self.device)
         self.smoothnet.eval()
 
         for p in self.smoothnet.parameters():
