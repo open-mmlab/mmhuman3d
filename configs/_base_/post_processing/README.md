@@ -3,7 +3,6 @@
 We provide two learning-based post-processing methods ```deciwatch``` and ```smoothnet``` for speed-up and smoothing respectively.
 
 ## DeciWatch
-### Introduction
 
 We provide the config files for DeciWatch: [DeciWatch: A Simple Baseline for 10x Efficient 2D and 3D Pose Estimation](https://arxiv.org/pdf/2203.08713.pdf).
 
