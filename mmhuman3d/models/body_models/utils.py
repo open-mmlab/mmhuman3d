@@ -152,9 +152,8 @@ def quat2mat(quat):
     """
     norm_quat = quat
     norm_quat = norm_quat / norm_quat.norm(p=2, dim=1, keepdim=True)
-    w, x, y, z = norm_quat[:, 0], norm_quat[:, 1], norm_quat[:,
-                                                             2], norm_quat[:,
-                                                                           3]
+    w, x, y, z = norm_quat[:, 0], norm_quat[:, 1], norm_quat[:, 2], \
+        norm_quat[:, 3]
     B = quat.size(0)
     w2, x2, y2, z2 = w.pow(2), x.pow(2), y.pow(2), z.pow(2)
     wx, wy, wz = w * x, w * y, w * z
@@ -196,4 +195,3 @@ def with_zeros(input):
     padded_tensor = torch.cat(
         [input, row_append.view(1, 1, 4).repeat(batch_size, 1, 1)], 1)
     return padded_tensor
-
