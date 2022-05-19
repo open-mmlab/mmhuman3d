@@ -5,6 +5,12 @@ import torch
 from mmcv.runner import load_checkpoint
 from torch import Tensor, nn
 
+from mmhuman3d.utils.transforms import (
+    aa_to_rotmat,
+    rot6d_to_rotmat,
+    rotmat_to_aa,
+    rotmat_to_rot6d,
+)
 from ..builder import POST_PROCESSING
 
 
@@ -190,6 +196,8 @@ class SmoothNetFilter:
 
         T, K, C = x.shape
 
+        assert C == 3 or C == 6 or C == 9
+
         if T < self.window_size:
             # Skip smoothing if the input length is less than the window size
             smoothed = x
@@ -202,11 +210,29 @@ class SmoothNetFilter:
                 if x_type == 'array':
                     x = torch.tensor(
                         x, dtype=torch.float32, device=self.device)
-                x = x.view(1, T, K * C).permute(0, 2, 1)  # to [1, KC, T]
+                if C == 9:
+                    input_type = 'matrix'
+                    x = rotmat_to_rot6d(x.reshape(-1, 3, 3)).reshape(T, K, -1)
+                elif C == 3:
+                    input_type = 'axis_angles'
+                    x = rotmat_to_rot6d(aa_to_rotmat(x.reshape(-1,
+                                                               3))).reshape(
+                                                                   T, K, -1)
+                else:
+                    input_type = 'rotation_6d'
+                x = x.view(1, T, -1).permute(0, 2, 1)  # to [1, KC, T]
                 smoothed = self.smoothnet(x)  # in shape [1, KC, T]
 
             # Convert model output back to input shape and format
-            smoothed = smoothed.permute(0, 2, 1).view(T, K, C)  # to [T, K, C]
+            smoothed = smoothed.permute(0, 2, 1).view(T, K, -1)  # to [T, K, C]
+
+            if input_type == 'matrix':
+                smoothed = rot6d_to_rotmat(smoothed.reshape(-1, 6)).reshape(
+                    T, K, C)
+            elif input_type == 'axis_angles':
+                smoothed = rotmat_to_aa(
+                    rot6d_to_rotmat(smoothed.reshape(-1, 6))).reshape(T, K, C)
+
             if x_type == 'array':
                 smoothed = smoothed.cpu().numpy().astype(
                     dtype)  # to numpy.ndarray
