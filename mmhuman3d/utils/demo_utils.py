@@ -302,6 +302,8 @@ def conver_verts_to_cam_coord(verts,
         verts = np.einsum('fnij,fnkj->fnki', Ks, verts)
     elif verts.ndim == 3:
         verts = np.einsum('fij,fkj->fki', Ks, verts)
+    elif verts.ndim == 2:
+        verts = np.einsum('fij,fkj->fki', Ks, verts[None])
     return verts, K0
 
 
