@@ -216,9 +216,12 @@ def single_person_with_mmdet(args, frames_iter):
     # smooth
     if args.smooth_type is not None:
         smpl_poses = smooth_process(
-            smpl_poses.reshape(frame_num, 24, 9), smooth_type=args.smooth_type)
+            smpl_poses.reshape(frame_num, 24, 9),
+            smooth_type=args.smooth_type).reshape(frame_num, 24, 3, 3)
         verts = smooth_process(verts, smooth_type=args.smooth_type)
-        smpl_poses = smpl_poses.reshape(frame_num, 24, 3, 3)
+        pred_cams = smooth_process(
+            pred_cams[:, np.newaxis],
+            smooth_type=args.smooth_type).reshape(frame_num, 3)
 
     if smpl_poses.shape[1:] == (24, 3, 3):
         smpl_poses = rotmat_to_aa(smpl_poses)
@@ -386,10 +389,12 @@ def multi_person_with_mmtracking(args, frames_iter):
     # smooth
     if args.smooth_type is not None:
         smpl_poses = smooth_process(
-            smpl_poses.reshape(frame_num, max_instance, 24, 9),
-            smooth_type=args.smooth_type)
+            smpl_poses.reshape(frame_num, -1, 24, 9),
+            smooth_type=args.smooth_type).reshape(frame_num, -1, 24, 3, 3)
         verts = smooth_process(verts, smooth_type=args.smooth_type)
-        smpl_poses = smpl_poses.reshape(frame_num, max_instance, 24, 3, 3)
+        pred_cams = smooth_process(
+            pred_cams[:, np.newaxis],
+            smooth_type=args.smooth_type).reshape(frame_num, -1, 3)
 
     if smpl_poses.shape[2:] == (24, 3, 3):
         smpl_poses = rotmat_to_aa(smpl_poses)

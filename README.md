@@ -85,6 +85,7 @@ Supported methods:
 - [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
 - [x] [PARE](https://pare.is.tue.mpg.de/) (ICCV'2021)
 - [x] [DeciWatch](https://ailingzeng.site/deciwatch) (arXiv'2022)
+- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (arXiv'2022)
 
 </details>
 
