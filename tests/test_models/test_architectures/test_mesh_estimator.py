@@ -5,7 +5,7 @@ from mmhuman3d.models.architectures.mesh_estimator import (
     ImageBodyModelEstimator,
     VideoBodyModelEstimator,
 )
-from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils.geometry import project_points
 
 

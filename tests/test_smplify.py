@@ -2,7 +2,8 @@ import mmcv
 import numpy as np
 import torch
 
-from mmhuman3d.models.builder import build_body_model, build_registrant
+from mmhuman3d.models.body_models.builder import build_body_model
+from mmhuman3d.models.registrants.builder import build_registrant
 
 body_model_load_dir = 'data/body_models'
 batch_size = 2
