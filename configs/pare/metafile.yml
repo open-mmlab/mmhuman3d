@@ -1,0 +1,32 @@
+Collections:
+  - Name: SPIN
+    Metadata:
+      Training Data:
+         - COCO
+         - Human3.6M
+         - LSP-Extended
+         - LSP
+         - MPI-INF-3DHP
+         - MPII
+         - 3DPW
+      Architecture:
+        - PoseHighResolutionNet
+        - PareHead
+    Paper:
+      URL: https://arxiv.org/abs/2104.08527
+      Title: "PARE: Part Attention Regressor for 3D Human Body Estimation"
+    README: configs/pare/README.md
+
+Models:
+  - Name: hrnet_w32_conv_pare_mix
+    In Collection: PARE
+    Config: configs/spin/hrnet_w32_conv_pare_mix.py
+    Metadata:
+      Epochs: 50
+    Results:
+      - Task: Human Pose and Shape Estimation
+        Dataset: 3DPW
+        Metrics:
+          MPJPE: 81.74
+          PA-MPJPE: 48.69
+    Weights: https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/pare/with_mosh/hrnet_w32_conv_pare_mosh.pth?versionId=CAEQOhiBgIDooeHSgxgiIDkwYzViMTUyNjM1MjQ3ZDNiNzNjMjJlOGFlNjgxYjlh

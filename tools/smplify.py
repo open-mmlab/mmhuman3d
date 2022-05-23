@@ -10,7 +10,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.evaluation import keypoint_mpjpe
 from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_pose
 from mmhuman3d.data.data_structures import HumanData
-from mmhuman3d.models.builder import build_registrant
+from mmhuman3d.models.registrants.builder import build_registrant
 
 
 def parse_args():

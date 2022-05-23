@@ -1,10 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch.nn as nn
 
-from ..builder import LOSSES
 
-
-@LOSSES.register_module()
 class GANLoss(nn.Module):
     """Define GAN loss.
 

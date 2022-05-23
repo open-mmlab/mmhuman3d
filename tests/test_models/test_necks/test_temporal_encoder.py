@@ -1,6 +1,6 @@
 import torch
 
-from mmhuman3d.models.necks import TemporalGRUEncoder
+from mmhuman3d.models.necks.temporal_encoder import TemporalGRUEncoder
 
 
 def test_hmr_head():

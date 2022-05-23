@@ -12,7 +12,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idx,
 )
 from mmhuman3d.data.data_structures.human_data import HumanData
-from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.body_models.builder import build_body_model
 from .base_converter import BaseConverter
 from .builder import DATA_CONVERTERS
 

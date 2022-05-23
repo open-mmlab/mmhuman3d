@@ -10,7 +10,7 @@ from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import (
     ParametricMeshes,
     join_batch_meshes_as_scene,
 )
-from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils.mesh_utils import \
     join_batch_meshes_as_scene as join_batch_meshes_as_scene_
 from mmhuman3d.utils.mesh_utils import (

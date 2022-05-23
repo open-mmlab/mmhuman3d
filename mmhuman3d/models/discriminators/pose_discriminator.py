@@ -10,7 +10,6 @@ import torch.nn as nn
 from mmcv.cnn import normal_init, xavier_init
 
 from mmhuman3d.utils.geometry import batch_rodrigues
-from ..builder import DISCRIMINATORS
 
 
 class BaseDiscriminator(nn.Module):
@@ -105,7 +104,6 @@ class BaseDiscriminator(nn.Module):
                 xavier_init(m, gain=0.01)
 
 
-@DISCRIMINATORS.register_module()
 class ShapeDiscriminator(BaseDiscriminator):
     """Discriminator for SMPL shape parameters, the inputs is (batch_size x 10)
     Args:
@@ -132,7 +130,6 @@ class ShapeDiscriminator(BaseDiscriminator):
         return self.fc_blocks(inputs)
 
 
-@DISCRIMINATORS.register_module()
 class PoseDiscriminator(nn.Module):
     """Discriminator for SMPL pose parameters of each joint.
 
@@ -195,7 +192,6 @@ class PoseDiscriminator(nn.Module):
                 xavier_init(m, gain=0.01)
 
 
-@DISCRIMINATORS.register_module()
 class FullPoseDiscriminator(BaseDiscriminator):
     """Discriminator for SMPL pose parameters of all joints.
 
@@ -223,7 +219,6 @@ class FullPoseDiscriminator(BaseDiscriminator):
         return self.fc_blocks(inputs)
 
 
-@DISCRIMINATORS.register_module()
 class SMPLDiscriminator(nn.Module):
     """Discriminator for SMPL pose and shape parameters.
 

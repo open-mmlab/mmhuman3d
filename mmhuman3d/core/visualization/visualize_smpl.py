@@ -20,14 +20,15 @@ from mmhuman3d.core.cameras import (
     compute_orbit_cameras,
 )
 from mmhuman3d.core.cameras.builder import build_cameras
-from mmhuman3d.core.conventions.cameras import convert_camera_matrix
+from mmhuman3d.core.conventions.cameras.convert_convention import \
+    convert_camera_matrix  # prevent yapf isort conflict
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.core.visualization.renderer import render_runner
 from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import \
     ParametricMeshes  # noqa: E501
 from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import \
     align_input_to_padded  # noqa: E501
-from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils import (
     check_input_path,
     check_path_suffix,
@@ -72,7 +73,6 @@ def _prepare_background(image_array, frame_list, origin_frames, output_path,
             image_array = image_array[None]
         if image_array.shape[0] == 1:
             image_array = image_array.repeat(num_frames, 1, 1, 1)
-        image_array
         frame_list = None
         origin_frames = None
         image_array = image_array[start:end]
@@ -351,7 +351,6 @@ def _prepare_mesh(poses, betas, transl, verts, start, end, body_model):
         elif verts.ndim == 4:
             joints = torch.einsum('fpik,ji->fpjk',
                                   [verts, body_model.J_regressor])
-
         num_verts = body_model.NUM_VERTS
         assert verts.shape[-2] == num_verts, 'Wrong input verts shape.'
         num_frames = verts.shape[0]
@@ -428,52 +427,54 @@ def _prepare_colors(palette, render_choice, num_person, num_verts, model_type):
 
 
 def render_smpl(
-    # smpl parameters
-    poses: Optional[Union[torch.Tensor, np.ndarray, dict]] = None,
-    betas: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    transl: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    verts: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    body_model: Optional[nn.Module] = None,
-    body_model_config: Optional[dict] = None,
-    # camera parameters
-    R: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    T: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    K: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    orig_cam: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    Ks: Optional[Union[torch.Tensor, np.ndarray]] = None,
-    in_ndc: bool = True,
-    convention: str = 'pytorch3d',
-    projection: Literal['weakperspective', 'perspective', 'fovperspective',
-                        'orthographics', 'fovorthographics'] = 'perspective',
-    orbit_speed: Union[float, Tuple[float, float]] = 0.0,
-    # render choice parameters
-    render_choice: Literal['lq', 'mq', 'hq', 'silhouette', 'depth', 'normal',
-                           'pointcloud', 'part_silhouette'] = 'hq',
-    palette: Union[List[str], str, np.ndarray, torch.Tensor] = 'white',
-    texture_image: Union[torch.Tensor, np.ndarray] = None,
-    resolution: Optional[Union[List[int], Tuple[int, int]]] = None,
-    start: int = 0,
-    end: Optional[int] = None,
-    alpha: float = 1.0,
-    no_grad: bool = True,
-    batch_size: int = 10,
-    device: Union[torch.device, str] = 'cuda',
-    # file io parameters
-    return_tensor: bool = False,
-    output_path: str = None,
-    origin_frames: Optional[str] = None,
-    frame_list: Optional[List[str]] = None,
-    image_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
-    img_format: str = '%06d.png',
-    overwrite: bool = False,
-    mesh_file_path: Optional[str] = None,
-    read_frames_batch: bool = False,
-    # visualize keypoints
-    plot_kps: bool = False,
-    kp3d: Optional[Union[np.ndarray, torch.Tensor]] = None,
-    mask: Optional[Union[np.ndarray, List[int]]] = None,
-    vis_kp_index: bool = False,
-) -> Union[None, torch.Tensor]:
+        # smpl parameters
+        poses: Optional[Union[torch.Tensor, np.ndarray, dict]] = None,
+        betas: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        transl: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        verts: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        body_model: Optional[nn.Module] = None,
+        body_model_config: Optional[dict] = None,
+        # camera parameters
+        R: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        T: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        K: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        orig_cam: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        Ks: Optional[Union[torch.Tensor, np.ndarray]] = None,
+        in_ndc: bool = True,
+        convention: str = 'pytorch3d',
+        projection: Literal['weakperspective', 'perspective', 'fovperspective',
+                            'orthographics',
+                            'fovorthographics'] = 'perspective',
+        orbit_speed: Union[float, Tuple[float, float]] = 0.0,
+        # render choice parameters
+        render_choice: Literal['lq', 'mq', 'hq', 'silhouette', 'depth',
+                               'normal', 'pointcloud',
+                               'part_silhouette'] = 'hq',
+        palette: Union[List[str], str, np.ndarray, torch.Tensor] = 'white',
+        texture_image: Union[torch.Tensor, np.ndarray] = None,
+        resolution: Optional[Union[List[int], Tuple[int, int]]] = None,
+        start: int = 0,
+        end: Optional[int] = None,
+        alpha: float = 1.0,
+        no_grad: bool = True,
+        batch_size: int = 10,
+        device: Union[torch.device, str] = 'cuda',
+        # file io parameters
+        return_tensor: bool = False,
+        output_path: str = None,
+        origin_frames: Optional[str] = None,
+        frame_list: Optional[List[str]] = None,
+        image_array: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        img_format: str = '%06d.png',
+        overwrite: bool = False,
+        mesh_file_path: Optional[str] = None,
+        read_frames_batch: bool = False,
+        # visualize keypoints
+        plot_kps: bool = False,
+        kp3d: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        mask: Optional[Union[np.ndarray, List[int]]] = None,
+        vis_kp_index: bool = False,
+        verbose: bool = False) -> Union[None, torch.Tensor]:
     """Render SMPL or SMPL-X mesh or silhouette into differentiable tensors,
     and export video or images.
 
@@ -722,6 +723,9 @@ def render_smpl(
             Whether plot keypoint index number on human mesh.
 
             Defaults to False.
+        # visualize render progress
+        verbose (bool, optional):
+            Whether print the progress bar for rendering.
     Returns:
         Union[None, torch.Tensor]: return the rendered image tensors or None.
     """
@@ -1040,6 +1044,7 @@ def render_smpl(
         output_path=output_path,
         return_tensor=return_tensor,
         no_grad=no_grad,
+        verbose=verbose,
         **render_data)
 
     if remove_folder:

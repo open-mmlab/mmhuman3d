@@ -6,7 +6,6 @@ from mmcv.cnn import build_conv_layer, build_norm_layer, build_plugin_layer
 from mmcv.runner import BaseModule
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from ..builder import BACKBONES
 from ..utils import ResLayer
 
 
@@ -300,7 +299,6 @@ class Bottleneck(BaseModule):
         return out
 
 
-@BACKBONES.register_module()
 class ResNet(BaseModule):
     """ResNet backbone.
     Args:
@@ -339,7 +337,7 @@ class ResNet(BaseModule):
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None
     Example:
-        >>> from mmhuman3d.models import ResNet
+        >>> from mmhuman3d.models.backbones.resnet import ResNet
         >>> import torch
         >>> self = ResNet(depth=18)
         >>> self.eval()
@@ -640,7 +638,6 @@ class ResNet(BaseModule):
                     m.eval()
 
 
-@BACKBONES.register_module()
 class ResNetV1d(ResNet):
     r"""ResNetV1d variant described in `Bag of Tricks
     <https://arxiv.org/pdf/1812.01187.pdf>`_.
@@ -652,3 +649,22 @@ class ResNetV1d(ResNet):
     def __init__(self, **kwargs):
         super(ResNetV1d, self).__init__(
             deep_stem=True, avg_down=True, **kwargs)
+
+
+def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
+    """3x3 convolution with padding."""
+    return nn.Conv2d(
+        in_planes,
+        out_planes,
+        kernel_size=3,
+        stride=stride,
+        padding=dilation,
+        groups=groups,
+        bias=False,
+        dilation=dilation)
+
+
+def conv1x1(in_planes, out_planes, stride=1):
+    """1x1 convolution."""
+    return nn.Conv2d(
+        in_planes, out_planes, kernel_size=1, stride=stride, bias=False)

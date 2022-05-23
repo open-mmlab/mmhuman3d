@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import torch
@@ -64,7 +64,7 @@ def convert_kps(
     src: str,
     dst: str,
     approximate: bool = False,
-    mask: Optional[Union[np.ndarray, torch.Tensor]] = None,
+    mask: Union[np.ndarray, torch.Tensor] = None,
     keypoints_factory: dict = KEYPOINTS_FACTORY,
     return_mask: bool = True
 ) -> Tuple[Union[np.ndarray, torch.Tensor], Union[np.ndarray, torch.Tensor]]:
@@ -79,7 +79,7 @@ def convert_kps(
         src (str): source data type from keypoints_factory.
         dst (str): destination data type from keypoints_factory.
         approximate (bool): control whether approximate mapping is allowed.
-        mask (Optional[Union[np.ndarray, torch.Tensor]], optional):
+        mask (Union[np.ndarray, torch.Tensor], optional):
             The original mask to mark the existence of the keypoints.
             None represents all ones mask.
             Defaults to None.
@@ -95,9 +95,59 @@ def convert_kps(
             the same type.
     """
     assert keypoints.ndim in {3, 4}
+    if isinstance(keypoints, torch.Tensor):
+
+        def new_array_func(shape, value, device_data, if_uint8):
+            if if_uint8:
+                dtype = torch.uint8
+            else:
+                dtype = None
+            if value == 1:
+                return torch.ones(
+                    size=shape, dtype=dtype, device=device_data.device)
+            elif value == 0:
+                return torch.zeros(
+                    size=shape, dtype=dtype, device=device_data.device)
+            else:
+                raise ValueError
+
+        def to_type_uint8_func(data):
+            return data.to(dtype=torch.uint8)
+
+    elif isinstance(keypoints, np.ndarray):
+
+        def new_array_func(shape, value, device_data, if_uint8):
+            if if_uint8:
+                dtype = np.uint8
+            else:
+                dtype = None
+            if value == 1:
+                return np.ones(shape=shape)
+            elif value == 0:
+                return np.zeros(shape=shape, dtype=dtype)
+            else:
+                raise ValueError
+
+        def to_type_uint8_func(data):
+            return data.astype(np.uint8)
+
+    else:
+        raise TypeError('Type of keypoints is neither' +
+                        ' torch.Tensor nor np.ndarray.\n' +
+                        f'Type of keypoints: {type(keypoints)}')
+
+    if mask is not None:
+        assert type(mask) == type(keypoints)
+    else:
+        mask = new_array_func(
+            shape=(keypoints.shape[-2], ),
+            value=1,
+            device_data=keypoints,
+            if_uint8=True)
+
     if src == dst:
         if return_mask:
-            return keypoints, np.ones((keypoints.shape[-2]))
+            return keypoints, mask
         else:
             return keypoints
 
@@ -106,14 +156,11 @@ def convert_kps(
     extra_dims = keypoints.shape[:-2]
     keypoints = keypoints.reshape(-1, len(src_names), keypoints.shape[-1])
 
-    if isinstance(keypoints, np.ndarray):
-        out_keypoints = np.zeros(
-            (keypoints.shape[0], len(dst_names), keypoints.shape[-1]))
-    else:
-        out_keypoints = torch.zeros(
-            (keypoints.shape[0], len(dst_names), keypoints.shape[-1]),
-            device=keypoints.device,
-            dtype=keypoints.dtype)
+    out_keypoints = new_array_func(
+        shape=(keypoints.shape[0], len(dst_names), keypoints.shape[-1]),
+        value=0,
+        device_data=keypoints,
+        if_uint8=False)
 
     original_mask = mask
     if original_mask is not None:
@@ -121,22 +168,18 @@ def convert_kps(
         assert original_mask.shape[0] == len(
             src_names), f'The length of mask should be {len(src_names)}'
 
-    if isinstance(keypoints, np.ndarray):
-        mask = np.zeros((len(dst_names)), dtype=np.uint8)
-    elif isinstance(keypoints, torch.Tensor):
-        mask = torch.zeros((len(dst_names)),
-                           dtype=torch.uint8,
-                           device=keypoints.device)
-    else:
-        raise TypeError('keypoints should be torch.Tensor or np.ndarray')
+    mask = new_array_func(
+        shape=(len(dst_names), ),
+        value=0,
+        device_data=keypoints,
+        if_uint8=True)
 
     dst_idxs, src_idxs, _ = \
         get_mapping(src, dst, approximate, keypoints_factory)
     out_keypoints[:, dst_idxs] = keypoints[:, src_idxs]
     out_shape = extra_dims + (len(dst_names), keypoints.shape[-1])
     out_keypoints = out_keypoints.reshape(out_shape)
-
-    mask[dst_idxs] = original_mask[src_idxs] \
+    mask[dst_idxs] = to_type_uint8_func(original_mask[src_idxs]) \
         if original_mask is not None else 1.0
 
     if return_mask:
