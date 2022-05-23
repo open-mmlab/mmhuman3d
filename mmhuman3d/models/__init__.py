@@ -1,6 +1,5 @@
 from .architectures import *  # noqa: F401,F403
 from .backbones import *  # noqa: F401,F403
-from .body_models import *  # noqa: F401,F403
 from .builder import (
     ARCHITECTURES,
     BACKBONES,

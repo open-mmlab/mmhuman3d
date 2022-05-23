@@ -30,7 +30,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from ..builder import BODY_MODELS
+from .. import BODY_MODELS
 from .utils import quat_feat, rodrigues, with_zeros
 
 
