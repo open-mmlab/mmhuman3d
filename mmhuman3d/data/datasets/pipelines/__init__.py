@@ -17,6 +17,7 @@ from .hybrik_transforms import (
     RandomOcclusion,
 )
 from .loading import LoadImageFromFile
+from .synthetic_occlusion_augmentation import SyntheticOcclusion
 from .transforms import (
     CenterCrop,
     ColorJitter,
@@ -29,10 +30,28 @@ from .transforms import (
 )
 
 __all__ = [
-    'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToPIL', 'ToNumpy',
-    'Transpose', 'Collect', 'LoadImageFromFile', 'CenterCrop',
-    'RandomHorizontalFlip', 'ColorJitter', 'Lighting', 'RandomChannelNoise',
-    'GetRandomScaleRotation', 'MeshAffine', 'HybrIKRandomFlip', 'HybrIKAffine',
-    'GenerateHybrIKTarget', 'RandomDPG', 'RandomOcclusion',
-    'NewKeypointsSelection', 'Normalize'
+    'Compose',
+    'to_tensor',
+    'ToTensor',
+    'ImageToTensor',
+    'ToPIL',
+    'ToNumpy',
+    'Transpose',
+    'Collect',
+    'LoadImageFromFile',
+    'CenterCrop',
+    'RandomHorizontalFlip',
+    'ColorJitter',
+    'Lighting',
+    'RandomChannelNoise',
+    'GetRandomScaleRotation',
+    'MeshAffine',
+    'HybrIKRandomFlip',
+    'HybrIKAffine',
+    'GenerateHybrIKTarget',
+    'RandomDPG',
+    'RandomOcclusion',
+    'NewKeypointsSelection',
+    'Normalize',
+    'SyntheticOcclusion',
 ]

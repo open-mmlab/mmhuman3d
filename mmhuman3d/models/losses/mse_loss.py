@@ -1,7 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..builder import LOSSES
 from .utils import weighted_loss
 
 
@@ -26,7 +25,6 @@ def mse_loss_with_gmof(pred, target, sigma):
     return loss
 
 
-@LOSSES.register_module()
 class MSELoss(nn.Module):
     """MSELoss.
 
@@ -72,7 +70,6 @@ class MSELoss(nn.Module):
         return loss
 
 
-@LOSSES.register_module()
 class KeypointMSELoss(nn.Module):
     """MSELoss for 2D and 3D keypoints.
 

@@ -12,7 +12,7 @@ from mmcv.runner import get_dist_info, init_dist
 from mmhuman3d import __version__
 from mmhuman3d.apis import set_random_seed, train_model
 from mmhuman3d.data.datasets import build_dataset
-from mmhuman3d.models import build_architecture
+from mmhuman3d.models.architectures.builder import build_architecture
 from mmhuman3d.utils import collect_env, get_root_logger
 
 

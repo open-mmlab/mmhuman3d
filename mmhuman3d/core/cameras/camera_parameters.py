@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from mmhuman3d.core.cameras.cameras import PerspectiveCameras
-from mmhuman3d.core.conventions.cameras import (
+from mmhuman3d.core.conventions.cameras.convert_convention import (
     convert_camera_matrix,
     convert_K_3x3_to_4x4,
     convert_K_4x4_to_3x3,

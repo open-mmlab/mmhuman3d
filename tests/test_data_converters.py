@@ -29,8 +29,11 @@ def test_preprocess():
     cfg = dict(type='H36mConverter', modes=['valid'], protocol=2)
     data_converter = build_data_converter(cfg)
     data_converter.convert(H36M_ROOT, output_path)
-
+    cfg = dict(type='H36mConverter', modes=['train'], protocol=1)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(H36M_ROOT, output_path)
     assert osp.exists(osp.join(output_path, 'h36m_train.npz'))
+    assert osp.exists(osp.join(output_path, 'h36m_mosh_train.npz'))
     assert osp.exists(osp.join(output_path, 'h36m_valid_protocol1.npz'))
     assert osp.exists(osp.join(output_path, 'h36m_valid_protocol2.npz'))
 
@@ -196,13 +199,6 @@ def test_preprocess():
                           'spin_mpi_inf_3dhp_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_mpii_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'spin_lspet_train.npz')
-    cfg = dict(
-        type='H36mSpinConverter',
-        modes=['train'],
-        mosh_dir='tests/data/dataset_sample/h36m_mosh')
-    data_converter = build_data_converter(cfg)
-    data_converter.convert(H36M_ROOT, output_path)
-    assert osp.exists(osp.join(output_path, 'spin_h36m_train.npz'))
 
     GTA_HUMAN_ROOT = os.path.join(root_path, 'gta_human_data')
     cfg = dict(type='GTAHumanConverter')

@@ -60,7 +60,10 @@ def rot6d_to_rotmat(x):
     Output:
         (B,3,3) Batch of corresponding rotation matrices
     """
-    x = x.view(-1, 3, 2)
+    if isinstance(x, torch.Tensor):
+        x = x.reshape(-1, 3, 2)
+    elif isinstance(x, np.ndarray):
+        x = x.view(-1, 3, 2)
     a1 = x[:, :, 0]
     a2 = x[:, :, 1]
     b1 = F.normalize(a1)

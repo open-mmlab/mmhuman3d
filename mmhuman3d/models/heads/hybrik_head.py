@@ -6,7 +6,6 @@ from mmcv.runner.base_module import BaseModule
 from torch.nn import functional as F
 
 from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
-from ..builder import HEADS
 
 
 def norm_heatmap(norm_type, heatmap):
@@ -36,7 +35,6 @@ def norm_heatmap(norm_type, heatmap):
         raise NotImplementedError
 
 
-@HEADS.register_module()
 class HybrIKHead(BaseModule):
     """HybrIK parameters regressor head.
 

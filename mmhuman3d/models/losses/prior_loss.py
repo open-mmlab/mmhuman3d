@@ -15,10 +15,8 @@ from mmhuman3d.core.conventions.joints_mapping.standard_joint_angles import (
 )
 from mmhuman3d.utils.keypoint_utils import search_limbs
 from mmhuman3d.utils.transforms import aa_to_rot6d, aa_to_sja
-from ..builder import LOSSES
 
 
-@LOSSES.register_module()
 class ShapePriorLoss(nn.Module):
     """Prior loss for body shape parameters.
 
@@ -67,7 +65,6 @@ class ShapePriorLoss(nn.Module):
         return shape_prior_loss
 
 
-@LOSSES.register_module()
 class PoseRegLoss(nn.Module):
     """Regulizer loss for body pose parameters.
 
@@ -105,7 +102,6 @@ class PoseRegLoss(nn.Module):
         return pose_prior_loss
 
 
-@LOSSES.register_module()
 class LimbLengthLoss(nn.Module):
     """Limb length loss for body shape parameters. As betas are associated with
     the height of a person, fitting on limb length help determine body shape
@@ -215,7 +211,6 @@ class LimbLengthLoss(nn.Module):
         return loss
 
 
-@LOSSES.register_module()
 class JointPriorLoss(nn.Module):
     """Prior loss for joint angles.
 
@@ -324,7 +319,6 @@ class JointPriorLoss(nn.Module):
         return joint_prior_loss
 
 
-@LOSSES.register_module()
 class SmoothJointLoss(nn.Module):
     """Smooth loss for joint angles.
 
@@ -399,7 +393,6 @@ class SmoothJointLoss(nn.Module):
         return smooth_joint_loss
 
 
-@LOSSES.register_module()
 class SmoothPelvisLoss(nn.Module):
     """Smooth loss for pelvis angles.
 
@@ -465,7 +458,6 @@ class SmoothPelvisLoss(nn.Module):
         return smooth_pelvis_loss
 
 
-@LOSSES.register_module()
 class SmoothTranslationLoss(nn.Module):
     """Smooth loss for translations.
 
@@ -527,7 +519,6 @@ class SmoothTranslationLoss(nn.Module):
         return smooth_translation_loss
 
 
-@LOSSES.register_module()
 class CameraPriorLoss(nn.Module):
     """Prior loss for predicted camera.
 
@@ -580,7 +571,6 @@ class CameraPriorLoss(nn.Module):
         return camera_prior_loss
 
 
-@LOSSES.register_module()
 class MaxMixturePrior(nn.Module):
     """Ref: SMPLify-X
     https://github.com/vchoutas/smplify-x/blob/master/smplifyx/prior.py

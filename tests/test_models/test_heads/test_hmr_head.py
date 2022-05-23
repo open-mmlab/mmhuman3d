@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from mmhuman3d.models.heads import HMRHead
+from mmhuman3d.models.heads.builder import HMRHead
 
 
 def test_hmr_head():

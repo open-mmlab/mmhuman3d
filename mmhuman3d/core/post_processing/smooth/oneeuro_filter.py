@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 import torch
 
-from .builder import FILTERS
+from ..builder import POST_PROCESSING
 
 
 def smoothing_factor(t_e, cutoff):
@@ -56,7 +56,7 @@ class OneEuro:
         return x_hat
 
 
-@FILTERS.register_module(name=['OneEuroFilter', 'oneeuro'])
+@POST_PROCESSING.register_module(name=['OneEuroFilter', 'oneeuro'])
 class OneEuroFilter:
     """Oneeuro filter, source code: https://github.com/mkocabas/VIBE/blob/c0
     c3f77d587351c806e901221a9dc05d1ffade4b/lib/utils/smooth_pose.py.
