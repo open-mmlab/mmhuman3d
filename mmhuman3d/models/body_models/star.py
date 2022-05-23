@@ -30,11 +30,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .. import BODY_MODELS
 from .utils import quat_feat, rodrigues, with_zeros
 
 
-@BODY_MODELS.register_module(name=['STAR', 'star'])
 class STAR(nn.Module):
 
     def __init__(self,
