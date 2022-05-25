@@ -22,7 +22,6 @@
 #
 # Contact: ps-license@tuebingen.mpg.de
 
-from __future__ import division
 import os
 from typing import Optional
 
@@ -30,7 +29,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .utils import quat_feat, rodrigues, with_zeros
+from mmhuman3d.utils.transforms import quat_feat, rodrigues, with_zeros
 
 
 class STAR(nn.Module):
