@@ -24,6 +24,8 @@
 
 import os
 
+import numpy as np
+import torch
 import torch.nn as nn
 
 
@@ -59,3 +61,50 @@ class STAR(nn.Module):
             raise RuntimeError('Path {} does not exist!'.format(star_path))
 
         super(STAR, self).__init__()
+
+        star_model = np.load(star_path, allow_pickle=True)
+        J_regressor = star_model['J_regressor']
+        self.num_betas = num_betas
+
+        # Model sparse joints regressor, regresses joints location from a mesh
+        self.register_buffer('J_regressor',
+                             torch.cuda.FloatTensor(J_regressor))
+
+        # Model skinning weights
+        self.register_buffer('weights',
+                             torch.cuda.FloatTensor(star_model['weights']))
+        # Model pose corrective blend shapes
+        self.register_buffer(
+            'posedirs',
+            torch.cuda.FloatTensor(star_model['posedirs'].reshape((-1, 93))))
+        # Mean Shape
+        self.register_buffer('v_template',
+                             torch.cuda.FloatTensor(star_model['v_template']))
+        # Shape corrective blend shapes
+        self.register_buffer(
+            'shapedirs',
+            torch.cuda.FloatTensor(
+                np.array(star_model['shapedirs'][:, :, :num_betas])))
+        # Mesh traingles
+        self.register_buffer(
+            'faces', torch.from_numpy(star_model['f'].astype(np.int64)))
+        self.f = star_model['f']
+        # Kinematic tree of the model
+        self.register_buffer(
+            'kintree_table',
+            torch.from_numpy(star_model['kintree_table'].astype(np.int64)))
+
+        id_to_col = {
+            self.kintree_table[1, i].item(): i
+            for i in range(self.kintree_table.shape[1])
+        }
+        self.register_buffer(
+            'parent',
+            torch.LongTensor([
+                id_to_col[self.kintree_table[0, it].item()]
+                for it in range(1, self.kintree_table.shape[1])
+            ]))
+
+        self.verts = None
+        self.J = None
+        self.R = None
