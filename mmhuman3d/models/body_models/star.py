@@ -36,6 +36,7 @@ class STAR(nn.Module):
                  gender: str = 'neutral',
                  num_betas: int = 10) -> None:
         """STAR model constructor.
+
         Parameters
         ----------
         model_path: str
@@ -68,27 +69,34 @@ class STAR(nn.Module):
 
         # Model sparse joints regressor, regresses joints location from a mesh
         self.register_buffer('J_regressor',
-                             torch.cuda.FloatTensor(J_regressor))
+                             torch.tensor(J_regressor, dtype=torch.float))
 
         # Model skinning weights
-        self.register_buffer('weights',
-                             torch.cuda.FloatTensor(star_model['weights']))
+        self.register_buffer(
+            'weights', torch.tensor(star_model['weights'], dtype=torch.float))
+
         # Model pose corrective blend shapes
         self.register_buffer(
             'posedirs',
-            torch.cuda.FloatTensor(star_model['posedirs'].reshape((-1, 93))))
+            torch.tensor(
+                star_model['posedirs'].reshape((-1, 93)), dtype=torch.float))
+
         # Mean Shape
-        self.register_buffer('v_template',
-                             torch.cuda.FloatTensor(star_model['v_template']))
+        self.register_buffer(
+            'v_template',
+            torch.tensor(star_model['v_template'], dtype=torch.float))
+
         # Shape corrective blend shapes
         self.register_buffer(
             'shapedirs',
-            torch.cuda.FloatTensor(
-                np.array(star_model['shapedirs'][:, :, :num_betas])))
+            torch.tensor(
+                star_model['shapedirs'][:, :, :num_betas], dtype=torch.float))
+
         # Mesh traingles
         self.register_buffer(
             'faces', torch.from_numpy(star_model['f'].astype(np.int64)))
         self.f = star_model['f']
+
         # Kinematic tree of the model
         self.register_buffer(
             'kintree_table',
@@ -100,10 +108,11 @@ class STAR(nn.Module):
         }
         self.register_buffer(
             'parent',
-            torch.LongTensor([
+            torch.tensor([
                 id_to_col[self.kintree_table[0, it].item()]
                 for it in range(1, self.kintree_table.shape[1])
-            ]))
+            ],
+                         dtype=torch.int64))
 
         self.verts = None
         self.J = None
