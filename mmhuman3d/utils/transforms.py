@@ -608,20 +608,16 @@ def batch_transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
     return new_gloabl_orient, new_transl
 
 
-# Adapted from:
-#
-# https://github.com/ahmedosman/STAR/blob/master/star/pytorch/star.py
-#
-#
-
-
-def quat_feat(theta):
+def quat_feat(theta: torch.Tensor) -> torch.Tensor:
     """Computes a normalized quaternion ([0,0,0,0]  when the body is in rest
     pose) given joint angles.
 
-    :param theta: A tensor of joints axis angles,
-        batch size x number of joints x 3
-    :return:
+    Args:
+        theta (torch.Tensor): A tensor of joints axis angles,
+            batch size x number of joints x 3
+
+    Returns:
+        quat (torch.Tensor)
     """
     l1norm = torch.norm(theta + 1e-8, p=2, dim=1)
     angle = torch.unsqueeze(l1norm, -1)
@@ -633,11 +629,14 @@ def quat_feat(theta):
     return quat
 
 
-def _quat2mat(quat):
+def _quat2mat(quat: torch.Tensor) -> torch.Tensor:
     """Converts a quaternion to a rotation matrix.
 
-    :param quat:
-    :return:
+    Args:
+        quat (torch.Tensor)
+
+    Returns:
+        rotMat (torch.Tensor)
     """
     norm_quat = quat
     norm_quat = norm_quat / norm_quat.norm(p=2, dim=1, keepdim=True)
@@ -656,9 +655,11 @@ def _quat2mat(quat):
     return rotMat
 
 
-def rodrigues(theta):
+def rodrigues(theta: torch.Tensor) -> torch.Tensor:
     """Computes the rodrigues representation given joint angles.
 
+    Parameters
+    ----------
     :param theta: batch_size x number of joints x 3
     :return: batch_size x number of joints x 3 x 4
     """
@@ -672,14 +673,16 @@ def rodrigues(theta):
     return _quat2mat(quat)
 
 
-def with_zeros(input):
+def with_zeros(input: torch.Tensor) -> torch.Tensor:
     """Appends a row of [0,0,0,1] to a batch size x 3 x 4 Tensor.
 
+    Parameters
+    ----------
     :param input: A tensor of dimensions batch size x 3 x 4
     :return: A tensor batch size x 4 x 4 (appended with 0,0,0,1)
     """
     batch_size = input.shape[0]
-    row_append = torch.cuda.FloatTensor(([0.0, 0.0, 0.0, 1.0]))
+    row_append = torch.tensor([0.0, 0.0, 0.0, 1.0], dtype=torch.float)
     row_append.requires_grad = False
     padded_tensor = torch.cat(
         [input, row_append.view(1, 1, 4).repeat(batch_size, 1, 1)], 1)
