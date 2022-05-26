@@ -3,17 +3,17 @@
 import numpy as np
 import torch
 
-from mmhuman3d.models.body_models.builder import build_body_model
+from mmhuman3d.models.body_models.star import STAR
 
 body_model_load_dir = 'data/body_models/star'
 
 
 def test_star_init():
-    _ = build_body_model(dict(type='STAR', model_path=body_model_load_dir))
+    _ = STAR(model_path=body_model_load_dir)
 
 
 def test_star_forward():
-    star = build_body_model(dict(type='STAR', model_path=body_model_load_dir))
+    star = STAR(model_path=body_model_load_dir)
 
     betas = np.array([[
         2.25176191, -3.7883464, 0.46747496, 3.89178988, 2.20098416, 0.26102114,
@@ -27,8 +27,3 @@ def test_star_forward():
 
     trans = torch.cuda.FloatTensor(np.zeros((batch_size, 3)))
     _ = star.forward(poses, betas, trans)
-
-
-if __name__ == '__main__':
-    test_star_init()
-    test_star_forward()
