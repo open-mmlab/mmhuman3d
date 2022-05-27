@@ -31,7 +31,8 @@ def test_star_incompatible_gender():
         _ = build_body_model(
             dict(
                 type='STAR',
-                model_path=os.path.join(body_model_load_dir, 'STAR_MALE.npz'),
+                model_path=os.path.join(body_model_load_dir,
+                                        'STAR_NEUTRAL.npz'),
                 gender='female'))
     except RuntimeError as err:
         # NOTE (kristijanbartol): This is one way to check the error type.
