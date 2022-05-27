@@ -56,13 +56,17 @@ class STAR(nn.Module):
                                '[\'male\', \'female\', or \'neutral\']!')
         self.gender = gender
 
+        model_fname = 'STAR_{}.npz'.format(gender.upper())
         if os.path.isdir(model_path):
-            star_path = os.path.join(model_path,
-                                     'STAR_{}.npz'.format(gender.upper()))
+            star_path = os.path.join(model_path, model_fname)
+        elif not os.path.exists(model_path):
+            raise RuntimeError('Path {} does not exist!'.format(model_path))
         else:
+            if os.path.split(model_path)[-1] != model_fname:
+                raise RuntimeError(
+                    f'Model filename ({model_fname}) and gender '
+                    f'({gender}) are incompatible!')
             star_path = model_path
-        if not os.path.exists(star_path):
-            raise RuntimeError('Path {} does not exist!'.format(star_path))
 
         super(STAR, self).__init__()
 
