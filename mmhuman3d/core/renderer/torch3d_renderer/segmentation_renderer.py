@@ -4,7 +4,7 @@ import torch
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from mmhuman3d.utils import get_different_colors
+from mmhuman3d.utils.demo_utils import get_different_colors
 from .base_renderer import BaseRenderer
 from .utils import normalize
 
