@@ -10,14 +10,12 @@ from pytorch3d.structures import Meshes
 from torch.nn.functional import interpolate
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import \
-    align_input_to_padded  # noqa: E501
 from mmhuman3d.utils.ffmpeg_utils import images_to_array
 from mmhuman3d.utils.path_utils import check_path_suffix
 from .base_renderer import BaseRenderer
 from .builder import build_renderer
 from .lights import DirectionalLights, PointLights
-from .utils import normalize, rgb2bgr, tensor2array
+from .utils import align_input_to_padded, normalize, rgb2bgr, tensor2array
 
 
 class SMPLRenderer(BaseRenderer):

@@ -4,7 +4,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 import numpy as np
 
 import mmhuman3d.core.conventions.keypoints_mapping as keypoints_mapping
-from mmhuman3d.core.visualization.renderer import Axes3dJointsRenderer
+from mmhuman3d.core.renderer.matplotlib3d_renderer import Axes3dJointsRenderer
 from mmhuman3d.utils import (
     get_different_colors,
     prepare_output_path,

@@ -23,10 +23,11 @@ from mmhuman3d.core.cameras.builder import build_cameras
 from mmhuman3d.core.conventions.cameras.convert_convention import \
     convert_camera_matrix  # prevent yapf isort conflict
 from mmhuman3d.core.conventions.segmentation import body_segmentation
-from mmhuman3d.core.visualization.renderer import render_runner
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import \
+from mmhuman3d.core.renderer.torch3d_renderer import render_runner
+from mmhuman3d.core.renderer.torch3d_renderer.meshes import \
     ParametricMeshes  # noqa: E501
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import \
+from mmhuman3d.core.renderer.torch3d_renderer.smpl_renderer import SMPLRenderer
+from mmhuman3d.core.renderer.torch3d_renderer.utils import \
     align_input_to_padded  # noqa: E501
 from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils import (
@@ -45,7 +46,6 @@ from mmhuman3d.utils import (
     video_to_array,
     video_to_images,
 )
-from .renderer import SMPLRenderer
 
 try:
     from typing import Literal
