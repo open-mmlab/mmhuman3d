@@ -17,7 +17,8 @@ from mmhuman3d.core.visualization.renderer import build_renderer
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.models.builder import build_body_model
 from mmhuman3d.utils.demo_utils import conver_verts_to_cam_coord
-
+import scipy.sparse
+import time
 result_path = 'data/demo_result/inference_result.npz'
 
 
@@ -86,12 +87,40 @@ if __name__ == '__main__':
     # cameras.get_camera_center()-cameras.get_camera_plane_normals()
     body_model = build_body_model(
         dict(type='SMPL', model_path='data/body_models/smpl'))
+
     faces = torch.tensor(body_model.faces.astype(np.float32))[None].to(device)
     textures = TexturesVertex(
-        verts_features=torch.ones(verts.shape)).to(device)
-    mesh = Meshes(verts, faces, textures)
+        verts_features=torch.ones(verts.shape)).to(device)    
+    downsampling = 2
+    if downsampling is not None:
+        assert downsampling == 1 or downsampling ==2, \
+            f"Only support 1 or 2, but got {downsampling}."
 
-    images = renderer(meshes=mesh, cameras=cameras)
+        mesh_downsampling = np.load(
+            'data/mesh_downsampling.npz', 
+            allow_pickle=True, 
+            encoding='latin1')
+
+        U_ = mesh_downsampling['U'] # upsampling mat
+        D_ = mesh_downsampling['D'] # downsampling mat
+        F_ = mesh_downsampling['F'] # faces
+
+        device = 'cuda'
+        ptD = []
+        for i in range(downsampling):
+            d = scipy.sparse.coo_matrix(D_[i])
+            i = torch.LongTensor(np.array([d.row, d.col]))
+            v = torch.FloatTensor(d.data)
+            D_mat = torch.sparse.FloatTensor(i, v, d.shape).to(device)
+            verts = torch.spmm(D_mat, verts.squeeze())[None]
+        faces = torch.IntTensor(F_[downsampling].astype(np.int16))[None].to(device)
+        textures = TexturesVertex(
+            verts_features=torch.ones(verts.shape)).to(device)   
+    mesh = Meshes(verts, faces, textures)
+    T = time.time()
+    for i in range(100):
+        images = renderer(meshes=mesh, cameras=cameras)
+    print(time.time()-T)
     rgba = renderer.tensor2rgba(images).cpu().numpy()
     rgbs, valid_masks = rgba[..., :3] * 255, rgba[..., 3:]
     output_images = (rgbs * valid_masks + (1 - valid_masks) * image).astype(
@@ -108,3 +137,8 @@ if __name__ == '__main__':
 #     # 'specular_color': [[0.5, 0.5, 0.5]],
 #     'location': [[0., 0., 0.]],
 # }
+
+# pytorch3d
+# 6890 2s per frame
+# 1723 0.5 per frame
+# 431 0.15 per frame
