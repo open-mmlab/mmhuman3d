@@ -101,6 +101,12 @@ setup(
     keywords='3D Human',
     url='https://github.com/open-mmlab/mmhuman3d',
     packages=find_packages(exclude=('configs', 'tools', 'demo')),
+    ext_modules=cythonize([Extension("Sim3DR_Cython",
+                           sources=["vis_human/sim3drender/lib/rasterize.pyx",
+                                    "vis_human/sim3drender/lib/rasterize_kernel.cpp"],
+                           language='c++',
+                           include_dirs=[numpy.get_include()],
+                           extra_compile_args=["-std=c++11"])]),
     include_package_data=True,
     classifiers=[
         'Development Status :: 4 - Beta',

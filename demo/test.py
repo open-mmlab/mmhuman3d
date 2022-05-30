@@ -1,25 +1,27 @@
 from mmhuman3d.data.data_structures.human_data import HumanData
 import requests
 import json
-
+import numpy as np
 if __name__ == "__main__":
-    result_path = 'data/demo_result/inference_result.npz'
+    result_path = '/home/SENSETIME/fanxiangyu/code/mmhuman3d/data/demo_result/inference_result.npz'
     data = HumanData.fromfile(result_path)
     for k,v in data['smpl'].items():
         data['smpl'][k] = v.tolist()
+    data['smpl']['transl'] = np.zeros([36,3]).tolist()
     params = {
-        "human_data":data['smpl'],
-        "actor_type":"Mannequin",
-        "actor_name":"rp_yasmin_rigged_009",
-        "motion_category":"humandata",
-        "regenerate":True,
+        "human_data":{'smpl':data['smpl']},
+        "actor_type":"MXJBald",
+        # "actor_name":"rp_yasmin_rigged_009",
+        "motion_category":"human_data",
+        "regenerate":False,
         "output_smpl":False
     }
-    retarget_url = 'http://10.152.237.9:7000/retarget/'
-    resp = requests.post(retarget_url, json=json.dumps(params))
+    retarget_url = 'http://10.10.30.159:8763/api/v1/retargeting/retarget/'
+    resp = requests.post(retarget_url, json=params)
+    resp_json = resp.json()
     if not resp_json.get('code') == 200:
         err_msg = (
-            f'Error response from POST {self.retarget_url} with params: {params}.\n'
+            f'Error response from POST {retarget_url}'
             f'Response:\n{resp_json}'
         )
         print(err_msg)
