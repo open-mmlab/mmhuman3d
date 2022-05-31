@@ -24,7 +24,7 @@ if __name__ == "__main__":
             f'Error response from POST {retarget_url}'
             f'Response:\n{resp_json}'
         )
-        print(err_msg)
+        # print(err_msg)
         raise RuntimeError(err_msg)
     resp_content = resp_json['content']
 
