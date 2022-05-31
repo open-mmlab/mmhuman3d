@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from . import _init_paths
+# from . import _init_paths
 import numpy as np
 import Sim3DR_Cython
 
