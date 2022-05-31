@@ -1,11 +1,11 @@
-# Data preparation
+# 数据预处理
 
 <!-- - [Data preparation](#data-preparation) -->
   <!-- * [Overview](#overview)
   * [Generate dataset files](#generate-dataset-files)
   * [Obtain preprocessed datasets](#obtain-preprocessed-datasets) -->
-- [Datasets for supported algorithms](#datasets-for-supported-algorithms)
-- [Folder structure](#folder-structure)
+- [不同算法使用的数据集](#datasets-for-supported-algorithms)
+- [文件夹结构](#folder-structure)
   * [AGORA](#agora)
   * [COCO](#coco)
   * [COCO-WholeBody](#coco-wholebody)
@@ -26,12 +26,11 @@
   * [SURREAL](#surreal)
 
 
-## Overview
+## 总览
 
-Our data pipeline use [HumanData](./human_data.md) structure for
-storing and loading. The proprocessed npz files can be obtained from raw data using our data converters, and the supported configs can be found [here](https://github.com/open-mmlab/mmhuman3d/tree/main/tools/convert_datasets.py).
+我们使用 [HumanData](./human_data.md) 结构用于存储和加载数据。经过处理的.npz可以使用我们提供的数据转换脚本从原始数据格式获取，详情请参考[convert_datasets.py](https://github.com/open-mmlab/mmhuman3d/tree/main/tools/convert_datasets.py).
 
-These are our supported converters and their respective `dataset-name`:
+如下是我们支持的格式转换方式和具体的 `数据集名称`:
 - AgoraConverter (`agora`)
 - AmassConverter (`amass`)
 - CocoConverter (`coco`)
@@ -42,6 +41,7 @@ These are our supported converters and their respective `dataset-name`:
 - GTAHumanConverter (`gta_human`)
 - H36mConverter (`h36m_p1`, `h36m_p2`)
 - H36mHybrIKConverter (`h36m_hybrik`)
+- H36mSpinConverter (`h36m_spin`)
 - InstaVibeConverter (`instavariety_vibe`)
 - LspExtendedConverter (`lsp_extended`)
 - LspConverter (`lsp_original`, `lsp_dataset`)
@@ -129,9 +129,9 @@ DATASET_CONFIGS = dict(
 
 -->
 
-## Datasets for supported algorithms
+## 不同算法使用的数据集
 
-For all algorithms, the root path for our datasets and output path for our preprocessed npz files are stored in `data/datasets` and `data/preprocessed_datasets`. As such, use this command with the listed `dataset-names`:
+所有算法使用的数据集路径和经过处理的.npz文件路径为`data/datasets` 和 `data/preprocessed_datasets`。使用如下命令进行数据格式转换：
 
 ```bash
 python tools/convert_datasets.py \
@@ -140,7 +140,9 @@ python tools/convert_datasets.py \
   --output_path data/preprocessed_datasets
 ```
 
-For HMR training and testing, the following datasets are required:
+使用时，请指定具体的`dataset-name`.
+
+训练HMR算法，需要如下的数据集
   - [COCO](#coco)
   - [Human3.6M](#human36m)
   - [Human3.6M Mosh](#human36m-mosh)
@@ -150,12 +152,12 @@ For HMR training and testing, the following datasets are required:
   - [LSPET](#lspet)
   - [PW3D](#pw3d)
 
-Convert datasets with the following `dataset-names`:
+使用如下的数据集名称替换`dataset-names`进行数据转换:
 ```
 coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
 ```
 
-**Alternatively**, you may download the preprocessed files directly:
+**或者**, 您可以下载处理好的.npz文件:
 - [cmu_mosh.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/cmu_mosh.npz?versionId=CAEQHhiBgIDoof_37BciIDU0OGU0MGNhMjAxMjRiZWI5YzdkMWEzMzc3YzBiZDM2)
 - [coco_2014_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/coco_2014_train.npz?versionId=CAEQHhiBgICUrvbS6xciIDFmZmFhMDk5OGQ3YzQ5ZDE5NzJkMGQxNzdmMmQzZDdi)
 - [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
@@ -165,11 +167,9 @@ coco, pw3d, mpii, mpi_inf_3dhp, lsp_original, lsp_extended, h36m
 - [mpii_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/mpii_train.npz?versionId=CAEQHhiBgIDhq_bS6xciIDEwMmE0ZDc0NWI1NjQ2NWZhYTA5ZjEyODBiNWFmODg1)
 - [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
 
+由于许可证的限制，我们无法上传`h36m_mosh_train.npz`。但是我们提供了相关的转换工具, 如果您拥有原始的`mosh`数据, 您可以参考[Human3.6M Mosh](#human36m-mosh)。
 
-Unfortunately, we are unable to distribute `h36m_mosh_train.npz` due to license limitations. However, we provide the
-conversion tools should you possess the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36m-mosh) on details for conversion.
-
-The preprocessed datasets should have this structure:
+处理好的数据集应该具有如下的结构:
 ```text
 mmhuman3d
 ├── mmhuman3d
@@ -181,7 +181,7 @@ mmhuman3d
     ├── datasets
     └── preprocessed_datasets
         ├── coco_2014_train.npz
-        ├── h36m_train.npz or h36m_mosh_train.npz (if mosh is available)
+        ├── h36m_train.npz (h36m_mosh_train.npz)
         ├── lspet_train.npz
         ├── lsp_train.npz
         ├── mpi_inf_3dhp_train.npz
@@ -189,7 +189,7 @@ mmhuman3d
         └── pw3d_test.npz
 ```
 
-For SPIN training, the following datasets are required:
+训练SPIN算法, 需要如下的数据集:
   - [COCO](#coco)
   - [Human3.6M](#human36m)
   - [Human3.6M Mosh](#human36m-mosh)
@@ -201,12 +201,12 @@ For SPIN training, the following datasets are required:
   - [SPIN](#spin)
 
 
-Convert datasets with the following `dataset-names`:
+使用如下的数据集名称替换`dataset-names`进行数据转换:
 ```
 spin, h36m
 ```
 
-**Alternatively**, you may download the preprocessed files directly:
+**或者**, 您可以先下载处理好的.npz文件:
 - [spin_coco_2014_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_coco_2014_train.npz?versionId=CAEQHhiBgICb6bfT6xciIGM2NmNmZDYyNDMxMDRiNTVhNDk3YzY1N2Y2ODdlMTAy)
 - [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
 - [spin_lsp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_lsp_train.npz?versionId=CAEQHhiBgIDu57fT6xciIDQ0ODAzNjUyNjJkMzQyNzQ5Y2IzNGNhOTZmZGI2NzBm)
@@ -215,10 +215,9 @@ spin, h36m
 - [spin_mpii_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_mpii_train.npz?versionId=CAEQHhiBgMDz57fT6xciIGJjMzAwMDdlYTBmMTQ0MDg4ZGE4YjhiZGNkNWQwZmM1)
 - [spin_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_pw3d_test.npz?versionId=CAEQHhiBgMCL6LfT6xciIGUxNjY3OTBiODU5ZDQxODliYTQ4NzU0OGVjMzJkYmRm)
 
-Unfortunately, we are unable to distribute `h36m_mosh_train.npz` due to license limitations. However, we provide the
-conversion tools should you posses the raw mosh data. Prefer refer to [Human3.6M Mosh](#human36m-mosh) on details for conversion.
+由于许可证的限制，我们无法上传`h36m_mosh_train.npz`。但是我们提供了相关的转换工具, 如果您拥有原始的`mosh`数据, 您可以参考[Human3.6M Mosh](#human36m-mosh)。
 
-The preprocessed datasets should have this structure:
+处理好的数据集应该具有如下的结构:
 ```text
 mmhuman3d
 ├── mmhuman3d
@@ -230,7 +229,7 @@ mmhuman3d
     ├── datasets
     └── preprocessed_datasets
         ├── spin_coco_2014_train.npz
-        ├── h36m_train.npz or h36m_mosh_train.npz (if mosh is available)
+        ├── h36m_train.npz (h36m_mosh_train.npz)
         ├── spin_lsp_train.npz
         ├── spin_lspet_train.npz
         ├── spin_mpi_inf_3dhp_train.npz
@@ -238,21 +237,19 @@ mmhuman3d
         └── spin_pw3d_test.npz
 ```
 
-
-For VIBE training and testing, the following datasets are required:
+训练VIBE算法, 需要如下的数据集:
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [PW3D](#pw3d)
 
+数据转换暂时不可用.
 
-The data converters are currently not available.
-
-**Alternatively**, you may download the preprocessed files directly:
+**或者**, 您可以先下载处理好的.npz文件:
 - [vibe_insta_variety.npz](https://pjlab-my.sharepoint.cn/:u:/g/personal/openmmlab_pjlab_org_cn/EYnlkp-69NBNlXDH-5ELZikBXDbSg8SZHqmdSX_3hK4EYg?e=QUl5nI)
 - [vibe_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/vibe_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgICTnq3U6xciIGUwMTc5YWQ2MjNhZDQ3NGE5MmYxOWJhMGQxMTcwNTll)
 - [vibe_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/vibe_pw3d_test.npz?versionId=CAEQHhiBgMD5na3U6xciIGQ4MmU0MjczYTYzODQ1NDQ5M2JiNzY1N2E5MTNlOWY5)
 
 
-The preprocessed datasets should have this structure:
+处理好的数据集应该具有如下的结构:
 ```text
 mmhuman3d
 ├── mmhuman3d
@@ -268,26 +265,26 @@ mmhuman3d
         └── vibe_pw3d_test.npz
 ```
 
-For HYBRIK training and testing, the following datasets are required:
+训练HybrIK算法, 需要如下的数据集:
   - [HybrIK](#hybrik)
   - [COCO](#coco)
   - [Human3.6M](#human36m)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [PW3D](#pw3d)
 
-Convert datasets with the following `dataset-names`:
+使用如下的数据集名称替换`dataset-names`进行数据转换:
 ```
 h36m_hybrik, pw3d_hybrik, mpi_inf_3dhp_hybrik, coco_hybrik
 ```
 
-**Alternatively**, you may download the preprocessed files directly:
+**或者**, 您可以先下载处理好的.npz文件:
 - [hybriK_coco_2017_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_coco_2017_train.npz?versionId=CAEQHhiBgMDA6rjT6xciIDE3N2FiZDkxYTkyZDRjN2ZiYjc1ODQ2YTc5NjY0ZmFl)
 - [hybrik_h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_h36m_train.npz?versionId=CAEQHhiBgIC_iLjT6xciIGE4NmQ5YzUxMzY0ZjQ0Y2U5MWFkOTkwNmIwMGI4NTNm)
 - [hybrik_mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgICogLjT6xciIDQwYzRlYTVlOTE0YTQ4ZDRhYTljOGRkZDc1MDhjNDgy)
 - [hybrik_pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/hybrik_pw3d_test.npz?versionId=CAEQHhiBgMCO8LfT6xciIDhjMDFhOTFmZjY4MDQ4MWI4MzVmODYyYTc1NTYwNjA1)
 
 
-The preprocessed datasets should have this structure:
+处理好的数据集应该具有如下的结构:
 ```text
 mmhuman3d
 ├── mmhuman3d
@@ -304,7 +301,7 @@ mmhuman3d
         └── hybrik_pw3d_test.npz
 ```
 
-For PARE training, the following datasets are required:
+训练PARE算法, 需要如下的数据集:
   - [Human3.6M](#human36m)
   - [Human3.6M Mosh](#human36m-mosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
@@ -314,12 +311,12 @@ For PARE training, the following datasets are required:
   - [PW3D](#pw3d)
 
 
-Convert datasets with the following `dataset-names`:
+使用如下的数据集名称替换`dataset-names`进行数据转换:
 ```
 h36m, coco, mpii, lspet, mpi-inf-3dhp, pw3d
 ```
 
-**Alternatively**, you may download the preprocessed files directly:
+**或者**, 您可以先下载处理好的.npz文件:
 - [h36m_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_train.npz?versionId=CAEQHhiBgMDrrfbS6xciIGY2NjMxMjgwMWQzNjRkNWJhYTNkZTYyYWUxNWQ4ZTE5)
 - [mpi_inf_3dhp_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/mpi_inf_3dhp_train.npz?versionId=CAEQHhiBgMD3q_bS6xciIGQwYjc4NTRjYTllMzRkODU5NTNiZDQyOTBlYmRhODg5)
 - [eft_mpii.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/eft_mpii.npz?versionId=CAEQOhiBgMCXlty_gxgiIDYxNDc5YTIzZjBjMDRhMGM5ZjBiZmYzYjFjMTU1ZTRm)
@@ -329,7 +326,7 @@ h36m, coco, mpii, lspet, mpi-inf-3dhp, pw3d
 - [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
 
 
-The preprocessed datasets should have this structure:
+处理好的数据集应该具有如下的结构:
 ```text
 mmhuman3d
 ├── mmhuman3d
@@ -349,7 +346,7 @@ mmhuman3d
         └── pw3d_test.npz
 ```
 
-## Folder structure
+## 文件夹结构
 
 ### AGORA
 
@@ -371,7 +368,7 @@ mmhuman3d
 
 </details>
 
-For [AGORA](https://agora.is.tue.mpg.de/index.html), please download the [dataset](https://agora.is.tue.mpg.de/download.php) and place them in the folder structure below:
+请从[这里](https://agora.is.tue.mpg.de/index.html)下载AGORA数据集，并按照如下结构放置文件夹:
 
 ```text
 mmhuman3d
@@ -432,9 +429,9 @@ mmhuman3d
 
 </details>
 
-Details for direct preprocessing will be added in the future.
+未来会添加更多关于处理AMASS数据集的细节。
 
-**Alternatively**, you may download the preprocessed files directly:
+**或者**, 您可以直接下载处理好的.npz文件:
 - [amass_smplh.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/amass_smplh.npz?versionId=CAEQIhiBgICS4Mrt7xciIGU5MDBmZmE4Y2I0NjRiYTc4ZWY2NzY2MzU1ZmIwZTQ2)
 - [amass_smplx.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/amass_smplx.npz?versionId=CAEQIhiBgIDh387t7xciIGRlN2JlZjA0ZGM0YzRkNmM5OWJhNmVjMmZlN2RiN2E1)
 
@@ -458,8 +455,8 @@ Details for direct preprocessing will be added in the future.
 
 </details>
 
-For [COCO](http://cocodataset.org/) data, please download from [COCO download](http://cocodataset.org/#download). COCO'2014 Train is needed for HMR training and COCO'2017 Train is needed for HybrIK trainig.
-Download and extract them under  `$MMHUMAN3D/data/datasets`, and make them look like this:
+请从[这里](http://cocodataset.org/#download)下载`COCO`数据集。其中，训练HMR需要`COCO2014`，训练HybrIK需要`COCO2017`。
+下载并解压至  `$MMHUMAN3D/data/datasets`, 使它们具有如下的结构:
 
 ```text
 mmhuman3d
@@ -514,8 +511,8 @@ mmhuman3d
 
 </details>
 
-For [COCO-WholeBody](https://github.com/jin-s13/COCO-WholeBody/) dataset, images can be downloaded from [COCO download](http://cocodataset.org/#download), 2017 Train/Val is needed for COCO keypoints training and validation.
-Download and extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+请从[这里](http://cocodataset.org/#download)下载[COCO-WholeBody](https://github.com/jin-s13/COCO-WholeBody/)数据集(2017 train/val)中的图像，从[这里](https://github.com/jin-s13/COCO-WholeBody/)下载标注文件。
+解压至`$MMHUMAN3D/data/datasets`文件夹，并使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -565,8 +562,7 @@ mmhuman3d
 
 </details>
 
-For [CrowdPose](https://github.com/Jeff-sjtu/CrowdPose) data, please download from [CrowdPose](https://github.com/Jeff-sjtu/CrowdPose).
-Download and extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载[CrowdPose](https://github.com/Jeff-sjtu/CrowdPose)数据集，并解压至文件夹`$MMHUMAN3D/data/datasets`，使其具有如下结构：
 
 ```text
 mmhuman3d
@@ -607,8 +603,7 @@ mmhuman3d
 
 </details>
 
-For [EFT](https://github.com/facebookresearch/eft) data, please download from [EFT](https://github.com/facebookresearch/eft).
-Download and extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载[EFT](https://github.com/facebookresearch/eft)数据集，解压至`$MMHUMAN3D/data/datasets`，并使其具有如下结构:
 
 ```text
 mmhuman3d
@@ -673,7 +668,8 @@ More details are coming soon!
 
 </details>
 
-For [Human3.6M](http://vision.imar.ro/human3.6m/description.php), please download from the official website and run the [preprocessing script](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py), which will extract pose annotations at downsampled framerate (10 FPS). The processed data should have the following structure:
+从官网下载[Human3.6M](http://vision.imar.ro/human3.6m/description.php)数据集，并使用[脚本](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py)进行预处理，间隔5帧提取标注。
+处理过的数据集具有如下的结构:
 
 ```text
 mmhuman3d
@@ -690,7 +686,7 @@ mmhuman3d
             |   ├── images
             |   |    |── S1_Directions_1.54138969
             |   |    |  ├── S1_Directions_1.54138969_00001.jpg
-            |   |    |  ├── S1_Directions_1.54138969_00006.jpg
+            |   |    |  ├── S1_Directions_1.54138969_00002.jpg
             |   |    |  └── ...
             |   |    └── ...
             |   ├── MyPoseFeatures
@@ -711,14 +707,14 @@ mmhuman3d
             └── metadata.xml
 ```
 
-To extract images from [Human3.6M](http://vision.imar.ro/human3.6m/description.php) original videos, modify the `h36m_p1` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
+修改[配置文件](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py)中的`h36m_p1`，从原始的[Human3.6M](http://vision.imar.ro/human3.6m/description.php)数据集中的视频提取图像。
 
 ```python
 h36m_p1=dict(
     type='H36mConverter',
     modes=['train', 'valid'],
     protocol=1,
-    extract_img=True, # set to true to extract images from raw videos
+    extract_img=True, # 从原视频中提取图像，设置为True
     prefix='h36m'),
 ```
 
@@ -726,32 +722,32 @@ h36m_p1=dict(
 
 <!-- [DATASET] -->
 
-For data preparation of [Human3.6M](http://vision.imar.ro/human3.6m/description.php) for HMR, SPIN and PARE training, we use the [MoShed](https://mosh.is.tue.mpg.de/) data provided in [HMR](https://github.com/akanazawa/hmr) for training. However, due to license limitations, we are not allowed to redistribute the data. Even if you do not have access to these parameters, you can still generate the preprocessed h36m npz file without mosh parameters using our [converter](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py).
+我们使用[HMR](https://github.com/akanazawa/hmr)提供的[MoShed](https://mosh.is.tue.mpg.de/)数据集训练`HMR`、`SPIN`和`PARE`。由于版权的限制，我们无法上传该数据集。即使没有使用mosh参数的许可，仍可使用我们提供的[转换脚本](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m.py)生成h36m的.npz文件。
 
-You will need to extract images from raw videos for training. Do note that preprocessing can take a long time if image extraction is required. To do so, modify the `h36m_p1` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
+修改[配置文件](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py)中的`h36m_p1`，从原始的[Human3.6M](http://vision.imar.ro/human3.6m/description.php)数据集中的视频提取图像。
 
-Config without mosh:
+不具有mosh数据的配置文件:
 ```python
 h36m_p1=dict(
     type='H36mConverter',
     modes=['train', 'valid'],
     protocol=1,
-    extract_img=True,  # this is to specify you want to extract images from videos
+    extract_img=True,  # 从原视频中提取图像，设置为True
     prefix='h36m'),
 ```
 
-Config with mosh:
+具有mosh数据的配置文件:
 ```python
 h36m_p1=dict(
     type='H36mConverter',
     modes=['train', 'valid'],
     protocol=1,
-    extract_img=True,  # this is to specify you want to extract images from videos
-    mosh_dir='data/datasets/h36m_mosh', # supply the directory to the mosh if available
+    extract_img=True,  # 从原视频中提取图像，设置为True
+    mosh_dir='data/datasets/h36m_mosh', # 如果拥有mosh数据，指定其的路径
     prefix='h36m'),
 ```
 
-If you have MoShed data available, it should have the following structure:
+如果您可以获取到Human3.6m的Mosh数据，整个文件夹应该具有如下的架构：
 
 ```text
 mmhuman3d
@@ -797,7 +793,7 @@ mmhuman3d
 
 </details>
 
-For [HybrIK](https://github.com/Jeff-sjtu/HybrIK), please download the parsed [json annotation files](https://github.com/Jeff-sjtu/HybrIK#fetch-data) and place them in the folder structure below:
+下载[HybrIK](https://github.com/Jeff-sjtu/HybrIK)数据集的[标注](https://github.com/Jeff-sjtu/HybrIK#fetch-data), 并使其文件夹具有如下的结构:
 
 ```text
 mmhuman3d
@@ -816,8 +812,8 @@ mmhuman3d
             └── annotation_mpi_inf_3dhp_test.json
 ```
 
-To convert the preprocessed json files into npz files used for our pipeline,
-run the following preprocessing scripts:
+运行如下脚本，将.json文件处理成mmhuman3d中使用的.npz文件：
+
   - [Human3.6M](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/h36m_hybrik.py)
   - [PW3D](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/pw3d_hybrik.py)
   - [Mpi-Inf-3dhp](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/data/data_converters/mpi_inf_3dhp_hybrik.py)
@@ -845,9 +841,7 @@ run the following preprocessing scripts:
 ```
 </details>
 
-For [LSP](https://sam.johnson.io/research/lsp.html), please download the high resolution version
-[LSP dataset original](http://sam.johnson.io/research/lsp_dataset_original.zip).
-Extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载具有高分辨率的LSP数据集[LSP dataset original](http://sam.johnson.io/research/lsp_dataset_original.zip)，解压至文件夹`$MMHUMAN3D/data/datasets`，并使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -886,9 +880,7 @@ mmhuman3d
 
 </details>
 
-For [LSPET](https://sam.johnson.io/research/lspet.html), please download its high resolution form
-[HR-LSPET](http://datasets.d2.mpi-inf.mpg.de/hr-lspet/hr-lspet.zip).
-Extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载具有高分辨率的LSPET数据集[HR-LSPET](http://datasets.d2.mpi-inf.mpg.de/hr-lspet/hr-lspet.zip)，解压至文件夹`$MMHUMAN3D/data/datasets`，并使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -927,17 +919,18 @@ mmhuman3d
 ```
 </details>
 
-You will need to extract images from raw videos for training. Do note that preprocessing can take a long time if image extraction is required. To do so, modify the `mpi_inf_3dhp` config in [DATASET_CONFIG](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py):
+修改[配置文件](https://github.com/open-mmlab/mmhuman3d/blob/main/tools/convert_datasets.py)中的`mpi_inf_3dhp`，从原始视频中提取图像。
+请注意，这会花费较长的时间。
 
 Config:
 ```python
 mpi_inf_3dhp=dict(
   type='MpiInf3dhpConverter',
   modes=['train', 'test'],
-  extract_img=True),  # this is to specify you want to extract images from videos
+  extract_img=True),  # 从原视频中提取图像，设置为True
 ```
 
-For [MPI-INF-3DHP](http://gvv.mpi-inf.mpg.de/3dhp-dataset/), download and extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载[MPI-INF-3DHP](http://gvv.mpi-inf.mpg.de/3dhp-dataset/)数据集, 解压至文件夹`$MMHUMAN3D/data/datasets`, 使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -1003,8 +996,8 @@ mmhuman3d
 
 </details>
 
-For [MPII](http://human-pose.mpi-inf.mpg.de/) data, please download images from [MPII Human Pose Dataset](http://human-pose.mpi-inf.mpg.de/ and annotations from [here](https://github.com/princeton-vl/pose-hg-train/tree/master/data/mpii/annot?rgh-link-date=2020-07-05T04%3A14%3A02Z).
-Extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载[MPII](http://human-pose.mpi-inf.mpg.de/#download)数据集，并从[这里](https://github.com/princeton-vl/pose-hg-train/tree/master/data/mpii/annot?rgh-link-date=2020-07-05T04%3A14%3A02Z)下载标注。
+解压至文件夹`$MMHUMAN3D/data/datasets`, 使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -1043,8 +1036,7 @@ mmhuman3d
 
 </details>
 
-For [PoseTrack18](https://posetrack.net/users/download.php) data, please download from [PoseTrack18](https://posetrack.net/users/download.php).
-Extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载[PoseTrack18](https://posetrack.net/users/download.php)数据集，解压至文件夹`$MMHUMAN3D/data/datasets`，使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -1109,8 +1101,7 @@ mmhuman3d
 
 </details>
 
-For [Penn Action](http://dreamdragon.github.io/PennAction/) data, please download from [Penn Action](https://upenn.box.com/PennAction).
-Extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载[Penn Action](https://upenn.box.com/PennAction)数据集，解压至文件夹`$MMHUMAN3D/data/datasets`，使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -1153,8 +1144,7 @@ month = {sep}
 
 </details>
 
-For [PW3D](https://virtualhumans.mpi-inf.mpg.de/3DPW/) data, please download from [PW3D Dataset](https://virtualhumans.mpi-inf.mpg.de/3DPW/).
-Extract them under `$MMHUMAN3D/data/datasets`, and make them look like this:
+下载[PW3D](https://virtualhumans.mpi-inf.mpg.de/3DPW/)数据集，解压至文件夹`$MMHUMAN3D/data/datasets`，并使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -1204,7 +1194,7 @@ mmhuman3d
 
 </details>
 
-For [SPIN](https://github.com/nkolot/SPIN), please download the [preprocessed npz files](https://github.com/nkolot/SPIN/blob/master/fetch_data.sh) and place them in the folder structure below:
+下载经过处理的[.npz 文件](https://github.com/nkolot/SPIN/blob/master/fetch_data.sh)，使文件夹具有如下的结构:
 
 ```text
 mmhuman3d
@@ -1243,7 +1233,7 @@ mmhuman3d
 
 </details>
 
-For [SURREAL](https://www.di.ens.fr/willow/research/surreal/), please download the [dataset] (https://www.di.ens.fr/willow/research/surreal/data/) and place them in the folder structure below:
+下载[SURREAL](https://www.di.ens.fr/willow/research/surreal/data/)数据集，并使其具有如下的结构:
 
 ```text
 mmhuman3d
@@ -1297,7 +1287,7 @@ mmhuman3d
 
 </details>
 
-For [VIBE](https://github.com/mkocabas/VIBE), please download the [preprocessed mpi_inf_3dhp and pw3d npz files from SPIN](https://github.com/nkolot/SPIN/blob/master/fetch_data.sh) and pretrained frame feature extractor [spin.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/vibe/spin.pth?versionId=CAEQHhiBgIDrxqbU6xciIGIzOWFkMWYyNzMwMjRhMzBiYzM3NDFiMmVkY2JkZTVh). Place them in the folder structure below:
+请下载经过处理的`mpi_inf_3dhp`与`pw3d`的[.npz 文件](https://github.com/nkolot/SPIN/blob/master/fetch_data.sh)，以及预训练之后的特征提取权重 [spin.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/vibe/spin.pth?versionId=CAEQHhiBgIDrxqbU6xciIGIzOWFkMWYyNzMwMjRhMzBiYzM3NDFiMmVkY2JkZTVh)。 将文件夹整理成如下的结构:
 
 ```text
 mmhuman3d

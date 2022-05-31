@@ -38,6 +38,7 @@ If your dataset requires different handling (modes) for training and test set, y
 @DATA_CONVERTERS.register_module()
 class LspConverter(BaseModeConverter):
 
+    """
     Args:
         modes (list): 'test' and/or 'train' for accepted modes
     """
