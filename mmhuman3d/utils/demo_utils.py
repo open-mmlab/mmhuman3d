@@ -158,7 +158,7 @@ def convert_bbox_to_intrinsic(bboxes: np.ndarray,
     """Convert bbox to intrinsic parameters.
 
     Args:
-        bbox (np.ndarray): (frame, num_person, 4) or (frame, 4)
+        bbox (np.ndarray): (frame, num_person, 4), (frame, 4), or (4,)
         img_width (int): image width of training data.
         img_height (int): image height of training data.
         bbox_scale_factor (float): scale factor for expanding the bbox.
@@ -167,7 +167,7 @@ def convert_bbox_to_intrinsic(bboxes: np.ndarray,
             'xywh' means the left-up point and the width and height of the
             bbox.
     Returns:
-        np.ndarray: (frame, num_person, 3, 3) or  (frame, 3, 3)
+        np.ndarray: (frame, num_person, 3, 3), (frame, 3, 3) or (3,3)
     """
     if not isinstance(bboxes, np.ndarray):
         raise TypeError(
@@ -258,20 +258,22 @@ def convert_kp2d_to_bbox(
     return bbox
 
 
-def conver_verts_to_cam_coord(verts,
-                              pred_cams,
-                              bboxes_xy,
-                              focal_length=5000.,
-                              bbox_scale_factor=1.25,
-                              bbox_format='xyxy'):
+def convert_verts_to_cam_coord(verts,
+                               pred_cams,
+                               bboxes_xy,
+                               focal_length=5000.,
+                               bbox_scale_factor=1.25,
+                               bbox_format='xyxy'):
     """Convert vertices from the world coordinate to camera coordinate.
 
     Args:
         verts ([np.ndarray]): The vertices in the world coordinate.
-            The shape is (frame,num_person,6890,3) or (frame,6890,3).
+            The shape is (frame,num_person,6890,3), (frame,6890,3),
+            or (6890,3).
         pred_cams ([np.ndarray]): Camera parameters estimated by HMR or SPIN.
-            The shape is (frame,num_person,3) or (frame,6890,3).
-        bboxes_xy ([np.ndarray]): (frame, num_person, 4|5) or (frame, 4|5)
+            The shape is (frame,num_person,3), (frame,3), or (3,).
+        bboxes_xy ([np.ndarray]): (frame, num_person, 4|5), (frame, 4|5),
+            or (4|5,)
         focal_length ([float],optional): Defined same as your training.
         bbox_scale_factor (float): scale factor for expanding the bbox.
         bbox_format (Literal['xyxy', 'xywh'] ): 'xyxy' means the left-up point
@@ -302,6 +304,10 @@ def conver_verts_to_cam_coord(verts,
         verts = np.einsum('fnij,fnkj->fnki', Ks, verts)
     elif verts.ndim == 3:
         verts = np.einsum('fij,fkj->fki', Ks, verts)
+    elif verts.ndim == 2:
+        verts = np.einsum('fij,fkj->fki', Ks, verts[None])
+    else:
+        raise ValueError('Wrong input verts shape {verts.shape}')
     return verts, K0
 
 
