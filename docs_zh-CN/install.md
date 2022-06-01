@@ -14,12 +14,12 @@
 - CUDA 9.2+
 - GCC 5+
 - PyTorch3D 0.4+
-- [MMCV](https://github.com/open-mmlab/mmcv) (请安装用于GPU的mmcv-full, 要求版本>=1.3.13, <=1.5.0)
+- [MMCV](https://github.com/open-mmlab/mmcv) (请安装用于GPU的mmcv-full, 要求版本>=1.3.17,<1.6.0)
 
 Optional:
 - [MMPose](https://github.com/open-mmlab/mmpose) (只用于演示)
 - [MMDetection](https://github.com/open-mmlab/mmdetection) (只用于演示)
-- [MMTracking](https://github.com/open-mmlab/mmtracking) (只用于多人的演示。请安装 mmcls<1.18.0, mmcv-full>=1.3.16, <1.4.0)
+- [MMTracking](https://github.com/open-mmlab/mmtracking) (只用于多人的演示。请安装 mmcls<1.18.0, mmcv-full>=1.3.16,<1.6.0)
 
 ## 准备环境
 
@@ -91,13 +91,13 @@ pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/{torch_ver
 
 对于 GPU:
  ```shell
- pip install "mmcv-full>=1.3.13,<1.4.0" -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
+ pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
  ```
 使用您的cuda版本号和pytorch版本号替换`{cu_version}`和`{torch_version}`
 
 以在CUDA 10.2和PyTorch 1.8.0的环境下, 安装mmcv-full为例:
 ```shell
-pip install "mmcv-full>=1.3.13,<1.4.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 ```
 您可以从[这里](https://mmcv.readthedocs.io/en/latest/get_started/installation.html)查看适配于不同CUDA版本和PyTorch版本的MMCV.
 更多版本的下载信息，请参考[openmmlab-download](https://download.openmmlab.com/mmcv/dist/index.html).
@@ -105,7 +105,7 @@ pip install "mmcv-full>=1.3.13,<1.4.0" -f https://download.openmmlab.com/mmcv/di
 您也可以使用如下命令，从源码编译mmcv
 
 ```shell
-git clone https://github.com/open-mmlab/mmcv.git -b v1.3.13
+git clone https://github.com/open-mmlab/mmcv.git -b v1.3.17
 cd mmcv
 MMCV_WITH_OPS=1 pip install -e .  # 执行此步骤会安装包含cuda算子的mmcv-full
 # 或者运行 pip install -e .  # 执行此步骤会安装不包含cuda算子的mmcv
@@ -187,7 +187,7 @@ conda install pytorch3d -c pytorch3d
 
 # 安装 mmcv-full
 
-pip install "mmcv-full>=1.3.13,<1.4.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
 
 # 可选

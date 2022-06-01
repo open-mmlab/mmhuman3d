@@ -18,12 +18,12 @@
 - CUDA 9.2+
 - GCC 5+
 - PyTorch3D 0.4+
-- [MMCV](https://github.com/open-mmlab/mmcv) (Please install mmcv-full>=1.3.13, <=1.5.0 for GPU)
+- [MMCV](https://github.com/open-mmlab/mmcv) (Please install mmcv-full>=1.3.17,<1.6.0 for GPU)
 
 Optional:
 - [MMPOSE](https://github.com/open-mmlab/mmpose) (Only for demo.)
 - [MMDETECTION](https://github.com/open-mmlab/mmdetection) (Only for demo.)
-- [MMTRACKING](https://github.com/open-mmlab/mmtracking) (Only for multi-person demo. If you use mmtrack, please install mmcls<1.18.0, mmcv-full>=1.3.16, <1.4.0 for GPU)
+- [MMTRACKING](https://github.com/open-mmlab/mmtracking) (Only for multi-person demo. If you use mmtrack, please install mmcls<1.18.0, mmcv-full>=1.3.16,<1.6.0 for GPU
 
 ## Prepare environment
 
@@ -95,13 +95,13 @@ Please replace `{torch_version}` in the url to your desired one.
 
 For GPU:
  ```shell
- pip install "mmcv-full>=1.3.13,<1.4.0" -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
+ pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
  ```
 Please replace `{cu_version}` and `{torch_version}` in the url to your desired one.
 
 For example, to install mmcv-full with CUDA 10.2 and PyTorch 1.8.0, use the following command:
 ```shell
-pip install "mmcv-full>=1.3.13,<1.4.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 ```
 
 See [here](https://mmcv.readthedocs.io/en/latest/get_started/installation.html) for different versions of MMCV compatible to different PyTorch and CUDA versions.
@@ -110,7 +110,7 @@ For more version download link, refer to [openmmlab-download](https://download.o
 Optionally you can choose to compile mmcv from source by the following command
 
 ```shell
-git clone https://github.com/open-mmlab/mmcv.git -b v1.3.13
+git clone https://github.com/open-mmlab/mmcv.git -b v1.3.17
 cd mmcv
 MMCV_WITH_OPS=1 pip install -e .  # package mmcv-full, which contains cuda ops, will be installed after this step
 # OR pip install -e .  # package mmcv, which contains no cuda ops, will be installed after this step
@@ -192,7 +192,7 @@ conda install pytorch3d -c pytorch3d
 
 # install mmcv-full
 
-pip install "mmcv-full>=1.3.13,<1.4.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
 
 # Optional
