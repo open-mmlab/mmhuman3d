@@ -548,7 +548,7 @@ class SMPLify(object):
             #     torch.Tensor([self.img_res / 2,
             #                   self.img_res / 2]).to(model_joints.device))
             projected_joints_xyd = self.camera.transform_points_screen(
-                model_joints)
+                model_joints + torch.ones_like(model_joints) * 1e-9)
             projected_joints = projected_joints_xyd[..., :2]
 
             # normalize keypoints to [-1,1]
