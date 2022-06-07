@@ -153,7 +153,7 @@ if __name__ == '__main__':
     body_model = build_body_model(
             dict(type='SMPL', model_path='data/body_models/smpl'))
     faces = torch.tensor(body_model.faces.astype(np.float32))[None].to(device)
-    downsampling = 2
+    downsampling = None
     if downsampling is not None:
         assert downsampling == 1 or downsampling ==2, \
             f"Only support 1 or 2, but got {downsampling}."

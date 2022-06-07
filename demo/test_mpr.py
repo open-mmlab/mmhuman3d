@@ -8,6 +8,22 @@ from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.models.builder import build_body_model
 from mmhuman3d.utils.demo_utils import conver_verts_to_cam_coord
 
+def colormap_z(z, vmin=None, vmax=None, verbose_vlims=False, inverse_cmap=True, v_pad=.5, percentile=1):
+    vmin, vmax = get_vlims(z, vmin=vmin, vmax=vmax, v_pad=v_pad, percentile=percentile, verbose_vlims=verbose_vlims)
+
+    z_vis = deepcopy(z)
+    if inverse_cmap:
+        z_vis[z == 0] = vmax
+        cm = matplotlib.cm.viridis_r
+    else:
+        z_vis[z == 0] = vmin
+        cm = matplotlib.cm.viridis
+
+    z_vis = (z_vis - vmin) / (vmax - vmin)
+
+    colored = cm(z_vis)[..., :3]
+
+    return colored
 
 class VisualizerMeshSMPL:
     def __init__(
@@ -32,7 +48,7 @@ class VisualizerMeshSMPL:
         self.z = z
         self.normals = normals
         self.sides = sides
-        self.no_dist = False
+        self.no_dist = True
         # if K is not None:
         #     assert isinstance(size, dict)
         #     if scale is None:
@@ -103,7 +119,7 @@ class VisualizerMeshSMPL:
                 )
                 t = torch.tensor([[0, -t_up, self.z]], dtype=torch.float32, device=self.device)
 
-                vertices_transformed = vertices 
+                vertices_transformed = vertices @ R.T + t
 
             if self.normals:
                 coords, normals = mpr.estimate_normals(
@@ -169,7 +185,10 @@ if __name__ == '__main__':
 
     # mpr.Pinhole2D(fx=focal_length,fy=focal_length,cx=112.,cy=112.,w=1080,h=1920)
     vis_smpl = VisualizerMeshSMPL(device='cuda',body_models=body_model)
-
-    img = vis_smpl.vertices2vis(verts[0])
+    import time
+    T = time.time()
+    for i in range(100):
+        img = vis_smpl.vertices2vis(verts)
+    print(time.time()-T)
     cv2.imwrite('./test.png', img)
 

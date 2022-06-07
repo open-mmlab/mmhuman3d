@@ -14,7 +14,11 @@ if __name__ == "__main__":
         # "actor_name":"rp_yasmin_rigged_009",
         "motion_category":"human_data",
         "regenerate":False,
-        "output_smpl":False
+        "output_smplx":False,
+        "output_bbox":False,
+        "output_fbx":True,
+        "output_mo_json":True,
+
     }
     retarget_url = 'http://10.10.30.159:8763/api/v1/retargeting/retarget/'
     resp = requests.post(retarget_url, json=params)
@@ -28,8 +32,8 @@ if __name__ == "__main__":
         raise RuntimeError(err_msg)
     resp_content = resp_json['content']
 
-    assert 'motion_url' in resp_content, f'{resp_content}'
-    assert 'bbox_url' in resp_content, f'{resp_content}'
-    fbx_url, bbox_url = resp_content['motion_url'], resp_content['bbox_url']
+    # assert 'motion_url' in resp_content, f'{resp_content}'
+    # assert 'bbox_url' in resp_content, f'{resp_content}'
+    # resp_content['mo_json'] 
 
-    print(fbx_url,bbox_url)
+    print(resp_content['motion_url'])

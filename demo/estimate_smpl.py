@@ -175,12 +175,17 @@ def single_person_with_mmdet(args, frames_iter):
                     'keypoints_3d': np.zeros((17, 3)),
                 }]
             else:
-                mesh_results = inference_image_based_model(
-                    mesh_model,
-                    frames_iter[frame_id],
-                    result,
-                    bbox_thr=args.bbox_thr,
-                    format='xyxy')
+                import time
+                T = time.time()
+                for i in range(1):
+
+                    mesh_results = inference_image_based_model(
+                        mesh_model,
+                        frames_iter[frame_id],
+                        result,
+                        bbox_thr=args.bbox_thr,
+                        format='xyxy')
+                # print(time.time() - T)
         else:
             raise (f'{mesh_model.cfg.model.type} is not supported yet')
 
