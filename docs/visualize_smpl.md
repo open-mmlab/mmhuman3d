@@ -198,10 +198,10 @@
     2). You pass `verts` directly and the above three will be ignored. The `body_model` or `model_path` is still required if you pass`verts` since we need to get the `faces`.
     The priority order is `verts` > (`poses` & `betas` & `transl` & `gender`).
     Check the docstring for details.
-    3) for multi-person, you should have an extra dim for num_person. E.g., shape of smpl `verts` should be (num_frame, num_person, 6890, 3), shape of smpl `poses` should be (num_frame, num_person, 72), shape of smpl `betas` should be (num_frame, num_person, 10), shape of vibe `pred_cam` should be (num_frame, num_person, 3). This doesn't have influence on `K`, `R`, `T` since they are for every frame.
+    3). for multi-person, you should have an extra dim for num_person. E.g., shape of smpl `verts` should be (num_frame, num_person, 6890, 3), shape of smpl `poses` should be (num_frame, num_person, 72), shape of smpl `betas` should be (num_frame, num_person, 10), shape of vibe `pred_cam` should be (num_frame, num_person, 3). This doesn't have influence on `K`, `R`, `T` since they are for every frame.
 
 - **body model:**
-    There area two ways to pass body model:
+    There are two ways to pass body model:
     1). You pass a dict `body_model_config` which containing the same configs as build_body_model
     2). You pass `body_model` directly and the above three will be ignored.
     The priority order is `body_model` > (`model_path` & `model_type` & `gender`).
@@ -210,5 +210,5 @@
 - **output path:**
     Output_path could be `None` or `str` of video path or `str` of image folder path.
     1). If `None`, no output file will be wrote.
-    1). If a video path like `xxx.mp4`, a video file will be wrote. Make sure you have enough space for temporal images. The images will be removed automatically.
-    1). If a image folder path like `xxx/`, a folder will be created and the images will be wrote into it.
+    2). If a video path like `xxx.mp4`, a video file will be wrote. Make sure you have enough space for temporal images. The images will be removed automatically.
+    3). If a image folder path like `xxx/`, a folder will be created and the images will be wrote into it.
