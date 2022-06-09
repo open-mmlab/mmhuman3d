@@ -29,7 +29,7 @@
     If you want to visualize a T-pose smpl or your poses do not have global_orient, you can do:
     ```python
     import torch
-    from mmhuman3d.core.visualization. import visualize_T_pose
+    from mmhuman3d.core.visualization.visualize_smpl import visualize_T_pose
     body_model_config = dict(
         type='smpl', model_path=model_path)
     visualize_T_pose(
