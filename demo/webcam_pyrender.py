@@ -4,29 +4,21 @@ import time
 from collections import deque
 from queue import Queue
 from threading import Event, Lock, Thread
-
+import pyrender
 import torch
 import cv2
 import numpy as np
 import mmcv
 import trimesh
-# from mmpose.apis import init_pose_model
-from pytorch3d.renderer import FoVOrthographicCameras, FoVPerspectiveCameras
+
 from mmhuman3d.models.builder import build_body_model
 from mmpose.utils import StopWatch
-from mmpose.core.visualization import imshow_keypoints,imshow_mesh_3d
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import tensor2array
-from mmhuman3d.core.visualization.renderer import build_renderer
-from mmhuman3d.core.conventions.cameras.convert_convention import \
-    convert_camera_matrix  # prevent yapf isort conflict
-from mmhuman3d.utils.demo_utils import convert_bbox_to_intrinsic, conver_verts_to_cam_coord, get_default_hmr_intrinsic, smooth_process
-from mmhuman3d.core.cameras.builder import build_cameras
-from pytorch3d.renderer.mesh.textures import TexturesVertex
-from pytorch3d.structures import Meshes
+from mmhuman3d.utils.demo_utils import conver_verts_to_cam_coord
+
+
 from mmhuman3d.utils.transforms import rotmat_to_aa
 from mmhuman3d.core.visualization import visualize_kp2d
 from mmhuman3d.apis import inference_image_based_model,init_model
-from mmhuman3d.core.visualization import visualize_smpl_hmr
 from mmhuman3d.utils.demo_utils import process_mmdet_results
 import scipy.sparse
 try:
@@ -40,6 +32,88 @@ try:
     psutil_proc = psutil.Process()
 except (ImportError, ModuleNotFoundError):
     psutil_proc = None
+
+
+class Renderer(object):
+    
+    def __init__(self, focal_length=5000., height=224., width=224.,**kwargs):
+        # self.renderer = pyrender.OffscreenRenderer(height, width)
+        self.renderer = pyrender.OffscreenRenderer(640, 480)
+        self.camera_center = np.array([width / 2., height / 2.])
+        self.focal_length = focal_length
+        self.colors = [
+                        (.7, .7, .6, 1.),
+                        (.7, .5, .5, 1.),  # Pink
+                        (.5, .5, .7, 1.),  # Blue
+                        (.5, .55, .3, 1.),  # capsule
+                        (.3, .5, .55, 1.),  # Yellow
+                    ]
+
+    def __call__(self, verts, faces, colors=None,focal_length=None,camera_pose=None,**kwargs):
+        # Need to flip x-axis
+        rot = trimesh.transformations.rotation_matrix(
+            np.radians(180), [1, 0, 0])
+
+        #self.renderer.viewport_height = img.shape[0]
+        #self.renderer.viewport_width = img.shape[1]
+        num_people = verts.shape[0]
+        verts = verts.detach().cpu().numpy()
+        if isinstance(faces, torch.Tensor):
+        	faces = faces.detach().cpu().numpy()
+
+        # Create a scene for each image and render all meshes
+        scene = pyrender.Scene(bg_color=[0.0, 0.0, 0.0, 0.0],
+                               ambient_light=(0.3, 0.3, 0.3))
+
+        
+        # Create camera. Camera will always be at [0,0,0]
+        # CHECK If I need to swap x and y
+        if camera_pose is None:
+            camera_pose = np.eye(4)
+
+        if focal_length is None:
+            fx,fy = self.focal_length, self.focal_length
+        else:
+            fx,fy = focal_length, focal_length
+        camera = pyrender.camera.IntrinsicsCamera(fx=fx, fy=fy,
+                                                  cx=self.camera_center[0], cy=self.camera_center[1])
+        scene.add(camera, pose=camera_pose)
+        # Create light source
+        light = pyrender.DirectionalLight(color=[1.0, 1.0, 1.0], intensity=0.5)
+        # for every person in the scene
+        for n in range(num_people):
+            mesh = trimesh.Trimesh(verts[n], faces[n])
+            mesh.apply_transform(rot)
+            trans = np.array([0,0,0])
+            if colors is None:
+                mesh_color = self.colors[0] #self.colors[n % len(self.colors)]
+            else:
+                mesh_color = colors[n % len(colors)]
+            material = pyrender.MetallicRoughnessMaterial(
+                metallicFactor=0.2,
+                alphaMode='OPAQUE',
+                baseColorFactor=mesh_color)
+            mesh = pyrender.Mesh.from_trimesh(
+                mesh,
+                material=material)
+            scene.add(mesh, 'mesh')
+
+            # Use 3 directional lights
+            light_pose = np.eye(4)
+            light_pose[:3, 3] = np.array([0, -1, 1]) + trans
+            scene.add(light, pose=light_pose)
+            light_pose[:3, 3] = np.array([0, 1, 1]) + trans
+            scene.add(light, pose=light_pose)
+            light_pose[:3, 3] = np.array([1, 1, 2]) + trans
+            scene.add(light, pose=light_pose)
+        # Alpha channel was not working previously need to check again
+        # Until this is fixed use hack with depth image to get the opacity
+        color, rend_depth = self.renderer.render(scene, flags=pyrender.RenderFlags.RGBA)
+        return color
+
+    def delete(self):
+        self.renderer.delete()
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -80,14 +154,9 @@ def parse_args():
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
-        '--det-score-thr',
-        type=float,
-        default=0.5,
-        help='bbox score threshold')
-    parser.add_argument(
         '--bbox_thr',
         type=float,
-        default=0.6,
+        default=0.5,
         help='Bounding box score threshold')
     parser.add_argument(
         '--smooth_type',
@@ -95,11 +164,6 @@ def parse_args():
         default=None,
         help='Smooth the data through the specified type.'
         'Select in [oneeuro,gaus1d,savgol].')        
-    parser.add_argument(
-        '--out_video_fps',
-        type=int,
-        default=20,
-        help='Set the FPS of the output video file.')
 
     parser.add_argument(
         '--buffer_size',
@@ -111,7 +175,7 @@ def parse_args():
     parser.add_argument(
         '--inference_fps',
         type=int,
-        default=10,
+        default=20,
         help='Maximum inference FPS. This is to limit the resource consuming '
         'especially when the detection and pose model are lightweight and '
         'very fast. Default: 10.')
@@ -126,7 +190,7 @@ def parse_args():
 
     parser.add_argument(
         '--synchronous_mode',
-        action='store_true',
+        default=True,
         help='Enable synchronous mode that video I/O and inference will be '
         'temporally aligned. Note that this will reduce the display FPS.')
 
@@ -162,13 +226,13 @@ def read_camera():
 
             if args.synchronous_mode:
                 event_inference_done.wait()
-            event_inference_done.wait()
+           
             frame_buffer.put((ts_input, frame))
         else:
             # input ending signal
             frame_buffer.put((None, None))
             break
-
+        
     vid_cap.release()
 
 
@@ -186,7 +250,8 @@ def inference_detection():
         # inference detection
         with stop_watch.timeit('Det'):
             mmdet_results = inference_detector(det_model, frame)
-
+            if mmdet_results== []:
+                continue
         t_info = stop_watch.report_strings()
         with det_result_queue_mutex:
             det_result_queue.append((ts_input, frame, t_info, mmdet_results))
@@ -218,55 +283,14 @@ def inference_mesh():
                 det_results,
                 bbox_thr=args.bbox_thr,
                 format='xyxy')
-            if mesh_results == []:
-                continue
         t_info += stop_watch.report_strings()
         with mesh_result_queue_mutex:
-            smpl_betas = mesh_results[0]['smpl_beta']
-            smpl_poses = mesh_results[0]['smpl_pose']
-            if smpl_poses.shape == (24, 3, 3):
-                smpl_poses = rotmat_to_aa(smpl_poses).reshape(-1)
-            elif smpl_poses.shape == (24, 3):
-                smpl_poses = smpl_poses.reshape(-1)
-            else:
-                raise (f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
-
-            pred_cams = mesh_results[0]['camera']
-            verts = mesh_results[0]['vertices']
-            bboxes_xyxy = mesh_results[0]['bbox']
-            kp3d = mesh_results[0]['keypoints_3d']
-
-            if args.smooth_type is not None:
-                smpl_poses = smooth_process(
-                    smpl_poses.reshape(1, 24, 9), smooth_type=args.smooth_type)
-                smpl_poses = smpl_poses.reshape(1, 24, 3, 3)
-                verts = smooth_process(verts, smooth_type=args.smooth_type)
-
-            verts, _ = conver_verts_to_cam_coord(
-                verts, pred_cams, bboxes_xyxy, focal_length=5000.)
-            verts = torch.tensor(verts, dtype=torch.float32)[0]
-            for D_mat in ptD:
-                verts = torch.spmm(D_mat, verts)
-            
-            kp3d, _ = conver_verts_to_cam_coord(
-                kp3d, pred_cams, bboxes_xyxy, focal_length=5000.)
-            # K1 = convert_bbox_to_intrinsic(bboxes_xyxy[None])
-            # kp3d_224 = np.dot(K0,kp3d.T).squeeze()
-            # kp3d_orig = np.dot(K1,kp3d_224).T.squeeze()
-
-            kp2d = np.zeros([17,2])
-            kp3d =kp3d.squeeze()
-
-            kp2d[:, 0] = (kp3d[:,0] * 5000+(112*kp3d[:,2]))/(kp3d[:,2]+1e-9)
-            kp2d[:, 1] = (kp3d[:,1] * 5000+(112*kp3d[:,2]))/(kp3d[:,2]+1e-9)
-
-            mesh_result_queue.append((ts_input, t_info, smpl_poses, smpl_betas,
-                                      pred_cams, verts, kp2d, bboxes_xyxy))
+            mesh_result_queue.append((ts_input, t_info, mesh_results))
 
         event_inference_done.set()
 
 
-def display(renderer, cameras, textures, faces):
+def display(renderer, faces):
     print('Thread "display" started')
     stop_watch = StopWatch(window=10)
 
@@ -274,7 +298,7 @@ def display(renderer, cameras, textures, faces):
     ts_inference = None  # timestamp of the latest inference result
     fps_inference = 0.  # infenrece FPS
     t_delay_inference = 0.  # inference result time delay
-    kp2d = None  # latest inference result
+    mesh_results = None  # latest inference result
     verts = None
     t_info = []  # upstream time information (list[str])
 
@@ -301,38 +325,66 @@ def display(renderer, cameras, textures, faces):
             if len(mesh_result_queue) > 0:
                 with mesh_result_queue_mutex:
                     _result = mesh_result_queue.popleft()
-                    _ts_input, t_info, smpl_poses, smpl_betas, \
-                        pred_cams, verts, kp2d, bboxes_xyxy = _result
+                    _ts_input, t_info, mesh_results = _result
 
                 _ts = time.time()
                 if ts_inference is not None:
                     fps_inference = 1.0 / (_ts - ts_inference)
                 ts_inference = _ts
                 t_delay_inference = (_ts - _ts_input) * 1000
-            if verts is not None:
+            if mesh_results:
+
+                smpl_betas = mesh_results[0]['smpl_beta']
+                smpl_poses = mesh_results[0]['smpl_pose']
+                if smpl_poses.shape == (24, 3, 3):
+                    smpl_poses = rotmat_to_aa(smpl_poses).reshape(-1)
+                elif smpl_poses.shape == (24, 3):
+                    smpl_poses = smpl_poses.reshape(-1)
+                else:
+                    raise (f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
+
+                pred_cams = mesh_results[0]['camera']
+                verts = mesh_results[0]['vertices']
+                bboxes_xyxy = mesh_results[0]['bbox']
+                kp3d = mesh_results[0]['keypoints_3d']
+
+                # if args.smooth_type is not None:
+                #     smpl_poses = smooth_process(
+                #         smpl_poses.reshape(1, 24, 9), smooth_type=args.smooth_type)
+                #     smpl_poses = smpl_poses.reshape(1, 24, 3, 3)
+                #     verts = smooth_process(verts, smooth_type=args.smooth_type)
+
+                verts, _ = conver_verts_to_cam_coord(
+                    verts, pred_cams, bboxes_xyxy, focal_length=5000.)
+                verts = torch.tensor(verts, dtype=torch.float32).to(args.device)
+                # for D_mat in ptD:
+                #     verts = torch.spmm(D_mat, verts.squeeze())[None]
+                
+                kp3d, _ = conver_verts_to_cam_coord(
+                    kp3d, pred_cams, bboxes_xyxy, focal_length=5000.)
+
+                kp2d = np.zeros([17,2])
+                kp3d =kp3d.squeeze()
+
+                kp2d[:, 0] = (kp3d[:,0] * 5000+(112*kp3d[:,2]))/(kp3d[:,2]+1e-9)
+                kp2d[:, 1] = (kp3d[:,1] * 5000+(112*kp3d[:,2]))/(kp3d[:,2]+1e-9)
+
                 # show bounding boxes
                 mmcv.imshow_bboxes(
                     img, bboxes_xyxy[None], colors='green', top_k=-1, thickness=2, show=False)
 
-                img = visualize_kp2d(
-                    kp2d[None],
-                    data_source='h36m',
-                    return_array=True,
-                    resolution=list(frame.shape[:2]),
-                    image_array=frame[None],
-                    disable_tqdm=True).squeeze()
-                # # visualize smpl
-                # if isinstance(verts,np.ndarray):
-                #     verts = torch.tensor(verts, dtype=torch.float32)
-                # if isinstance(faces,np.ndarray):
-                #     faces = torch.tensor(faces)
-                # mesh = Meshes(verts[None].to(args.device), faces, textures)
-                # rendered_images = renderer(meshes=mesh, cameras=cameras)
-                # rgba = renderer.tensor2rgba(rendered_images).cpu().numpy()
-                # rgbs, valid_masks = rgba[..., :3] * 255, rgba[..., 3:]
-                # img = (rgbs * valid_masks + (1 - valid_masks) * img)[0].astype(np.uint8)
+                # img = visualize_kp2d(
+                #     kp2d[None],
+                #     data_source='h36m',
+                #     return_array=True,
+                #     resolution=list(frame.shape[:2]),
+                #     image_array=frame[None],
+                #     disable_tqdm=True).squeeze()
+                result = renderer(verts=verts,faces=faces)
+                color, valid_masks = result[..., :-1] , (result[..., -1] > 0) * 1.0
+                valid_masks = valid_masks[:,:,None]
+                img = (color * valid_masks + (1 - valid_masks) * img).astype(np.uint8)
 
-                # verts = None
                 
             # delay control
             if args.display_delay > 0:
@@ -377,7 +429,7 @@ def display(renderer, cameras, textures, faces):
             #     vid_out.write(img)
 
             # display
-            cv2.imshow('mmpose webcam demo', img)
+            cv2.imshow('mmhuman3d webcam demo', img)
             keyboard_input = cv2.waitKey(1)
             if keyboard_input in (27, ord('q'), ord('Q')):
                 break
@@ -400,12 +452,12 @@ def main():
     global pose_smoother_list
     global downsampling
     global ptD 
+
     args = parse_args()
     assert has_mmdet, 'Please install mmdet to run the demo.'
     assert args.det_config is not None
     assert args.det_checkpoint is not None
-    # args.mesh_reg_config = "configs/hmr/resnet50_hmr_pw3d_e50_cache.py"
-    # args.mesh_reg_checkpoint = "data/checkpoints/resnet50_hmr_pw3d-04f40f58_20211201.pth"
+
     cam_id = args.cam_id
     if cam_id.isdigit():
         cam_id = int(cam_id)
@@ -425,38 +477,7 @@ def main():
                     model_path='data/body_models/smpl'))
     faces = torch.tensor(body_model.faces.astype(np.int32))[None].to(args.device)
 
-    # load visualization config file
-    render_cfg = mmcv.Config.fromfile(
-        'configs/render/smpl.py')['RENDER_CONFIGS']['lq']
-    render_cfg['device'] = args.device
-    render_cfg['resolution'] = resolution
-    # build renderer
-    renderer = build_renderer(render_cfg)
-    K = get_default_hmr_intrinsic(num_frame=1, focal_length=5000.)[0]
-    K, R, T = convert_camera_matrix(
-        convention_dst='pytorch3d',
-        K=K,
-        R=None,
-        T=None,
-        is_perspective=True,
-        convention_src='opencv',
-        resolution_src=resolution,
-        in_ndc_src=False,
-        in_ndc_dst=False)
-    # # camera
-    cameras = build_cameras(
-        dict(
-            type='perspective',
-            in_ndc=False,
-            device=args.device,
-            K=K,
-            R=R,
-            T=T,
-            resolution=resolution)).to(args.device)
-    # cameras = FoVPerspectiveCameras(R=torch.eye(3), T=torch.zeros(3)).to(args.device)
-    # textures
-    textures = TexturesVertex(verts_features=torch.ones([1,6890,3])).to(args.device)
-    downsampling =1
+    downsampling = None
     if downsampling is not None:
         assert downsampling == 1 or downsampling ==2, \
             f"Only support 1 or 2, but got {downsampling}."
@@ -477,14 +498,13 @@ def main():
             ptD.append(torch.sparse.FloatTensor(i, v, d.shape)) 
 
         faces = torch.IntTensor(F_[downsampling].astype(np.int16))[None].to(args.device)
-        textures = TexturesVertex(
-            verts_features=torch.ones(verts_shape[downsampling])).to(args.device) 
     
+
     # build detection model
     det_model = init_detector(
         args.det_config, args.det_checkpoint, device=args.device.lower())
 
-
+    renderer = Renderer()
     # build human3d models
 
     mesh_model, extractor = init_model(
@@ -531,7 +551,7 @@ def main():
         t_mesh.start()
 
         # run display in the main thread
-        display(renderer, cameras, textures, faces.clone())
+        display(renderer, faces.clone())
         # join the input thread (non-daemon)
         t_input.join()
 

@@ -306,8 +306,6 @@ def convert_verts_to_cam_coord(verts,
         verts = np.einsum('fij,fkj->fki', Ks, verts)
     elif verts.ndim == 2:
         verts = np.einsum('fij,fkj->fki', Ks, verts[None])
-    else:
-        raise ValueError('Wrong input verts shape {verts.shape}')
     return verts, K0
 
 

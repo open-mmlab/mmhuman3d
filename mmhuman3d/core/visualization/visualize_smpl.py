@@ -461,6 +461,7 @@ def render_smpl(
         device: Union[torch.device, str] = 'cuda',
         # file io parameters
         return_tensor: bool = False,
+        return_render_img: bool = False,
         output_path: str = None,
         origin_frames: Optional[str] = None,
         frame_list: Optional[List[str]] = None,
@@ -671,6 +672,9 @@ def render_smpl(
         # file io parameters:
 
         return_tensor (bool, optional): Whether return the result tensors.
+
+            Defaults to False, will return None.
+        return_render_img (bool, optional): whether return the render images.
 
             Defaults to False, will return None.
         output_path (str, optional): output video or gif or image folder.
@@ -1005,6 +1009,7 @@ def render_smpl(
         device=device,
         output_path=output_path,
         return_tensor=return_tensor,
+        return_render_img=return_render_img,
         alpha=alpha,
         read_img_format=img_format,
         render_choice=render_choice,
@@ -1043,6 +1048,7 @@ def render_smpl(
         batch_size=batch_size,
         output_path=output_path,
         return_tensor=return_tensor,
+        return_render_img=return_render_img,
         no_grad=no_grad,
         verbose=verbose,
         **render_data)
@@ -1051,7 +1057,7 @@ def render_smpl(
         if Path(frames_folder).is_dir():
             shutil.rmtree(frames_folder)
 
-    if return_tensor:
+    if return_tensor or return_render_img:
         return results
     else:
         return None
