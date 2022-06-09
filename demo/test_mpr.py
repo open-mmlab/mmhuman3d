@@ -3,10 +3,40 @@ import numpy as np
 import torch
 import mmcv
 import cv2
+import matplotlib
+from copy import deepcopy
+import matplotlib.pyplot as plt
 
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.models.builder import build_body_model
 from mmhuman3d.utils.demo_utils import conver_verts_to_cam_coord
+
+def get_vlims(z, vmin=None, vmax=None, v_pad=.5, percentile=1, verbose_vlims=False):
+    if vmin is None:
+        if percentile > 0:
+            res_vmin = np.percentile(z[z > 0], percentile)
+        else:
+            res_vmin = z[z > 0].min()
+    else:
+        res_vmin = vmin
+    if vmax is None:
+        if percentile > 0:
+            res_vmax = np.percentile(z[z > 0], 100 - percentile)
+        else:
+            res_vmax = z.max()
+    else:
+        res_vmax = vmax
+
+    v_pad = (res_vmax - res_vmin) * v_pad
+    if vmin is None:
+        res_vmin -= v_pad
+    if vmax is None:
+        res_vmax += v_pad
+
+    if verbose_vlims:
+        print(res_vmin, res_vmax)
+
+    return res_vmin, res_vmax
 
 def colormap_z(z, vmin=None, vmax=None, verbose_vlims=False, inverse_cmap=True, v_pad=.5, percentile=1):
     vmin, vmax = get_vlims(z, vmin=vmin, vmax=vmax, v_pad=v_pad, percentile=percentile, verbose_vlims=verbose_vlims)
@@ -33,8 +63,8 @@ class VisualizerMeshSMPL:
         # size=1024,
         # f_scale=2,
         z=5,
-        normals=True,
-        sides=False,
+        normals=False,
+        sides=True,
         # smplx_wrapper=None,
         kinect_bones=None,
         focal_length=5000.,
@@ -187,7 +217,7 @@ if __name__ == '__main__':
     vis_smpl = VisualizerMeshSMPL(device='cuda',body_models=body_model)
     import time
     T = time.time()
-    for i in range(100):
+    for i in range(1):
         img = vis_smpl.vertices2vis(verts)
     print(time.time()-T)
     cv2.imwrite('./test.png', img)
