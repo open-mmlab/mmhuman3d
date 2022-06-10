@@ -1,10 +1,10 @@
 from mmhuman3d.utils.collect_env import collect_env
 from mmhuman3d.utils.demo_utils import (
     box2cs,
-    conver_verts_to_cam_coord,
     convert_bbox_to_intrinsic,
     convert_crop_cam_to_orig_img,
     convert_kp2d_to_bbox,
+    convert_verts_to_cam_coord,
     get_default_hmr_intrinsic,
     get_different_colors,
     prepare_frames,
@@ -109,7 +109,7 @@ __all__ = [
     'check_path_suffix',
     'collect_env',
     'compress_video',
-    'conver_verts_to_cam_coord',
+    'convert_verts_to_cam_coord',
     'convert_bbox_to_intrinsic',
     'convert_crop_cam_to_orig_img',
     'convert_kp2d_to_bbox',

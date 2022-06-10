@@ -1,5 +1,7 @@
 from setuptools import find_packages, setup
 
+from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+
 
 def readme():
     with open('README.md', encoding='utf-8') as f:
@@ -101,12 +103,15 @@ setup(
     keywords='3D Human',
     url='https://github.com/open-mmlab/mmhuman3d',
     packages=find_packages(exclude=('configs', 'tools', 'demo')),
-    ext_modules=cythonize([Extension("Sim3DR_Cython",
-                           sources=["vis_human/sim3drender/lib/rasterize.pyx",
-                                    "vis_human/sim3drender/lib/rasterize_kernel.cpp"],
-                           language='c++',
-                           include_dirs=[numpy.get_include()],
-                           extra_compile_args=["-std=c++11"])]),
+    ext_modules=[
+        CUDAExtension(
+            'mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer',  # noqa: E501
+            [
+                'mmhuman3d/core/visualization/renderer/mpr_renderer/cuda/rasterizer.cpp',  # noqa: E501
+                'mmhuman3d/core/visualization/renderer/mpr_renderer/cuda/rasterizer_kernel.cu',  # noqa: E501
+            ])
+    ],
+    cmdclass={'build_ext': BuildExtension},
     include_package_data=True,
     classifiers=[
         'Development Status :: 4 - Beta',
