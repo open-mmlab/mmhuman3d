@@ -28,7 +28,6 @@ def render(renderer: Union[nn.Module, dict],
            lights: Union[MMLights, dict, None] = None,
            batch_size: int = 5,
            return_tensor: bool = False,
-           return_render_img: bool = False,
            no_grad: bool = False,
            verbose: bool = True,
            **forward_params):
@@ -117,11 +116,11 @@ def render(renderer: Union[nn.Module, dict],
 
         else:
             images_batch = renderer(indexes=indexes, **foward_params_batch)
-        if return_tensor or return_render_img:
+        if return_tensor:
             tensors.append(images_batch)
 
     renderer.export()
 
-    if return_tensor or return_render_img:
+    if return_tensor:
         tensors = torch.cat(tensors)
         return tensors

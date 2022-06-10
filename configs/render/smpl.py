@@ -5,13 +5,7 @@ base_directional_light = {
     'diffuse_color': [[0.5, 0.5, 0.5]],
     'specular_color': [[0.5, 0.5, 0.5]],
 }
-vis_point_light = {
-    'type': 'point',
-    'ambient_color': [[0.56, 0.56, 0.56]],
-    'diffuse_color': [[0.3, 0.3, 0.3]],
-    'specular_color': [[0.5, 0.5, 0.5]],
-    'location': [[0., 0., 0.]],    
-}
+
 base_point_light = {
     'type': 'point',
     'ambient_color': [[1, 1, 1]],
@@ -50,7 +44,7 @@ RENDER_CONFIGS = {
         'shader': {
             'type': 'hard_flat'
         },
-        'lights': vis_point_light,
+        'lights': base_directional_light,
         'materials': base_material,
         'rasterizer': {
             'bin_size': 0,

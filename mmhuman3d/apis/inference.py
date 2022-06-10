@@ -183,15 +183,12 @@ def inference_image_based_model(
 
     # forward the model
     with torch.no_grad():
-        import time
-        T = time.time()
-        for i in range(100):
-            results = model(
-                img=batch_data['img'],
-                img_metas=batch_data['img_metas'],
-                sample_idx=batch_data['sample_idx'],
-            )
-        print(time.time() - T )
+        results = model(
+            img=batch_data['img'],
+            img_metas=batch_data['img_metas'],
+            sample_idx=batch_data['sample_idx'],
+        )
+
     for idx in range(len(det_results)):
         mesh_result = det_results[idx].copy()
         mesh_result['bbox'] = bboxes_xyxy[idx]
