@@ -49,7 +49,7 @@ mmhuman3d
     │       ├── SMPL_FEMALE.pkl
     │       ├── SMPL_MALE.pkl
     │       └── SMPL_NEUTRAL.pkl
-    ├── pretrained
+    ├── pretrained_models
     │   ├── hrnet_pretrain.pth
     │   └── hrnet_w32_conv_pare_coco.pth
     ├── preprocessed_datasets

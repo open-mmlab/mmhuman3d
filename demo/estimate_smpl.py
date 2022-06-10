@@ -175,17 +175,12 @@ def single_person_with_mmdet(args, frames_iter):
                     'keypoints_3d': np.zeros((17, 3)),
                 }]
             else:
-                import time
-                T = time.time()
-                for i in range(1):
-
-                    mesh_results = inference_image_based_model(
-                        mesh_model,
-                        frames_iter[frame_id],
-                        result,
-                        bbox_thr=args.bbox_thr,
-                        format='xyxy')
-                # print(time.time() - T)
+                mesh_results = inference_image_based_model(
+                    mesh_model,
+                    frames_iter[frame_id],
+                    result,
+                    bbox_thr=args.bbox_thr,
+                    format='xyxy')
         else:
             raise (f'{mesh_model.cfg.model.type} is not supported yet')
 
@@ -221,9 +216,12 @@ def single_person_with_mmdet(args, frames_iter):
     # smooth
     if args.smooth_type is not None:
         smpl_poses = smooth_process(
-            smpl_poses.reshape(frame_num, 24, 9), smooth_type=args.smooth_type)
+            smpl_poses.reshape(frame_num, 24, 9),
+            smooth_type=args.smooth_type).reshape(frame_num, 24, 3, 3)
         verts = smooth_process(verts, smooth_type=args.smooth_type)
-        smpl_poses = smpl_poses.reshape(frame_num, 24, 3, 3)
+        pred_cams = smooth_process(
+            pred_cams[:, np.newaxis],
+            smooth_type=args.smooth_type).reshape(frame_num, 3)
 
     if smpl_poses.shape[1:] == (24, 3, 3):
         smpl_poses = rotmat_to_aa(smpl_poses)
@@ -391,10 +389,12 @@ def multi_person_with_mmtracking(args, frames_iter):
     # smooth
     if args.smooth_type is not None:
         smpl_poses = smooth_process(
-            smpl_poses.reshape(frame_num, max_instance, 24, 9),
-            smooth_type=args.smooth_type)
+            smpl_poses.reshape(frame_num, -1, 24, 9),
+            smooth_type=args.smooth_type).reshape(frame_num, -1, 24, 3, 3)
         verts = smooth_process(verts, smooth_type=args.smooth_type)
-        smpl_poses = smpl_poses.reshape(frame_num, max_instance, 24, 3, 3)
+        pred_cams = smooth_process(
+            pred_cams[:, np.newaxis],
+            smooth_type=args.smooth_type).reshape(frame_num, -1, 3)
 
     if smpl_poses.shape[2:] == (24, 3, 3):
         smpl_poses = rotmat_to_aa(smpl_poses)
@@ -442,12 +442,16 @@ def multi_person_with_mmtracking(args, frames_iter):
     compressed_verts = np.zeros([frame_num, max_instance, 6890, 3])
     compressed_cams = np.zeros([frame_num, max_instance, 3])
     compressed_bboxs = np.zeros([frame_num, max_instance, 5])
+    compressed_poses = np.zeros([frame_num, max_instance, 24, 3])
+    compressed_betas = np.zeros([frame_num, max_instance, 10])
 
     for i, track_ids_list in enumerate(track_ids_lists):
         instance_num = len(track_ids_list)
         compressed_verts[i, :instance_num] = verts[i, track_ids_list]
         compressed_cams[i, :instance_num] = pred_cams[i, track_ids_list]
         compressed_bboxs[i, :instance_num] = bboxes_xyxy[i, track_ids_list]
+        compressed_poses[i, :instance_num] = smpl_poses[i, track_ids_list]
+        compressed_betas[i, :instance_num] = smpl_betas[i, track_ids_list]
 
     assert len(frame_id_list) > 0
 
@@ -462,8 +466,8 @@ def multi_person_with_mmtracking(args, frames_iter):
                 output_folder=frames_folder)
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_hmr(
-            poses=smpl_poses.reshape(-1, instance_num, 24 * 3),
-            betas=smpl_betas,
+            poses=compressed_poses.reshape(-1, max_instance, 24 * 3),
+            betas=compressed_betas,
             cam_transl=compressed_cams,
             bbox=compressed_bboxs,
             output_path=args.show_path,

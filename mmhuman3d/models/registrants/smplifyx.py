@@ -5,11 +5,9 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idx,
     get_keypoint_idxs_by_part,
 )
-from mmhuman3d.models.builder import REGISTRANTS
 from .smplify import OptimizableParameters, SMPLify
 
 
-@REGISTRANTS.register_module()
 class SMPLifyX(SMPLify):
     """Re-implementation of SMPLify-X with extended features.
 

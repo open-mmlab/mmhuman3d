@@ -14,10 +14,8 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.models.utils import batch_inverse_kinematics_transform
 from mmhuman3d.utils.transforms import quat_to_rotmat
-from ..builder import BODY_MODELS
 
 
-@BODY_MODELS.register_module(name=['SMPL', 'smpl'])
 class SMPL(_SMPL):
     """Extension of the official SMPL implementation."""
 
@@ -202,7 +200,6 @@ class SMPL(_SMPL):
         return full_pose
 
 
-@BODY_MODELS.register_module()
 class GenderedSMPL(torch.nn.Module):
     """A wrapper of SMPL to handle gendered inputs."""
 
@@ -388,8 +385,6 @@ def to_np(array, dtype=np.float32):
     return np.array(array, dtype=dtype)
 
 
-@BODY_MODELS.register_module(
-    name=['HybrIKSMPL', 'HybrIKsmpl', 'hybriksmpl', 'hybrik', 'hybrIK'])
 class HybrIKSMPL(SMPL):
     """Extension of the SMPL for HybrIK."""
 

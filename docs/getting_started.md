@@ -59,8 +59,8 @@ We provide a demo script to estimate SMPL parameters for single-person or multi-
 Some useful configs are explained here:
 
 - If you specify `--output` and `--show_path`, the demo script will save the estimated results into `human_data` and render the estimated human mesh.
-- If you specify `--smooth_type`, the demo will be smoothed using specific method. We now support `guas1d`,`oneeuro`, and `savgol`.
-- If you specify `--speed_up_type`, the demo will be processed more quickly using specific method. We now support learning-based method `deciwatch`, more information can be find  [here](../configs/_base_/post_processing/README.md).
+- If you specify `--smooth_type`, the demo will be smoothed using specific method. We now support filters `guas1d`,`oneeuro`, `savgol` and learning-based method `smoothnet`, more information can be find [here](../configs/_base_/post_processing/README.md).
+- If you specify `--speed_up_type`, the demo will be processed more quickly using specific method. We now support learning-based method `deciwatch`, more information can be find [here](../configs/_base_/post_processing/README.md).
 ### Single-person
 
 ```shell
@@ -111,7 +111,7 @@ python demo/estimate_smpl.py \
 ```
 Example:
 ```shell
-python demo/estimate_smpl_image.py \
+python demo/estimate_smpl.py \
     configs/hmr/resnet50_hmr_pw3d.py \
     data/checkpoints/resnet50_hmr_pw3d.pth \
     --multi_person_demo \

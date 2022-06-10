@@ -42,6 +42,10 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   A suite of differentiale visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
 
 ## News
+- 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) is released. Major updates include:
+  - Support SmoothNet (added by paper authors)
+  - Fix circular import and up to 2.5x speed up in module initialization
+  - Add documentations in Chinese
 - 2022-04-30: MMHuman3D [v0.7.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.7.0) is released. Major updates include:
   - Support PARE (better than the official implementation)
   - Support DeciWatch (added by paper authors)
@@ -51,12 +55,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - Add HumanDataCache that requires 96% less RAM during training
   - Refactor differentiable renderers and support UV map rendering
   - Support slice/concat operations for HumanData
-- 2022-02-11: MMHuman3D [v0.5.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.5.0) is released. Major updates include:
-  - Support new data structure SMC for new dataset HuMMan, which will soon be released
-  - Support for multi-GPU training/testing without slurm
-  - Support training-time validation and additional metrics such as PVE
-  - Bug fixes in data augmentation for more stable training
-  - Stronger HybrIK baseline (PA-MPJPE 49.02 on 3DPW)
 
 ## Benchmark and Model Zoo
 
@@ -85,6 +83,7 @@ Supported methods:
 - [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
 - [x] [PARE](https://pare.is.tue.mpg.de/) (ICCV'2021)
 - [x] [DeciWatch](https://ailingzeng.site/deciwatch) (arXiv'2022)
+- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (arXiv'2022)
 
 </details>
 

@@ -2,7 +2,7 @@ import torch
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.visualization.renderer import UVRenderer
-from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.body_models.builder import build_body_model
 
 if torch.cuda.is_available():
     device_name = 'cuda:0'

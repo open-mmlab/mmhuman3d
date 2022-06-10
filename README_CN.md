@@ -42,6 +42,10 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
 ## 最新进展
+- 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) 已经发布. 主要更新包括:
+  - 支持 SmoothNet（由论文作者添加）
+  - 修复循环引用问题，获得最多2.5倍速度提升
+  - 增加中文版文档
 - 2022-04-30: MMHuman3D [v0.7.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.7.0) 已经发布. 主要更新包括:
   - 支持PARE算法 (优于官方实现）
   - 支持DeciWatch（由论文作者添加）
@@ -51,12 +55,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - 增加HumanDataCache，大幅削减(96%)训练时内存占用
   - 重构可微渲染器并支持UV map渲染
   - HumanData支持slice/concat操作
-- 2022-02-11: MMHuman3D [v0.5.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.5.0) 已经发布. 主要更新包括:
-  - 支持新的数据结构SMC以及即将发布的新数据集HuMMan
-  - 支持在非slurm环境下的多GPU训练/测试
-  - 支持训练时验证及更多测试指标如PVE
-  - 修复数据增强的问题使训练稳定
-  - 更强的HybrIK基线（3DPW上达到PA-MPJPE 49.02）
 
 ## 基准与模型库
 
@@ -85,6 +83,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
 - [x] [PARE](https://pare.is.tue.mpg.de/) (ICCV'2021)
 - [x] [DeciWatch](https://ailingzeng.site/deciwatch) (arXiv'2022)
+- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (arXiv'2022)
 
 </details>
 
