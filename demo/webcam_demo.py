@@ -8,6 +8,7 @@ from threading import Event, Lock, Thread
 import cv2
 import mmcv
 import numpy as np
+import torch
 from mmpose.utils import StopWatch
 
 from mmhuman3d.apis import inference_image_based_model, init_model
@@ -89,11 +90,6 @@ def parse_args():
         help='Smooth the data through the specified type.'
         'Select in [oneeuro,gaus1d,savgol].')
     parser.add_argument(
-        '--out_video_fps',
-        type=int,
-        default=20,
-        help='Set the FPS of the output video file.')
-    parser.add_argument(
         '--out_video_file',
         type=str,
         default=None,
@@ -113,7 +109,7 @@ def parse_args():
     parser.add_argument(
         '--inference_fps',
         type=int,
-        default=10,
+        default=20,
         help='Maximum inference FPS. This is to limit the resource consuming '
         'especially when the detection and pose model are lightweight and '
         'very fast. Default: 10.')
@@ -144,8 +140,7 @@ def parse_args():
 def read_camera():
     # init video reader
     print('Thread "input" started')
-    # cam_id = args.cam_id
-    cam_id = 'demo/resources/single_person_demo.mp4'
+    cam_id = args.cam_id
     if cam_id.isdigit():
         cam_id = int(cam_id)
     vid_cap = cv2.VideoCapture(cam_id)
@@ -327,7 +322,8 @@ def display():
                 #     disable_tqdm=True).squeeze()
 
                 # visualize smpl
-                verts = verts.to(args.device)
+                if isinstance(verts, np.ndarray):
+                    verts = torch.tensor(verts).to(args.device).squeeze()
                 img = renderer(verts, img)
 
             # delay control
@@ -398,8 +394,7 @@ def main():
     assert args.det_config is not None
     assert args.det_checkpoint is not None
 
-    args.synchronous_mode = True
-    cam_id = 'demo/resources/single_person_demo.mp4'  # args.cam_id
+    cam_id = args.cam_id
     if cam_id.isdigit():
         cam_id = int(cam_id)
     vid_cap = cv2.VideoCapture(cam_id)

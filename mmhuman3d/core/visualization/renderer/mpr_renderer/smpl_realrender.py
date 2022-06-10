@@ -24,8 +24,8 @@ class VisualizerMeshSMPL:
             fy=focal_length,
             cx=camera_center[0],
             cy=camera_center[1],
-            w=resolution[0],
-            h=resolution[1])
+            w=resolution[1],
+            h=resolution[0])
         self.device = torch.device(device)
         self.faces = self.body_models.faces_tensor.to(
             dtype=torch.int32, device=self.device)

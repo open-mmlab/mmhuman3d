@@ -206,7 +206,7 @@ class SMPLRenderer(BaseRenderer):
 
             else:
                 output_images = bgrs
-                
+
             if self.plot_kps:
 
                 joints = joints.to(self.device)
