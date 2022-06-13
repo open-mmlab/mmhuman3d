@@ -28,6 +28,10 @@ from .transforms import (
     RandomChannelNoise,
     RandomHorizontalFlip,
 )
+from .expose_transforms import (
+    BBoxCenterJitter,
+    SimulateLowRes,
+)
 
 __all__ = [
     'Compose',
@@ -54,4 +58,6 @@ __all__ = [
     'NewKeypointsSelection',
     'Normalize',
     'SyntheticOcclusion',
+    'BBoxCenterJitter',
+    'SimulateLowRes',
 ]

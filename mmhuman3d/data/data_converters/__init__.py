@@ -24,6 +24,10 @@ from .spin import SpinConverter
 from .surreal import SurrealConverter
 from .up3d import Up3dConverter
 from .vibe import VibeConverter
+from .ffhq_flame import FFHQFlameConverter
+from .expose_curated_fits import ExposeCuratedFitsConverter
+from .expose_spin_smplx import ExposeSPINSMPLXConverter
+from .freihand import FreihandConverter
 
 __all__ = [
     'build_data_converter', 'AgoraConverter', 'MpiiConverter', 'H36mConverter',
@@ -33,5 +37,7 @@ __all__ = [
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
     'GTAHumanConverter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
     'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter', 'SurrealConverter',
-    'InstaVibeConverter', 'SpinConverter', 'VibeConverter', 'HuMManConverter'
+    'InstaVibeConverter', 'SpinConverter', 'VibeConverter', 'HuMManConverter',
+    'FFHQFlameConverter', 'ExposeCuratedFitsConverter','ExposeSPINSMPLXConverter',
+    'FreihandConverter',
 ]

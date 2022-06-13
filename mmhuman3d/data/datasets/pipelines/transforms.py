@@ -1,5 +1,6 @@
 import math
 import random
+from unittest import result
 
 import cv2
 import mmcv
@@ -209,6 +210,41 @@ def _flip_smpl_pose(pose):
     pose_flipped[2::3] = -pose_flipped[2::3]
     return pose_flipped
 
+def _flip_smplx_pose(pose):
+    """Flip SMPLX pose parameters horizontally.
+
+    Args:
+        pose (np.ndarray([63])): SMPLX pose parameters
+    Returns:
+        pose_flipped (np.ndarray([21,3]))
+    """
+    SIGN_FLIP = np.array([6, 7, 8, 3, 4, 5, 9, 10, 11, 15, 16, 17,
+                          12, 13, 14, 18, 19, 20, 24, 25, 26, 21, 22, 23, 27,
+                          28, 29, 33, 34, 35, 30, 31, 32,
+                          36, 37, 38, 42, 43, 44, 39, 40, 41, 45, 46, 47, 51,
+                          52, 53, 48, 49, 50, 57, 58, 59, 54, 55, 56, 63, 64,
+                          65, 60, 61, 62], dtype=np.int32) - 3
+    dim_flip = np.array([1, -1, -1], dtype=pose.dtype)
+    pose = (pose[SIGN_FLIP].reshape(21, 3) * dim_flip).copy()
+    return pose
+
+def _flip_axis_angle(r):
+    """Flip axis_angle horizontally.
+
+    Args:
+        r (np.ndarray([3]))
+    Returns:
+        f_flipped
+    """
+    dim_flip = np.array([1, -1, -1], dtype=r.dtype)
+    r = r * dim_flip
+    return r
+
+def _flip_hand_pose(r_pose, l_pose):
+    dim_flip = np.array([1, -1, -1], dtype=r_pose.dtype)
+    ret_l_pose = r_pose * dim_flip
+    ret_r_pose = l_pose * dim_flip
+    return ret_r_pose, ret_l_pose
 
 def _flip_keypoints(keypoints, flip_pairs, img_width=None):
     """Flip human joints horizontally.
@@ -287,7 +323,6 @@ def _rotate_smpl_pose(pose, rot):
 
     return pose_rotated
 
-
 @PIPELINES.register_module()
 class RandomHorizontalFlip(object):
     """Flip the image randomly.
@@ -316,7 +351,7 @@ class RandomHorizontalFlip(object):
         if np.random.rand() > self.flip_prob:
             results['is_flipped'] = np.array([0])
             return results
-
+        
         results['is_flipped'] = np.array([1])
 
         # flip image
@@ -353,6 +388,35 @@ class RandomHorizontalFlip(object):
             body_pose = smpl_pose_flipped[3:]
             results['smpl_global_orient'] = global_orient
             results['smpl_body_pose'] = body_pose.reshape((-1, 3))
+
+        if 'smplx_body_pose' in results:
+            
+            body_pose = results['smplx_body_pose'].copy().reshape((-1))
+            body_pose_flipped = _flip_smplx_pose(body_pose)
+            results['smplx_body_pose'] = body_pose_flipped
+        
+        if 'smplx_global_orient' in results:
+            global_orient = results['smplx_global_orient'].copy().reshape((-1))
+            global_orient_flipped = _flip_axis_angle(global_orient)
+            results['smplx_global_orient'] = global_orient_flipped
+        
+        if 'smplx_jaw_pose' in results:
+            jaw_pose = results['smplx_jaw_pose'].copy().reshape((-1))
+            jaw_pose_flipped = _flip_axis_angle(jaw_pose)
+            results['smplx_jaw_pose'] = jaw_pose_flipped
+
+        if 'smplx_right_hand_pose' in results:
+            right_hand_pose = results['smplx_right_hand_pose'].copy()
+            left_hand_pose = results['smplx_left_hand_pose'].copy()
+            results['smplx_right_hand_pose'], results['smplx_left_hand_pose'] = _flip_hand_pose(right_hand_pose,left_hand_pose)
+            
+
+
+        # Expressions are not symmetric, so we remove them from the labels when the image is flipped
+        if 'smplx_expression' in results:
+            results['smplx_expression'] = np.zeros((results['smplx_expression'].shape[0]),dtype=np.float32)
+            results['has_smplx_expression'] = 0
+        
         return results
 
     def __repr__(self):
@@ -621,6 +685,13 @@ class RandomChannelNoise:
         img = cv2.multiply(img, pn)
 
         results['img'] = img
+
+        if 'ori_img' in results:
+            img = results['ori_img']
+            img = cv2.multiply(img, pn)
+
+            results['ori_img'] = img
+        
         return results
 
 
@@ -658,7 +729,6 @@ class GetRandomScaleRotation:
 
         return results
 
-
 @PIPELINES.register_module()
 class MeshAffine:
     """Affine transform the image to get input image.
@@ -678,8 +748,18 @@ class MeshAffine:
         r = results['rotation']
         trans = get_affine_transform(c, s, r, self.image_size)
 
+        
+        crop_trans = get_affine_transform(c,s,0.0,self.image_size)
+        results['crop_transform'] = crop_trans
+
+
         if 'img' in results:
             img = results['img']
+
+            # img before affine
+            results['ori_img'] = img.copy()
+            results['img_fields'] = ['img','ori_img']
+
             img = cv2.warpAffine(
                 img,
                 trans, (int(self.image_size[0]), int(self.image_size[1])),
@@ -707,5 +787,10 @@ class MeshAffine:
             pose = _rotate_smpl_pose(pose, r)
             results['smpl_global_orient'] = pose[:3]
             results['smpl_body_pose'] = pose[3:].reshape((-1, 3))
+
+        if 'smplx_global_orient' in results:
+            global_orient = results['smplx_global_orient'].copy()
+            global_orient = _rotate_smpl_pose(global_orient,r)
+            results['smplx_global_orient'] = global_orient
 
         return results
