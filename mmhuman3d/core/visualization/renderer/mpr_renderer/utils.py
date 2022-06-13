@@ -24,7 +24,7 @@ def vis_normals(coords, normals, vis_pad=0.2):
     coords_masked = -coords[mask]
     normals_masked = normals[mask]
 
-    coords_len = torch.sqrt(torch.sum(coords_masked ** 2, dim=1))
+    coords_len = torch.sqrt(torch.sum(coords_masked**2, dim=1))
 
     dot = torch.sum(coords_masked * normals_masked, dim=1) / coords_len
 

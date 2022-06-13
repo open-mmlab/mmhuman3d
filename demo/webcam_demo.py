@@ -11,16 +11,14 @@ import numpy as np
 import torch
 
 from mmhuman3d.apis import inference_image_based_model, init_model
-from mmhuman3d.utils.demo_utils import StopWatch
 from mmhuman3d.core.visualization.renderer.mpr_renderer.smpl_realrender import \
     VisualizerMeshSMPL  # noqa: E501
 from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils.demo_utils import (
+    StopWatch,
     convert_verts_to_cam_coord,
     process_mmdet_results,
-    smooth_process,
 )
-from mmhuman3d.utils.transforms import rotmat_to_aa
 
 try:
     from mmdet.apis import inference_detector, init_detector
@@ -164,7 +162,7 @@ def inference_detection():
         # inference detection
         with stop_watch.timeit('Det'):
             mmdet_results = inference_detector(det_model, frame)
-            if mmdet_results== []:
+            if mmdet_results == []:
                 continue
         t_info = stop_watch.report_strings()
         with det_result_queue_mutex:
@@ -212,7 +210,6 @@ def display():
     ts_inference = None  # timestamp of the latest inference result
     fps_inference = 0.  # infenrece FPS
     t_delay_inference = 0.  # inference result time delay
-    kp2d = None  # latest inference result
     verts = None
     t_info = []  # upstream time information (list[str])
 
@@ -248,26 +245,9 @@ def display():
                 t_delay_inference = (_ts - _ts_input) * 1000
             if mesh_results:
 
-                smpl_betas = mesh_results[0]['smpl_beta']
-                smpl_poses = mesh_results[0]['smpl_pose']
-                if smpl_poses.shape == (24, 3, 3):
-                    smpl_poses = rotmat_to_aa(smpl_poses).reshape(-1)
-                elif smpl_poses.shape == (24, 3):
-                    smpl_poses = smpl_poses.reshape(-1)
-                else:
-                    raise (f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
-
                 pred_cams = mesh_results[0]['camera']
                 verts = mesh_results[0]['vertices']
                 bboxes_xyxy = mesh_results[0]['bbox']
-                kp3d = mesh_results[0]['keypoints_3d']
-
-                # if args.smooth_type is not None:
-                #     smpl_poses = smooth_process(
-                #         smpl_poses.reshape(1, 24, 9), smooth_type=args.smooth_type)
-                #     smpl_poses = smpl_poses.reshape(1, 24, 3, 3)
-                #     verts = smooth_process(verts, smooth_type=args.smooth_type)
-
                 verts, _ = convert_verts_to_cam_coord(
                     verts, pred_cams, bboxes_xyxy, focal_length=5000.)
 
@@ -279,14 +259,6 @@ def display():
                     top_k=-1,
                     thickness=2,
                     show=False)
-
-                # img = visualize_kp2d(
-                #     kp2d[None],
-                #     data_source='h36m',
-                #     return_array=True,
-                #     resolution=list(frame.shape[:2]),
-                #     image_array=frame[None],
-                #     disable_tqdm=True).squeeze()
 
                 # visualize smpl
                 if isinstance(verts, np.ndarray):

@@ -1,9 +1,9 @@
 import colorsys
 import os
-from pathlib import Path
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import partial
+from pathlib import Path
 
 import mmcv
 import numpy as np

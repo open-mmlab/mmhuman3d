@@ -10,7 +10,8 @@ from mmhuman3d.core.visualization.renderer.mpr_renderer.utils import \
     vis_normals  # noqa: E501
 
 
-class VisualizerMeshSMPL:  
+class VisualizerMeshSMPL:
+
     def __init__(self,
                  device=None,
                  body_models=None,

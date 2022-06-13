@@ -28,14 +28,14 @@ torch::Tensor project_mesh_cuda(
 
 void check_equal_dtype(const torch::Tensor& a, const torch::Tensor& b) {
     TORCH_CHECK(
-        a.dtype() == b.dtype(), 
+        a.dtype() == b.dtype(),
         "expected equal dtype, got ", a.dtype(), " != ", b.dtype()
     );
 }
 
 void check_equal_gpuid(const torch::Tensor& a, const torch::Tensor& b) {
     TORCH_CHECK(
-        a.device().index() == b.device().index(), 
+        a.device().index() == b.device().index(),
         "expected equal gpu id, got ", a.device().index(), " != ", b.device().index()
     );
 }
