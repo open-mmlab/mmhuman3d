@@ -1,4 +1,4 @@
-/*
+/* 
 
 There are 2 ways to rasterize triangles that came to mind:
 1) iterate over all pixels (they define CUDA grid), for selected pixel feed all triangles to 1 CUDA block

@@ -9,9 +9,9 @@ import cv2
 import mmcv
 import numpy as np
 import torch
-from mmpose.utils import StopWatch
 
 from mmhuman3d.apis import inference_image_based_model, init_model
+from mmhuman3d.utils.demo_utils import StopWatch
 from mmhuman3d.core.visualization.renderer.mpr_renderer.smpl_realrender import \
     VisualizerMeshSMPL  # noqa: E501
 from mmhuman3d.models.body_models.builder import build_body_model
@@ -74,21 +74,10 @@ def parse_args():
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
-        '--det-score-thr',
-        type=float,
-        default=0.5,
-        help='bbox score threshold')
-    parser.add_argument(
         '--bbox_thr',
         type=float,
         default=0.6,
         help='Bounding box score threshold')
-    parser.add_argument(
-        '--smooth_type',
-        type=str,
-        default=None,
-        help='Smooth the data through the specified type.'
-        'Select in [oneeuro,gaus1d,savgol].')
     parser.add_argument(
         '--out_video_file',
         type=str,
@@ -105,15 +94,13 @@ def parse_args():
         default=-1,
         help='Frame buffer size. If set -1, the buffer size will be '
         'automatically inferred from the display delay time. Default: -1')
-
     parser.add_argument(
         '--inference_fps',
         type=int,
-        default=20,
+        default=30,
         help='Maximum inference FPS. This is to limit the resource consuming '
         'especially when the detection and pose model are lightweight and '
         'very fast. Default: 10.')
-
     parser.add_argument(
         '--display_delay',
         type=int,
@@ -121,18 +108,11 @@ def parse_args():
         help='Delay the output video in milliseconds. This can be used to '
         'align the output video and inference results. The delay can be '
         'disabled by setting a non-positive delay time. Default: 0')
-
     parser.add_argument(
         '--synchronous_mode',
         action='store_true',
         help='Enable synchronous mode that video I/O and inference will be '
         'temporally aligned. Note that this will reduce the display FPS.')
-
-    parser.add_argument(
-        '--smooth',
-        action='store_true',
-        help='Apply a temporal filter to smooth the pose estimation results. '
-        'See also --smooth-filter-cfg.')
 
     return parser.parse_args()
 
@@ -356,7 +336,7 @@ def display():
                 vid_out.write(img)
 
             # display
-            cv2.imshow('mmpose webcam demo', img)
+            cv2.imshow('mmhuman3d webcam demo', img)
             keyboard_input = cv2.waitKey(1)
             if keyboard_input in (27, ord('q'), ord('Q')):
                 break
