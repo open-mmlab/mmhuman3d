@@ -1,13 +1,6 @@
 import torch
 
 
-def is_cuda_tensor(t):
-    assert torch.is_tensor(t)
-    assert t.is_cuda
-
-def check_shape_len(t, n):
-    assert len(t.shape) == n
-
 def vis_z_buffer(z, percentile=1, vis_pad=0.2):
     z = z[:, :, 0]
     mask = z > 1e-5
