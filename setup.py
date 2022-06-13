@@ -1,5 +1,6 @@
 from setuptools import find_packages, setup
 
+import torch
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
 
@@ -14,6 +15,19 @@ def get_version():
     with open(version_file, 'r', encoding='utf-8') as f:
         exec(compile(f.read(), version_file, 'exec'))
     return locals()['__version__']
+
+
+def get_extensions():
+    extensions = []
+    if torch.cuda.is_available():
+        ext_ops = CUDAExtension(
+            'mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer',  # noqa: E501
+            [
+                'mmhuman3d/core/visualization/renderer/mpr_renderer/cuda/rasterizer.cpp',  # noqa: E501
+                'mmhuman3d/core/visualization/renderer/mpr_renderer/cuda/rasterizer_kernel.cu',  # noqa: E501
+            ])
+        extensions.append(ext_ops)
+    return extensions
 
 
 def parse_requirements(fname='requirements.txt', with_version=True):
@@ -103,14 +117,7 @@ setup(
     keywords='3D Human',
     url='https://github.com/open-mmlab/mmhuman3d',
     packages=find_packages(exclude=('configs', 'tools', 'demo')),
-    ext_modules=[
-        CUDAExtension(
-            'mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer',  # noqa: E501
-            [
-                'mmhuman3d/core/visualization/renderer/mpr_renderer/cuda/rasterizer.cpp',  # noqa: E501
-                'mmhuman3d/core/visualization/renderer/mpr_renderer/cuda/rasterizer_kernel.cu',  # noqa: E501
-            ])
-    ],
+    ext_modules=get_extensions(),
     cmdclass={'build_ext': BuildExtension},
     include_package_data=True,
     classifiers=[

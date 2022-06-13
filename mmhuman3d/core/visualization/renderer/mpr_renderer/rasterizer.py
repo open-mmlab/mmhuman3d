@@ -1,6 +1,5 @@
 import torch
 
-from mmhuman3d.core.visualization.renderer.mpr_renderer.utils import is_cuda_tensor, check_shape_len
 from mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer import \
     estimate_normals as estimate_normals_cuda  # noqa: E501
 from mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer import \
@@ -18,7 +17,7 @@ def estimate_normals(vertices, faces, pinhole, vertices_filter=None):
     Returns:
         coords (torch.tensor): The estimated coordinates.
         normals (torch.tensor): The estimated normals.
-    """    
+    """
     if vertices_filter is None:
         assert torch.is_tensor(vertices)
         assert vertices.is_cuda
@@ -45,12 +44,12 @@ def project_mesh(vertices,
     Args:
         vertices (torch.tensor): Shape should be (num_verts, 3).
         faces (torch.tensor): The faces of the vertices.
-        vertice_values (torch.tensor): The depth of the each vertex. 
+        vertice_values (torch.tensor): The depth of the each vertex.
         pinhole (object): The object of the camera.
 
     Returns:
         torch.tensor: The projected mesh.
-    """    
+    """
     if vertices_filter is None:
         assert torch.is_tensor(vertices)
         assert vertices.is_cuda
