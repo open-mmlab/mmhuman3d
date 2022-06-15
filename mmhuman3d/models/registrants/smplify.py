@@ -326,8 +326,11 @@ class SMPLify(object):
             joint_prior_weight: weight of joint prior loss
             smooth_loss_weight: weight of smooth loss
             pose_prior_weight: weight of pose prior loss
+            pose_reg_weight: weight of pose regularization loss
+            limb_length_weight: weight of limb length loss
             joint_weights: per joint weight of shape (K, )
             num_iter: number of iterations
+            ftol: early stop tolerance for relative change in loss
 
         Returns:
             None
@@ -428,6 +431,8 @@ class SMPLify(object):
             joint_prior_weight: weight of joint prior loss
             smooth_loss_weight: weight of smooth loss
             pose_prior_weight: weight of pose prior loss
+            pose_reg_weight: weight of pose regularization loss
+            limb_length_weight: weight of limb length loss
             joint_weights: per joint weight of shape (K, )
             return_verts: whether to return vertices
             return_joints: whether to return joints
