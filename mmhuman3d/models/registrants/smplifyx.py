@@ -235,6 +235,7 @@ class SMPLifyX(SMPLify):
 
         optimizer = build_optimizer(parameters, self.optimizer)
 
+        pre_loss = None
         for iter_idx in range(num_iter):
 
             def closure():
@@ -274,7 +275,6 @@ class SMPLifyX(SMPLify):
                 return loss
 
             loss = optimizer.step(closure)
-            print(iter_idx)
             if iter_idx > 0 and pre_loss is not None and ftol > 0:
                 loss_rel_change = self._compute_relative_change(
                     pre_loss, loss.item())
