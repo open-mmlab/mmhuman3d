@@ -236,7 +236,7 @@ class SMPLRenderer(BaseRenderer):
                     verts_rgba=joints_rgb_padded.to(self.device),
                     cameras=cameras)
 
-                pointcloud_rgb, = pointcloud_images[..., :3]
+                pointcloud_rgb = pointcloud_images[..., :3]
                 pointcloud_bgr = rgb2bgr(pointcloud_rgb)
                 pointcloud_mask = (pointcloud_images[..., 3:] > 0) * 1.0
                 output_images = output_images * (
@@ -265,7 +265,11 @@ class SMPLRenderer(BaseRenderer):
 
         # return
         if self.return_tensor:
-            rendered_map = rendered_tensor
+
+            if images is not None:
+                rendered_map = torch.tensor(output_images)
+            else:
+                rendered_map = rendered_tensor
 
             if self.final_resolution != self.resolution:
                 rendered_map = interpolate(
