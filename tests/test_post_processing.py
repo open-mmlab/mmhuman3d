@@ -17,6 +17,46 @@ def test_data_type_torch():
     savgol = build_post_processing(cfg)
     out_o = savgol(noisy_input)
     cfg = dict(
+        type='smoothnet',
+        window_size=8,
+        output_size=8,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize8.pth.tar?versionId'
+        '=CAEQPhiBgMDo0s7shhgiIDgzNTRmNWM2ZWEzYTQyYzRhNzUwYTkzZWZkMmU5MWEw',
+        device='cpu')
+    smoothenet_8 = build_post_processing(cfg)
+    out_s_8 = smoothenet_8(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=16,
+        output_size=16,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize16.pth.tar?versionId'
+        '=CAEQPhiBgMC.s87shhgiIGM3ZTI1ZGY1Y2NhNDQ2YzRiNmEyOGZhY2VjYWFiN2Zi',
+        device='cpu')
+    smoothenet_16 = build_post_processing(cfg)
+    out_s_16 = smoothenet_16(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=32,
+        output_size=32,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize32.pth.tar?versionId'
+        '=CAEQPhiBgIDf0s7shhgiIDhmYmM3YWQ0ZGI3NjRmZTc4NTk2NDE1MTA2MTUyMGRm',
+        device='cpu')
+    smoothenet_32 = build_post_processing(cfg)
+    out_s_32 = smoothenet_32(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=64,
+        output_size=64,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize64.pth.tar?versionId'
+        '=CAEQPhiBgMCyw87shhgiIGEwODI4ZjdiYmFkYTQ0NzZiNDVkODk3MDBlYzE1Y2Rh',
+        device='cpu')
+    smoothenet_64 = build_post_processing(cfg)
+    out_s_64 = smoothenet_64(noisy_input)
+    cfg = dict(
         type='deciwatch',
         interval=5,
         slide_window_q=1,
@@ -127,6 +167,14 @@ def test_data_type_torch():
     assert accel_input_abs >= torch.mean(torch.abs(accel_out_o))
     accel_out_d_5_1 = out_d_5_1[:-2] - 2 * out_d_5_1[1:-1] + out_d_5_1[2:]
     assert accel_input_abs >= torch.mean(torch.abs(accel_out_d_5_1))
+    accel_smoothenet_8 = out_s_8[:-2] - 2 * out_s_8[1:-1] + out_s_8[2:]
+    assert accel_input_abs >= torch.mean(torch.abs(accel_smoothenet_8))
+    accel_smoothenet_16 = out_s_16[:-2] - 2 * out_s_16[1:-1] + out_s_16[2:]
+    assert accel_input_abs >= torch.mean(torch.abs(accel_smoothenet_16))
+    accel_smoothenet_32 = out_s_32[:-2] - 2 * out_s_32[1:-1] + out_s_32[2:]
+    assert accel_input_abs >= torch.mean(torch.abs(accel_smoothenet_32))
+    accel_smoothenet_64 = out_s_64[:-2] - 2 * out_s_64[1:-1] + out_s_64[2:]
+    assert accel_input_abs >= torch.mean(torch.abs(accel_smoothenet_64))
     accel_out_d_5_2 = out_d_5_2[:-2] - 2 * out_d_5_2[1:-1] + out_d_5_2[2:]
     assert accel_input_abs >= torch.mean(torch.abs(accel_out_d_5_2))
     accel_out_d_5_3 = out_d_5_3[:-2] - 2 * out_d_5_3[1:-1] + out_d_5_3[2:]
@@ -146,10 +194,11 @@ def test_data_type_torch():
     accel_out_d_10_5 = out_d_10_5[:-2] - 2 * out_d_10_5[1:-1] + out_d_10_5[2:]
     assert accel_input_abs >= torch.mean(torch.abs(accel_out_d_10_5))
     assert out_g.shape == noisy_input.shape == \
-        out_s.shape == out_o.shape == out_d_5_1.shape == out_d_5_2.shape \
-        == out_d_5_3.shape == out_d_5_4.shape == out_d_5_5.shape \
-        == out_d_10_1.shape == out_d_10_2.shape == out_d_10_3.shape \
-        == out_d_10_4.shape == out_d_10_5.shape
+        out_s.shape == out_o.shape == out_s_8.shape == out_s_16.shape \
+        == out_s_32.shape == out_s_64.shape == out_d_5_1.shape \
+        == out_d_5_2.shape == out_d_5_3.shape == out_d_5_4.shape \
+        == out_d_5_5.shape == out_d_10_1.shape == out_d_10_2.shape \
+        == out_d_10_3.shape == out_d_10_4.shape == out_d_10_5.shape
 
 
 def test_data_type_torch_zero():
@@ -188,6 +237,46 @@ def test_data_type_torch_cuda():
     savgol = build_post_processing(cfg)
     out_o = savgol(noisy_input)
     cfg = dict(
+        type='smoothnet',
+        window_size=8,
+        output_size=8,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize8.pth.tar?versionId'
+        '=CAEQPhiBgMDo0s7shhgiIDgzNTRmNWM2ZWEzYTQyYzRhNzUwYTkzZWZkMmU5MWEw',
+        device='cuda:0')
+    smoothenet_8 = build_post_processing(cfg)
+    out_s_8 = smoothenet_8(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=16,
+        output_size=16,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize16.pth.tar?versionId'
+        '=CAEQPhiBgMC.s87shhgiIGM3ZTI1ZGY1Y2NhNDQ2YzRiNmEyOGZhY2VjYWFiN2Zi',
+        device='cuda:0')
+    smoothenet_16 = build_post_processing(cfg)
+    out_s_16 = smoothenet_16(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=32,
+        output_size=32,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize32.pth.tar?versionId'
+        '=CAEQPhiBgIDf0s7shhgiIDhmYmM3YWQ0ZGI3NjRmZTc4NTk2NDE1MTA2MTUyMGRm',
+        device='cuda:0')
+    smoothenet_32 = build_post_processing(cfg)
+    out_s_32 = smoothenet_32(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=64,
+        output_size=64,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize64.pth.tar?versionId'
+        '=CAEQPhiBgMCyw87shhgiIGEwODI4ZjdiYmFkYTQ0NzZiNDVkODk3MDBlYzE1Y2Rh',
+        device='cuda:0')
+    smoothenet_64 = build_post_processing(cfg)
+    out_s_64 = smoothenet_64(noisy_input)
+    cfg = dict(
         type='deciwatch',
         interval=5,
         slide_window_q=1,
@@ -296,6 +385,14 @@ def test_data_type_torch_cuda():
     assert accel_input_abs >= torch.mean(torch.abs(accel_out_s))
     accel_out_o = out_o[:-2] - 2 * out_o[1:-1] + out_o[2:]
     assert accel_input_abs >= torch.mean(torch.abs(accel_out_o))
+    accel_smoothenet_8 = out_s_8[:-2] - 2 * out_s_8[1:-1] + out_s_8[2:]
+    assert accel_input_abs >= torch.mean(torch.abs(accel_smoothenet_8))
+    accel_smoothenet_16 = out_s_16[:-2] - 2 * out_s_16[1:-1] + out_s_16[2:]
+    assert accel_input_abs >= torch.mean(torch.abs(accel_smoothenet_16))
+    accel_smoothenet_32 = out_s_32[:-2] - 2 * out_s_32[1:-1] + out_s_32[2:]
+    assert accel_input_abs >= torch.mean(torch.abs(accel_smoothenet_32))
+    accel_smoothenet_64 = out_s_64[:-2] - 2 * out_s_64[1:-1] + out_s_64[2:]
+    assert accel_input_abs >= torch.mean(torch.abs(accel_smoothenet_64))
     accel_out_d_5_1 = out_d_5_1[:-2] - 2 * out_d_5_1[1:-1] + out_d_5_1[2:]
     assert accel_input_abs >= torch.mean(torch.abs(accel_out_d_5_1))
     accel_out_d_5_2 = out_d_5_2[:-2] - 2 * out_d_5_2[1:-1] + out_d_5_2[2:]
@@ -317,10 +414,11 @@ def test_data_type_torch_cuda():
     accel_out_d_10_5 = out_d_10_5[:-2] - 2 * out_d_10_5[1:-1] + out_d_10_5[2:]
     assert accel_input_abs >= torch.mean(torch.abs(accel_out_d_10_5))
     assert out_g.shape == noisy_input.shape == \
-        out_s.shape == out_o.shape == out_d_5_1.shape == out_d_5_2.shape \
-        == out_d_5_3.shape == out_d_5_4.shape == out_d_5_5.shape \
-        == out_d_10_1.shape == out_d_10_2.shape == out_d_10_3.shape \
-        == out_d_10_4.shape == out_d_10_5.shape
+        out_s.shape == out_o.shape == out_s_8.shape == out_s_16.shape \
+        == out_s_32.shape == out_s_64.shape == out_d_5_1.shape \
+        == out_d_5_2.shape == out_d_5_3.shape == out_d_5_4.shape \
+        == out_d_5_5.shape == out_d_10_1.shape == out_d_10_2.shape \
+        == out_d_10_3.shape == out_d_10_4.shape == out_d_10_5.shape
 
 
 def test_data_type_np():
@@ -334,8 +432,45 @@ def test_data_type_np():
     cfg = dict(type='SGFilter', window_size=5, polyorder=2)
     savgol = build_post_processing(cfg)
     out_o = savgol(noisy_input)
-    assert out_g.shape == noisy_input.shape == out_s.shape == out_o.shape
-
-
-if __name__ == '__main__':
-    test_data_type_torch()
+    cfg = dict(
+        type='smoothnet',
+        window_size=8,
+        output_size=8,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize8.pth.tar?versionId'
+        '=CAEQPhiBgMDo0s7shhgiIDgzNTRmNWM2ZWEzYTQyYzRhNzUwYTkzZWZkMmU5MWEw',
+        device='cpu')
+    smoothenet_8 = build_post_processing(cfg)
+    out_s_8 = smoothenet_8(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=16,
+        output_size=16,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize16.pth.tar?versionId'
+        '=CAEQPhiBgMC.s87shhgiIGM3ZTI1ZGY1Y2NhNDQ2YzRiNmEyOGZhY2VjYWFiN2Zi',
+        device='cpu')
+    smoothenet_16 = build_post_processing(cfg)
+    out_s_16 = smoothenet_16(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=32,
+        output_size=32,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize32.pth.tar?versionId'
+        '=CAEQPhiBgIDf0s7shhgiIDhmYmM3YWQ0ZGI3NjRmZTc4NTk2NDE1MTA2MTUyMGRm',
+        device='cpu')
+    smoothenet_32 = build_post_processing(cfg)
+    out_s_32 = smoothenet_32(noisy_input)
+    cfg = dict(
+        type='smoothnet',
+        window_size=64,
+        output_size=64,
+        checkpoint='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/smoothnet/smoothnet_windowsize64.pth.tar?versionId'
+        '=CAEQPhiBgMCyw87shhgiIGEwODI4ZjdiYmFkYTQ0NzZiNDVkODk3MDBlYzE1Y2Rh',
+        device='cpu')
+    smoothenet_64 = build_post_processing(cfg)
+    out_s_64 = smoothenet_64(noisy_input)
+    assert out_g.shape == noisy_input.shape == out_s.shape == out_o.shape \
+        == out_s_8.shape == out_s_16.shape == out_s_32.shape == out_s_64.shape

@@ -15,7 +15,7 @@ from mmcv.runner import (
 
 from mmhuman3d.apis import multi_gpu_test, single_gpu_test
 from mmhuman3d.data.datasets import build_dataloader, build_dataset
-from mmhuman3d.models import build_architecture
+from mmhuman3d.models.architectures.builder import build_architecture
 
 
 def parse_args():

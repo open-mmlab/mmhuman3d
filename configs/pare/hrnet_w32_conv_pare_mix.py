@@ -201,11 +201,11 @@ data = dict(
                 ann_file='eft_mpii.npz'),
             dict(
                 type=dataset_type,
-                dataset_name='mpi-inf-3dhp',
+                dataset_name='mpi_inf_3dhp',
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_24',
-                ann_file='mpi_inf_3dhp_train_mmhuman3d.npz'),
+                ann_file='mpi_inf_3dhp_train.npz'),
         ],
         partition=[0.5, 0.233, 0.046, 0.021, 0.2],
     ),

@@ -26,7 +26,7 @@ from mmhuman3d.data.data_structures.human_data_cache import (
     HumanDataCacheReader,
     HumanDataCacheWriter,
 )
-from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.body_models.builder import build_body_model
 from .base_dataset import BaseDataset
 from .builder import DATASETS
 

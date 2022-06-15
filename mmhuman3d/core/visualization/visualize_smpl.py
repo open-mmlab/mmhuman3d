@@ -28,7 +28,7 @@ from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import \
     ParametricMeshes  # noqa: E501
 from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import \
     align_input_to_padded  # noqa: E501
-from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils import (
     check_input_path,
     check_path_suffix,

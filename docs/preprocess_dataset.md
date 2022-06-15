@@ -306,7 +306,7 @@ mmhuman3d
 
 For PARE training, the following datasets are required:
   - [Human3.6M](#human36m)
-  - [Human3.6M Mosh](#human36mmosh)
+  - [Human3.6M Mosh](#human36m-mosh)
   - [MPI-INF-3DHP](#mpi-inf-3dhp)
   - [EFT-COCO](#EFT)
   - [EFT-MPII](#EFT)

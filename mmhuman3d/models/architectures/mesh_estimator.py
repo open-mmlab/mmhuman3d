@@ -13,16 +13,13 @@ from mmhuman3d.utils.geometry import (
     project_points,
     rotation_matrix_to_angle_axis,
 )
-from ..builder import (
-    ARCHITECTURES,
-    build_backbone,
-    build_body_model,
-    build_discriminator,
-    build_head,
-    build_loss,
-    build_neck,
-    build_registrant,
-)
+from ..backbones.builder import build_backbone
+from ..body_models.builder import build_body_model
+from ..discriminators.builder import build_discriminator
+from ..heads.builder import build_head
+from ..losses.builder import build_loss
+from ..necks.builder import build_neck
+from ..registrants.builder import build_registrant
 from .base_architecture import BaseArchitecture
 
 
@@ -736,7 +733,6 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         pass
 
 
-@ARCHITECTURES.register_module()
 class ImageBodyModelEstimator(BodyModelEstimator):
 
     def make_fake_data(self, predictions: dict, requires_grad: bool):
@@ -800,7 +796,6 @@ class ImageBodyModelEstimator(BodyModelEstimator):
         return all_preds
 
 
-@ARCHITECTURES.register_module()
 class VideoBodyModelEstimator(BodyModelEstimator):
 
     def make_fake_data(self, predictions: dict, requires_grad: bool):

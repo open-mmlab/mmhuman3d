@@ -4,10 +4,8 @@ import torch.nn as nn
 from mmcv.runner.base_module import BaseModule
 
 from mmhuman3d.utils.geometry import rot6d_to_rotmat
-from ..builder import HEADS
 
 
-@HEADS.register_module()
 class HMRHead(BaseModule):
 
     def __init__(self,

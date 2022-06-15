@@ -163,6 +163,37 @@ class PositionEmbeddingSine_1D(nn.Module):
 
 
 class DeciWatch(nn.Module):
+    """Apply DeciWatch framework for 10x efficiency.
+    "DeciWatch: A Simple Baseline for 10× Efficient 2D and 3D Pose Estimation",
+    arXiv'2022. More details can be found in the `paper
+    <https://arxiv.org/pdf/2203.08713>` .
+    Args:
+        input_dim (int): The size of input spatial dimension,
+            e.g., 15*2 for 2d pose on the jhmdb dataset
+        sample_interval (int): DeciWatch argument. See :class:`DeciWatch`
+            for details. The intervals of the uniform sampling.
+            The sampling ratio is: 1/sample_interval. Default: 10
+        encoder_hidden_dim (int): DeciWatch argument. See :class:`DeciWatch`
+            for details. Hidden dimension in the encoder. Default: 64
+        decoder_hidden_dim (int): DeciWatch argument. See :class:`DeciWatch`
+            for details. Hidden dimension in the decoder. Default: 64
+        dropout (float): DeciWatch argument. See :class:`DeciWatch`
+            for details. dropout probability. Default: 0.1
+        nheads (int): DeciWatch argument. See :class:`DeciWatch`
+            for details. Default: 4
+        dim_feedforward (int): DeciWatch argument. See :class:`DeciWatch`
+            for details. Dimension of feed forward layers.
+        enc_layers (int): DeciWatch argument. See :class:`DeciWatch`
+            for details. Layers of the encoder. Default: 5
+        dec_layers (int): DeciWatch argument. See :class:`DeciWatch`
+            for details. Layers of the encoder. Default: 5
+        activation (str): DeciWatch argument. See :class:`DeciWatch`
+            for details. Activation function in deciwatch.
+            Default: 'leaky_relu'
+        pre_norm (bool): DeciWatch argument. See :class:`DeciWatch`
+            for details. Whether to normalize before positional embedding.
+            Default: False
+    """
 
     def __init__(self,
                  input_dim=24 * 6,

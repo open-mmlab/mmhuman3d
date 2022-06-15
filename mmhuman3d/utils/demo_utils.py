@@ -314,8 +314,10 @@ def smooth_process(x,
         x (np.ndarray): Shape should be (frame,num_person,K,C)
             or (frame,K,C).
         smooth_type (str, optional): Smooth type.
-            choose in ['oneeuro', 'gaus1d', 'savgol'].
-            Defaults to 'savgol'.
+            choose in ['oneeuro', 'gaus1d', 'savgol','smoothnet',
+                'smoothnet_windowsize8','smoothnet_windowsize16',
+                'smoothnet_windowsize32','smoothnet_windowsize64'].
+            Defaults to 'savgol'. 'smoothnet' is default with windowsize=8.
         cfg_base_dir (str, optional): Config base dir,
                             default configs/_base_/post_processing/
     Raises:
@@ -325,8 +327,14 @@ def smooth_process(x,
         np.ndarray: Smoothed data. The shape should be
             (frame,num_person,K,C) or (frame,K,C).
     """
+    if smooth_type == 'smoothnet':
+        smooth_type = 'smoothnet_windowsize8'
 
-    assert smooth_type in ['oneeuro', 'gaus1d', 'savgol']
+    assert smooth_type in [
+        'oneeuro', 'gaus1d', 'savgol', 'smoothnet_windowsize8',
+        'smoothnet_windowsize16', 'smoothnet_windowsize32',
+        'smoothnet_windowsize64'
+    ]
 
     cfg = os.path.join(cfg_base_dir, smooth_type + '.py')
     if isinstance(cfg, str):

@@ -8,7 +8,6 @@ from mmcv.cnn import build_conv_layer, build_norm_layer
 from mmcv.runner import BaseModule, ModuleList, Sequential
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from ..builder import BACKBONES
 from .resnet import BasicBlock, Bottleneck
 
 
@@ -202,7 +201,6 @@ class HRModule(BaseModule):
         return x_fuse
 
 
-@BACKBONES.register_module()
 class PoseHighResolutionNet(BaseModule):
     """HRNet backbone.
     `High-Resolution Representations for Labeling Pixels and Regions

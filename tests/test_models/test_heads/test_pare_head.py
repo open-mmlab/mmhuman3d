@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmhuman3d.models.heads import PareHead
+from mmhuman3d.models.heads.builder import PareHead
 
 
 @pytest.mark.parametrize('deconv_with_bias', [True, False])

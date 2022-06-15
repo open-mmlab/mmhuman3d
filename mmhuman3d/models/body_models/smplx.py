@@ -10,10 +10,8 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_num,
 )
 from mmhuman3d.core.conventions.segmentation import body_segmentation
-from ..builder import BODY_MODELS
 
 
-@BODY_MODELS.register_module(name=['SMPLX', 'smplx'])
 class SMPLX(_SMPLX):
     """Extension of the official SMPL-X implementation."""
 

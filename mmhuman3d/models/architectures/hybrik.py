@@ -5,14 +5,11 @@ import torch
 
 from mmhuman3d.data.datasets.pipelines.hybrik_transforms import heatmap2coord
 from mmhuman3d.utils.transforms import rotmat_to_quat
-from ..builder import (
-    ARCHITECTURES,
-    build_backbone,
-    build_body_model,
-    build_head,
-    build_loss,
-    build_neck,
-)
+from ..backbones.builder import build_backbone
+from ..body_models.builder import build_body_model
+from ..heads.builder import build_head
+from ..losses.builder import build_loss
+from ..necks.builder import build_neck
 from .base_architecture import BaseArchitecture
 
 
@@ -32,7 +29,6 @@ def set_requires_grad(nets, requires_grad=False):
                 param.requires_grad = requires_grad
 
 
-@ARCHITECTURES.register_module()
 class HybrIK_trainer(BaseArchitecture, metaclass=ABCMeta):
     """Hybrik_trainer Architecture.
 

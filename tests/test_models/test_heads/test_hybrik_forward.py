@@ -6,8 +6,9 @@ import numpy as np
 import pytest
 import torch
 
-from mmhuman3d.models import HybrIK_trainer, HybrIKHead
-from mmhuman3d.models.builder import build_body_model
+from mmhuman3d.models.architectures.hybrik import HybrIK_trainer
+from mmhuman3d.models.body_models.builder import build_body_model
+from mmhuman3d.models.heads.hybrik_head import HybrIKHead
 from mmhuman3d.models.utils.inverse_kinematics import (
     batch_get_3children_orient_svd,
     batch_get_pelvis_orient,

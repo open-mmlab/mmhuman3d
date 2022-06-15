@@ -9,7 +9,8 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idx,
     get_keypoint_idxs_by_part,
 )
-from mmhuman3d.models.builder import REGISTRANTS, build_body_model, build_loss
+from ..body_models.builder import build_body_model
+from ..losses.builder import build_loss
 
 
 class OptimizableParameters():
@@ -43,7 +44,6 @@ class OptimizableParameters():
         return self.opt_params
 
 
-@REGISTRANTS.register_module()
 class SMPLify(object):
     """Re-implementation of SMPLify with extended features.
 
