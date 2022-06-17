@@ -44,6 +44,7 @@ from mmhuman3d.utils.geometry import (
     quaternion_to_angle_axis,
     rotation_matrix_to_angle_axis,
     rotation_matrix_to_quaternion,
+    weak_perspective_projection,
 )
 from mmhuman3d.utils.keypoint_utils import search_limbs
 from mmhuman3d.utils.logger import get_root_logger
@@ -166,6 +167,7 @@ __all__ = [
     'video_to_gif',
     'video_to_images',
     'video_writer',
+    'weak_perspective_projection'
     'xywh2xyxy',
     'xyxy2xywh',
     'save_meshes_as_objs',

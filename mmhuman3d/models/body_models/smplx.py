@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 import torch
 from smplx import SMPLX as _SMPLX
+from smplx import SMPLXLayer as _SMPLXLayer
 from smplx.lbs import vertices2joints
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
@@ -249,3 +250,126 @@ class SMPLX(_SMPLX):
         ],
                               dim=1).reshape(-1, (NUM_JOINTS + 1) * 3)
         return full_pose
+
+
+class SMPLXLayer(_SMPLXLayer):
+    """Extension of the official SMPL-X implementation."""
+
+    body_pose_keys = {'global_orient', 'body_pose'}
+    full_pose_keys = {
+        'global_orient', 'body_pose', 'left_hand_pose', 'right_hand_pose',
+        'jaw_pose', 'leye_pose', 'reye_pose'
+    }
+    NUM_VERTS = 10475
+    NUM_FACES = 20908
+
+    def __init__(self,
+                 *args,
+                 keypoint_src: str = 'smplx',
+                 keypoint_dst: str = 'human_data',
+                 keypoint_approximate: bool = False,
+                 joints_regressor: str = None,
+                 extra_joints_regressor: str = None,
+                 **kwargs):
+        """
+        Args:
+            *args: extra arguments for SMPL initialization.
+            keypoint_src: source convention of keypoints. This convention
+                is used for keypoints obtained from joint regressors.
+                Keypoints then undergo conversion into keypoint_dst
+                convention.
+            keypoint_dst: destination convention of keypoints. This convention
+                is used for keypoints in the output.
+            keypoint_approximate: whether to use approximate matching in
+                convention conversion for keypoints.
+            joints_regressor: path to joint regressor. Should be a .npy
+                file. If provided, replaces the official J_regressor of SMPL.
+            extra_joints_regressor: path to extra joint regressor. Should be
+                a .npy file. If provided, extra joints are regressed and
+                concatenated after the joints regressed with the official
+                J_regressor or joints_regressor.
+            **kwargs: extra keyword arguments for SMPL initialization.
+
+        Returns:
+            None
+        """
+        super(SMPLXLayer, self).__init__(*args, **kwargs)
+        # joints = [JOINT_MAP[i] for i in JOINT_NAMES]
+        self.keypoint_src = keypoint_src
+        self.keypoint_dst = keypoint_dst
+        self.keypoint_approximate = keypoint_approximate
+
+        # override the default SMPL joint regressor if available
+        if joints_regressor is not None:
+            joints_regressor = torch.tensor(
+                np.load(joints_regressor), dtype=torch.float)
+            self.register_buffer('joints_regressor', joints_regressor)
+
+        # allow for extra joints to be regressed if available
+        if extra_joints_regressor is not None:
+            joints_regressor_extra = torch.tensor(
+                np.load(extra_joints_regressor), dtype=torch.float)
+            self.register_buffer('joints_regressor_extra',
+                                 joints_regressor_extra)
+
+        self.num_verts = self.get_num_verts()
+        self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
+        self.body_part_segmentation = body_segmentation('smplx')
+
+    def forward(self,
+                *args,
+                return_verts: bool = True,
+                return_full_pose: bool = False,
+                **kwargs) -> dict:
+        """Forward function.
+
+        Args:
+            *args: extra arguments for SMPL
+            return_verts: whether to return vertices
+            return_full_pose: whether to return full pose parameters
+            **kwargs: extra arguments for SMPL
+
+        Returns:
+            output: contains output parameters and attributes
+        """
+
+        kwargs['get_skin'] = True
+        smplx_output = super(SMPLXLayer, self).forward(*args, **kwargs)
+
+        if not hasattr(self, 'joints_regressor'):
+            joints = smplx_output.joints
+        else:
+            joints = vertices2joints(self.joints_regressor,
+                                     smplx_output.vertices)
+
+        if hasattr(self, 'joints_regressor_extra'):
+            extra_joints = vertices2joints(self.joints_regressor_extra,
+                                           smplx_output.vertices)
+            joints = torch.cat([joints, extra_joints], dim=1)
+
+        joints, joint_mask = convert_kps(
+            joints,
+            src=self.keypoint_src,
+            dst=self.keypoint_dst,
+            approximate=self.keypoint_approximate)
+        if isinstance(joint_mask, np.ndarray):
+            joint_mask = torch.tensor(
+                joint_mask, dtype=torch.uint8, device=joints.device)
+
+        batch_size = joints.shape[0]
+        joint_mask = joint_mask.reshape(1, -1).expand(batch_size, -1)
+
+        output = dict(
+            global_orient=smplx_output.global_orient,
+            body_pose=smplx_output.body_pose,
+            joints=joints,
+            joint_mask=joint_mask,
+            keypoints=torch.cat([joints, joint_mask[:, :, None]], dim=-1),
+            betas=smplx_output.betas)
+
+        if return_verts:
+            output['vertices'] = smplx_output.vertices
+        if return_full_pose:
+            output['full_pose'] = smplx_output.full_pose
+
+        return output

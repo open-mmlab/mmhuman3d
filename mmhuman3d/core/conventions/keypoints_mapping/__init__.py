@@ -46,6 +46,7 @@ KEYPOINTS_FACTORY = {
     'penn_action': penn_action.PENN_ACTION_KEYPOINTS,
     'h36m': h36m.H36M_KEYPOINTS,
     'h36m_mmpose': h36m.H36M_KEYPOINTS_MMPOSE,
+    'h36m_expose': h36m.H36M_KEYPOINTS_EXPOSE,
     'pw3d': pw3d.PW3D_KEYPOINTS,
     'mpii': mpii.MPII_KEYPOINTS,
     'lsp': lsp.LSP_KEYPOINTS,
@@ -258,6 +259,7 @@ def get_mapping(src: str,
                 intersection.append(dst_name)
             # approximate mapping
             if approximate and not matched:
+                
                 try:
                     part_list = human_data.APPROXIMATE_MAP[dst_name]
                 except KeyError:
