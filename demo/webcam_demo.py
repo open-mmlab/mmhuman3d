@@ -72,6 +72,11 @@ def parse_args():
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
+        '--body_model_dir',
+        type=str,
+        default='data/body_models/',
+        help='Body models file path')
+    parser.add_argument(
         '--bbox_thr',
         type=float,
         default=0.6,
@@ -349,7 +354,7 @@ def main():
             type='SMPL',
             gender='neutral',
             num_betas=10,
-            model_path='data/body_models/smpl'))
+            model_path=args.body_model_dir))
     # build renderer
     renderer = VisualizerMeshSMPL(
         device=args.device, body_models=body_model, resolution=resolution)
