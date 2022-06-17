@@ -2,10 +2,11 @@
 
 <!-- TOC -->
 
-- [Requirements](#requirements)
-- [Prepare environment](#prepare-environment)
-- [Install MMHuman3D](#install-mmhuman3d)
-- [A from-scratch setup script](#a-from-scratch-setup-script)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Prepare environment](#prepare-environment)
+  - [Install MMHuman3D](#install-mmhuman3d)
+  - [A from-scratch setup script](#a-from-scratch-setup-script)
 
 <!-- TOC -->
 
@@ -54,7 +55,9 @@ conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 
 **Important:** Make sure that your compilation CUDA version and runtime CUDA version match.
 
-d. Install PyTorch3D and dependency libs.
+d. Install PyTorch3D on Linux or Windows.
+
+For Linux:
 
 ```shell
 conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
@@ -62,6 +65,15 @@ conda install -c bottler nvidiacub -y
 
 conda install pytorch3d -c pytorch3d
 ```
+
+For Windows:
+
+You can go to "x64 Native Tools Command Prompt for VS 2019" to compile and install. Depending on the version of PyTorch, you may need to change some PyTorch headers before compilation. These are often discussed in issues in the PyTorch3D repository.
+```shell
+cd pytorch3d
+python3 setup.py install
+```
+
 Please refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details.
 
 Your installation is successful if you can do these in command line.
