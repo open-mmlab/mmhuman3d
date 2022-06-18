@@ -186,7 +186,7 @@ test_pipeline = [
 
 data = dict(
     samples_per_gpu=48, #body 48, head = hand = 64
-    workers_per_gpu=8,
+    workers_per_gpu=16,
     train = dict(
         type = 'MixedDataset',
         configs = [
@@ -221,7 +221,7 @@ data = dict(
                 num_expression=10,
             ),
         ],
-        partition=[1.0,1.0,1.0],
+        partition=[0.08,0.12,0.8],
     ),
     val=dict(
         type=dataset_type,
