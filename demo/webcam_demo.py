@@ -60,11 +60,6 @@ def parse_args():
         'scratch_600e_coco_20210629_110627-974d9307.pth',
         help='Checkpoint file for detection')
     parser.add_argument(
-        '--body_model_dir',
-        type=str,
-        default='data/body_models/',
-        help='Body models file path')
-    parser.add_argument(
         '--det_cat_id',
         type=int,
         default=1,
@@ -74,7 +69,7 @@ def parse_args():
     parser.add_argument(
         '--body_model_dir',
         type=str,
-        default='data/body_models/',
+        default='data/body_models/smpl',
         help='Body models file path')
     parser.add_argument(
         '--bbox_thr',
