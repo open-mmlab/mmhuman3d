@@ -1,5 +1,4 @@
-from unittest.mock import MagicMock, patch
-
+import pytest
 import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.utils import ico_sphere
@@ -8,8 +7,6 @@ from mmhuman3d.core.cameras import compute_orbit_cameras
 from mmhuman3d.core.cameras.builder import build_cameras
 from mmhuman3d.core.visualization import render_runner
 from mmhuman3d.core.visualization.renderer import build_renderer
-from mmhuman3d.core.visualization.renderer.mpr_renderer.smpl_realrender import \
-    VisualizerMeshSMPL  # noqa: E501
 from mmhuman3d.models.body_models.builder import build_body_model
 
 
@@ -45,13 +42,11 @@ def test_render_runner():
     assert tensor.shape == (2, 128, 128, 4)
 
 
-@patch(
-    'mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer.estimate_normals',  # noqa: E501
-    MagicMock)
-@patch(
-    'mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer.project_mesh',  # noqa: E501
-    MagicMock)
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason='requires CUDA support')
 def test_realtime_render():
+    from mmhuman3d.core.visualization.renderer.mpr_renderer.smpl_realrender import VisualizerMeshSMPL  # noqa: E501
+
     if torch.cuda.is_available():
         device_name = 'cuda'
     else:
