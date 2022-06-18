@@ -95,7 +95,7 @@ def parse_args():
     parser.add_argument(
         '--inference_fps',
         type=int,
-        default=30,
+        default=20,
         help='Maximum inference FPS. This is to limit the resource consuming '
         'especially when the detection and pose model are lightweight and '
         'very fast. Default: 10.')
@@ -138,7 +138,6 @@ def read_camera():
 
             if args.synchronous_mode:
                 event_inference_done.wait()
-            event_inference_done.wait()
             frame_buffer.put((ts_input, frame))
         else:
             # input ending signal
@@ -210,7 +209,7 @@ def display():
     ts_inference = None  # timestamp of the latest inference result
     fps_inference = 0.  # infenrece FPS
     t_delay_inference = 0.  # inference result time delay
-    verts = None
+    mesh_results = None
     t_info = []  # upstream time information (list[str])
 
     # initialize visualization and output
