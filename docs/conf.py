@@ -45,9 +45,8 @@ extensions = [
 ]
 
 autodoc_mock_imports = [
-    'mmhuman3d.version',
-    'mmhuman3d.core.visualization.renderer.torch3d_renderer', 'mmcv.ops',
-    'pytorch3d'
+    'mmhuman3d.version', 'mmhuman3d.core.renderer.torch3d_renderer',
+    'mmcv.ops', 'pytorch3d'
 ]
 
 # Ignore >>> when copying code
