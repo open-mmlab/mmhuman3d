@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from mmhuman3d.core.visualization import (
+from mmhuman3d.core.visualization.visualize_smpl import (
     visualize_smpl_calibration,
     visualize_smpl_hmr,
     visualize_smpl_pose,

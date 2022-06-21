@@ -5,12 +5,8 @@ from pytorch3d.renderer import (
     HardPhongShader,
     SoftGouraudShader,
     SoftPhongShader,
-    TexturesAtlas,
-    TexturesUV,
-    TexturesVertex,
 )
 
-from .lights import AmbientLights, DirectionalLights, PointLights
 from .shader import (
     DepthShader,
     NoLightShader,
@@ -18,18 +14,6 @@ from .shader import (
     SegmentationShader,
     SilhouetteShader,
 )
-from .textures import TexturesNearest
-
-RENDERER = Registry('renderer')
-
-LIGHTS = Registry('lights')
-LIGHTS.register_module(
-    name=['directional', 'directional_lights', 'DirectionalLights'],
-    module=DirectionalLights)
-LIGHTS.register_module(
-    name=['point', 'point_lights', 'PointLights'], module=PointLights)
-LIGHTS.register_module(
-    name=['ambient', 'ambient_lights', 'AmbientLights'], module=AmbientLights)
 
 SHADER = Registry('shader')
 SHADER.register_module(
@@ -67,35 +51,7 @@ SHADER.register_module(
     ],
     module=SegmentationShader)
 
-TEXTURES = Registry('textures')
-TEXTURES.register_module(
-    name=['TexturesAtlas', 'textures_atlas', 'atlas', 'Atlas'],
-    module=TexturesAtlas)
-TEXTURES.register_module(
-    name=['TexturesNearest', 'textures_nearest', 'nearest', 'Nearest'],
-    module=TexturesNearest)
-TEXTURES.register_module(
-    name=['TexturesUV', 'textures_uv', 'uv'], module=TexturesUV)
-TEXTURES.register_module(
-    name=['TexturesVertex', 'textures_vertex', 'vertex', 'vc'],
-    module=TexturesVertex)
-
-
-def build_textures(cfg):
-    """Build textures."""
-    return TEXTURES.build(cfg)
-
 
 def build_shader(cfg):
     """Build shader."""
     return SHADER.build(cfg)
-
-
-def build_lights(cfg):
-    """Build lights."""
-    return LIGHTS.build(cfg)
-
-
-def build_renderer(cfg):
-    """Build renderers."""
-    return RENDERER.build(cfg)

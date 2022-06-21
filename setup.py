@@ -21,10 +21,10 @@ def get_extensions():
     extensions = []
     if torch.cuda.is_available():
         ext_ops = CUDAExtension(
-            'mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer',  # noqa: E501
+            'mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer',  # noqa: E501
             [
-                'mmhuman3d/core/visualization/renderer/mpr_renderer/cuda/rasterizer.cpp',  # noqa: E501
-                'mmhuman3d/core/visualization/renderer/mpr_renderer/cuda/rasterizer_kernel.cu',  # noqa: E501
+                'mmhuman3d/core/renderer/mpr_renderer/cuda/rasterizer.cpp',  # noqa: E501
+                'mmhuman3d/core/renderer/mpr_renderer/cuda/rasterizer_kernel.cu',  # noqa: E501
             ])
         extensions.append(ext_ops)
     return extensions

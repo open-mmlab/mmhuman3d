@@ -13,7 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from mmhuman3d.core.conventions.cameras.convert_convention import \
     enc_camera_convention  # prevent yapf isort conflict
-from mmhuman3d.utils import get_different_colors
+from mmhuman3d.utils.demo_utils import get_different_colors
 from mmhuman3d.utils.ffmpeg_utils import images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
 

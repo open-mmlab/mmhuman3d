@@ -1,9 +1,9 @@
 import torch
 
 try:
-    from mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer import \
+    from mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer import \
         estimate_normals as estimate_normals_cuda  # noqa: E501
-    from mmhuman3d.core.visualization.renderer.mpr_renderer.cuda.rasterizer import \
+    from mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer import \
         project_mesh as project_mesh_cuda  # noqa: E501
 except (ImportError, ModuleNotFoundError):
     print('Please reinstall MMHuman3D to build mpr_renderer.')

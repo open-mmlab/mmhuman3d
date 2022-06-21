@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 from mmhuman3d.apis import inference_image_based_model, init_model
-from mmhuman3d.core.visualization.renderer.mpr_renderer.smpl_realrender import \
+from mmhuman3d.core.renderer.mpr_renderer.smpl_realrender import \
     VisualizerMeshSMPL  # noqa: E501
 from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils.demo_utils import (
@@ -162,8 +162,6 @@ def inference_detection():
         # inference detection
         with stop_watch.timeit('Det'):
             mmdet_results = inference_detector(det_model, frame)
-            if mmdet_results == []:
-                continue
         t_info = stop_watch.report_strings()
         with det_result_queue_mutex:
             det_result_queue.append((ts_input, frame, t_info, mmdet_results))

@@ -2,8 +2,8 @@ import json
 import os
 
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
+from mmhuman3d.core.renderer.vedo_render import VedoRenderer
 from mmhuman3d.utils.path_utils import check_path_suffix
-from .renderer.vedo_render import VedoRenderer
 
 
 def visualize_chessboard_kinects_rgb(chessboard_path: str,

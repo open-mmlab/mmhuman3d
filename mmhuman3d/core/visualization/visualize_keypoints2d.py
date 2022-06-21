@@ -15,16 +15,15 @@ from mmhuman3d.core.conventions.keypoints_mapping.human_data import (
     HUMAN_DATA_LIMBS_INDEX,
     HUMAN_DATA_PALETTE,
 )
-from mmhuman3d.utils import (
+from mmhuman3d.utils.demo_utils import get_different_colors
+from mmhuman3d.utils.ffmpeg_utils import images_to_video, video_to_images
+from mmhuman3d.utils.keypoint_utils import search_limbs
+from mmhuman3d.utils.path_utils import (
     Existence,
     check_input_path,
     check_path_existence,
     check_path_suffix,
-    get_different_colors,
-    images_to_video,
     prepare_output_path,
-    search_limbs,
-    video_to_images,
 )
 
 
