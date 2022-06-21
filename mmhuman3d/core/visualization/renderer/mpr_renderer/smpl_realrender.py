@@ -1,4 +1,5 @@
 # These codes brought from `https://github.com/rmbashirov/rgbd-kinect-pose/`
+
 import cv2
 import numpy as np
 import torch
@@ -34,15 +35,19 @@ class VisualizerMeshSMPL:
     def __call__(self, vertices, bg=None, **kwargs):
         assert vertices.device == self.faces.device
         vertices = vertices.clone()
-
         coords, normals = estimate_normals(
             vertices=vertices, faces=self.faces, pinhole=self.pinhole2d)
         vis = vis_normals(coords, normals)
-        # convert gray to 3 channel img
-        vis = cv2.merge((vis, vis, vis))
         if bg is not None:
             mask = coords[:, :, [2]] <= 0
-            vis = vis + bg * mask.cpu().numpy().astype(np.uint8)
+            vis = (
+                vis[:, :, None] +
+                torch.tensor(bg).to(mask.device) * mask).cpu().numpy().astype(
+                    np.uint8)
+        else:
+            # convert gray to 3 channel img
+            vis = vis.detach().cpu().numpy()
+            vis = cv2.merge((vis, vis, vis))
         # z_buffer = project_mesh(
         #     vertices=vertices,
         #     faces=self.faces,

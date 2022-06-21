@@ -32,6 +32,6 @@ def vis_normals(coords, normals, vis_pad=0.2):
     vis = torch.zeros((h, w), dtype=coords.dtype, device=coords.device)
     vis[mask] = torch.clamp(dot, 0, 1) * (1 - 2 * vis_pad) + vis_pad
 
-    vis_cpu = (vis * 255).to(dtype=torch.uint8).detach().cpu().numpy()
+    vis = (vis * 255).to(dtype=torch.uint8)
 
-    return vis_cpu
+    return vis

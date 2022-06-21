@@ -108,7 +108,8 @@ def parse_args():
         'disabled by setting a non-positive delay time. Default: 0')
     parser.add_argument(
         '--synchronous_mode',
-        action='store_true',
+        type=str,
+        default=True,
         help='Enable synchronous mode that video I/O and inference will be '
         'temporally aligned. Note that this will reduce the display FPS.')
 
@@ -363,9 +364,6 @@ def main():
         args.mesh_reg_config,
         args.mesh_reg_checkpoint,
         device=args.device.lower())
-
-    # store mesh history for tracking
-    # mesh_history_list = [{'mesh_results_last': [], 'next_id': 0}]
 
     # frame buffer
     if args.buffer_size > 0:
