@@ -29,6 +29,7 @@ from .ffhq_flame import FFHQFlameConverter
 from .expose_curated_fits import ExposeCuratedFitsConverter
 from .expose_spin_smplx import ExposeSPINSMPLXConverter
 from .freihand import FreihandConverter
+from .stirling import StirlingConverter
 
 __all__ = [
     'build_data_converter', 'AgoraConverter', 'MpiiConverter', 'H36mConverter',
@@ -40,5 +41,5 @@ __all__ = [
     'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter', 'SurrealConverter',
     'InstaVibeConverter', 'SpinConverter', 'VibeConverter', 'HuMManConverter',
     'FFHQFlameConverter', 'ExposeCuratedFitsConverter','ExposeSPINSMPLXConverter',
-    'FreihandConverter',
+    'FreihandConverter','StirlingConverter'
 ]

@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 
 import mmhuman3d.core.visualization.visualize_smpl as visualize_smpl
-from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx
+from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
 from mmhuman3d.models.utils import FitsDict
 from mmhuman3d.utils.geometry import (
     batch_rodrigues,
@@ -240,7 +240,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             has_keypoints3d
         if keypoints3d_conf[has_keypoints3d == 1].numel() == 0:
             return torch.Tensor([0]).type_as(gt_keypoints3d)
-
         # Center the predictions using the pelvis
         target_idxs = has_keypoints3d == 1
         pred_keypoints3d = pred_keypoints3d[target_idxs]
@@ -269,7 +268,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
         keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
         gt_keypoints2d = gt_keypoints2d[:, :, :2].float()
-
         if keypoints2d_conf[has_keypoints2d == 1].numel() == 0:
             return torch.Tensor([0]).type_as(gt_keypoints2d)
 
@@ -280,7 +278,7 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             translation = pred_cam[:,1:3]
             )
         gt_keypoints2d = 2 * gt_keypoints2d / (img_res - 1) - 1
-
+        
         target_idxs = has_keypoints2d == 1
         pred_keypoints2d = pred_keypoints2d[target_idxs]
         gt_keypoints2d = gt_keypoints2d[target_idxs]
@@ -301,7 +299,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         loss = self.loss_smplx_body_pose(
             pred_rotmat[target_idxs], gt_rotmat[target_idxs])
-        loss = loss / gt_rotmat[target_idxs].shape[0]
         return loss
 
     def compute_smplx_global_orient_loss(self, pred_rotmat: torch.Tensor,
@@ -315,36 +312,36 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         loss = self.loss_smplx_global_orient(
             pred_rotmat[target_idxs], gt_rotmat[target_idxs])
-        loss = loss / gt_rotmat[target_idxs].shape[0]
         return loss
     
     def compute_smplx_jaw_pose_loss(self, pred_rotmat: torch.Tensor,
-                               gt_jaw_pose: torch.Tensor, has_smplx_jaw_pose: torch.Tensor):
+                               gt_jaw_pose: torch.Tensor, has_smplx_jaw_pose: torch.Tensor, face_conf: torch.Tensor):
         """Compute loss for smplx jaw pose."""
         target_idxs = has_smplx_jaw_pose == 1
         if gt_jaw_pose[target_idxs].numel() == 0:
             return torch.Tensor([0]).type_as(gt_jaw_pose)
 
         gt_rotmat = batch_rodrigues(gt_jaw_pose.view(-1, 3)).view(-1, 1, 3, 3)
+        conf = face_conf.mean(axis=1).float()
+        conf = conf.view(-1, 1, 1, 1)
 
         loss = self.loss_smplx_jaw_pose(
-            pred_rotmat[target_idxs], gt_rotmat[target_idxs])
-        loss = loss / gt_rotmat[target_idxs].shape[0]
+            pred_rotmat[target_idxs], gt_rotmat[target_idxs], weight = conf[target_idxs])
         return loss
 
     def compute_smplx_hand_pose_loss(self, pred_rotmat: torch.Tensor,
-                               gt_hand_pose: torch.Tensor, has_smplx_hand_pose: torch.Tensor):
+                               gt_hand_pose: torch.Tensor, has_smplx_hand_pose: torch.Tensor, hand_conf: torch.Tensor):
         """Compute loss for smplx left/right hand pose."""
         joint_num = pred_rotmat.shape[1]
         target_idxs = has_smplx_hand_pose == 1
         if gt_hand_pose[target_idxs].numel() == 0:
             return torch.Tensor([0]).type_as(gt_hand_pose)
-            
         gt_rotmat = batch_rodrigues(gt_hand_pose.view(-1, 3)).view(-1, joint_num, 3, 3)
+        conf = hand_conf.mean(axis=1, keepdim= True).float().expand(-1,joint_num)
+        conf = conf.view(-1, joint_num, 1, 1)
 
         loss = self.loss_smplx_hand_pose(
-            pred_rotmat[target_idxs], gt_rotmat[target_idxs])
-        loss = loss / gt_rotmat[target_idxs].shape[0]
+            pred_rotmat[target_idxs], gt_rotmat[target_idxs], weight = conf[target_idxs])
         return loss
 
 
@@ -365,14 +362,16 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         loss = self.loss_smplx_betas_piror(pred_betas)
         return loss
 
-    def compute_smplx_expression_loss(self, pred_expression: torch.Tensor, gt_expression: torch.Tensor, has_smplx_expression: torch.Tensor):
+    def compute_smplx_expression_loss(self, pred_expression: torch.Tensor, gt_expression: torch.Tensor, has_smplx_expression: torch.Tensor, face_conf: torch.Tensor):
         """Compute loss for smplx betas."""
         target_idxs = has_smplx_expression == 1
         if gt_expression[target_idxs].numel() == 0:
             return torch.Tensor([0]).type_as(gt_expression)
+        conf = face_conf.mean(axis=1).float()
+        conf = conf.view(-1, 1)
 
         loss = self.loss_smplx_expression(
-            pred_expression[target_idxs], gt_expression[target_idxs])
+            pred_expression[target_idxs], gt_expression[target_idxs], weight = conf[target_idxs])
         loss = loss / gt_expression[target_idxs].shape[0]
         return loss
 
@@ -392,8 +391,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             pred_output = self.body_model_train(**pred_param)
             pred_keypoints3d = pred_output['joints']
             pred_vertices = pred_output['vertices']
-
-        
         if 'has_keypoints3d' in targets:
             has_keypoints3d = targets['has_keypoints3d'].squeeze(-1)
         else:
@@ -435,25 +432,28 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             pred_jaw_pose = pred_param['jaw_pose']
             pred_jaw_pose = pose2rotmat(pred_jaw_pose)
             gt_jaw_pose = targets['smplx_jaw_pose']
+            face_conf = get_keypoint_idxs_by_part('head',self.convention)
             has_smplx_jaw_pose = targets['has_smplx_jaw_pose'].squeeze(-1)
             losses['smplx_jaw_pose_loss'] = self.compute_smplx_jaw_pose_loss(
-                pred_jaw_pose, gt_jaw_pose, has_smplx_jaw_pose
+                pred_jaw_pose, gt_jaw_pose, has_smplx_jaw_pose, gt_keypoints2d[:,face_conf,2]
             )
         if self.loss_smplx_hand_pose is not None:
             pred_right_hand_pose = pred_param['right_hand_pose']
             pred_right_hand_pose = pose2rotmat(pred_right_hand_pose)
             gt_right_hand_pose = targets['smplx_right_hand_pose']
+            right_hand_conf = get_keypoint_idxs_by_part('right_hand', self.convention)
             has_smplx_right_hand_pose = targets['has_smplx_right_hand_pose'].squeeze(-1)
             losses['smplx_right_hand_pose_loss'] = self.compute_smplx_hand_pose_loss(
-                pred_right_hand_pose, gt_right_hand_pose, has_smplx_right_hand_pose
+                pred_right_hand_pose, gt_right_hand_pose, has_smplx_right_hand_pose, gt_keypoints2d[:,right_hand_conf,2]
             )
             if 'left_hand_pose' in pred_param:
                 pred_left_hand_pose = pred_param['left_hand_pose']
                 pred_left_hand_pose = pose2rotmat(pred_left_hand_pose)
                 gt_left_hand_pose = targets['smplx_left_hand_pose']
+                left_hand_conf = get_keypoint_idxs_by_part('left_hand', self.convention)
                 has_smplx_left_hand_pose = targets['has_smplx_left_hand_pose'].squeeze(-1)
                 losses['smplx_left_hand_pose_loss'] = self.compute_smplx_hand_pose_loss(
-                    pred_left_hand_pose, gt_left_hand_pose, has_smplx_left_hand_pose
+                    pred_left_hand_pose, gt_left_hand_pose, has_smplx_left_hand_pose, gt_keypoints2d[:,left_hand_conf,2]
                 )
         if self.loss_smplx_betas is not None:
             pred_betas = pred_param['betas']
@@ -464,9 +464,10 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         if self.loss_smplx_expression is not None:
             pred_expression = pred_param['expression']
             gt_expression = targets['smplx_expression']
+            face_conf = get_keypoint_idxs_by_part('head',self.convention)
             has_smplx_expression = targets['has_smplx_expression'].squeeze(-1)
-            losses['smplx_betas_loss'] = self.compute_smplx_betas_loss(
-                pred_expression, gt_expression, has_smplx_expression)
+            losses['smplx_expression_loss'] = self.compute_smplx_expression_loss(
+                pred_expression, gt_expression, has_smplx_expression, gt_keypoints2d[:, face_conf, 2])
         if self.loss_smplx_betas_piror is not None:
             pred_betas = pred_param['betas']
             losses['smplx_betas_prior_loss'] = self.compute_smplx_betas_prior_loss(

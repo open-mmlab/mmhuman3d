@@ -25,6 +25,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     smpl,
     smplx,
     flame,
+    face3d,
     spin,
     mano
 )
@@ -60,6 +61,7 @@ KEYPOINTS_FACTORY = {
     'hybrik_hp3d': mpi_inf_3dhp.HYBRIK_MPI_INF_3DHP_KEYPOINTS,
     'gta': gta.GTA_KEYPOINTS,
     'flame': flame.FLAME_73_KEYPOINTS,
+    'face3d':face3d.FACE3D_IND,
     'spin':spin.SPIN_KEYPOINTS,
     'mano': mano.MANO_KEYPOINTS,
 }

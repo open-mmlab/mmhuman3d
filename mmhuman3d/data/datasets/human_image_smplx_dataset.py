@@ -83,7 +83,10 @@ class HumanImageSMPLXDataset(HumanImageDataset):
         #     info['keypoints3d'] = np.zeros((self.num_keypoints, 4))
         #     info['has_keypoints3d'] = 0
         info = super().prepare_raw_data(idx)
-
+        if self.cache_reader is not None:
+            self.human_data = self.cache_reader.get_item(idx)
+            idx = idx % self.cache_reader.slice_size
+            
         if 'smplx' in self.human_data:
             smplx_dict = self.human_data['smplx']
             info['has_smplx'] = 1
@@ -146,11 +149,16 @@ class HumanImageSMPLXDataset(HumanImageDataset):
     def _parse_result(self, res, mode='keypoint'):
         if mode == 'vertice':
             # gt
-            gt_param_dict = self.human_data['smplx'].copy()
-            for key,value in gt_param_dict.items():
-                value = torch.FloatTensor(value)
-            gt_output = self.body_model(**gt_param_dict)
-            gt_vertices = gt_output['vertices'].detach().cpu().numpy() * 1000.
+            if 'vertices' in self.human_data: # stirling
+                gt_vertices = self.human_data['vertices'].copy()
+                gt_vertices = gt_vertices * 1000.
+            else:
+                gt_param_dict = self.human_data['smplx'].copy()
+                for key,value in gt_param_dict.items():
+                    value = torch.FloatTensor(value)
+                gt_output = self.body_model(**gt_param_dict)
+                gt_vertices = gt_output['vertices'].detach().cpu().numpy() * 1000.
+
             gt_mask = np.ones(gt_vertices.shape[:-1])
 
             # pred

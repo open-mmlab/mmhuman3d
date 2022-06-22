@@ -59,6 +59,7 @@ class FreihandConverter(BaseModeConverter):
         smplx['betas'] = []
         smplx['right_hand_pose'] = []
         keypoints2d = []
+        keypoints3d = []
         key = 'training'
 
 
@@ -104,9 +105,15 @@ class FreihandConverter(BaseModeConverter):
             kps2d = np.array(kps2d)
             kps2d = np.hstack([kps2d, np.ones([kps2d.shape[0], 1])])
             keypoints2d.append(kps2d)
+            kps3d = xyz[index%num_green_bg]
+            kps3d = np.hstack([kps3d, np.ones([kps3d.shape[0],1])])
+            keypoints3d.append(kps3d)
 
         keypoints2d = np.array(keypoints2d)
         keypoints2d, keypoints2d_mask = convert_kps(keypoints2d, src='mano', dst='human_data')
+        keypoints3d = np.array(keypoints3d)
+        keypoints3d, keypoints3d_mask = convert_kps(keypoints3d, src='mano', dst='human_data')
+
 
         smplx['global_orient'] = np.array(smplx['global_orient'])
         smplx['betas'] = np.array(smplx['betas'])
@@ -115,6 +122,8 @@ class FreihandConverter(BaseModeConverter):
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         human_data['keypoints2d'] = keypoints2d
         human_data['keypoints2d_mask'] = keypoints2d_mask
+        human_data['keypoints3d'] = keypoints3d
+        human_data['keypoints3d_mask'] = keypoints3d_mask
         
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_

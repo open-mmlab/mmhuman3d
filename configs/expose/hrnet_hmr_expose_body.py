@@ -132,7 +132,8 @@ model = dict(
     loss_smplx_hand_pose = dict(type='RotationDistance',reduction = 'sum', loss_weight=1),
     loss_smplx_betas = dict(type='MSELoss',reduction = 'sum', loss_weight=0.001),
     loss_smplx_expression = dict(type='MSELoss',reduction = 'sum', loss_weight=1),
-    loss_smplx_betas_prior = dict(type='ThresholdPrior', margin = 3.0, norm = 'l2', loss_weight=1)
+    loss_smplx_betas_prior = dict(type='ThresholdPrior', margin = 3.0, norm = 'l2', loss_weight=1),
+    convention = 'smplx'
 )
 
 # dataset settings
@@ -183,10 +184,29 @@ test_pipeline = [
         meta_keys=['image_path', 'center', 'scale', 'rotation']
     )
 ]
+inference_pipeline = [
+    dict(type = 'LoadImageFromFile'),
+    dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
+    dict(type = 'MeshAffine', img_res = 256),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='ImageToTensor', keys=['img']),
+    dict(type='ToTensor', keys=data_keys),
+    dict(
+        type = 'Collect',
+        keys = ['img',*data_keys],
+        meta_keys=['image_path', 'center', 'scale', 'rotation']
+    )
+]
+
+cache_files = {
+    'curated_fits': 'data/cache/curated_fits_train_smplx.npz',
+    'spin_smplx':'data/cache/spin_smplx_train.npz',
+    'h36m':'data/cache/h36m_train_smplx.npz'
+}
 
 data = dict(
     samples_per_gpu=48, #body 48, head = hand = 64
-    workers_per_gpu=16,
+    workers_per_gpu=8,
     train = dict(
         type = 'MixedDataset',
         configs = [
@@ -199,6 +219,7 @@ data = dict(
                 convention='smplx',
                 num_betas=10,
                 num_expression=10,
+                cache_data_path=cache_files['curated_fits'],
             ),
             dict(
                 type = dataset_type,
@@ -209,6 +230,7 @@ data = dict(
                 convention = 'smplx',
                 num_betas=10,
                 num_expression=10,
+                cache_data_path=cache_files['spin_smplx'],
             ),
             dict(
                 type=dataset_type,
@@ -219,6 +241,7 @@ data = dict(
                 convention='smplx',
                 num_betas=10,
                 num_expression=10,
+                cache_data_path=cache_files['h36m'],
             ),
         ],
         partition=[0.08,0.12,0.8],

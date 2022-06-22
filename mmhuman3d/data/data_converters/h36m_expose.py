@@ -387,9 +387,9 @@ class H36mExPoseConverter(BaseModeConverter):
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
-        human_data['keypoints2d_mask'] = mask
+        # human_data['keypoints2d_mask'] = mask
         human_data['keypoints3d_mask'] = mask
-        human_data['keypoints2d'] = keypoints2d_
+        # human_data['keypoints2d'] = keypoints2d_
         human_data['keypoints3d'] = keypoints3d_
         human_data['cam_param'] = cam_param
         human_data['config'] = 'h36m'

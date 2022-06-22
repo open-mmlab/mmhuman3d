@@ -383,14 +383,81 @@ class ExPoseHandHead(ExPoseHead):
         self.load_regressor(input_feat_dim,  param_mean, regressor_cfg)
         self.avgpool = nn.AdaptiveAvgPool2d((1,1))
     
-    def forward(self, features):
+    def forward(self, features, cond = None):
         batch_size = features[-1].size(0)
         features = self.avgpool(features[-1]).view(batch_size, -1)
-        hand_parameters = self.regressor(features)[-1]
+        hand_parameters = self.regressor(features, cond = cond)[-1]
         params_dict, raw_dict = self.flat_params_to_dict(hand_parameters)
         params_dict['betas'] = torch.index_select(hand_parameters, 1, self.shape_idxs)
 
         camera_params = torch.index_select(hand_parameters, 1, self.camera_idxs)
+        scale = camera_params[:, 0:1]
+        translation = camera_params[:, 1:3]
+        scale = self.camera_scale_func(scale)
+        camera_params = torch.cat([scale,translation],dim=1)
+        return {
+            'pred_param': params_dict,
+            'pred_cam': camera_params,
+            'pred_raw': raw_dict
+        }
+
+class ExPoseFaceHead(ExPoseHead):
+    def __init__(self, init_cfg=None, num_betas: int = 10, num_expression_coeffs: int = 10, mean_pose_path: str = '', input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
+        super().__init__(init_cfg)
+        # poses
+        self.pose_param_conf = [
+            dict(
+                name = 'global_orient',
+                num_angles = 1,
+                use_mean = False,
+                rotate_axis_x = True),
+            dict(
+                name = 'jaw_pose',
+                num_angles = 1,
+                use_mean = False,
+                rotate_axis_x = False),
+        ]
+        mean_poses_dict = {}
+        if os.path.exists(mean_pose_path):
+            with open(mean_pose_path, 'rb') as f:
+                mean_poses_dict = pickle.load(f)
+        start, mean_lst = self.load_param_decoder(mean_poses_dict)
+
+        # shape
+        shape_mean = torch.zeros([num_betas], dtype=torch.float32)
+        shape_idxs = list(range(start, start + num_betas))
+        self.register_buffer('shape_idxs', torch.tensor(shape_idxs, dtype=torch.long))
+        start += num_betas
+        mean_lst.append(shape_mean.view(-1))
+
+        # expression
+        expression_mean = torch.zeros([num_expression_coeffs], dtype=torch.float32)
+        expression_idxs = list(range(start, start + num_expression_coeffs))
+        self.register_buffer('expression_idxs', torch.tensor(expression_idxs, dtype=torch.long))
+        start += num_expression_coeffs
+        mean_lst.append(expression_mean.view(-1))
+        
+        # camera
+        mean, dim, scale_func = self.get_camera_param(camera_cfg)
+        self.camera_scale_func = scale_func
+        camera_idxs = list(range(start, start + dim))
+        self.register_buffer('camera_idxs', torch.tensor(camera_idxs, dtype=torch.long))
+        start += dim
+        mean_lst.append(mean)
+
+        param_mean = torch.cat(mean_lst).view(1, -1)
+        self.load_regressor(input_feat_dim,  param_mean, regressor_cfg)
+        self.avgpool = nn.AdaptiveAvgPool2d((1,1))
+    
+    def forward(self, features, cond = None):
+        batch_size = features[-1].size(0)
+        features = self.avgpool(features[-1]).view(batch_size, -1)
+        head_parameters = self.regressor(features, cond = cond)[-1]
+        params_dict, raw_dict = self.flat_params_to_dict(head_parameters)
+        params_dict['betas'] = torch.index_select(head_parameters, 1, self.shape_idxs)
+        params_dict['expression'] = torch.index_select(head_parameters, 1, self.expression_idxs)
+
+        camera_params = torch.index_select(head_parameters, 1, self.camera_idxs)
         scale = camera_params[:, 0:1]
         translation = camera_params[:, 1:3]
         scale = self.camera_scale_func(scale)
