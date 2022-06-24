@@ -78,7 +78,8 @@ class ExposeSPINSMPLXConverter(BaseModeConverter):
         pose = pose.reshape(-1,55,3)
         betas = np.concatenate([spin_data[dset]['betas'] for dset in spin_data], axis=0).astype(np.float32)
         dsets = np.concatenate([spin_data[dset]['dset'] for dset in spin_data],axis=0)
-        
+        centers = np.concatenate([spin_data[dset]['center'] for dset in spin_data],axis=0).astype(np.float32)
+        scales = np.concatenate([spin_data[dset]['scale'] for dset in spin_data],axis=0).astype(np.float32)
 
         global_pose = pose[:,0]
         body_pose = pose[:,1:22]
@@ -89,7 +90,7 @@ class ExposeSPINSMPLXConverter(BaseModeConverter):
         keypoints2d, keypoints2d_mask = convert_kps(keypoints2d, src='spin', dst='human_data')
 
 
-        for kps in keypoints2d:
+        for index, kps in enumerate(keypoints2d):
             # Remove joints with negative confidence
             kps[kps[:,-1]<0,-1] = 0
             body_conf = kps[BODY_IDXS,-1]
@@ -107,8 +108,12 @@ class ExposeSPINSMPLXConverter(BaseModeConverter):
             kps[RIGHT_HAND_IDXS, -1] = right_hand_conf
             kps[FACE_IDXS, -1] = face_conf
             conf = kps[:,-1]
-            bbox = keyps_to_bbox(kps[:,:2],conf)
-            bbox_xywh_.append(bbox)
+            # bbox = keyps_to_bbox(kps[:,:2],conf, scale = 1.2)
+            center = centers[index]
+            scale = scales[index]
+            bbox = np.concatenate([center - scale*100, center + scale*100])
+            bbox_xywh = self._xyxy2xywh(bbox)
+            bbox_xywh_.append(bbox_xywh)
 
         for index in range(len(imgnames)):
             if dsets[index] == 'coco':

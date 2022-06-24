@@ -2,7 +2,7 @@ _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
 # evaluate
-evaluation = dict(interval=10, metric=['pa-mpjpe'])
+evaluation = dict(interval=10, metric=['3DRMSE'])
 
 optimizer = dict(
     backbone =  dict(type='Adam', lr=1.0e-4, weight_decay = 1.0e-4),
@@ -70,7 +70,7 @@ model = dict(
         use_face_contour = True,
         model_path='data/body_models/flame',
         keypoint_src='flame',
-        keypoint_dst='flame',
+        keypoint_dst='face3d',
     ),
     loss_keypoints2d=dict(type='L1Loss', reduction = 'sum',loss_weight=1),
     loss_smplx_global_orient=dict(type='RotationDistance',reduction = 'sum', loss_weight=1),
@@ -160,7 +160,8 @@ data = dict(
         dataset_name='stirling',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='stirling_ESRC3D_HQ.npz'
+        ann_file='stirling_ESRC3D_HQ.npz',
+        convention = 'face3d'
     ),
     test = dict(
         type=dataset_type,
@@ -177,6 +178,7 @@ data = dict(
         dataset_name='stirling',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='stirling_ESRC3D_HQ.npz'
+        ann_file='stirling_ESRC3D_HQ.npz',
+        convention = 'face3d'
     ),
 )

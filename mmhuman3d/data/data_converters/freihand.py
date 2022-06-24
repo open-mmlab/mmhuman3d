@@ -14,7 +14,6 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idxs_by_part
 )
-from mmhuman3d.data.datasets.pipelines.expose_transforms import keyps_to_bbox
 
 import json
 import pickle as pk

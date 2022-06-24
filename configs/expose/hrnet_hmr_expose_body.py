@@ -148,9 +148,9 @@ data_keys = [
 ]
 train_pipeline = [
     dict(type = 'LoadImageFromFile'),
-    dict(type = 'BBoxCenterJitter', factor = 0.2, dist = 'uniform'),
+    dict(type = 'BBoxCenterJitter', factor = 0.0, dist = 'normal'),
     dict(type = 'RandomHorizontalFlip', flip_prob = 0.5, convention = 'smplx'), # hand = 0,head = body = 0.5
-    dict(type = 'GetRandomScaleRotation', rot_factor = 30.0, scale_factor = 0.2, rot_prob = 0.6),
+    dict(type = 'GetRandomScaleRotation', rot_factor = 30.0, scale_factor = 0.25, rot_prob = 0.6),
     dict(type = 'MeshAffine', img_res = 256), #hand = 224, body = head = 256
     dict(type = 'RandomChannelNoise', noise_factor = 0.4),
     dict(type = 'SimulateLowRes', 

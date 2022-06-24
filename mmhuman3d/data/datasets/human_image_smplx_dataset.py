@@ -16,10 +16,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_num,
 )
 from mmhuman3d.core.evaluation import (
-    keypoint_3d_auc,
-    keypoint_3d_pck,
-    keypoint_mpjpe,
-    vertice_pve,
+    fg_vertices_to_mesh_distance
 )
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.data.data_structures.human_data_cache import (
@@ -32,6 +29,11 @@ from .builder import DATASETS
 
 @DATASETS.register_module()
 class HumanImageSMPLXDataset(HumanImageDataset):
+
+    # metric
+    ALLOWED_METRICS = {
+        'mpjpe', 'pa-mpjpe', 'pve', '3dpck', 'pa-3dpck', '3dauc', 'pa-3dauc', '3DRMSE'
+    }
     def __init__(self, 
                  data_prefix: str, 
                  pipeline: list, 
@@ -151,7 +153,7 @@ class HumanImageSMPLXDataset(HumanImageDataset):
             # gt
             if 'vertices' in self.human_data: # stirling
                 gt_vertices = self.human_data['vertices'].copy()
-                gt_vertices = gt_vertices * 1000.
+                gt_vertices = gt_vertices
             else:
                 gt_param_dict = self.human_data['smplx'].copy()
                 for key,value in gt_param_dict.items():
@@ -218,12 +220,29 @@ class HumanImageSMPLXDataset(HumanImageDataset):
                 gt_keypoints3d = gt_keypoints3d - gt_pelvis
             else:
                 pass
-
+            
             pred_keypoints3d = pred_keypoints3d * 1000
-            gt_keypoints3d = gt_keypoints3d * 1000
+            if self.dataset_name != 'stirling':
+                gt_keypoints3d = gt_keypoints3d * 1000
             gt_keypoints3d_mask = gt_keypoints3d_mask > 0
 
             return pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask
+
+    def _report_3d_rmse(self, res_file):
+        '''compute the 3DRMSE between a predicted 3D face shape and the 3D ground truth scan
+        '''
+        pred_vertices, gt_vertices, _ = \
+            self._parse_result(res_file, mode = 'vertice')
+        pred_keypoints3d, gt_keypoints3d, _ = \
+            self._parse_result(res_file, mode = 'keypoint')
+        errors = []
+        for pred_vertice, gt_vertice, pred_points, gt_points in zip(pred_vertices,gt_vertices,pred_keypoints3d,gt_keypoints3d):
+            error = fg_vertices_to_mesh_distance(gt_vertice,gt_points,pred_vertice,self.body_model.faces, pred_points)
+            errors.append(error)
+        
+        error = np.array(errors).mean()
+        name_value_tuples = [('3DRMSE', error)]
+        return name_value_tuples
 
     def evaluate(self,
                  outputs: list,
@@ -264,7 +283,6 @@ class HumanImageSMPLXDataset(HumanImageDataset):
         keypoints = np.stack(keypoints)
         vertices = np.stack(vertices)
         res = dict(keypoints=keypoints, vertices=vertices)
-
         name_value_tuples = []
         for _metric in metrics:
             if _metric == 'mpjpe':
@@ -281,6 +299,8 @@ class HumanImageSMPLXDataset(HumanImageDataset):
                 _nv_tuples = self._report_3d_auc(res, metric='pa-3dauc')
             elif _metric == 'pve':
                 _nv_tuples = self._report_pve(res)
+            elif _metric == '3DRMSE':
+                _nv_tuples = self._report_3d_rmse(res)
             else:
                 raise NotImplementedError
             name_value_tuples.extend(_nv_tuples)

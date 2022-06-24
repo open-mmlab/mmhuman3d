@@ -97,8 +97,9 @@ class ExposeCuratedFitsConverter(BaseModeConverter):
             kps[RIGHT_HAND_IDXS, -1] = right_hand_conf
             kps[FACE_IDXS, -1] = face_conf
             conf = kps[:,-1]
-            bbox = keyps_to_bbox(kps[:,:2],conf)
-            bbox_xywh_.append(bbox)
+            bbox = keyps_to_bbox(kps[:,:2],conf, scale=1.2)
+            bbox_xywh = self._xyxy2xywh(bbox)
+            bbox_xywh_.append(bbox_xywh)
     
 
         human_data['keypoints2d'] = keypoints2d

@@ -23,7 +23,7 @@ from ..necks.builder import build_neck
 from ..registrants.builder import build_registrant
 from .base_architecture import BaseArchitecture
 
-from .base_architecture import BaseArchitecture
+from ..utils import SmplxHandMergeFunc, SmplxCropFunc, SmplxFaceMergeFunc
 
 
 def set_requires_grad(nets, requires_grad=False):
@@ -83,6 +83,10 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             camera parameters. Default: None
         loss_adv (dict | None, optional): Losses config for adversial
             training. Default: None.
+        extra_hand_model_cfg (dict | None, optional) : Hand model config for 
+            refining body model prediction. Default: None
+        extra_face_model_cfg (dict | None, optional) : Face model config for
+            refining body model prediction. Default: None
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None.
     """
@@ -106,12 +110,35 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                  loss_smplx_betas_prior: Optional[Union[dict, None]] = None,
                  loss_camera: Optional[Union[dict, None]] = None,
                  loss_adv: Optional[Union[dict, None]] = None,
+                 extra_hand_model_cfg: Optional[Union[dict, None]] = None,
+                 extra_face_model_cfg: Optional[Union[dict, None]] = None,
                  init_cfg: Optional[Union[list, dict, None]] = None):
         super(SMPLXBodyModelEstimator, self).__init__(init_cfg)
         self.backbone = build_backbone(backbone)
         self.neck = build_neck(neck)
         self.head = build_head(head)
         self.disc = build_discriminator(disc)
+
+
+        self.apply_hand_model = False
+        self.apply_face_model = False
+        if extra_hand_model_cfg is not None:
+            self.crop_hand_func = SmplxCropFunc(extra_hand_model_cfg['crop_cfg'])
+            self.hand_backbone = build_backbone(extra_hand_model_cfg['backbone'])
+            self.hand_neck = build_neck(extra_hand_model_cfg['neck'])
+            self.hand_head = build_neck(extra_hand_model_cfg['head'])
+            self.hand_merge_func = SmplxHandMergeFunc(extra_hand_model_cfg['merge_cfg'])
+            self.hand_crop_loss = build_loss(extra_hand_model_cfg['loss_hand_crop'])
+            self.apply_hand_model = True
+        
+        if extra_face_model_cfg is not None:
+            self.crop_face_func = SmplxCropFunc(extra_face_model_cfg['crop_cfg'])
+            self.face_backbone = build_backbone(extra_face_model_cfg['backbone'])
+            self.face_neck = build_neck(extra_face_model_cfg['neck'])
+            self.face_head = build_neck(extra_face_model_cfg['head'])
+            self.face_merge_func = SmplxFaceMergeFunc(extra_face_model_cfg['merge_cfg'])
+            self.face_crop_loss = build_loss(extra_face_model_cfg['loss_face_crop'])
+            self.apply_face_model = True
 
         self.body_model_train = build_body_model(body_model_train)
         self.body_model_test = build_body_model(body_model_test)
@@ -137,9 +164,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         In this function, the detector will finish the train step following
         the pipeline:
-        1. get fake and real SMPLX parameters
-        2. optimize discriminator (if have)
-        3. optimize generator
+        1. optimize discriminator (if have)
+        2. optimize generator
         If `self.train_cfg.disc_step > 1`, the train step will contain multiple
         iterations for optimizing discriminator with different input data and
         only one iteration for optimizing generator after `disc_step`
@@ -162,6 +188,24 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             features = self.neck(features)
 
         predictions = self.head(features)
+
+        if self.apply_hand_model:
+            hand_input_img = self.crop_hand_func(predictions,data_batch['img_metas'])
+            hand_features = self.hand_backbone(hand_input_img)
+            if self.neck is not None:
+                hand_features = self.hand_neck(hand_features)
+            hand_predictions = self.hand_head(hand_features)
+            predictions = self.hand_merge_func(predictions, hand_predictions)
+        
+        if self.apply_face_model:
+            face_input_img = self.crop_face_func(predictions, data_batch['img_metas'])
+            face_features = self.face_backbone(face_input_img)
+            if self.neck is not None:
+                face_features = self.face_neck(face_features)
+            face_predictions = self.face_head(face_features)
+            predictions = self.face_merge_func(predictions, face_predictions)
+
+
         targets = self.prepare_targets(data_batch)
 
         # optimize discriminator (if have)
@@ -264,7 +308,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             focal_length: Optional[int] = 5000,
             has_keypoints2d: Optional[torch.Tensor] = None):
         """Compute loss for 2d keypoints."""
-        
         keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
         keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
         gt_keypoints2d = gt_keypoints2d[:, :, :2].float()
@@ -418,7 +461,7 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             pred_global_orient = pose2rotmat(pred_global_orient)
             gt_global_orient = targets['smplx_global_orient']
             has_smplx_global_orient = targets['has_smplx_global_orient'].squeeze(-1)
-            losses['smplx_global_orient'] = self.compute_smplx_global_orient_loss(
+            losses['smplx_global_orient_loss'] = self.compute_smplx_global_orient_loss(
                 pred_global_orient, gt_global_orient, has_smplx_global_orient
             )
         if self.loss_smplx_body_pose is not None:

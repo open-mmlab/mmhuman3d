@@ -6,11 +6,12 @@ from mmhuman3d.core.evaluation.eval_utils import (
     keypoint_accel_error,
     keypoint_mpjpe,
     vertice_pve,
+    fg_vertices_to_mesh_distance,
 )
 from mmhuman3d.core.evaluation.mesh_eval import compute_similarity_transform
 
 __all__ = [
     'compute_similarity_transform', 'keypoint_mpjpe', 'mesh_eval',
     'DistEvalHook', 'EvalHook', 'vertice_pve', 'keypoint_3d_pck',
-    'keypoint_3d_auc', 'keypoint_accel_error'
+    'keypoint_3d_auc', 'keypoint_accel_error', 'fg_vertices_to_mesh_distance'
 ]
