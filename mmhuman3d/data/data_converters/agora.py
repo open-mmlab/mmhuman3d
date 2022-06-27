@@ -212,6 +212,10 @@ class AgoraConverter(BaseModeConverter):
                     occlusion = df.iloc[idx]['occlusion'][pidx]
                     ethnicity = df.iloc[idx]['ethnicity'][pidx]
 
+                    # skip kid since they use different model
+                    if kid:
+                        continue
+
                     # obtain keypoints
                     keypoints2d = df.iloc[idx]['gt_joints_2d'][pidx]
                     if self.res == (1280, 720):
