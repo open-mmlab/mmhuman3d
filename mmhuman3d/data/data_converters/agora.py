@@ -217,6 +217,7 @@ class AgoraConverter(BaseModeConverter):
                     if self.res == (1280, 720):
                         keypoints2d *= (720 / 2160)
                     keypoints3d = df.iloc[idx]['gt_joints_3d'][pidx]
+                    keypoints3d -= keypoints3d[0]  # root-centered
 
                     gt_bodymodel_path = os.path.join(
                         dataset_path,
