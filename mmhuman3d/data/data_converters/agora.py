@@ -108,7 +108,7 @@ class AgoraConverter(BaseModeConverter):
         # flip pose
         R_mod = cv2.Rodrigues(np.array([np.pi, 0, 0]))[0]
         R_root = cv2.Rodrigues(globalOrient.reshape(-1))[0]
-        new_root = R_root.dot(R_mod)
+        new_root = R_mod.dot(R_root)
         globalOrient = cv2.Rodrigues(new_root)[0].reshape(3)
 
         # apply camera matrices
