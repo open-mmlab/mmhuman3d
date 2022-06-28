@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
-
+import torch.nn as nn
 import mmhuman3d.core.visualization.visualize_smpl as visualize_smpl
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
 from mmhuman3d.models.utils import FitsDict
@@ -23,7 +23,7 @@ from ..necks.builder import build_neck
 from ..registrants.builder import build_registrant
 from .base_architecture import BaseArchitecture
 
-from ..utils import SmplxHandMergeFunc, SmplxCropFunc, SmplxFaceMergeFunc
+from ..utils import SmplxHandMergeFunc, SmplxFaceCropFunc,SmplxHandCropFunc, SmplxFaceMergeFunc
 
 
 def set_requires_grad(nets, requires_grad=False):
@@ -112,6 +112,7 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                  loss_adv: Optional[Union[dict, None]] = None,
                  extra_hand_model_cfg: Optional[Union[dict, None]] = None,
                  extra_face_model_cfg: Optional[Union[dict, None]] = None,
+                 frozen_batchnorm: bool = False,
                  init_cfg: Optional[Union[list, dict, None]] = None):
         super(SMPLXBodyModelEstimator, self).__init__(init_cfg)
         self.backbone = build_backbone(backbone)
@@ -119,30 +120,46 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         self.head = build_head(head)
         self.disc = build_discriminator(disc)
 
+        if frozen_batchnorm:
+            for param in self.backbone.parameters():
+                param.requires_grad = False
+            for param in self.head.parameters():
+                param.requires_grad = False
 
-        self.apply_hand_model = False
-        self.apply_face_model = False
-        if extra_hand_model_cfg is not None:
-            self.crop_hand_func = SmplxCropFunc(extra_hand_model_cfg['crop_cfg'])
-            self.hand_backbone = build_backbone(extra_hand_model_cfg['backbone'])
-            self.hand_neck = build_neck(extra_hand_model_cfg['neck'])
-            self.hand_head = build_neck(extra_hand_model_cfg['head'])
-            self.hand_merge_func = SmplxHandMergeFunc(extra_hand_model_cfg['merge_cfg'])
-            self.hand_crop_loss = build_loss(extra_hand_model_cfg['loss_hand_crop'])
-            self.apply_hand_model = True
-        
-        if extra_face_model_cfg is not None:
-            self.crop_face_func = SmplxCropFunc(extra_face_model_cfg['crop_cfg'])
-            self.face_backbone = build_backbone(extra_face_model_cfg['backbone'])
-            self.face_neck = build_neck(extra_face_model_cfg['neck'])
-            self.face_head = build_neck(extra_face_model_cfg['head'])
-            self.face_merge_func = SmplxFaceMergeFunc(extra_face_model_cfg['merge_cfg'])
-            self.face_crop_loss = build_loss(extra_face_model_cfg['loss_face_crop'])
-            self.apply_face_model = True
+            self.backbone = FrozenBatchNorm2d.convert_frozen_batchnorm(self.backbone)
+            self.head = FrozenBatchNorm2d.convert_frozen_batchnorm(self.head)
 
         self.body_model_train = build_body_model(body_model_train)
         self.body_model_test = build_body_model(body_model_test)
         self.convention = convention
+
+        self.apply_hand_model = False
+        self.apply_face_model = False
+        if extra_hand_model_cfg is not None:
+            self.hand_backbone = build_backbone(extra_hand_model_cfg.get('backbone',None))
+            self.hand_neck = build_neck(extra_hand_model_cfg.get('neck',None))
+            self.hand_head = build_head(extra_hand_model_cfg.get('head',None))
+            self.crop_hand_func = SmplxHandCropFunc(self.hand_head,self.body_model_train,convention=self.convention,**extra_hand_model_cfg.get('crop_cfg',None))
+            self.hand_merge_func = SmplxHandMergeFunc(self.body_model_train,self.convention)
+            self.hand_crop_loss = build_loss(extra_hand_model_cfg.get('loss_hand_crop',None))
+            self.apply_hand_model = True
+            self.left_hand_idxs = get_keypoint_idxs_by_part('left_hand', self.convention)
+            self.left_hand_idxs.append(get_keypoint_idx('left_wrist',self.convention))
+            self.left_hand_idxs = sorted(self.left_hand_idxs)
+            self.right_hand_idxs = get_keypoint_idxs_by_part('right_hand', self.convention)
+            self.right_hand_idxs.append(get_keypoint_idx('right_wrist',self.convention))
+            self.right_hand_idxs = sorted(self.right_hand_idxs)
+        
+        if extra_face_model_cfg is not None:
+            self.face_backbone = build_backbone(extra_face_model_cfg.get('backbone',None))
+            self.face_neck = build_neck(extra_face_model_cfg.get('neck',None))
+            self.face_head = build_head(extra_face_model_cfg.get('head',None))
+            self.crop_face_func = SmplxFaceCropFunc(self.face_head, self.body_model_train, convention = self.convention,**extra_face_model_cfg.get('crop_cfg',None))
+            self.face_merge_func = SmplxFaceMergeFunc(self.body_model_train, self.convention)
+            self.face_crop_loss = build_loss(extra_face_model_cfg.get('loss_face_crop',None))
+            self.apply_face_model = True
+            self.face_idxs = get_keypoint_idxs_by_part('head', self.convention)
+            self.face_idxs = sorted(self.face_idxs)
 
         self.loss_keypoints2d = build_loss(loss_keypoints2d)
         self.loss_keypoints3d = build_loss(loss_keypoints3d)
@@ -188,23 +205,22 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             features = self.neck(features)
 
         predictions = self.head(features)
-
         if self.apply_hand_model:
-            hand_input_img = self.crop_hand_func(predictions,data_batch['img_metas'])
+            hand_input_img, hand_mean, hand_crop_info = self.crop_hand_func(predictions,data_batch['img_metas'])
             hand_features = self.hand_backbone(hand_input_img)
             if self.neck is not None:
                 hand_features = self.hand_neck(hand_features)
-            hand_predictions = self.hand_head(hand_features)
+            hand_predictions = self.hand_head(hand_features, cond = hand_mean)
             predictions = self.hand_merge_func(predictions, hand_predictions)
-        
+            predictions['hand_crop_info'] = hand_crop_info
         if self.apply_face_model:
-            face_input_img = self.crop_face_func(predictions, data_batch['img_metas'])
+            face_input_img, face_mean, face_crop_info = self.crop_face_func(predictions, data_batch['img_metas'])
             face_features = self.face_backbone(face_input_img)
             if self.neck is not None:
                 face_features = self.face_neck(face_features)
-            face_predictions = self.face_head(face_features)
+            face_predictions = self.face_head(face_features, cond = face_mean)
             predictions = self.face_merge_func(predictions, face_predictions)
-
+            predictions['face_crop_info'] = face_crop_info
 
         targets = self.prepare_targets(data_batch)
 
@@ -225,6 +241,23 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             optimizer['neck'].zero_grad()
         if self.head is not None:
             optimizer['head'].zero_grad()
+
+        if self.apply_hand_model:
+            if self.hand_backbone is not None:
+                optimizer['hand_backbone'].zero_grad()
+            if self.hand_neck is not None:
+                optimizer['hand_neck'].zero_grad()
+            if self.hand_head is not None:
+                optimizer['hand_head'].zero_grad()
+
+        if self.apply_face_model:
+            if self.face_backbone is not None:
+                optimizer['face_backbone'].zero_grad()
+            if self.face_neck is not None:
+                optimizer['face_neck'].zero_grad()
+            if self.face_head is not None:
+                optimizer['face_head'].zero_grad()
+        
         loss.backward()
         if self.backbone is not None:
             optimizer['backbone'].step()
@@ -232,6 +265,23 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             optimizer['neck'].step()
         if self.head is not None:
             optimizer['head'].step()
+
+        if self.apply_hand_model:
+            if self.hand_backbone is not None:
+                optimizer['hand_backbone'].step()
+            if self.hand_neck is not None:
+                optimizer['hand_neck'].step()
+            if self.hand_head is not None:
+                optimizer['hand_head'].step()
+
+        if self.apply_face_model:
+            if self.face_backbone is not None:
+                optimizer['face_backbone'].step()
+            if self.face_neck is not None:
+                optimizer['face_neck'].step()
+            if self.face_head is not None:
+                optimizer['face_head'].step()
+        
 
         outputs = dict(
             loss=loss,
@@ -423,6 +473,103 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         loss = self.loss_camera(cameras)
         return loss
 
+    def compute_face_crop_loss(self,pred_keypoints3d: torch.Tensor,
+            pred_cam: torch.Tensor,
+            gt_keypoints2d: torch.Tensor,
+            face_crop_info: dict,
+            img_res: Optional[int] = 224,
+            has_keypoints2d: Optional[torch.Tensor] = None):
+        """Compute face crop loss for 2d keypoints."""
+        keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
+        keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
+        gt_keypoints2d = gt_keypoints2d[:, :, :2].float()
+        if keypoints2d_conf[has_keypoints2d == 1].numel() == 0:
+            return torch.Tensor([0]).type_as(gt_keypoints2d)
+
+        # Expose use weak_perspective_projection
+        pred_keypoints2d = weak_perspective_projection(
+            pred_keypoints3d,
+            scale = pred_cam[:, 0],
+            translation = pred_cam[:,1:3]
+            )
+        target_idxs = has_keypoints2d == 1
+        pred_keypoints2d = pred_keypoints2d[target_idxs]
+        gt_keypoints2d = gt_keypoints2d[target_idxs]
+
+        pred_keypoints2d = (0.5 * pred_keypoints2d + 0.5) * (img_res - 1)
+        face_inv_crop_transforms = face_crop_info['face_inv_crop_transforms']
+        pred_keypoints2d_hd = torch.einsum('bij,bkj->bki',[face_inv_crop_transforms[:, :2, :2], pred_keypoints2d]) + face_inv_crop_transforms[:, :2, 2].unsqueeze(dim=1)
+        gt_keypoints2d_hd =  torch.einsum('bij,bkj->bki',[face_inv_crop_transforms[:, :2, :2], gt_keypoints2d]) + face_inv_crop_transforms[:, :2, 2].unsqueeze(dim=1)
+
+        pred_face_keypoints_hd = pred_keypoints2d_hd[:,self.face_idxs]
+        face_crop_transform = face_crop_info['face_crop_transform']
+        inv_face_crop_transf = torch.inverse(face_crop_transform)
+        face_img_keypoints = torch.einsum('bij,bkj->bki',[inv_face_crop_transf[:, :2, :2],pred_face_keypoints_hd]) + inv_face_crop_transf[:, :2, 2].unsqueeze(dim=1)
+        gt_face_keypoints_hd = gt_keypoints2d_hd[:,self.face_idxs]
+        gt_face_keypoints = torch.einsum('bij,bkj->bki',[inv_face_crop_transf[:, :2, :2],gt_face_keypoints_hd]) + inv_face_crop_transf[:, :2, 2].unsqueeze(dim=1)       
+        
+        loss = self.face_crop_loss(
+            face_img_keypoints , gt_face_keypoints, weight = keypoints2d_conf[target_idxs][:,self.face_idxs])
+        loss /= gt_face_keypoints.shape[0]
+        return loss
+
+    def compute_hand_crop_loss(self,pred_keypoints3d: torch.Tensor,
+            pred_cam: torch.Tensor,
+            gt_keypoints2d: torch.Tensor,
+            hand_crop_info: dict,
+            img_res: Optional[int] = 224,
+            has_keypoints2d: Optional[torch.Tensor] = None):
+        """Compute hand crop loss for 2d keypoints."""
+        keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
+        keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
+        gt_keypoints2d = gt_keypoints2d[:, :, :2].float()
+        if keypoints2d_conf[has_keypoints2d == 1].numel() == 0:
+            return torch.Tensor([0]).type_as(gt_keypoints2d)
+
+        # Expose use weak_perspective_projection
+        pred_keypoints2d = weak_perspective_projection(
+            pred_keypoints3d,
+            scale = pred_cam[:, 0],
+            translation = pred_cam[:,1:3]
+            )
+        target_idxs = has_keypoints2d == 1
+        pred_keypoints2d = pred_keypoints2d[target_idxs]
+        gt_keypoints2d = gt_keypoints2d[target_idxs]
+
+        pred_keypoints2d = (0.5 * pred_keypoints2d + 0.5) * (img_res - 1)
+        hand_inv_crop_transforms = hand_crop_info['hand_inv_crop_transforms']
+        pred_keypoints2d_hd = torch.einsum('bij,bkj->bki',[hand_inv_crop_transforms[:, :2, :2], pred_keypoints2d]) + hand_inv_crop_transforms[:, :2, 2].unsqueeze(dim=1)
+        gt_keypoints2d_hd =  torch.einsum('bij,bkj->bki',[hand_inv_crop_transforms[:, :2, :2], gt_keypoints2d]) + hand_inv_crop_transforms[:, :2, 2].unsqueeze(dim=1)
+
+        pred_left_hand_keypoints_hd = pred_keypoints2d_hd[:,self.left_hand_idxs]
+        left_hand_crop_transform = hand_crop_info['left_hand_crop_transform']
+        inv_left_hand_crop_transf = torch.inverse(left_hand_crop_transform)
+        left_hand_img_keypoints = torch.einsum('bij,bkj->bki',[inv_left_hand_crop_transf[:, :2, :2],pred_left_hand_keypoints_hd]) + inv_left_hand_crop_transf[:, :2, 2].unsqueeze(dim=1)
+        gt_left_hand_keypoints_hd = gt_keypoints2d_hd[:,self.left_hand_idxs]
+        gt_left_hand_keypoints = torch.einsum('bij,bkj->bki',[inv_left_hand_crop_transf[:, :2, :2],gt_left_hand_keypoints_hd]) + inv_left_hand_crop_transf[:, :2, 2].unsqueeze(dim=1)
+
+        pred_right_hand_keypoints_hd = pred_keypoints2d_hd[:, self.right_hand_idxs]
+        right_hand_crop_transform = hand_crop_info['right_hand_crop_transform']
+        inv_right_hand_crop_transf = torch.inverse(right_hand_crop_transform)
+        right_hand_img_keypoints = torch.einsum('bij,bkj->bki',[inv_right_hand_crop_transf[:, :2, :2],pred_right_hand_keypoints_hd]) + inv_right_hand_crop_transf[:, :2, 2].unsqueeze(dim=1)
+        gt_right_hand_keypoints_hd = gt_keypoints2d_hd[:,self.right_hand_idxs]
+        gt_right_hand_keypoints = torch.einsum('bij,bkj->bki',[inv_right_hand_crop_transf[:, :2, :2],gt_right_hand_keypoints_hd]) + inv_right_hand_crop_transf[:, :2, 2].unsqueeze(dim=1)
+
+        
+        
+        left_loss = self.hand_crop_loss(
+            left_hand_img_keypoints , gt_left_hand_keypoints, weight = keypoints2d_conf[target_idxs][:,self.left_hand_idxs])
+        left_loss /= gt_left_hand_keypoints.shape[0]
+        
+        right_loss = self.hand_crop_loss(
+            right_hand_img_keypoints, gt_right_hand_keypoints, weight = keypoints2d_conf[target_idxs][:,self.right_hand_idxs])
+        right_loss /= gt_right_hand_keypoints.shape[0]
+
+        return left_loss + right_loss
+        
+
+
+
     def compute_losses(self, predictions: dict, targets: dict):
         """Compute losses."""
         pred_param = predictions['pred_param']
@@ -517,6 +664,10 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                 pred_betas)
         if self.loss_camera is not None:
             losses['camera_loss'] = self.compute_camera_loss(pred_cam)
+        if self.hand_crop_loss is not None:
+            losses['hand_crop_loss'] = self.compute_hand_crop_loss(pred_keypoints3d,pred_cam, gt_keypoints2d, predictions['hand_crop_info'], targets['img'].shape[-1], has_keypoints2d)
+        if self.face_crop_loss is not None:
+            losses['face_crop_loss'] = self.compute_face_crop_loss(pred_keypoints3d,pred_cam, gt_keypoints2d, predictions['face_crop_info'], targets['img'].shape[-1], has_keypoints2d)
         return losses
 
     @abstractmethod
@@ -569,6 +720,23 @@ class SMPLXImageBodyModelEstimator(SMPLXBodyModelEstimator):
             features = self.neck(features)
 
         predictions = self.head(features)
+        if self.apply_hand_model:
+            hand_input_img, hand_mean, hand_crop_info = self.crop_hand_func(predictions,img_metas)
+            hand_features = self.hand_backbone(hand_input_img)
+            if self.neck is not None:
+                hand_features = self.hand_neck(hand_features)
+            hand_predictions = self.hand_head(hand_features, cond = hand_mean)
+            predictions = self.hand_merge_func(predictions, hand_predictions)
+            predictions['hand_crop_info'] = hand_crop_info
+        if self.apply_face_model:
+            face_input_img, face_mean, face_crop_info = self.crop_face_func(predictions, img_metas)
+            face_features = self.face_backbone(face_input_img)
+            if self.neck is not None:
+                face_features = self.face_neck(face_features)
+            face_predictions = self.face_head(face_features, cond = face_mean)
+            predictions = self.face_merge_func(predictions, face_predictions)
+            predictions['face_crop_info'] = face_crop_info
+
         pred_param = predictions['pred_param']
         pred_cam = predictions['pred_cam']
 
@@ -591,3 +759,73 @@ class SMPLXImageBodyModelEstimator(SMPLXBodyModelEstimator):
         all_preds['image_idx'] = kwargs['sample_idx']
         return all_preds
 
+class FrozenBatchNorm2d(nn.Module):
+    """
+    BatchNorm2d where the batch statistics and the affine parameters
+    are fixed
+    """
+
+    def __init__(self, n):
+        super(FrozenBatchNorm2d, self).__init__()
+        self.register_buffer("weight", torch.ones(n))
+        self.register_buffer("bias", torch.zeros(n))
+        self.register_buffer("running_mean", torch.zeros(n))
+        self.register_buffer("running_var", torch.ones(n))
+
+    @staticmethod
+    def from_bn(module: nn.BatchNorm2d):
+        ''' Initializes a frozen batch norm module from a batch norm module
+        '''
+        dim = len(module.weight.data)
+
+        frozen_module = FrozenBatchNorm2d(dim)
+        frozen_module.weight.data = module.weight.data
+
+        missing, not_found = frozen_module.load_state_dict(
+            module.state_dict(), strict=False)
+        return frozen_module
+
+    @classmethod
+    def convert_frozen_batchnorm(cls, module):
+        """
+        Convert BatchNorm/SyncBatchNorm in module into FrozenBatchNorm.
+
+        Args:
+            module (torch.nn.Module):
+
+        Returns:
+            If module is BatchNorm/SyncBatchNorm, returns a new module.
+            Otherwise, in-place convert module and return it.
+
+        Similar to convert_sync_batchnorm in
+        https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/batchnorm.py
+        """
+        bn_module = nn.modules.batchnorm
+        bn_module = (bn_module.BatchNorm2d, bn_module.SyncBatchNorm)
+        res = module
+        if isinstance(module, bn_module):
+            res = cls(module.num_features)
+            if module.affine:
+                res.weight.data = module.weight.data.clone().detach()
+                res.bias.data = module.bias.data.clone().detach()
+            res.running_mean.data = module.running_mean.data
+            res.running_var.data = module.running_var.data
+            res.eps = module.eps
+        else:
+            for name, child in module.named_children():
+                new_child = cls.convert_frozen_batchnorm(child)
+                if new_child is not child:
+                    res.add_module(name, new_child)
+        return res
+
+    def forward(self, x):
+        # Cast all fixed parameters to half() if necessary
+        if x.dtype == torch.float16:
+            self.weight = self.weight.half()
+            self.bias = self.bias.half()
+            self.running_mean = self.running_mean.half()
+            self.running_var = self.running_var.half()
+
+        return F.batch_norm(
+            x, self.running_mean, self.running_var, self.weight, self.bias,
+            False)

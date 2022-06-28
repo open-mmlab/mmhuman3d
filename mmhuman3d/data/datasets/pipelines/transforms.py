@@ -748,16 +748,33 @@ class MeshAffine:
         r = results['rotation']
         trans = get_affine_transform(c, s, r, self.image_size)
 
-        
-        crop_trans = get_affine_transform(c,s,0.0,self.image_size)
-        results['crop_transform'] = crop_trans
 
 
         if 'img' in results:
             img = results['img']
 
             # img before affine
-            results['ori_img'] = img.copy()
+            ori_img = img.copy()
+            (h, w) = ori_img.shape[:2]
+            (cX, cY) = (w // 2, h // 2)
+            M = cv2.getRotationMatrix2D((cX, cY), r, 1.0)
+            cos = np.abs(M[0, 0])
+            sin = np.abs(M[0, 1])
+            # compute the new bounding dimensions of the image
+            nW = int((h * sin) + (w * cos))
+            nH = int((h * cos) + (w * sin))
+            # adjust the rotation matrix to take into account translation
+            M[0, 2] += (nW / 2) - cX
+            M[1, 2] += (nH / 2) - cY
+            # perform the actual rotation and return the image
+            ori_img = cv2.warpAffine(ori_img, M, (nW, nH))
+            M = np.concatenate([M,np.array([[0.0,0.0,1.0]])])
+            M = np.linalg.inv(M)
+            N = np.concatenate([trans,np.array([[0.0,0.0,1.0]])])
+            crop_trans = np.dot(N,M)
+            results['crop_transform'] = crop_trans[:2]
+
+            results['ori_img'] = ori_img
             results['img_fields'] = ['img','ori_img']
 
             img = cv2.warpAffine(

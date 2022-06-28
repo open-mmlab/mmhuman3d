@@ -1,4 +1,5 @@
 import json
+import pickle
 import os
 import os.path
 from abc import ABCMeta
@@ -13,6 +14,8 @@ from mmcv.runner import get_dist_info
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
+    get_keypoint_idx,
+    get_keypoint_idxs_by_part,
     get_keypoint_num,
 )
 from mmhuman3d.core.evaluation import (
@@ -32,7 +35,7 @@ class HumanImageSMPLXDataset(HumanImageDataset):
 
     # metric
     ALLOWED_METRICS = {
-        'mpjpe', 'pa-mpjpe', 'pve', '3dpck', 'pa-3dpck', '3dauc', 'pa-3dauc', '3DRMSE'
+        'mpjpe', 'pa-mpjpe', 'pve', '3dpck', 'pa-3dpck', '3dauc', 'pa-3dauc', '3DRMSE', 'pa-pve'
     }
     def __init__(self, 
                  data_prefix: str, 
@@ -44,10 +47,22 @@ class HumanImageSMPLXDataset(HumanImageDataset):
                  cache_data_path: Optional[Union[str, None]] = None, 
                  test_mode: Optional[bool] = False,
                  num_betas: Optional[int] = 10,
-                 num_expression: Optional[int] = 10):
+                 num_expression: Optional[int] = 10,
+                 face_vertex_ids_path: Optional[str] = None,
+                 hand_vertex_ids_path: Optional[str] = None,
+                 ):
         super().__init__(data_prefix, pipeline, dataset_name, body_model, ann_file, convention, cache_data_path, test_mode)
         self.num_betas = num_betas
         self.num_expression = num_expression
+        if face_vertex_ids_path is not None:
+            if os.path.exists(face_vertex_ids_path):
+                self.face_vertex_ids = np.load(face_vertex_ids_path).astype(np.int32)
+        if hand_vertex_ids_path is not None:
+            if os.path.exists(hand_vertex_ids_path):
+                with open(hand_vertex_ids_path, 'rb') as f:
+                    vertex_idxs_data = pickle.load(f, encoding='latin1')
+                self.left_hand_vertex_ids = vertex_idxs_data['left_hand']
+                self.right_hand_vertex_ids = vertex_idxs_data['right_hand']
 
     def prepare_raw_data(self, idx: int):
         """Get item from self.human_data."""
@@ -148,12 +163,15 @@ class HumanImageSMPLXDataset(HumanImageDataset):
 
         return info
 
-    def _parse_result(self, res, mode='keypoint'):
+    def _parse_result(self, res, mode='keypoint' , body_part = ''):
         if mode == 'vertice':
+            # pred
+            pred_vertices = res['vertices'] * 1000.
             # gt
-            if 'vertices' in self.human_data: # stirling
+            if 'vertices' in self.human_data: # stirling or ehf
                 gt_vertices = self.human_data['vertices'].copy()
-                gt_vertices = gt_vertices
+                if self.dataset_name == 'EHF':
+                    gt_vertices = gt_vertices * 1000.
             else:
                 gt_param_dict = self.human_data['smplx'].copy()
                 for key,value in gt_param_dict.items():
@@ -161,11 +179,17 @@ class HumanImageSMPLXDataset(HumanImageDataset):
                 gt_output = self.body_model(**gt_param_dict)
                 gt_vertices = gt_output['vertices'].detach().cpu().numpy() * 1000.
 
+            if body_part == 'right_hand':
+                pred_vertices = pred_vertices[:,self.right_hand_vertex_ids]
+                gt_vertices = gt_vertices[:,self.right_hand_vertex_ids]
+            elif body_part == 'left_hand':
+                pred_vertices = pred_vertices[:,self.left_hand_vertex_ids]
+                gt_vertices = gt_vertices[:,self.left_hand_vertex_ids]
+            elif body_part == 'face':
+                pred_vertices = pred_vertices[:,self.face_vertex_ids]
+                gt_vertices = gt_vertices[:,self.face_vertex_ids]
+
             gt_mask = np.ones(gt_vertices.shape[:-1])
-
-            # pred
-            pred_vertices = res['vertices'] * 1000.
-
             assert len(pred_vertices) == self.num_data
             
             return pred_vertices, gt_vertices, gt_mask
@@ -200,6 +224,30 @@ class HumanImageSMPLXDataset(HumanImageDataset):
                     gender=gender)
                 gt_keypoints3d = gt_output['joints'].detach().cpu().numpy()
                 gt_keypoints3d_mask = np.ones((len(pred_keypoints3d), gt_keypoints3d.shape[1]))
+            elif self.dataset_name == 'EHF':
+                gt_vertices = self.human_data['vertices'].copy()
+                if body_part == 'J14':
+                    gt_keypoints3d = torch.einsum('bik,ji->bjk', [torch.from_numpy(gt_vertices).float(), self.body_model.joints_regressor]).numpy()
+                    pred_vertices = res['vertices']
+                    pred_keypoints3d = torch.einsum('bik,ji->bjk', [torch.from_numpy(pred_vertices).float(), self.body_model.joints_regressor]).numpy()
+                    gt_keypoints3d_mask = np.ones((len(pred_keypoints3d),gt_keypoints3d.shape[1]))
+                else:
+                    gt_keypoints3d = torch.einsum('bik,ji->bjk', [torch.from_numpy(gt_vertices).float(), self.body_model.J_regressor]).numpy()
+                    extra_joints_idxs = np.array([9120, 9929, 9448,  616,    6, 5770, 5780, 8846, 8463, 8474, 8635, 5361, 4933, 5058, 5169, 5286, 8079, 7669, 7794, 7905, 8022])
+                    gt_keypoints3d = np.concatenate((gt_keypoints3d,gt_vertices[:, extra_joints_idxs]), axis = 1)
+                    pred_vertices = res['vertices']
+                    pred_keypoints3d = torch.einsum('bik,ji->bjk', [torch.from_numpy(pred_vertices).float(), self.body_model.J_regressor]).numpy()
+                    pred_keypoints3d = np.concatenate((pred_keypoints3d,pred_vertices[:, extra_joints_idxs]), axis = 1)
+
+                    if body_part == 'right_hand':
+                        idxs = get_keypoint_idxs_by_part('right_hand', self.convention)
+                        idxs.append(get_keypoint_idx('right_wrist',self.convention))
+                    elif body_part == 'left_hand':
+                        idxs = get_keypoint_idxs_by_part('left_hand', self.convention)
+                        idxs.append(get_keypoint_idx('left_wrist',self.convention))
+                    gt_keypoints3d = gt_keypoints3d[:, idxs]
+                    pred_keypoints3d = pred_keypoints3d[:, idxs]
+                    gt_keypoints3d_mask = np.ones((len(pred_keypoints3d),gt_keypoints3d.shape[1]))
             else:
                 gt_keypoints3d = self.human_data['keypoints3d'][:,:,:3]
                 gt_keypoints3d_mask = np.ones((len(pred_keypoints3d),gt_keypoints3d.shape[1]))
@@ -216,6 +264,12 @@ class HumanImageSMPLXDataset(HumanImageDataset):
                 pred_pelvis = pred_keypoints3d[:, [2,3],:].mean(axis=1, keepdims = True)
                 gt_pelvis = gt_keypoints3d[:, [2,3],:].mean(axis=1, keepdims = True)
                 gt_keypoints3d_mask = gt_keypoints3d_mask[:, joint_mapper]
+                pred_keypoints3d = pred_keypoints3d - pred_pelvis
+                gt_keypoints3d = gt_keypoints3d - gt_pelvis
+            elif gt_keypoints3d.shape[1] == 14:
+                assert pred_keypoints3d.shape[1] == 14
+                pred_pelvis = pred_keypoints3d[:, [2,3],:].mean(axis=1, keepdims = True)
+                gt_pelvis = gt_keypoints3d[:, [2,3],:].mean(axis=1, keepdims = True)
                 pred_keypoints3d = pred_keypoints3d - pred_pelvis
                 gt_keypoints3d = gt_keypoints3d - gt_pelvis
             else:
@@ -284,26 +338,38 @@ class HumanImageSMPLXDataset(HumanImageDataset):
         vertices = np.stack(vertices)
         res = dict(keypoints=keypoints, vertices=vertices)
         name_value_tuples = []
-        for _metric in metrics:
-            if _metric == 'mpjpe':
-                _nv_tuples = self._report_mpjpe(res)
-            elif _metric == 'pa-mpjpe':
-                _nv_tuples = self._report_mpjpe(res, metric='pa-mpjpe')
-            elif _metric == '3dpck':
-                _nv_tuples = self._report_3d_pck(res)
-            elif _metric == 'pa-3dpck':
-                _nv_tuples = self._report_3d_pck(res, metric='pa-3dpck')
-            elif _metric == '3dauc':
-                _nv_tuples = self._report_3d_auc(res)
-            elif _metric == 'pa-3dauc':
-                _nv_tuples = self._report_3d_auc(res, metric='pa-3dauc')
-            elif _metric == 'pve':
-                _nv_tuples = self._report_pve(res)
-            elif _metric == '3DRMSE':
-                _nv_tuples = self._report_3d_rmse(res)
-            else:
-                raise NotImplementedError
-            name_value_tuples.extend(_nv_tuples)
-
+        for index,  _metric in enumerate(metrics):
+            if 'body_part' in kwargs:
+                body_parts = kwargs['body_part'][index]
+                for body_part in body_parts:
+                    if _metric == 'pa-mpjpe':
+                        _nv_tuples = self._report_mpjpe(res, metric='pa-mpjpe', body_part=body_part)
+                    elif _metric == 'pa-pve':
+                        _nv_tuples = self._report_pve(res, metric='pa-pve', body_part = body_part)
+                    else:
+                        raise NotImplementedError
+                    name_value_tuples.extend(_nv_tuples)
+            else: 
+                if _metric == 'mpjpe':
+                    _nv_tuples = self._report_mpjpe(res)
+                elif _metric == 'pa-mpjpe':
+                    _nv_tuples = self._report_mpjpe(res, metric='pa-mpjpe')
+                elif _metric == '3dpck':
+                    _nv_tuples = self._report_3d_pck(res)
+                elif _metric == 'pa-3dpck':
+                    _nv_tuples = self._report_3d_pck(res, metric='pa-3dpck')
+                elif _metric == '3dauc':
+                    _nv_tuples = self._report_3d_auc(res)
+                elif _metric == 'pa-3dauc':
+                    _nv_tuples = self._report_3d_auc(res, metric='pa-3dauc')
+                elif _metric == 'pve':
+                    _nv_tuples = self._report_pve(res)
+                elif _metric == 'pa-pve':
+                    _nv_tuples = self._report_pve(res, metric='pa-pve')
+                elif _metric == '3DRMSE':
+                    _nv_tuples = self._report_3d_rmse(res)
+                else:
+                    raise NotImplementedError
+                name_value_tuples.extend(_nv_tuples)
         name_value = OrderedDict(name_value_tuples)
         return name_value

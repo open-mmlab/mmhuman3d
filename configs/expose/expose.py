@@ -2,16 +2,22 @@ _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
 # evaluate
-evaluation = dict(interval=10, metric=['pa-mpjpe', 'mpjpe'])
+evaluation = dict(interval=10, metric=['pa-mpjpe', 'pa-pve'], 
+                            body_part = [['J14','right_hand','left_hand'],
+                                         ['', 'right_hand', 'left_hand','face']])
 
 optimizer = dict(
     backbone =  dict(type='Adam', lr=1.0e-4, weight_decay = 1.0e-4),
     head = dict(type='Adam', lr=1.0e-4, weight_decay = 1.0e-4),
+    hand_backbone = dict(type='Adam', lr=1.0e-4, weight_decay = 1.0e-4),
+    face_backbone = dict(type='Adam', lr=1.0e-4, weight_decay = 1.0e-4),
+    hand_head = dict(type='Adam', lr=1.0e-4, weight_decay = 1.0e-4),
+    face_head = dict(type='Adam', lr=1.0e-4, weight_decay = 1.0e-4)
 )
 optimizer_config = dict(grad_clip=None)
 lr_config = dict(policy='step',step=[60, 100],gamma = 0.1)
 
-runner = dict(type='EpochBasedRunner', max_epochs=120)
+runner = dict(type='EpochBasedRunner', max_epochs=100)
 
 log_config = dict(
     interval=50, hooks=[
@@ -69,7 +75,6 @@ hrnet_extra = dict(
     ],
     final_conv_kernel = 1,
     return_list = False
-
 )
 
 find_unused_parameters = True
@@ -81,7 +86,8 @@ model = dict(
         extra = hrnet_extra,
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/hrnet_pretrain.pth')
+            checkpoint='data/pretrained_models/hrnet_hmr_expose_body.pth',
+            prefix = 'backbone')
     ),
     head = dict(
         type = 'ExPoseBodyHead',
@@ -99,7 +105,11 @@ model = dict(
         camera_cfg = dict(
             pos_func = 'softplus',
             mean_scale = 0.9
-        )
+        ),
+        init_cfg = dict(
+            type='Pretrained',
+            checkpoint='data/pretrained_models/hrnet_hmr_expose_body.pth',
+            prefix = 'head'),
     ),
     body_model_train=dict(
         type='SMPLXLayer',
@@ -133,6 +143,89 @@ model = dict(
     loss_smplx_betas = dict(type='MSELoss',reduction = 'sum', loss_weight=0.001),
     loss_smplx_expression = dict(type='MSELoss',reduction = 'sum', loss_weight=1),
     loss_smplx_betas_prior = dict(type='ThresholdPrior', margin = 3.0, norm = 'l2', loss_weight=1),
+    extra_hand_model_cfg = dict(
+        backbone = dict(
+            type = 'ResNet',
+            depth = 18,
+            init_cfg=dict(
+                type='Pretrained',
+                checkpoint='data/pretrained_models/resnet18_hmr_expose_hand.pth',
+                prefix = 'backbone')
+        ),
+        head = dict(
+            type = 'ExPoseHandHead',
+            num_betas = 10,
+            mean_pose_path = 'data/body_models/all_means.pkl',
+            input_feat_dim = 512,
+            regressor_cfg = dict(
+                layers = [1024,1024],
+                activ_type = 'ReLU',
+                dropout = 0.5,
+                gain = 0.01
+            ),
+            camera_cfg = dict(
+                pos_func = 'softplus',
+                mean_scale = 0.9
+            ),
+            init_cfg=dict(
+                type='Pretrained',
+                checkpoint='data/pretrained_models/resnet18_hmr_expose_hand.pth',
+                prefix = 'head')
+        ),
+        crop_cfg = dict(
+            img_res = 256,
+            scale_factor = 3.0,
+            crop_size = 224,
+            condition_hand_wrist_pose = True,
+            condition_hand_shape = False,
+            condition_hand_finger_pose = True,
+        ),
+        loss_hand_crop = dict(type='L1Loss', reduction = 'sum', loss_weight=1),
+    ),
+    extra_face_model_cfg = dict(
+        backbone = dict(
+            type = 'ResNet',
+            depth = 18,
+            init_cfg=dict(
+                type='Pretrained',
+                checkpoint='data/pretrained_models/resnet18_hmr_expose_face.pth',
+                prefix = 'backbone')
+        ),
+        head = dict(
+            type = 'ExPoseFaceHead',
+            num_betas = 100,
+            num_expression_coeffs = 50,
+            mean_pose_path = 'data/body_models/all_means.pkl',
+            input_feat_dim = 512,
+            regressor_cfg = dict(
+                layers = [1024,1024],
+                activ_type = 'ReLU',
+                dropout = 0.5,
+                gain = 0.01
+            ),
+            camera_cfg = dict(
+                pos_func = 'softplus',
+                mean_scale = 8.0
+            ),
+            init_cfg=dict(
+                type='Pretrained',
+                checkpoint='data/pretrained_models/resnet18_hmr_expose_face.pth',
+                prefix = 'head'),
+        ),
+        crop_cfg = dict(
+            img_res = 256,
+            scale_factor = 2.0,
+            crop_size = 256,
+            num_betas = 10, 
+            num_expression_coeffs = 10,
+            condition_face_neck_pose = False,
+            condition_face_jaw_pose = True,
+            condition_face_shape = False,
+            condition_face_expression = True
+        ),
+        loss_face_crop = dict(type='L1Loss', reduction = 'sum', loss_weight=1),
+    ),
+    frozen_batchnorm = True,
     convention = 'smplx'
 )
 
@@ -168,7 +261,7 @@ train_pipeline = [
     dict(
         type = 'Collect',
         keys = ['img',*data_keys],
-        meta_keys=['image_path', 'center', 'scale', 'rotation','ori_img']
+        meta_keys=['image_path', 'center', 'scale', 'rotation','ori_img', 'crop_transform']
     )
 ]
 test_pipeline = [
@@ -176,12 +269,12 @@ test_pipeline = [
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
     dict(type = 'MeshAffine', img_res = 256),
     dict(type='Normalize', **img_norm_cfg),
-    dict(type='ImageToTensor', keys=['img']),
+    dict(type='ImageToTensor', keys=['img', 'ori_img']),
     dict(type='ToTensor', keys=data_keys),
     dict(
         type = 'Collect',
         keys = ['img',*data_keys],
-        meta_keys=['image_path', 'center', 'scale', 'rotation']
+        meta_keys=['image_path', 'center', 'scale', 'rotation', 'ori_img', 'crop_transform']
     )
 ]
 inference_pipeline = [
@@ -189,89 +282,65 @@ inference_pipeline = [
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
     dict(type = 'MeshAffine', img_res = 256),
     dict(type='Normalize', **img_norm_cfg),
-    dict(type='ImageToTensor', keys=['img']),
+    dict(type='ImageToTensor', keys=['img', 'ori_img']),
     dict(type='ToTensor', keys=data_keys),
     dict(
         type = 'Collect',
         keys = ['img',*data_keys],
-        meta_keys=['image_path', 'center', 'scale', 'rotation']
+        meta_keys=['image_path', 'center', 'scale', 'rotation', 'ori_img', 'crop_transform']
     )
 ]
 
 cache_files = {
     'curated_fits': 'data/cache/curated_fits_train_smplx.npz',
-    'spin_smplx':'data/cache/spin_smplx_train.npz',
-    'h36m':'data/cache/h36m_train_smplx.npz'
 }
 
 data = dict(
-    samples_per_gpu=48, #body 48, head = hand = 64
+    samples_per_gpu=48,
     workers_per_gpu=8,
     train = dict(
-        type = 'MixedDataset',
-        configs = [
-            dict(
-                type = dataset_type,
-                pipeline = train_pipeline,
-                dataset_name='',
-                data_prefix = 'data',
-                ann_file='curated_fits_train.npz',
-                convention='smplx',
-                num_betas=10,
-                num_expression=10,
-                cache_data_path=cache_files['curated_fits'],
-            ),
-            dict(
-                type = dataset_type,
-                pipeline = train_pipeline,
-                dataset_name = '',
-                data_prefix = 'data',
-                ann_file = 'spin_smplx_train.npz',
-                convention = 'smplx',
-                num_betas=10,
-                num_expression=10,
-                cache_data_path=cache_files['spin_smplx'],
-            ),
-            dict(
-                type=dataset_type,
-                pipeline=train_pipeline,
-                dataset_name='h36m',
-                data_prefix='data',
-                ann_file='h36m_train.npz',
-                convention='smplx',
-                num_betas=10,
-                num_expression=10,
-                cache_data_path=cache_files['h36m'],
-            ),
-        ],
-        partition=[0.08,0.12,0.8],
+        type = dataset_type,
+        pipeline = train_pipeline,
+        dataset_name='',
+        data_prefix = 'data',
+        ann_file='curated_fits_train.npz',
+        convention='smplx',
+        num_betas=10,
+        num_expression=10,
+        cache_data_path=cache_files['curated_fits'],
     ),
     val=dict(
         type=dataset_type,
         body_model=dict(
-            type='SMPL',
-            keypoint_src='h36m',
-            keypoint_dst='h36m',
-            model_path='data/body_models/smpl',
-            joints_regressor='data/body_models/J_regressor_h36m.npy'
+            type='smplx',
+            keypoint_src='smplx',
+            keypoint_dst='smplx',
+            model_path='data/body_models/smplx',
+            joints_regressor='data/body_models/SMPLX_to_J14.npy'
         ),
-        dataset_name='3DPW',
+        dataset_name='EHF',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='pw3d_test.npz'
+        ann_file='ehf_val.npz',
+        face_vertex_ids_path = 'data/body_models/SMPL-X__FLAME_vertex_ids.npy',
+        hand_vertex_ids_path = 'data/body_models/MANO_SMPLX_vertex_ids.pkl',
+        convention = 'smplx'
     ),
     test = dict(
         type=dataset_type,
         body_model=dict(
-            type='SMPL',
-            keypoint_src='h36m',
-            keypoint_dst='h36m',
-            model_path='data/body_models/smpl',
-            joints_regressor='data/body_models/J_regressor_h36m.npy'
+            type='smplx',
+            keypoint_src='smplx',
+            keypoint_dst='smplx',
+            model_path='data/body_models/smplx',
+            joints_regressor='data/body_models/SMPLX_to_J14.npy'
         ),
-        dataset_name='3DPW',
+        dataset_name='EHF',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='pw3d_test.npz'
+        ann_file='ehf_val.npz',
+        face_vertex_ids_path = 'data/body_models/SMPL-X__FLAME_vertex_ids.npy',
+        hand_vertex_ids_path = 'data/body_models/MANO_SMPLX_vertex_ids.pkl',
+        convention = 'smplx'
     ),
 )

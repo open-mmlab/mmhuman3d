@@ -80,16 +80,36 @@ def keypoint_accel_error(gt, pred, mask=None):
     return np.mean(normed[new_vis], axis=1)
 
 
-def vertice_pve(pred_verts, target_verts):
+def vertice_pve(pred_verts, target_verts, alignment = 'none'):
     """Computes per vertex error (PVE).
 
     Args:
         verts_gt (N x verts_num x 3).
         verts_pred (N x verts_num x 3).
+        alignment (str, optional): method to align the prediction with the
+            groundtruth. Supported options are:
+            - ``'none'``: no alignment will be applied
+            - ``'scale'``: align in the least-square sense in scale
+            - ``'procrustes'``: align in the least-square sense in scale,
+                rotation and translation.
     Returns:
         error_verts.
     """
     assert len(pred_verts) == len(target_verts)
+    if alignment == 'none':
+        pass
+    elif alignment == 'procrustes':
+        pred_verts = np.stack([
+            compute_similarity_transform(pred_i, gt_i)
+            for pred_i, gt_i in zip(pred_verts, target_verts)
+        ])
+    elif alignment == 'scale':
+        pred_dot_pred = np.einsum('nkc,nkc->n', pred_verts, pred_verts)
+        pred_dot_gt = np.einsum('nkc,nkc->n', pred_verts, target_verts)
+        scale_factor = pred_dot_gt / pred_dot_pred
+        pred_verts = pred_verts * scale_factor[:, None, None]
+    else:
+        raise ValueError(f'Invalid value for alignment: {alignment}')
     error = np.linalg.norm(pred_verts - target_verts, ord=2, axis=-1).mean()
     return error
 

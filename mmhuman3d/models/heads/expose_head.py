@@ -253,6 +253,19 @@ class ExPoseHead(BaseModule):
             smplx_dict[pose_name] = decoder(pose)
         return smplx_dict, raw_dict
 
+    def get_mean(self, name, batch_size):
+        mean_param = self.regressor.get_mean().view(-1)
+        if name is None:
+            return mean_param.reshape(1,-1).expand(batch_size,-1)
+        idxs = getattr(self,f'{name}_idxs')
+        return mean_param[idxs].reshape(1,-1).expand(batch_size, -1)
+
+    def get_num_betas(self):
+        return self.num_betas
+
+    def get_num_expression_coeffs(self):
+        return self.num_expression_coeffs
+
     @abstractmethod
     def forward(self, features):
         pass
@@ -261,6 +274,8 @@ class ExPoseHead(BaseModule):
 class ExPoseBodyHead(ExPoseHead):
     def __init__(self, init_cfg=None, num_betas: int = 10, num_expression_coeffs: int = 10, mean_pose_path: str = '', shape_mean_path: str = '', input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
         super().__init__(init_cfg)
+        self.num_betas = num_betas
+        self.num_expression_coeffs = num_expression_coeffs
         # poses
         self.pose_param_conf = [
             dict(
@@ -325,6 +340,7 @@ class ExPoseBodyHead(ExPoseHead):
         param_mean = torch.cat(mean_lst).view(1, -1)
         self.load_regressor(input_feat_dim,  param_mean, regressor_cfg)
     
+
     def forward(self, features):
         body_parameters = self.regressor(features)[-1]
         params_dict, raw_dict = self.flat_params_to_dict(body_parameters)
@@ -346,6 +362,7 @@ class ExPoseBodyHead(ExPoseHead):
 class ExPoseHandHead(ExPoseHead):
     def __init__(self, init_cfg=None, num_betas: int = 10,  mean_pose_path: str = '',  input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
         super().__init__(init_cfg)
+        self.num_betas = num_betas
         # poses
         self.pose_param_conf = [
             dict(
@@ -404,6 +421,8 @@ class ExPoseHandHead(ExPoseHead):
 class ExPoseFaceHead(ExPoseHead):
     def __init__(self, init_cfg=None, num_betas: int = 10, num_expression_coeffs: int = 10, mean_pose_path: str = '', input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
         super().__init__(init_cfg)
+        self.num_betas = num_betas
+        self.num_expression_coeffs = num_expression_coeffs
         # poses
         self.pose_param_conf = [
             dict(
