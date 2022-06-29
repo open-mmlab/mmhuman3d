@@ -59,7 +59,10 @@ class FreihandConverter(BaseModeConverter):
         smplx['right_hand_pose'] = []
         keypoints2d = []
         keypoints3d = []
-        key = 'training'
+        if mode == 'train' or mode == 'val':
+            key = 'training'
+        elif mode == 'test':
+            key = 'evaluation'
 
 
         intrinsics_path = osp.join(dataset_path, f'{key}_K.json')
@@ -92,8 +95,10 @@ class FreihandConverter(BaseModeConverter):
                 right_hand_mean = mean_poses_dict['right_hand_pose']['aa'].squeeze()
         if right_hand_mean is not None:
             right_hand_pose += right_hand_mean[np.newaxis]
-        
-        for index in range(4*num_green_bg):
+        q = 1
+        if mode != 'test':
+            q = 4
+        for index in range(q*num_green_bg):
             smplx['global_orient'].append(global_pose[index%num_green_bg].copy())
             smplx['betas'].append(betas[index%num_green_bg].copy())
             smplx['right_hand_pose'].append(right_hand_pose[index%num_green_bg].copy())
@@ -135,7 +140,7 @@ class FreihandConverter(BaseModeConverter):
 
         if mode == 'train':
             human_data = human_data.get_slice(0,int(0.8*len(image_path_)))
-        else:
+        elif mode == 'val':
             human_data = human_data.get_slice(int(0.8*len(image_path_)),len(image_path_)) 
 
 

@@ -2,7 +2,7 @@ _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
 # evaluate
-evaluation = dict(interval=10, metric=['pa-mpjpe'])
+evaluation = dict(interval=10, metric=['pa-mpjpe', 'pa-pve'])
 
 optimizer = dict(
     backbone =  dict(type='Adam', lr=1.0e-4, weight_decay = 1.0e-4),
@@ -169,7 +169,7 @@ data = dict(
         dataset_name='FreiHand',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='freihand_val.npz',
+        ann_file='freihand_test.npz',
         convention='mano',
     ),
 )

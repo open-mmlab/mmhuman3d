@@ -26,6 +26,7 @@ from mmhuman3d.data.data_structures.human_data_cache import (
     HumanDataCacheReader,
     HumanDataCacheWriter,
 )
+from mmhuman3d.utils.transforms import aa_to_rotmat
 from .human_image_dataset import HumanImageDataset
 from .builder import DATASETS
 
@@ -175,7 +176,10 @@ class HumanImageSMPLXDataset(HumanImageDataset):
             else:
                 gt_param_dict = self.human_data['smplx'].copy()
                 for key,value in gt_param_dict.items():
-                    value = torch.FloatTensor(value)
+                    new_value = torch.FloatTensor(value)
+                    if ('pose' in key or key == 'global_orient') and value.shape[-2] !=3:
+                        new_value = aa_to_rotmat(new_value)
+                    gt_param_dict[key] = new_value
                 gt_output = self.body_model(**gt_param_dict)
                 gt_vertices = gt_output['vertices'].detach().cpu().numpy() * 1000.
 
@@ -245,6 +249,8 @@ class HumanImageSMPLXDataset(HumanImageDataset):
                     elif body_part == 'left_hand':
                         idxs = get_keypoint_idxs_by_part('left_hand', self.convention)
                         idxs.append(get_keypoint_idx('left_wrist',self.convention))
+                    elif body_part == 'body':
+                        idxs = get_keypoint_idxs_by_part('body', self.convention)
                     gt_keypoints3d = gt_keypoints3d[:, idxs]
                     pred_keypoints3d = pred_keypoints3d[:, idxs]
                     gt_keypoints3d_mask = np.ones((len(pred_keypoints3d),gt_keypoints3d.shape[1]))
@@ -270,6 +276,11 @@ class HumanImageSMPLXDataset(HumanImageDataset):
                 assert pred_keypoints3d.shape[1] == 14
                 pred_pelvis = pred_keypoints3d[:, [2,3],:].mean(axis=1, keepdims = True)
                 gt_pelvis = gt_keypoints3d[:, [2,3],:].mean(axis=1, keepdims = True)
+                pred_keypoints3d = pred_keypoints3d - pred_pelvis
+                gt_keypoints3d = gt_keypoints3d - gt_pelvis
+            elif gt_keypoints3d.shape[1] == 21:
+                pred_pelvis = pred_keypoints3d[:,:1,:]
+                gt_pelvis = gt_keypoints3d[:,:1,:]
                 pred_keypoints3d = pred_keypoints3d - pred_pelvis
                 gt_keypoints3d = gt_keypoints3d - gt_pelvis
             else:

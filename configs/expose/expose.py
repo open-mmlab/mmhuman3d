@@ -3,7 +3,7 @@ use_adversarial_train = True
 
 # evaluate
 evaluation = dict(interval=10, metric=['pa-mpjpe', 'pa-pve'], 
-                            body_part = [['J14','right_hand','left_hand'],
+                            body_part = [['body','right_hand','left_hand'],
                                          ['', 'right_hand', 'left_hand','face']])
 
 optimizer = dict(
@@ -17,7 +17,7 @@ optimizer = dict(
 optimizer_config = dict(grad_clip=None)
 lr_config = dict(policy='step',step=[60, 100],gamma = 0.1)
 
-runner = dict(type='EpochBasedRunner', max_epochs=100)
+runner = dict(type='EpochBasedRunner', max_epochs=300)
 
 log_config = dict(
     interval=50, hooks=[
