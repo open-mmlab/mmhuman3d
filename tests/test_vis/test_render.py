@@ -67,7 +67,7 @@ def test_realtime_render():
     # test camera
     pinhole2d = Pinhole2D(fx=5000., fy=5000., cx=112, cy=112, w=1024, h=1024)
     K = pinhole2d.get_K()
-    assert K == np.array([[5000., 0, 112], [0, 5000., 112], [0, 0, 1]])
+    assert (K == np.array([[5000., 0, 112], [0, 5000., 112], [0, 0, 1]])).all()
 
     verts = torch.ones([6890, 3])
     verts_ndc = pinhole2d.project_ndc(verts)
