@@ -68,13 +68,8 @@ conda install pytorch3d -c pytorch3d
 
 For Windows:
 
-You can go to "x64 Native Tools Command Prompt for VS 2019" to compile and install. Depending on the version of PyTorch, you may need to change some PyTorch headers before compilation. These are often discussed in issues in the PyTorch3D repository.
-```shell
-cd pytorch3d
-python3 setup.py install
-```
-
-Please refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details.
+Please refer to [official installation](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details. Here we provide an [example](https://github.com/open-mmlab/mmhuman3d/pull/199#issue-1274739041) for user reference.
+**Important:** This section is for users who want to install MMHuman3D on Windows.
 
 Your installation is successful if you can do these in command line.
 
