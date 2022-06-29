@@ -2,13 +2,12 @@
 
 <!-- TOC -->
 
-- [Installation](#installation)
-  - [Requirements](#requirements)
-  - [Prepare environment](#prepare-environment)
-  - [Install MMHuman3D](#install-mmhuman3d)
-  - [A from-scratch setup script](#a-from-scratch-setup-script)
+- [Requirements](#requirements)
+- [Prepare environment](#prepare-environment)
+- [Install MMHuman3D](#install-mmhuman3d)
+- [A from-scratch setup script](#a-from-scratch-setup-script)
 
-<!-- TOC -->
+* <!-- TOC -->
 
 ## Requirements
 
