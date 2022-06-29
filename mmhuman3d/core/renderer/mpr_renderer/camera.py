@@ -22,12 +22,6 @@ class Pinhole2D:
         self.h = h
         self.w = w
 
-    def __str__(self):
-        result = f'fx: {self.fx}, fy: {self.fy}, cx: {self.cx}, cy: {self.cy}'
-        if self.h > 0 and self.w > 0:
-            result += f', h: {self.h}, w: {self.w}'
-        return result
-
     def get_K(self):
         return np.array([[self.fx, 0, self.cx], [0, self.fy, self.cy],
                          [0, 0, 1]])

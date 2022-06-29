@@ -47,13 +47,13 @@ def parse_args():
         help='Checkpoint file for mesh regression')
     parser.add_argument('--cam-id', type=str, default='0')
     parser.add_argument(
-        '--det-config',
+        '--det_config',
         type=str,
         default='demo/mmdetection_cfg/'
         'ssdlite_mobilenetv2_scratch_600e_coco.py',
         help='Config file for detection')
     parser.add_argument(
-        '--det-checkpoint',
+        '--det_checkpoint',
         type=str,
         default='https://download.openmmlab.com/mmdetection/v2.0/ssd/'
         'ssdlite_mobilenetv2_scratch_600e_coco/ssdlite_mobilenetv2_'
@@ -63,7 +63,8 @@ def parse_args():
         '--det_cat_id',
         type=int,
         default=1,
-        help='Category id for bounding box detection model')
+        help='Category id for bounding box detection model. '
+        'Default: 1 for human')
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
@@ -77,7 +78,7 @@ def parse_args():
         default=0.6,
         help='Bounding box score threshold')
     parser.add_argument(
-        '--out_video_file',
+        '--output',
         type=str,
         default=None,
         help='Record the video into a file. This may reduce the frame rate')
@@ -87,6 +88,11 @@ def parse_args():
         default=20,
         help='Set the FPS of the output video file.')
     parser.add_argument(
+        '--input_video_fps',
+        type=int,
+        default=30,
+        help='The FPS of the input video file.')
+    parser.add_argument(
         '--buffer_size',
         type=int,
         default=-1,
@@ -95,7 +101,7 @@ def parse_args():
     parser.add_argument(
         '--inference_fps',
         type=int,
-        default=20,
+        default=10,
         help='Maximum inference FPS. This is to limit the resource consuming '
         'especially when the detection and pose model are lightweight and '
         'very fast. Default: 10.')
@@ -107,11 +113,11 @@ def parse_args():
         'align the output video and inference results. The delay can be '
         'disabled by setting a non-positive delay time. Default: 0')
     parser.add_argument(
-        '--synchronous_mode',
+        '--synchronous',
         type=str,
         default=True,
-        help='Enable synchronous mode that video I/O and inference will be '
-        'temporally aligned. Note that this will reduce the display FPS.')
+        help='If True, the video I/O and inference will be temporally '
+        'aligned. Note that this will reduce the display FPS.')
 
     return parser.parse_args()
 
@@ -137,7 +143,7 @@ def read_camera():
             with input_queue_mutex:
                 input_queue.append((ts_input, frame))
 
-            if args.synchronous_mode:
+            if args.synchronous:
                 event_inference_done.wait()
             frame_buffer.put((ts_input, frame))
         else:
@@ -295,12 +301,12 @@ def display():
                         0.3, text_color, 1)
 
             # save the output video frame
-            if args.out_video_file is not None:
+            if args.output is not None:
                 if vid_out is None:
                     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                     fps = args.out_video_fps
                     frame_size = (img.shape[1], img.shape[0])
-                    vid_out = cv2.VideoWriter(args.out_video_file, fourcc, fps,
+                    vid_out = cv2.VideoWriter(args.output, fourcc, fps,
                                               frame_size)
 
                 vid_out.write(img)
@@ -369,7 +375,8 @@ def main():
     else:
         # infer buffer size from the display delay time
         # assume that the maximum video fps is 30
-        buffer_size = round(30 * (1 + max(args.display_delay, 0) / 1000.))
+        buffer_size = round(args.input_video_fps *
+                            (1 + max(args.display_delay, 0) / 1000.))
     frame_buffer = Queue(maxsize=buffer_size)
 
     # queue of input frames
