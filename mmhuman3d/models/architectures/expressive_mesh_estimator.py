@@ -664,9 +664,9 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                 pred_betas)
         if self.loss_camera is not None:
             losses['camera_loss'] = self.compute_camera_loss(pred_cam)
-        if self.hand_crop_loss is not None:
+        if self.apply_hand_model and self.hand_crop_loss is not None:
             losses['hand_crop_loss'] = self.compute_hand_crop_loss(pred_keypoints3d,pred_cam, gt_keypoints2d, predictions['hand_crop_info'], targets['img'].shape[-1], has_keypoints2d)
-        if self.face_crop_loss is not None:
+        if self.apply_face_model and self.face_crop_loss is not None:
             losses['face_crop_loss'] = self.compute_face_crop_loss(pred_keypoints3d,pred_cam, gt_keypoints2d, predictions['face_crop_info'], targets['img'].shape[-1], has_keypoints2d)
         return losses
 
