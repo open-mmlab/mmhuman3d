@@ -3,7 +3,7 @@
 
     You have smpl pose tensor or array shape of which is (frame, 72)
     ```python
-    from mmhuman3d.core.visualization import visualize_smpl_pose
+    from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_pose
     body_model_config = dict(
         type='smpl', model_path=model_path)
     visualize_smpl_pose(
@@ -29,7 +29,7 @@
     If you want to visualize a T-pose smpl or your poses do not have global_orient, you can do:
     ```python
     import torch
-    from mmhuman3d.core.visualization import visualize_T_pose
+    from mmhuman3d.core.visualization.visualize_smpl import visualize_T_pose
     body_model_config = dict(
         type='smpl', model_path=model_path)
     visualize_T_pose(
@@ -45,7 +45,7 @@
     E.g., we use vibe sample_video.mp4 as an example.
     ```python
     import pickle
-    from mmhuman3d.core.visualization import visualize_smpl_vibe
+    from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_vibe
     with open('vibe_output.pkl', 'rb') as f:
         d = pickle.load(f, encoding='latin1')
     poses = d[1]['pose']
@@ -86,7 +86,7 @@
     E.g., we use vibe sample_video.mp4 as an example.
     ```python
     import pickle
-    from mmhuman3d.core.visualization import visualize_smpl_hmr
+    from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_hmr
     gender = 'female'
     focal_length = 5000
     det_width = 224
@@ -142,7 +142,7 @@
 - **visualize smpl with opencv camera:**
     You should pass the opencv defined intrinsic matrix K and extrinsic matrix R, T.
     ```python
-    from mmhuman3d.core.visualization import visualize_smpl_calibration
+    from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_calibration
     body_model_config = dict(
         type='smpl', model_path=model_path, gender=gender)
     visualize_smpl_calibration(

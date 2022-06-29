@@ -4,17 +4,13 @@ import torch
 from pytorch3d.structures import Meshes
 
 from mmhuman3d.core.cameras import MMCamerasBase
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.lights import \
-    MMLights  # noqa: E501
 from .base_renderer import BaseRenderer
-from .builder import RENDERER
+from .utils import normalize
 
 
-@RENDERER.register_module(
-    name=['Mesh', 'mesh', 'mesh_renderer', 'MeshRenderer'])
-class MeshRenderer(BaseRenderer):
-    """Render RGBA image with the help of camera system."""
-    shader_type = 'SoftPhongShader'
+class SilhouetteRenderer(BaseRenderer):
+    """Silhouette renderer."""
+    shader_type = 'SilhouetteShader'
 
     def __init__(
         self,
@@ -24,7 +20,7 @@ class MeshRenderer(BaseRenderer):
         out_img_format: str = '%06d.png',
         **kwargs,
     ) -> None:
-        """Renderer for RGBA image of meshes.
+        """SilhouetteRenderer for neural rendering and visualization.
 
         Args:
             resolution (Iterable[int]):
@@ -38,6 +34,9 @@ class MeshRenderer(BaseRenderer):
             out_img_format (str, optional): The image format string for
                 saving the images.
                 Defaults to '%06d.png'.
+
+        Returns:
+            None
         """
         super().__init__(
             resolution=resolution,
@@ -47,19 +46,20 @@ class MeshRenderer(BaseRenderer):
             **kwargs)
 
     def forward(self,
-                meshes: Meshes,
+                meshes: Optional[Meshes] = None,
                 cameras: Optional[MMCamerasBase] = None,
-                lights: Optional[MMLights] = None,
-                indexes: Optional[Iterable[int]] = None,
+                images: Optional[torch.Tensor] = None,
+                indexes: Iterable[str] = None,
                 backgrounds: Optional[torch.Tensor] = None,
-                **kwargs) -> Union[torch.Tensor, None]:
-        """Render Meshes.
+                **kwargs):
+        """Render silhouette map.
 
         Args:
-            meshes (Meshes): meshes to be rendered.
-            cameras (Optional[MMCamerasBase], optional): cameras for render.
+            meshes (Optional[Meshes], optional): meshes to be rendered.
+                Require the textures type is `TexturesClosest`.
+                The color indicates the class index of the triangle.
                 Defaults to None.
-            lights (Optional[MMLights], optional): lights for render.
+            cameras (Optional[MMCamerasBase], optional): cameras for render.
                 Defaults to None.
             indexes (Optional[Iterable[int]], optional): indexes for images.
                 Defaults to None.
@@ -69,18 +69,21 @@ class MeshRenderer(BaseRenderer):
         Returns:
             Union[torch.Tensor, None]: return tensor or None.
         """
-
         meshes = meshes.to(self.device)
         self._update_resolution(cameras, **kwargs)
         fragments = self.rasterizer(meshes_world=meshes, cameras=cameras)
-
-        rendered_images = self.shader(
-            fragments=fragments,
-            meshes=meshes,
-            cameras=cameras,
-            lights=self.lights if lights is None else lights)
+        silhouette_map = self.shader(
+            fragments=fragments, meshes=meshes, cameras=cameras)
 
         if self.output_path is not None:
-            rgba = self.tensor2rgba(rendered_images)
+            rgba = self.tensor2rgba(silhouette_map)
             self._write_images(rgba, backgrounds, indexes)
-        return rendered_images
+
+        return silhouette_map
+
+    def tensor2rgba(self, tensor: torch.Tensor):
+        silhouette = tensor[..., 3:]
+        rgbs = silhouette.repeat(1, 1, 1, 3)
+        valid_masks = (silhouette > 0) * 1.0
+        rgbs = normalize(rgbs, out_value_range=(0, 1))
+        return torch.cat([rgbs, valid_masks], -1)

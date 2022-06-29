@@ -4,12 +4,10 @@ from typing import Iterable, List, Optional, Tuple, Union
 import numpy as np
 
 import mmhuman3d.core.conventions.keypoints_mapping as keypoints_mapping
-from mmhuman3d.core.visualization.renderer import Axes3dJointsRenderer
-from mmhuman3d.utils import (
-    get_different_colors,
-    prepare_output_path,
-    search_limbs,
-)
+from mmhuman3d.core.renderer.matplotlib3d_renderer import Axes3dJointsRenderer
+from mmhuman3d.utils.demo_utils import get_different_colors
+from mmhuman3d.utils.keypoint_utils import search_limbs
+from mmhuman3d.utils.path_utils import prepare_output_path
 
 
 def _norm_pose(pose_numpy: np.ndarray, min_value: Union[float, int],

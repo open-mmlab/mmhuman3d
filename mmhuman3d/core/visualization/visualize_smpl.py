@@ -23,29 +23,30 @@ from mmhuman3d.core.cameras.builder import build_cameras
 from mmhuman3d.core.conventions.cameras.convert_convention import \
     convert_camera_matrix  # prevent yapf isort conflict
 from mmhuman3d.core.conventions.segmentation import body_segmentation
-from mmhuman3d.core.visualization.renderer import render_runner
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import \
+from mmhuman3d.core.renderer.torch3d_renderer import render_runner
+from mmhuman3d.core.renderer.torch3d_renderer.meshes import \
     ParametricMeshes  # noqa: E501
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.utils import \
+from mmhuman3d.core.renderer.torch3d_renderer.smpl_renderer import SMPLRenderer
+from mmhuman3d.core.renderer.torch3d_renderer.utils import \
     align_input_to_padded  # noqa: E501
 from mmhuman3d.models.body_models.builder import build_body_model
-from mmhuman3d.utils import (
-    check_input_path,
-    check_path_suffix,
+from mmhuman3d.utils.demo_utils import (
     convert_bbox_to_intrinsic,
     convert_crop_cam_to_orig_img,
     convert_kp2d_to_bbox,
     get_default_hmr_intrinsic,
     get_different_colors,
+)
+from mmhuman3d.utils.ffmpeg_utils import (
+    check_input_path,
     images_to_array,
     prepare_output_path,
-    save_meshes_as_objs,
-    save_meshes_as_plys,
     vid_info_reader,
     video_to_array,
     video_to_images,
 )
-from .renderer import SMPLRenderer
+from mmhuman3d.utils.mesh_utils import save_meshes_as_objs, save_meshes_as_plys
+from mmhuman3d.utils.path_utils import check_path_suffix
 
 try:
     from typing import Literal

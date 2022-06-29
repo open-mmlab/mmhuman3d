@@ -4,8 +4,8 @@ from pytorch3d.utils import ico_sphere
 
 from mmhuman3d.core.cameras import compute_orbit_cameras
 from mmhuman3d.core.cameras.builder import build_cameras
-from mmhuman3d.core.visualization import render_runner
-from mmhuman3d.core.visualization.renderer import build_renderer
+from mmhuman3d.core.renderer.torch3d_renderer import render_runner
+from mmhuman3d.core.renderer.torch3d_renderer.builder import build_renderer
 
 
 def test_render_runner():

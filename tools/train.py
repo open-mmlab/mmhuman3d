@@ -13,7 +13,8 @@ from mmhuman3d import __version__
 from mmhuman3d.apis import set_random_seed, train_model
 from mmhuman3d.data.datasets import build_dataset
 from mmhuman3d.models.architectures.builder import build_architecture
-from mmhuman3d.utils import collect_env, get_root_logger
+from mmhuman3d.utils.collect_env import collect_env
+from mmhuman3d.utils.logger import get_root_logger
 
 
 def parse_args():
