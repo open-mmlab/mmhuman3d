@@ -79,7 +79,7 @@ class EHFConverter(BaseModeConverter):
             vertices_.append(vertices)
 
         keypoints2d_  = np.array(keypoints2d_)
-        keypoints2d, keypoints2d_mask = convert_kps(keypoints2d_, src='openpose_curated_fits', dst='human_data')
+        keypoints2d, keypoints2d_mask = convert_kps(keypoints2d_, src='openpose_137', dst='human_data')
         vertices_ = np.array(vertices_)
     
 

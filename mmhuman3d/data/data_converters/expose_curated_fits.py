@@ -76,7 +76,7 @@ class ExposeCuratedFitsConverter(BaseModeConverter):
         left_hand_pose = pose[:,23 + eye_offset:23 + eye_offset + 15]
         right_hand_pose = pose[:,23 + 15 + eye_offset:]
 
-        keypoints2d, keypoints2d_mask = convert_kps(keypoints2d, src='openpose_curated_fits', dst='human_data')
+        keypoints2d, keypoints2d_mask = convert_kps(keypoints2d, src='openpose_137', dst='human_data')
 
 
         for kps in keypoints2d:

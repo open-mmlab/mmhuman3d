@@ -3,12 +3,13 @@ Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp.
 Openpose mainly supports 25 and 135 now, 118 convention can be found in
 https://github.com/vchoutas/smplify-x/issues/152#issuecomment-923715702.
 
-Openpose_curated_fits can be found in 
+OPENPOSE_137_KEYPOINTS can be found in 
 https://github.com/vchoutas/expose
 
 - OPENPOSE_25_KEYPOINTS:  body(25)
 - OPENPOSE_118_KEYPOINTS: body(25) + hand(42) + face(51)
 - OPENPOSE_135_KEYPOINTS: body(25) + hand(40) + face(70)
+- OPENPOSE_137_KEYPOINTS: body(27) + hand(40) + face(70)
 
 Note that:
 1. 135 and coco17 share the first 17 body keypoints
@@ -472,8 +473,8 @@ OPENPOSE_JOINTS = [
 
 FEET_KEYPS_NAMES = ['left_bigtoe', 'left_smalltoe', 'left_heel',
                     'right_bigtoe', 'right_smalltoe', 'right_heel']
-OPENPOSE_JOINTS_CF = deepcopy(OPENPOSE_JOINTS)
+OPENPOSE_137_KEYPOINTS = deepcopy(OPENPOSE_JOINTS)
 start = 19
 for feet_name in FEET_KEYPS_NAMES:
-    OPENPOSE_JOINTS_CF.insert(start, feet_name)
+    OPENPOSE_137_KEYPOINTS.insert(start, feet_name)
     start += 1

@@ -64,8 +64,9 @@ class ShapePriorLoss(nn.Module):
 
         return shape_prior_loss
 
-class ThresholdPrior(nn.Module):
-    """Threshold loss for parameters.
+class ShapeThresholdPriorLoss(nn.Module):
+    """Threshold loss for betas. Soft constraint to prevent parameters for leaving feasible set. 
+    Implements a penalty constraint that encourages the parameters to stay in the feasible set of solutions.
 
     Args:
         margin (int, optional): The threshold value
@@ -80,25 +81,25 @@ class ThresholdPrior(nn.Module):
         self.epsilon = epsilon
         self.loss_weight = loss_weight
 
-    def forward(self, module_input):
+    def forward(self, betas):
         """Forward function of loss.
 
         Args:
-            module_input (torch.Tensor): The parameters
+            betas (torch.Tensor): The body shape parameters
         Returns:
             torch.Tensor: The calculated loss
         """
-        abs_values = module_input.abs()
+        abs_values = betas.abs()
         mask = abs_values.gt(self.margin)
-        invalid_values = torch.masked_select(module_input, mask)
+        invalid_values = torch.masked_select(betas, mask)
 
         if self.norm == 'l1':
             return self.loss_weight * invalid_values.abs().sum() / (
-                mask.to(dtype=module_input.dtype).sum() + self.epsilon
+                mask.to(dtype=betas.dtype).sum() + self.epsilon
             )
         elif self.norm == 'l2':
             return self.loss_weight * invalid_values.pow(2).sum() / (
-                mask.to(dtype=module_input.dtype).sum() + self.epsilon
+                mask.to(dtype=betas.dtype).sum() + self.epsilon
             )
 
 class PoseRegLoss(nn.Module):

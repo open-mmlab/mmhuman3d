@@ -26,8 +26,8 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     smplx,
     flame,
     face3d,
-    spin,
-    mano
+    mano,
+    spin_smplx
 )
 
 KEYPOINTS_FACTORY = {
@@ -56,13 +56,13 @@ KEYPOINTS_FACTORY = {
     'openpose_25': openpose.OPENPOSE_25_KEYPOINTS,
     'openpose_118': openpose.OPENPOSE_118_KEYPOINTS,
     'openpose_135': openpose.OPENPOSE_135_KEYPOINTS,
-    'openpose_curated_fits': openpose.OPENPOSE_JOINTS_CF,
+    'openpose_137': openpose.OPENPOSE_137_KEYPOINTS,
     'hybrik_29': hybrik.HYBRIK_29_KEYPOINTS,
     'hybrik_hp3d': mpi_inf_3dhp.HYBRIK_MPI_INF_3DHP_KEYPOINTS,
     'gta': gta.GTA_KEYPOINTS,
     'flame': flame.FLAME_73_KEYPOINTS,
     'face3d':face3d.FACE3D_IND,
-    'spin':spin.SPIN_KEYPOINTS,
+    'spin_smplx':spin_smplx.SPIN_SMPLX_KEYPOINTS,
     'mano': mano.MANO_KEYPOINTS,
 }
 

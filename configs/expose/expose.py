@@ -142,7 +142,7 @@ model = dict(
     loss_smplx_hand_pose = dict(type='RotationDistance',reduction = 'sum', loss_weight=1),
     loss_smplx_betas = dict(type='MSELoss',reduction = 'sum', loss_weight=0.001),
     loss_smplx_expression = dict(type='MSELoss',reduction = 'sum', loss_weight=1),
-    loss_smplx_betas_prior = dict(type='ThresholdPrior', margin = 3.0, norm = 'l2', loss_weight=1),
+    loss_smplx_betas_prior = dict(type='ShapeThresholdPriorLoss', margin = 3.0, norm = 'l2', loss_weight=1),
     extra_hand_model_cfg = dict(
         backbone = dict(
             type = 'ResNet',

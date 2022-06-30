@@ -87,7 +87,7 @@ class ExposeSPINSMPLXConverter(BaseModeConverter):
         left_hand_pose = pose[:,25:25 + 15]
         right_hand_pose = pose[:,-15:]
 
-        keypoints2d, keypoints2d_mask = convert_kps(keypoints2d, src='spin', dst='human_data')
+        keypoints2d, keypoints2d_mask = convert_kps(keypoints2d, src='spin_smplx', dst='human_data')
 
 
         for index, kps in enumerate(keypoints2d):

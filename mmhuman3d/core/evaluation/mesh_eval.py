@@ -6,7 +6,7 @@
 import numpy as np
 
 
-def compute_similarity_transform(source_points, target_points):
+def compute_similarity_transform(source_points, target_points , return_tform = False):
     """Computes a similarity transform (sR, t) that takes a set of 3D points
     source_points (N x 3) closest to a set of 3D points target_points, where R
     is an 3x3 rotation matrix, t 3x1 translation, s scale.
@@ -61,5 +61,8 @@ def compute_similarity_transform(source_points, target_points):
     source_points_hat = scale * R.dot(source_points) + t
 
     source_points_hat = source_points_hat.T
+
+    if return_tform:
+        return source_points_hat, {'rotation':R, 'scale': scale, 'translation':t}
 
     return source_points_hat

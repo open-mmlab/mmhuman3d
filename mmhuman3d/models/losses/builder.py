@@ -15,7 +15,7 @@ from .prior_loss import (
     SmoothJointLoss,
     SmoothPelvisLoss,
     SmoothTranslationLoss,
-    ThresholdPrior,
+    ShapeThresholdPriorLoss,
 )
 from .smooth_l1_loss import L1Loss, SmoothL1Loss
 from .rotaion_distance_loss import RotationDistance
@@ -33,7 +33,7 @@ LOSSES.register_module(name='SmoothJointLoss', module=SmoothJointLoss)
 LOSSES.register_module(name='SmoothPelvisLoss', module=SmoothPelvisLoss)
 LOSSES.register_module(
     name='SmoothTranslationLoss', module=SmoothTranslationLoss)
-LOSSES.register_module(name='ThresholdPrior', module=ThresholdPrior)
+LOSSES.register_module(name='ShapeThresholdPriorLoss', module=ShapeThresholdPriorLoss)
 LOSSES.register_module(name='CameraPriorLoss', module=CameraPriorLoss)
 LOSSES.register_module(name='MaxMixturePrior', module=MaxMixturePrior)
 LOSSES.register_module(name='L1Loss', module=L1Loss)
