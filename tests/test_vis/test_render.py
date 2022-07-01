@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.utils import ico_sphere
@@ -47,12 +46,53 @@ def test_render_runner():
     assert tensor.shape == (2, 128, 128, 4)
 
 
-@pytest.mark.skipif(
-    not torch.cuda.is_available(), reason='requires CUDA support')
-def test_realtime_render_cuda():
-    from mmhuman3d.core.renderer.mpr_renderer.smpl_realrender import VisualizerMeshSMPL  # noqa: E501
+# @pytest.mark.skipif(
+#     not torch.cuda.is_available(), reason='requires CUDA support')
+# def test_realtime_render_cuda():
+#     from mmhuman3d.core.renderer.mpr_renderer.smpl_realrender import VisualizerMeshSMPL  # noqa: E501
 
-    vertices = torch.ones([6890, 3]).to(device='cuda')
+#     vertices = torch.ones([6890, 3]).to(device='cuda')
+#     body_model = build_body_model(
+#         dict(
+#             type='SMPL',
+#             gender='neutral',
+#             num_betas=10,
+#             model_path='data/body_models/smpl'))
+#     renderer = VisualizerMeshSMPL(
+#         body_models=body_model, resolution=[224, 224], device='cuda')
+
+#     res = renderer(vertices)
+#     assert res.shape == (224, 224, 3)
+
+
+def mock_estimate_normals_cuda(*args):
+    return torch.zeros([1024, 1024, 3]), torch.zeros([1024, 1024, 3])
+
+
+def mock_project_mesh_cuda(*args):
+    return torch.zeros([1024, 1024, 1])
+
+
+def mock_estimate_normals(vertices, faces, pinhole):
+    return torch.zeros([1024, 1024, 3]), torch.zeros([1024, 1024, 3])
+
+
+@patch('mmhuman3d.core.renderer.mpr_renderer.rasterizer.estimate_normals',
+       mock_estimate_normals)
+@surrogate(
+    'mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer.estimate_normals')
+@patch('mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer.estimate_normals',
+       mock_estimate_normals_cuda)
+@surrogate('mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer.project_mesh')
+@patch('mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer.project_mesh',
+       mock_project_mesh_cuda)
+def test_realtime_render():
+    # mock_estimate_normals.return_value = np.zeros([1024, 1024, 3]), np.zeros(
+    #     [1024, 1024, 3])
+    # mock_project_mesh.return_value = np.zeros([1024, 1024, 1])
+    # test realrender
+    from mmhuman3d.core.renderer.mpr_renderer.smpl_realrender import VisualizerMeshSMPL  # noqa: E501
+    vertices = torch.ones([6890, 3]).to(device='cpu')
     body_model = build_body_model(
         dict(
             type='SMPL',
@@ -60,50 +100,28 @@ def test_realtime_render_cuda():
             num_betas=10,
             model_path='data/body_models/smpl'))
     renderer = VisualizerMeshSMPL(
-        body_models=body_model, resolution=[224, 224], device='cuda')
-
+        body_models=body_model, resolution=[1024, 1024], device='cpu')
     res = renderer(vertices)
-    assert res.shape == (224, 224, 3)
-
-
-@surrogate(
-    'mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer.estimate_normals')
-@patch('mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer.estimate_normals')
-@surrogate('mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer.project_mesh')
-@patch('mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer.project_mesh')
-def test_realtime_render(mock_project_mesh, mock_estimate_normals):
-    mock_estimate_normals.return_value = np.zeros([1024, 1024, 3]), np.zeros(
-        [1024, 1024, 3])
-    mock_project_mesh.return_value = np.zeros([1024, 1024, 1])
-    # test realrender
-    from mmhuman3d.core.renderer.mpr_renderer.smpl_realrender import VisualizerMeshSMPL  # noqa: E501
-    with pytest.raises(AssertionError):
-        vertices = torch.ones([6890, 3]).to(device='cpu')
-        body_model = build_body_model(
-            dict(
-                type='SMPL',
-                gender='neutral',
-                num_betas=10,
-                model_path='data/body_models/smpl'))
-        renderer = VisualizerMeshSMPL(
-            body_models=body_model, resolution=[224, 224], device='cpu')
-
-        res = renderer(vertices)
-
+    assert res.shape == (1024, 1024, 3)
+    bg = np.zeros([1024, 1024, 3])
+    res = renderer(vertices, bg=bg)
+    assert res.shape == (1024, 1024, 3)
     # test estimate normals
-    from mmhuman3d.core.renderer.mpr_renderer.rasterizer import \
+    from mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer import \
         estimate_normals
     vertices = torch.zeros([6890, 3])
     vertices_filter = torch.ones(6890)
     faces = torch.zeros([13776, 3])
     pinhole2d = Pinhole2D(fx=5000., fy=5000., cx=112, cy=112, w=1024, h=1024)
+
     coords, normals = estimate_normals(vertices, faces, pinhole2d,
                                        vertices_filter)
     assert coords.shape == (1024, 1024, 3)
 
     # test project mesh
-    from mmhuman3d.core.renderer.mpr_renderer.rasterizer import \
+    from mmhuman3d.core.renderer.mpr_renderer.cuda.rasterizer import \
         project_mesh
+
     z_buff = project_mesh(vertices, faces, vertices, pinhole2d,
                           vertices_filter)
     assert z_buff.shape == (1024, 1024, 1)
@@ -133,7 +151,3 @@ def test_realtime_render(mock_project_mesh, mock_estimate_normals):
 
     res = vis_normals(coords, normals)
     assert res.shape == (1024, 1024)
-
-
-if __name__ == '__main__':
-    test_realtime_render()
