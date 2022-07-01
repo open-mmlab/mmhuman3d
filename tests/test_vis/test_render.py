@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 from pytorch3d.renderer.mesh.textures import TexturesVertex
 from pytorch3d.utils import ico_sphere
@@ -46,23 +47,23 @@ def test_render_runner():
     assert tensor.shape == (2, 128, 128, 4)
 
 
-# @pytest.mark.skipif(
-#     not torch.cuda.is_available(), reason='requires CUDA support')
-# def test_realtime_render_cuda():
-#     from mmhuman3d.core.renderer.mpr_renderer.smpl_realrender import VisualizerMeshSMPL  # noqa: E501
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason='requires CUDA support')
+def test_realtime_render_cuda():
+    from mmhuman3d.core.renderer.mpr_renderer.smpl_realrender import VisualizerMeshSMPL  # noqa: E501
 
-#     vertices = torch.ones([6890, 3]).to(device='cuda')
-#     body_model = build_body_model(
-#         dict(
-#             type='SMPL',
-#             gender='neutral',
-#             num_betas=10,
-#             model_path='data/body_models/smpl'))
-#     renderer = VisualizerMeshSMPL(
-#         body_models=body_model, resolution=[224, 224], device='cuda')
+    vertices = torch.ones([6890, 3]).to(device='cuda')
+    body_model = build_body_model(
+        dict(
+            type='SMPL',
+            gender='neutral',
+            num_betas=10,
+            model_path='data/body_models/smpl'))
+    renderer = VisualizerMeshSMPL(
+        body_models=body_model, resolution=[224, 224], device='cuda')
 
-#     res = renderer(vertices)
-#     assert res.shape == (224, 224, 3)
+    res = renderer(vertices)
+    assert res.shape == (224, 224, 3)
 
 
 def mock_estimate_normals_cuda(*args):
