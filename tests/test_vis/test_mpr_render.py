@@ -114,7 +114,7 @@ def mock_estimate_normals(vertices, faces, pinhole):
        mock_project_mesh_cuda)
 def test_smpl_realtime_render():
     from mmhuman3d.core.renderer.mpr_renderer.smpl_realrender import VisualizerMeshSMPL  # noqa: E501
-    vertices = torch.ones([6890, 3]).to(device='cuda')
+    vertices = torch.ones([6890, 3]).to(device='cpu')
     body_model = build_body_model(
         dict(
             type='SMPL',
@@ -122,7 +122,7 @@ def test_smpl_realtime_render():
             num_betas=10,
             model_path='data/body_models/smpl'))
     renderer = VisualizerMeshSMPL(
-        body_models=body_model, resolution=[1024, 1024], device='cuda')
+        body_models=body_model, resolution=[1024, 1024], device='cpu')
 
     res = renderer(vertices)
     assert res.shape == (1024, 1024, 3)
