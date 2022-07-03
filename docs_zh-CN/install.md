@@ -1,9 +1,10 @@
 # 安装
 
-- [依赖](#requirements)
-- [准备环境](#prepare-environment)
-- [安装 MMHuman3D](#install-mmhuman3d)
-- [从头开始安装的脚本](#a-from-scratch-setup-script)
+- [安装](#安装)
+- [依赖](#依赖)
+- [准备环境](#准备环境)
+- [安装 MMHuman3D](#安装-mmhuman3d)
+- [从头开始安装的脚本](#从头开始安装的脚本)
 
 ## 依赖
 
@@ -48,9 +49,11 @@ conda install pytorch={torch_version} torchvision cudatoolkit={cu_version} -c py
 conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 ```
 
-**注意** 请确保compilation CUDA version和runtime CUDA version相匹配.
+**注意:** 请确保compilation CUDA version和runtime CUDA version相匹配.
 
-d. 安装PyTorch3D和相关依赖.
+d. 在Linux或者Windows上安装PyTorch3D.
+
+对于Linux：
 
 ```shell
 conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
@@ -58,7 +61,11 @@ conda install -c bottler nvidiacub -y
 
 conda install pytorch3d -c pytorch3d
 ```
-更多细节，详见[PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md).
+
+对于Windows：
+
+请参考[官方安装文档](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md). 这里我们提供一个[例子](https://github.com/open-mmlab/mmhuman3d/pull/199#issue-1274739041)供用户参考。
+**注意:** 这部分是针对想在Windows平台安装MMHuman3D的用户。
 
 运行如下命令测试PyTorch3D是否安装成功:
 
