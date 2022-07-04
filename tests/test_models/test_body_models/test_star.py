@@ -73,4 +73,4 @@ def test_star_forward():
     betas = torch.tensor(betas, dtype=torch.float)
 
     trans = torch.zeros((batch_size, 3), dtype=torch.float)
-    _ = star.forward(poses, betas, trans)
+    _ = star.forward(body_pose=poses, betas=betas, trans=trans)
