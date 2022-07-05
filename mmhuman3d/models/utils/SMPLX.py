@@ -271,8 +271,7 @@ class CropSampler():
 
 
 class SmplxHandCropFunc():
-    def __init__(self, model_head, body_model, convention = 'smplx', img_res = 256, scale_factor = 2.0 , crop_size = 224,
-                condition_hand_wrist_pose = True, condition_hand_shape = False, condition_hand_finger_pose = True):
+    def __init__(self, model_head, body_model, convention = 'smplx', img_res = 256, scale_factor = 2.0 , crop_size = 224, condition_hand_wrist_pose = True, condition_hand_shape = False, condition_hand_finger_pose = True):
         self.model_head = model_head
         self.body_model = body_model
         self.img_res = img_res
@@ -296,7 +295,7 @@ class SmplxHandCropFunc():
 
 
     def build_hand_mean(self, global_orient, body_pose, betas, left_hand_pose,
-                        right_hand_pose, batch_size) :
+                        raw_right_hand_pose, batch_size) :
         ''' Builds the initial point for the iterative regressor of the hand
         '''
         hand_mean = []
@@ -306,8 +305,7 @@ class SmplxHandCropFunc():
         if self.condition_hand_wrist_pose:
             # Compute the absolute pose of the right wrist
             right_wrist_pose_abs = find_joint_global_rotation(self.right_wrist_kin_chain, global_orient,body_pose)
-
-            right_wrist_pose = rotmat_to_rot6d(right_wrist_pose_abs.unsqueeze(dim=1)).reshape(batch_size, -1)
+            right_wrist_pose = right_wrist_pose_abs[:,:3,:2].contiguous().reshape(batch_size, -1)
 
             # Compute the absolute rotation for the left wrist
             left_wrist_pose_abs = find_joint_global_rotation(self.left_wrist_kin_chain, global_orient, body_pose)
@@ -315,15 +313,15 @@ class SmplxHandCropFunc():
             left_to_right_wrist_pose = flip_pose(left_wrist_pose_abs)
 
             # Convert to the latent representation
-            left_to_right_wrist_pose = rotmat_to_rot6d(left_to_right_wrist_pose.unsqueeze(dim=1)).reshape(batch_size, -1)
+            left_to_right_wrist_pose = left_to_right_wrist_pose[:,:3,:2].contiguous().reshape(batch_size, -1)
         else:
             right_wrist_pose = self.model_head.get_mean('global_orient',batch_size=batch_size)
             left_to_right_wrist_pose = self.model_head.get_mean('global_orient',batch_size=batch_size)
 
         # Convert the pose of the left hand to the right hand and project
         # it to the encoder space
-        left_to_right_hand_pose = rotmat_to_rot6d(flip_pose(left_hand_pose)).reshape(batch_size, -1)
-        right_hand_pose = rotmat_to_rot6d(right_hand_pose).reshape(batch_size, -1)
+        left_to_right_hand_pose = flip_pose(left_hand_pose)[:,:,:3,:2].contiguous().reshape(batch_size, -1)
+        right_hand_pose = raw_right_hand_pose.reshape(batch_size, -1)
         camera_mean = self.model_head.get_mean('camera',batch_size = batch_size)
 
         shape_condition = (betas if self.condition_hand_shape else
@@ -369,9 +367,9 @@ class SmplxHandCropFunc():
         left_hand_inv_crop_transforms = left_hand_points_to_crop['inv_crop_transforms']
         
         left_hand_cropper_out = self.hand_cropper(full_imgs, left_hand_center, left_hand_orig_bbox_size)
-        left_hand_crops = left_hand_cropper_out['images'] # batchsize*3*crop_size*crop_size
-        left_hand_points = left_hand_cropper_out['sampling_grid'] # batchsize*crop_size*crop_size*2 表示输出图像的点所在原图的位置
-        left_hand_crop_transform = left_hand_cropper_out['transform'] # batchsize* 3*3
+        left_hand_crops = left_hand_cropper_out['images']
+        left_hand_points = left_hand_cropper_out['sampling_grid']
+        left_hand_crop_transform = left_hand_cropper_out['transform']
 
         # right hand
         right_hand_joints = (pred_keypoints2d[:,self.right_hand_idxs]*0.5+0.5)*(self.img_res-1)
@@ -380,9 +378,9 @@ class SmplxHandCropFunc():
         right_hand_orig_bbox_size = right_hand_points_to_crop['orig_bbox_size']
         right_hand_inv_crop_transforms = right_hand_points_to_crop['inv_crop_transforms']
         right_hand_cropper_out = self.hand_cropper(full_imgs, right_hand_center, right_hand_orig_bbox_size)
-        right_hand_crops = right_hand_cropper_out['images'] # batchsize*3*crop_size*crop_size
-        right_hand_points = right_hand_cropper_out['sampling_grid'] # batchsize*crop_size*crop_size*2 表示输出图像的点所在原图的位置
-        right_hand_crop_transform = right_hand_cropper_out['transform'] # batchsize* 3*3
+        right_hand_crops = right_hand_cropper_out['images']
+        right_hand_points = right_hand_cropper_out['sampling_grid']
+        right_hand_crop_transform = right_hand_cropper_out['transform']
 
         # concat
         all_hand_imgs = []
@@ -396,7 +394,7 @@ class SmplxHandCropFunc():
             pred_param['body_pose'],
             pred_param['betas'],
             pred_param['left_hand_pose'],
-            pred_param['right_hand_pose'],
+            pred_raw['raw_right_hand_pose'],
             batch_size=full_imgs.shape[0]
         )
         crop_info = dict(
@@ -427,12 +425,13 @@ class SmplxFaceCropFunc():
         self.scale_factor = scale_factor
         self.face_cropper = CropSampler(crop_size)
 
-    def build_face_mean(self, global_orient, body_pose, betas, jaw_pose, expression, batch_size):
+    def build_face_mean(self, global_orient, body_pose, betas, raw_jaw_pose, expression, batch_size):
         face_mean = []
         # Compute the absolute pose of the right wrist
         neck_pose_abs = find_joint_global_rotation(self.neck_kin_chain, global_orient, body_pose)
         # Convert the absolute neck pose to offsets
-        neck_pose = rotmat_to_rot6d(neck_pose_abs.unsqueeze(dim=1)).reshape(batch_size, -1)
+        # neck_pose = rotmat_to_rot6d(neck_pose_abs.unsqueeze(dim=1)).reshape(batch_size, -1)
+        neck_pose = neck_pose_abs[:,:3,:2].contiguous().reshape(batch_size, -1)
 
         camera_mean = self.model_head.get_mean('camera',batch_size = batch_size)
 
@@ -441,7 +440,7 @@ class SmplxFaceCropFunc():
             self.model_head.get_mean('global_orient', batch_size = batch_size))
             
         jaw_pose_condition = (
-            rotmat_to_rot6d(jaw_pose).reshape(batch_size, -1) if self.condition_face_jaw_pose else
+            raw_jaw_pose.reshape(batch_size, -1) if self.condition_face_jaw_pose else
             self.model_head.get_mean('jaw_pose', batch_size = batch_size)
         )
         face_num_betas = self.model_head.get_num_betas()
@@ -493,17 +492,18 @@ class SmplxFaceCropFunc():
         face_inv_crop_transforms = face_points_to_crop['inv_crop_transforms']
 
         face_cropper_out = self.face_cropper(full_imgs, face_center, face_orig_bbox_size)
-        face_crops = face_cropper_out['images'] # batchsize*3*crop_size*crop_size
-        face_points = face_cropper_out['sampling_grid'] # batchsize*crop_size*crop_size*2 表示输出图像的点所在原图的位置
-        face_crop_transform = face_cropper_out['transform'] # batchsize* 3*3
+        face_crops = face_cropper_out['images']
+        face_points = face_cropper_out['sampling_grid']
+        face_crop_transform = face_cropper_out['transform']
 
         all_face_imgs = [face_crops]
         all_face_imgs = torch.cat(all_face_imgs, dim=0)
+        
         face_mean = self.build_face_mean(
             pred_param['global_orient'],
             pred_param['body_pose'],
             pred_param['betas'],
-            pred_param['jaw_pose'],
+            pred_raw['raw_jaw_pose'],
             pred_param['expression'],
             batch_size= full_imgs.shape[0]
         )

@@ -19,8 +19,10 @@ def compute_similarity_transform(source_points, target_points , return_tform = F
     Args:
         source_points (np.ndarray([N, 3])): Source point set.
         target_points (np.ndarray([N, 3])): Target point set.
+        return_tform (bool) : Whether return transform 
     Returns:
         source_points_hat (np.ndarray([N, 3])): Transformed source point set.
+        transform (dict): Returns if return_tform is True. Returns rotation: r, 'scale': s, 'translation':t.
     """
 
     assert target_points.shape[0] == source_points.shape[0]

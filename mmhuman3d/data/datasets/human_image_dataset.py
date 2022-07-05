@@ -318,7 +318,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         with open(res_file, 'w') as f:
             json.dump(keypoints, f, sort_keys=True, indent=4)
 
-    def _parse_result(self, res, mode='keypoint' , body_part = None):
+    def _parse_result(self, res, mode='keypoint'):
         """Parse results."""
 
         if mode == 'vertice':

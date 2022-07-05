@@ -65,8 +65,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             2D keypoints. Default: None.
         loss_keypoints3d (dict | None, optional): Losses config dict for
             3D keypoints. Default: None.
-        loss_vertex (dict | None, optional): Losses config dict for mesh
-            vertices. Default: None
         loss_smplx_global_orient (dict | None, optional): Losses config dict for smplx
             global orient. Default: None
         loss_smplx_body_pose (dict | None, optional): Losses config dict for smplx

@@ -167,7 +167,7 @@ __all__ = [
     'video_to_gif',
     'video_to_images',
     'video_writer',
-    'weak_perspective_projection'
+    'weak_perspective_projection',
     'xywh2xyxy',
     'xyxy2xywh',
     'save_meshes_as_objs',
