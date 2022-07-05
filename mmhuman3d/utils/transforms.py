@@ -2,22 +2,37 @@ from typing import Union
 
 import numpy
 import torch
-from pytorch3d.transforms import (
-    axis_angle_to_matrix,
-    axis_angle_to_quaternion,
-    euler_angles_to_matrix,
-    matrix_to_euler_angles,
-    matrix_to_quaternion,
-    matrix_to_rotation_6d,
-    quaternion_to_axis_angle,
-    quaternion_to_matrix,
-    rotation_6d_to_matrix,
-)
 
 from mmhuman3d.core.conventions.joints_mapping.standard_joint_angles import (
     TRANSFORMATION_AA_TO_SJA,
     TRANSFORMATION_SJA_TO_AA,
 )
+from .logger import get_root_logger
+
+try:
+    from pytorch3d.transforms import (
+        axis_angle_to_matrix,
+        axis_angle_to_quaternion,
+        euler_angles_to_matrix,
+        matrix_to_euler_angles,
+        matrix_to_quaternion,
+        matrix_to_rotation_6d,
+        quaternion_to_axis_angle,
+        quaternion_to_matrix,
+        rotation_6d_to_matrix,
+    )
+except (ImportError, ModuleNotFoundError):
+    import traceback
+    logger = get_root_logger()
+    stack_str = ''
+    for line in traceback.format_stack():
+        if 'frozen' not in line:
+            stack_str += line + '\n'
+    import_exception = traceback.format_exc() + '\n'
+    warning_msg = stack_str + import_exception + \
+        'If pytorch3d is not required,' +\
+        ' this warning could be ignored.'
+    logger.warning(warning_msg)
 
 
 class Compose:

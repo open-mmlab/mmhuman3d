@@ -20,12 +20,11 @@ from pytorch3d.renderer import (
 from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.utils.ffmpeg_utils import images_to_gif, images_to_video
 from mmhuman3d.utils.path_utils import check_path_suffix
-from .builder import RENDERER, build_lights, build_shader
+from .lights import build_lights
+from .shader import build_shader
 from .utils import normalize, rgb2bgr, tensor2array
 
 
-@RENDERER.register_module(
-    name=['base', 'Base', 'base_renderer', 'BaseRenderer'])
 class BaseRenderer(nn.Module):
 
     def __init__(self,

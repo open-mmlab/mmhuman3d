@@ -54,7 +54,9 @@ conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 
 **Important:** Make sure that your compilation CUDA version and runtime CUDA version match.
 
-d. Install PyTorch3D and dependency libs.
+d. Install PyTorch3D on Linux or Windows.
+
+For Linux:
 
 ```shell
 conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
@@ -62,7 +64,11 @@ conda install -c bottler nvidiacub -y
 
 conda install pytorch3d -c pytorch3d
 ```
-Please refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details.
+
+For Windows:
+
+Please refer to [official installation](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details. Here we provide an [example](https://github.com/open-mmlab/mmhuman3d/pull/199#issue-1274739041) for user reference.
+**Important:** This section is for users who want to install MMHuman3D on Windows.
 
 Your installation is successful if you can do these in command line.
 

@@ -37,7 +37,7 @@ renderer = MeshRenderer(
     shader=SoftPhongShader(device=device, cameras=cameras, lights=lights))
 
 ### initialized by mmhuman3d
-from mmhuman3d.core.visualization.renderer import MeshRenderer
+from mmhuman3d.core.renderer.torch3d_renderer.builder import MeshRenderer
 # rasterizer could be passed by nn.Module or dict
 rasterizer = dict(
     image_size=128,
@@ -60,7 +60,7 @@ shader = dict(type='SoftPhongShader')
 These two methods are equal.
 ```python
 import torch.nn as nn
-from mmhuman3d.core.visualization.renderer import MeshRenderer, build_renderer
+from mmhuman3d.core.renderer.torch3d_renderer.builder import MeshRenderer, build_renderer
 
 renderer = MeshRenderer(shader=shader, device=device, rasterizer=rasterizer, resolution=resolution)
 renderer = build_renderer(dict(type='mesh', device=device, shader=shader, rasterizer=rasterizer, resolution=resolution))
@@ -77,7 +77,7 @@ We provide `tensor2rgba` function for visualization, the returned tensor will be
  The operation is simple:
  ```python
  import torch
- from mmhuman3d.core.visualization.renderer import build_renderer
+ from mmhuman3d.core.renderer.torch3d_renderer.builder import build_renderer
 
  renderer = build_renderer(dict(type='mesh', device=device, resolution=resolution))
  rendered_tensor = renderer(meshes=meshes, cameras=cameras, lights=lights)
@@ -107,7 +107,7 @@ You could pass your data by `render_runner` to render a series batch of render. 
 
 ```python
 import torch
-from mmhuman3d.core.visualization.renderer import render_runner
+from mmhuman3d.core.renderer.torch3d_renderer import render_runner
 
 render_data = dict(cameras=cameras, lights=lights, meshes=meshes, backgrounds=backgrounds)
 # no_grad=True for non-differentiable render
@@ -130,7 +130,7 @@ Warp a gray texture image to smpl_mesh.
 import torch
 from mmhuman3d.models.body_models.builder import build_body_model
 from pytorch3d.structures import meshes
-from mmhuman3d.core.visualization.renderer import build_renderer
+from mmhuman3d.core.renderer.torch3d_renderer.builder import build_renderer
 body_model = build_body_model(dict(type='smpl', model_path=model_path)).to(device)
 pose_dict = body_model.tensor2dict(torch.zeros(1, 72))
 verts = body_model(**pose_dict)['vertices']

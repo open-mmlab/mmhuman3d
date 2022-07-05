@@ -173,7 +173,10 @@ class SMPLifyX(SMPLify):
                         joint_prior_weight: float = None,
                         smooth_loss_weight: float = None,
                         pose_prior_weight: float = None,
+                        pose_reg_weight: float = None,
+                        limb_length_weight: float = None,
                         joint_weights: dict = {},
+                        ftol: float = 1e-4,
                         num_iter: int = 1) -> None:
         """Optimize a stage of body model parameters according to
         configuration.
@@ -208,8 +211,11 @@ class SMPLifyX(SMPLify):
             joint_prior_weight: weight of joint prior loss
             smooth_loss_weight: weight of smooth loss
             pose_prior_weight: weight of pose prior loss
+            pose_reg_weight: weight of pose regularization loss
+            limb_length_weight: weight of limb length loss
             joint_weights: per joint weight of shape (K, )
             num_iter: number of iterations
+            ftol: early stop tolerance for relative change in loss
 
         Returns:
             None
@@ -229,6 +235,7 @@ class SMPLifyX(SMPLify):
 
         optimizer = build_optimizer(parameters, self.optimizer)
 
+        pre_loss = None
         for iter_idx in range(num_iter):
 
             def closure():
@@ -259,41 +266,52 @@ class SMPLifyX(SMPLify):
                     shape_prior_weight=shape_prior_weight,
                     smooth_loss_weight=smooth_loss_weight,
                     pose_prior_weight=pose_prior_weight,
+                    pose_reg_weight=pose_reg_weight,
+                    limb_length_weight=limb_length_weight,
                     joint_weights=joint_weights)
 
                 loss = loss_dict['total_loss']
                 loss.backward()
                 return loss
 
-            optimizer.step(closure)
+            loss = optimizer.step(closure)
+            if iter_idx > 0 and pre_loss is not None and ftol > 0:
+                loss_rel_change = self._compute_relative_change(
+                    pre_loss, loss.item())
+                if loss_rel_change < ftol:
+                    print(f'[ftol={ftol}] Early stop at {iter_idx} iter!')
+                    break
+            pre_loss = loss.item()
 
     def evaluate(
         self,
-        betas=None,
-        body_pose=None,
-        global_orient=None,
-        transl=None,
-        left_hand_pose=None,
-        right_hand_pose=None,
-        expression=None,
-        jaw_pose=None,
-        leye_pose=None,
-        reye_pose=None,
-        keypoints2d=None,
-        keypoints2d_conf=None,
-        keypoints2d_weight=None,
-        keypoints3d=None,
-        keypoints3d_conf=None,
-        keypoints3d_weight=None,
-        shape_prior_weight=None,
-        joint_prior_weight=None,
-        smooth_loss_weight=None,
-        pose_prior_weight=None,
-        joint_weights={},
-        return_verts=False,
-        return_full_pose=False,
-        return_joints=False,
-        reduction_override=None,
+        betas: torch.Tensor = None,
+        body_pose: torch.Tensor = None,
+        global_orient: torch.Tensor = None,
+        transl: torch.Tensor = None,
+        left_hand_pose: torch.Tensor = None,
+        right_hand_pose: torch.Tensor = None,
+        expression: torch.Tensor = None,
+        jaw_pose: torch.Tensor = None,
+        leye_pose: torch.Tensor = None,
+        reye_pose: torch.Tensor = None,
+        keypoints2d: torch.Tensor = None,
+        keypoints2d_conf: torch.Tensor = None,
+        keypoints2d_weight: float = None,
+        keypoints3d: torch.Tensor = None,
+        keypoints3d_conf: torch.Tensor = None,
+        keypoints3d_weight: float = None,
+        shape_prior_weight: float = None,
+        joint_prior_weight: float = None,
+        smooth_loss_weight: float = None,
+        pose_prior_weight: float = None,
+        pose_reg_weight: float = None,
+        limb_length_weight: float = None,
+        joint_weights: dict = {},
+        return_verts: bool = False,
+        return_full_pose: bool = False,
+        return_joints: bool = False,
+        reduction_override: str = None,
     ):
         """Evaluate fitted parameters through loss computation. This function
         serves two purposes: 1) internally, for loss backpropagation 2)
@@ -327,6 +345,8 @@ class SMPLifyX(SMPLify):
             joint_prior_weight: weight of joint prior loss
             smooth_loss_weight: weight of smooth loss
             pose_prior_weight: weight of pose prior loss
+            pose_reg_weight: weight of pose regularization loss
+            limb_length_weight: weight of limb length loss
             joint_weights: per joint weight of shape (K, )
             return_verts: whether to return vertices
             return_joints: whether to return joints
@@ -370,6 +390,8 @@ class SMPLifyX(SMPLify):
             shape_prior_weight=shape_prior_weight,
             smooth_loss_weight=smooth_loss_weight,
             pose_prior_weight=pose_prior_weight,
+            pose_reg_weight=pose_reg_weight,
+            limb_length_weight=limb_length_weight,
             joint_weights=joint_weights,
             reduction_override=reduction_override,
             body_pose=body_pose,
@@ -449,7 +471,6 @@ class SMPLifyX(SMPLify):
         Returns:
             weight: per keypoint weight tensor of shape (K)
         """
-
         num_keypoint = self.body_model.num_joints
 
         if use_shoulder_hip_only:

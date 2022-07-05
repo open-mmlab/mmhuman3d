@@ -5,8 +5,8 @@ import torch
 from pytorch3d.renderer.mesh import TexturesVertex
 from pytorch3d.utils import torus
 
-from mmhuman3d.core.visualization.renderer import build_renderer
-from mmhuman3d.core.visualization.renderer.torch3d_renderer.meshes import (
+from mmhuman3d.core.renderer.torch3d_renderer.builder import build_renderer
+from mmhuman3d.core.renderer.torch3d_renderer.meshes import (
     ParametricMeshes,
     join_batch_meshes_as_scene,
 )

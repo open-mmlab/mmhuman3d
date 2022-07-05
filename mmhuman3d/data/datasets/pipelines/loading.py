@@ -4,7 +4,7 @@ import cv2
 import mmcv
 import numpy as np
 
-import mmhuman3d.data.data_structures as data_structures
+from mmhuman3d.data.data_structures.smc_reader import SMCReader
 from ..builder import PIPELINES
 
 
@@ -50,7 +50,7 @@ class LoadImageFromFile(object):
             assert 'image_id' in results, 'Load image from .smc, ' \
                                           'but image_id is not provided.'
             device, device_id, frame_id = results['image_id']
-            smc_reader = data_structures.SMCReader(filename)
+            smc_reader = SMCReader(filename)
             img = smc_reader.get_color(
                 device, device_id, frame_id, disable_tqdm=True)
             img = img.squeeze()  # (1, H, W, 3) -> (H, W, 3)

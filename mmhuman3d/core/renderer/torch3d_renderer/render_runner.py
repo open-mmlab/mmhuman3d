@@ -13,8 +13,8 @@ from tqdm import trange
 from mmhuman3d.core.cameras import MMCamerasBase
 from mmhuman3d.core.cameras.builder import build_cameras
 from .base_renderer import BaseRenderer
-from .builder import build_lights, build_renderer
-from .lights import AmbientLights, MMLights
+from .builder import build_renderer
+from .lights import AmbientLights, MMLights, build_lights
 
 osj = os.path.join
 

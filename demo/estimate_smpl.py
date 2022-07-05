@@ -15,9 +15,8 @@ from mmhuman3d.apis import (
     inference_video_based_model,
     init_model,
 )
-from mmhuman3d.core.visualization import visualize_smpl_hmr
+from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_hmr
 from mmhuman3d.data.data_structures.human_data import HumanData
-from mmhuman3d.utils import array_to_images
 from mmhuman3d.utils.demo_utils import (
     extract_feature_sequence,
     get_speed_up_interval,
@@ -28,6 +27,7 @@ from mmhuman3d.utils.demo_utils import (
     speed_up_interpolate,
     speed_up_process,
 )
+from mmhuman3d.utils.ffmpeg_utils import array_to_images
 from mmhuman3d.utils.transforms import rotmat_to_aa
 
 try:

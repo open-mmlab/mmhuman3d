@@ -504,7 +504,7 @@ class SMCReader:
             frame = self.__read_color_from_bytes__(
                 self.smc['iPhone'][str(iphone_id)]['Color'][str(i)][()])
             if vertical:
-                frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
             frames.append(frame)
         return np.stack(frames, axis=0)
 
@@ -549,7 +549,7 @@ class SMCReader:
         for i in tqdm.tqdm(frame_list, disable=disable_tqdm):
             frame = self.smc['iPhone'][str(iphone_id)]['Depth'][str(i)][()]
             if vertical:
-                frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
             frames.append(frame)
         return np.stack(frames, axis=0)
 
