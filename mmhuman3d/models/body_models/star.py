@@ -225,24 +225,24 @@ class STAR(nn.Module):
                 return_full_pose: bool = True) -> torch.Tensor:
         """Forward pass for the STAR model.
 
-        Parameters
-        ----------
-        global_orient: torch.tensor, optional, shape Bx3
-            Global orientation (rotation) of the body. If given, ignore the
-            member variable and use it as the global rotation of the body.
-            Useful if someone wishes to predicts this with an external model.
-            (default=None)
-        body_pose: torch.Tensor, shape Bx(J*3)
-            Pose parameters for the STAR model. It should be a tensor that
-            contains joint rotations in axis-angle format. If given, ignore
-            the member variable and use it as the body parameters.
-            (default=None)
-        betas: torch.Tensor, shape Bx10
-            Shape parameters for the STAR model. If given, ignore the member
-            variable and use it as shape parameters. (default=None)
-        transl: torch.Tensor, shape Bx3
-            Translation vector for the STAR model. If given, ignore the member
-            variable and use it as the translation of the body. (default=None)
+        Args:
+            global_orient: torch.tensor, optional, shape Bx3
+                Global orientation (rotation) of the body. If given, ignore the
+                member variable and use it as the global rotation of the body.
+                Useful if someone wishes to predicts this with an external
+                model. (default=None)
+            body_pose: torch.Tensor, shape Bx(J*3)
+                Pose parameters for the STAR model. It should be a tensor that
+                contains joint rotations in axis-angle format. If given, ignore
+                the member variable and use it as the body parameters.
+                (default=None)
+            betas: torch.Tensor, shape Bx10
+                Shape parameters for the STAR model. If given, ignore the
+                member variable and use it as shape parameters. (default=None)
+            transl: torch.Tensor, shape Bx3
+                Translation vector for the STAR model. If given, ignore the
+                member variable and use it as the translation of the body.
+                (default=None)
         Returns:
             output: Contains output parameters and attributes corresponding
             to other body models.
@@ -295,10 +295,9 @@ class STAR(nn.Module):
             src=self.keypoint_src,
             dst=self.keypoint_dst,
             approximate=self.keypoint_approximate)
-        if isinstance(joint_mask, np.ndarray):
-            joint_mask = torch.tensor(
-                joint_mask, dtype=torch.uint8, device=joints.device)
 
+        joint_mask = torch.tensor(
+            joint_mask, dtype=torch.uint8, device=joints.device)
         joint_mask = joint_mask.reshape(1, -1).expand(batch_size, -1)
 
         output = dict(
