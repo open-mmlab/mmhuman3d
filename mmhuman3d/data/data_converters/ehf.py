@@ -12,9 +12,9 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idxs_by_part
 )
-from mmhuman3d.data.datasets.pipelines.expose_transforms import keyps_to_bbox
 from plyfile import PlyData
 import cv2
+
 @DATA_CONVERTERS.register_module()
 class EHFConverter(BaseModeConverter):
     """EHF dataset
@@ -67,8 +67,9 @@ class EHFConverter(BaseModeConverter):
             rhand_kps2d = np.array(json_data['people'][0]['hand_right_keypoints_2d'],dtype=np.float32).reshape(-1,3)
             keypoints2d = np.concatenate((body_kps2d,lhand_kps2d,rhand_kps2d,face_kps2d),axis=0)
             keypoints2d[:,-1] = 1.0
+            conf = keypoints2d[:,-1]
             keypoints2d_.append(keypoints2d)
-            bbox = keyps_to_bbox(keypoints2d[:,:2], keypoints2d[:,-1], scale=1.2)
+            bbox = self._keypoints_to_scaled_bbox(keypoints2d[:,:2][conf>1], scale=1.2)
             bbox_xywh = self._xyxy2xywh(bbox)
             bbox_xywh_.append(bbox_xywh)
 

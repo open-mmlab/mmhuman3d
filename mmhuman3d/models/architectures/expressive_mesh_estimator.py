@@ -23,7 +23,7 @@ from ..necks.builder import build_neck
 from ..registrants.builder import build_registrant
 from .base_architecture import BaseArchitecture
 
-from ..utils import SmplxHandMergeFunc, SmplxFaceCropFunc,SmplxHandCropFunc, SmplxFaceMergeFunc
+from ..utils import SMPLXHandMergeFunc, SMPLXFaceCropFunc,SMPLXFaceMergeFunc, SMPLXHandCropFunc
 
 
 def set_requires_grad(nets, requires_grad=False):
@@ -137,8 +137,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             self.hand_backbone = build_backbone(extra_hand_model_cfg.get('backbone',None))
             self.hand_neck = build_neck(extra_hand_model_cfg.get('neck',None))
             self.hand_head = build_head(extra_hand_model_cfg.get('head',None))
-            self.crop_hand_func = SmplxHandCropFunc(self.hand_head,self.body_model_train,convention=self.convention,**extra_hand_model_cfg.get('crop_cfg',None))
-            self.hand_merge_func = SmplxHandMergeFunc(self.body_model_train,self.convention)
+            self.crop_hand_func = SMPLXHandCropFunc(self.hand_head,self.body_model_train,convention=self.convention,**extra_hand_model_cfg.get('crop_cfg',None))
+            self.hand_merge_func = SMPLXHandMergeFunc(self.body_model_train,self.convention)
             self.hand_crop_loss = build_loss(extra_hand_model_cfg.get('loss_hand_crop',None))
             self.apply_hand_model = True
             self.left_hand_idxs = get_keypoint_idxs_by_part('left_hand', self.convention)
@@ -152,8 +152,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             self.face_backbone = build_backbone(extra_face_model_cfg.get('backbone',None))
             self.face_neck = build_neck(extra_face_model_cfg.get('neck',None))
             self.face_head = build_head(extra_face_model_cfg.get('head',None))
-            self.crop_face_func = SmplxFaceCropFunc(self.face_head, self.body_model_train, convention = self.convention,**extra_face_model_cfg.get('crop_cfg',None))
-            self.face_merge_func = SmplxFaceMergeFunc(self.body_model_train, self.convention)
+            self.crop_face_func = SMPLXFaceCropFunc(self.face_head, self.body_model_train, convention = self.convention,**extra_face_model_cfg.get('crop_cfg',None))
+            self.face_merge_func = SMPLXFaceMergeFunc(self.body_model_train, self.convention)
             self.face_crop_loss = build_loss(extra_face_model_cfg.get('loss_face_crop',None))
             self.apply_face_model = True
             self.face_idxs = get_keypoint_idxs_by_part('head', self.convention)

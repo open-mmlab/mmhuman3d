@@ -1,13 +1,17 @@
 from typing import List
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
 from mmhuman3d.utils.geometry import weak_perspective_projection
-from mmhuman3d.utils.transforms import rotmat_to_rot6d
 from smplx.utils import find_joint_kin_chain
 import torch
 import torch.nn.functional as F
 
 
-class SmplxHandMergeFunc():
+class SMPLXHandMergeFunc():
+    '''This function use predictions from hand model to update the hand params 
+    (right_hand_pose, left_hand_pose, wrist_pose)
+    in predictions from body model.
+    '''
+
     def __init__(self,body_model, convention = 'smplx'):
         self.body_model = body_model
         self.convention = convention
@@ -36,7 +40,7 @@ class SmplxHandMergeFunc():
         right_wrist_parent_rot = find_joint_global_rotation(self.right_wrist_kin_chain[1:], global_orient,body_pose)
 
         left_wrist_parent_rot = find_joint_global_rotation(self.left_wrist_kin_chain[1:], global_orient, body_pose)
-        left_to_right_wrist_parent_rot = flip_pose(left_wrist_parent_rot)
+        left_to_right_wrist_parent_rot = flip_rotmat(left_wrist_parent_rot)
         
         parent_rots += [right_wrist_parent_rot, left_to_right_wrist_parent_rot]
         parent_rots = torch.cat(parent_rots, dim=0)
@@ -47,9 +51,9 @@ class SmplxHandMergeFunc():
         wrist_pose_from_hand = torch.matmul(parent_rots.reshape(-1, 3, 3).transpose(1, 2), wrist_pose_from_hand.reshape(-1, 3, 3))
 
         right_hand_wrist = wrist_pose_from_hand[right_hand_from_body_idxs]
-        left_hand_wrist = flip_pose(wrist_pose_from_hand[left_hand_from_body_idxs])
+        left_hand_wrist = flip_rotmat(wrist_pose_from_hand[left_hand_from_body_idxs])
         right_hand_pose = hand_predictions['pred_param']['right_hand_pose'][right_hand_from_body_idxs]
-        left_hand_pose = flip_pose(hand_predictions['pred_param']['right_hand_pose'][left_hand_from_body_idxs])
+        left_hand_pose = flip_rotmat(hand_predictions['pred_param']['right_hand_pose'][left_hand_from_body_idxs])
 
         body_predictions['pred_param']['right_hand_pose'] = right_hand_pose
         body_predictions['pred_param']['left_hand_pose'] = left_hand_pose
@@ -59,7 +63,12 @@ class SmplxHandMergeFunc():
 
         return body_predictions
 
-class SmplxFaceMergeFunc():
+class SMPLXFaceMergeFunc():
+    '''This function use predictions from face model to update the face params
+    (jaw_pose, expression)
+    in predictions from body model.
+    '''
+
     def __init__(self, body_model, convention = 'smplx', num_expression_coeffs = 10):
         self.body_model = body_model
         self.convention = convention
@@ -142,7 +151,7 @@ def concat_images(images:List[torch.Tensor]):
         batched[ii, :shape[0], :shape[1], :shape[2]] = img
     return batched
 
-def flip_pose(pose_rotmat):
+def flip_rotmat(pose_rotmat):
     rot_mats = pose_rotmat.reshape(-1, 9).clone()
 
     rot_mats[:, [1, 2, 3, 6]] *= -1
@@ -270,7 +279,12 @@ class CropSampler():
                 }
 
 
-class SmplxHandCropFunc():
+class SMPLXHandCropFunc():
+    '''This function crop hand image from the original image.
+    Use the output keypoints predicted by the body model to locate 
+    the hand position.
+    '''
+
     def __init__(self, model_head, body_model, convention = 'smplx', img_res = 256, scale_factor = 2.0 , crop_size = 224, condition_hand_wrist_pose = True, condition_hand_shape = False, condition_hand_finger_pose = True):
         self.model_head = model_head
         self.body_model = body_model
@@ -310,7 +324,7 @@ class SmplxHandCropFunc():
             # Compute the absolute rotation for the left wrist
             left_wrist_pose_abs = find_joint_global_rotation(self.left_wrist_kin_chain, global_orient, body_pose)
             # Flip the left wrist to the right
-            left_to_right_wrist_pose = flip_pose(left_wrist_pose_abs)
+            left_to_right_wrist_pose = flip_rotmat(left_wrist_pose_abs)
 
             # Convert to the latent representation
             left_to_right_wrist_pose = left_to_right_wrist_pose[:,:3,:2].contiguous().reshape(batch_size, -1)
@@ -320,7 +334,7 @@ class SmplxHandCropFunc():
 
         # Convert the pose of the left hand to the right hand and project
         # it to the encoder space
-        left_to_right_hand_pose = flip_pose(left_hand_pose)[:,:,:3,:2].contiguous().reshape(batch_size, -1)
+        left_to_right_hand_pose = flip_rotmat(left_hand_pose)[:,:,:3,:2].contiguous().reshape(batch_size, -1)
         right_hand_pose = raw_right_hand_pose.reshape(batch_size, -1)
         camera_mean = self.model_head.get_mean('camera',batch_size = batch_size)
 
@@ -404,7 +418,12 @@ class SmplxHandCropFunc():
         )
         return all_hand_imgs, hand_mean, crop_info
 
-class SmplxFaceCropFunc():
+class SMPLXFaceCropFunc():
+    '''This function crop face image from the original image.
+    Use the output keypoints predicted by the facce model to locate 
+    the face position.
+    '''
+    
     def __init__(self,model_head, body_model, convention = 'smplx', img_res = 256, scale_factor = 2.0, crop_size = 256, num_betas = 10, num_expression_coeffs = 10, condition_face_neck_pose = False, condition_face_jaw_pose = True, condition_face_shape = False, condition_face_expression = True):
         self.model_head = model_head
         self.body_model = body_model

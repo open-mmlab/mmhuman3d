@@ -12,7 +12,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idxs_by_part
 )
-from mmhuman3d.data.datasets.pipelines.expose_transforms import keyps_to_bbox
+
 @DATA_CONVERTERS.register_module()
 class ExposeSPINSMPLXConverter(BaseModeConverter):
     """SPIN in SMPLX for ExPose
@@ -108,7 +108,6 @@ class ExposeSPINSMPLXConverter(BaseModeConverter):
             kps[RIGHT_HAND_IDXS, -1] = right_hand_conf
             kps[FACE_IDXS, -1] = face_conf
             conf = kps[:,-1]
-            # bbox = keyps_to_bbox(kps[:,:2],conf, scale = 1.2)
             center = centers[index]
             scale = scales[index]
             bbox = np.concatenate([center - scale*100, center + scale*100])

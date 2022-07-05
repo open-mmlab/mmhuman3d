@@ -14,8 +14,8 @@ https://github.com/vchoutas/expose
 Note that:
 1. 135 and coco17 share the first 17 body keypoints
 2. 25 and 118 share the first 25 body keypoints
+3. 137 and 135 share the hand and face parts
 """
-from copy import deepcopy
 
 OPENPOSE_135_KEYPOINTS = [
     'nose',
@@ -471,10 +471,6 @@ OPENPOSE_JOINTS = [
     'left_eye_undefined', # not defined in expose
 ]
 
-FEET_KEYPS_NAMES = ['left_bigtoe', 'left_smalltoe', 'left_heel',
+OPENPOSE_FEET_KEYPOINTS = ['left_bigtoe', 'left_smalltoe', 'left_heel',
                     'right_bigtoe', 'right_smalltoe', 'right_heel']
-OPENPOSE_137_KEYPOINTS = deepcopy(OPENPOSE_JOINTS)
-start = 19
-for feet_name in FEET_KEYPS_NAMES:
-    OPENPOSE_137_KEYPOINTS.insert(start, feet_name)
-    start += 1
+OPENPOSE_137_KEYPOINTS = OPENPOSE_JOINTS[:19] + OPENPOSE_FEET_KEYPOINTS + OPENPOSE_JOINTS[19:]

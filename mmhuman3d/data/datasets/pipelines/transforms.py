@@ -218,14 +218,14 @@ def _flip_smplx_pose(pose):
     Returns:
         pose_flipped (np.ndarray([21,3]))
     """
-    SIGN_FLIP = np.array([6, 7, 8, 3, 4, 5, 9, 10, 11, 15, 16, 17,
+    flippedParts = np.array([6, 7, 8, 3, 4, 5, 9, 10, 11, 15, 16, 17,
                           12, 13, 14, 18, 19, 20, 24, 25, 26, 21, 22, 23, 27,
                           28, 29, 33, 34, 35, 30, 31, 32,
                           36, 37, 38, 42, 43, 44, 39, 40, 41, 45, 46, 47, 51,
                           52, 53, 48, 49, 50, 57, 58, 59, 54, 55, 56, 63, 64,
                           65, 60, 61, 62], dtype=np.int32) - 3
     dim_flip = np.array([1, -1, -1], dtype=pose.dtype)
-    pose = (pose[SIGN_FLIP].reshape(21, 3) * dim_flip).copy()
+    pose = (pose[flippedParts].reshape(21, 3) * dim_flip).copy()
     return pose
 
 def _flip_axis_angle(r):
@@ -809,5 +809,101 @@ class MeshAffine:
             global_orient = results['smplx_global_orient'].copy()
             global_orient = _rotate_smpl_pose(global_orient,r)
             results['smplx_global_orient'] = global_orient
+
+        return results
+
+
+@PIPELINES.register_module()
+class BBoxCenterJitter(object):
+    def __init__(self, factor=0.0, dist='normal'):
+        super(BBoxCenterJitter, self).__init__()
+        self.factor = factor
+        self.dist = dist
+        assert self.dist in ['normal', 'uniform'], (
+            f'Distribution must be normal or uniform, not {self.dist}')
+
+    def __str__(self):
+        return f'BBoxCenterJitter({self.factor:0.2f})'
+
+    def __call__(self, results):
+        # body model: no process
+        if self.factor <= 1e-3:
+            return results
+
+        bbox_size = results['scale'][0]
+
+        jitter = bbox_size * self.factor
+
+        if self.dist == 'normal':
+            center_jitter = np.random.randn(2) * jitter
+        elif self.dist == 'uniform':
+            center_jitter = np.random.rand(2) * 2 * jitter - jitter
+
+        center = results['center']
+        H, W = results['img_shape']
+        new_center = center + center_jitter
+        new_center[0] = np.clip(new_center[0], 0, W)
+        new_center[1] = np.clip(new_center[1], 0, H)
+
+        results['center'] = new_center
+        return results
+
+@PIPELINES.register_module()
+class SimulateLowRes(object):
+    def __init__(
+        self,
+        dist: str = 'categorical',
+        factor: float = 1.0,
+        cat_factors = (1.0,),
+        factor_min: float = 1.0,
+        factor_max: float = 1.0
+    ) -> None:
+        self.factor_min = factor_min
+        self.factor_max = factor_max
+        self.dist = dist
+        self.cat_factors = cat_factors
+        assert dist in ['uniform', 'categorical']
+
+    def __str__(self) -> str:
+        if self.dist == 'uniform':
+            dist_str = (
+                f'{self.dist.title()}: [{self.factor_min}, {self.factor_max}]')
+        else:
+            dist_str = (
+                f'{self.dist.title()}: [{self.cat_factors}]')
+        return f'SimulateLowResolution({dist_str})'
+
+    def _sample_low_res(
+        self,
+        image: np.ndarray
+    ) -> np.ndarray:
+        '''
+        '''
+        if self.dist == 'uniform':
+            downsample = self.factor_min != self.factor_max
+            if not downsample:
+                return image
+            factor = np.random.rand() * (
+                self.factor_max - self.factor_min) + self.factor_min
+        elif self.dist == 'categorical':
+            if len(self.cat_factors) < 2:
+                return image
+            idx = np.random.randint(0, len(self.cat_factors))
+            factor = self.cat_factors[idx]
+
+        H, W, _ = image.shape
+        downsampled_image = cv2.resize(
+            image, (int(W // factor), int(H // factor)), cv2.INTER_NEAREST
+        )
+        resized_image = cv2.resize(
+            downsampled_image, (W, H), cv2.INTER_LINEAR_EXACT)
+        return resized_image
+
+    def __call__(self, results):
+        '''
+        '''
+        img = results['img']
+        img = self._sample_low_res(img)
+        results['img'] = img
 
         return results
