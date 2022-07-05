@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 from .mesh_eval import compute_similarity_transform
-from math import sqrt
-import pymesh
+import trimesh
+from trimesh.proximity import closest_point
 
 def keypoint_mpjpe(pred, gt, mask, alignment='none'):
     """Calculate the mean per-joint position error (MPJPE) and the error after
@@ -260,9 +260,7 @@ def fg_vertices_to_mesh_distance(groundtruth_vertices, grundtruth_landmark_point
             vertex_indices_mask.append(vertex_idx)
             points_on_groundtruth_scan_to_measure_from.append(vertex)
     assert len(vertex_indices_mask) == len(points_on_groundtruth_scan_to_measure_from)
-    # For each vertex on the ground truth mesh, find the closest point on the surface of the predicted mesh:
-    predicted_mesh_pymesh = pymesh.meshio.form_mesh(np.array(predicted_mesh_vertices_aligned), predicted_mesh_faces)
-    squared_distances, face_indices, closest_points = pymesh.distance_to_mesh(predicted_mesh_pymesh,
-                                                                              points_on_groundtruth_scan_to_measure_from)
-    distances = [sqrt(d2) for d2 in squared_distances]
-    return np.mean(np.array(distances))
+    # For each vertex on the ground truth mesh, caculate the distance to the surface of the predicted mesh:
+    predicted_mesh = trimesh.Trimesh(predicted_mesh_vertices_aligned, predicted_mesh_faces)
+    _, distance, _ =  closest_point(predicted_mesh, points_on_groundtruth_scan_to_measure_from)
+    return distance.mean()

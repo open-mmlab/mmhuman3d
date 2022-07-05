@@ -14,3 +14,5 @@ scipy
 smplx
 tqdm
 vedo
+trimesh
+rtree
