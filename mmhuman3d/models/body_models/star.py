@@ -16,7 +16,7 @@ from mmhuman3d.utils.transforms import (
 
 class STAR(nn.Module):
 
-    NUM_BODY_JOINTS = 23
+    NUM_BODY_JOINTS = 24
 
     def __init__(self,
                  model_path: str,
@@ -31,8 +31,8 @@ class STAR(nn.Module):
                  num_betas: int = 10,
                  create_betas: bool = True,
                  betas: torch.Tensor = None,
-                 create_trans: bool = True,
-                 trans: torch.Tensor = None,
+                 create_transl: bool = True,
+                 transl: torch.Tensor = None,
                  batch_size: int = 1,
                  dtype=torch.float32) -> None:
         """STAR model constructor.
@@ -61,7 +61,7 @@ class STAR(nn.Module):
         create_body_pose: bool, optional
             Flag for creating a member variable for the pose of the body.
             (default = True)
-        body_pose: torch.tensor, optional, Bx(Body Joints * 3)
+        body_pose: torch.tensor, optional, Bx(3*24)
             The default value for the body pose variable.
             (default = None)
         num_betas: int, optional
@@ -73,11 +73,11 @@ class STAR(nn.Module):
         betas: torch.tensor, optional, Bx10
             The default value for the shape member variable.
             (default = None)
-        create_trans: bool, optional
+        create_transl: bool, optional
             Flag for creating a member variable for the translation
             of the body. (default = True)
-        trans: torch.tensor, optional, Bx3
-            The default value for the trans variable.
+        transl: torch.tensor, optional, Bx3
+            The default value for the transl variable.
             (default = None)
         dtype: torch.dtype, optional
                 The data type for the created variables.
@@ -202,15 +202,15 @@ class STAR(nn.Module):
             self.register_parameter(
                 'betas', nn.Parameter(default_betas, requires_grad=True))
 
-        if create_trans:
-            if trans is None:
-                default_trans = torch.zeros([batch_size, 3],
-                                            dtype=dtype,
-                                            requires_grad=True)
+        if create_transl:
+            if transl is None:
+                default_transl = torch.zeros([batch_size, 3],
+                                             dtype=dtype,
+                                             requires_grad=True)
             else:
-                default_trans = torch.tensor(trans, dtype=dtype)
+                default_transl = torch.tensor(transl, dtype=dtype)
             self.register_parameter(
-                'trans', nn.Parameter(default_trans, requires_grad=True))
+                'transl', nn.Parameter(default_transl, requires_grad=True))
 
         self.verts = None
         self.J = None
@@ -220,7 +220,7 @@ class STAR(nn.Module):
                 global_orient: Optional[torch.Tensor] = None,
                 body_pose: Optional[torch.Tensor] = None,
                 betas: Optional[torch.Tensor] = None,
-                trans: Optional[torch.Tensor] = None,
+                transl: Optional[torch.Tensor] = None,
                 return_verts: bool = True,
                 return_full_pose: bool = True) -> torch.Tensor:
         """Forward pass for the STAR model.
@@ -240,7 +240,7 @@ class STAR(nn.Module):
         betas: torch.Tensor, shape Bx10
             Shape parameters for the STAR model. If given, ignore the member
             variable and use it as shape parameters. (default=None)
-        trans: torch.Tensor, shape Bx3
+        transl: torch.Tensor, shape Bx3
             Translation vector for the STAR model. If given, ignore the member
             variable and use it as the translation of the body. (default=None)
         Returns:
@@ -251,9 +251,9 @@ class STAR(nn.Module):
             global_orient if global_orient is not None else self.global_orient)
         body_pose = body_pose if body_pose is not None else self.body_pose
         betas = betas if betas is not None else self.betas
-        apply_trans = trans is not None or hasattr(self, 'trans')
-        if trans is None and hasattr(self, 'transl'):
-            trans = self.trans
+        apply_transl = transl is not None or hasattr(self, 'transl')
+        if transl is None and hasattr(self, 'transl'):
+            transl = self.transl
 
         batch_size = body_pose.shape[0]
         v_template = self.v_template[None, :]
@@ -286,9 +286,9 @@ class STAR(nn.Module):
         results = torch.stack(results, dim=1)
         posed_joints = results[:, :, :3, 3]
 
-        if apply_trans:
-            posed_joints += trans[:, None, :]
-            v_posed += trans[:, None, :]
+        if apply_transl:
+            posed_joints += transl[:, None, :]
+            v_posed += transl[:, None, :]
 
         joints, joint_mask = convert_kps(
             posed_joints,
