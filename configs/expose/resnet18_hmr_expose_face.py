@@ -40,6 +40,18 @@ model = dict(
         num_betas = 100,
         num_expression_coeffs = 50,
         mean_pose_path = 'data/body_models/all_means.pkl',
+        pose_param_conf = [
+            dict(
+                name = 'global_orient',
+                num_angles = 1,
+                use_mean = False,
+                rotate_axis_x = True),
+            dict(
+                name = 'jaw_pose',
+                num_angles = 1,
+                use_mean = False,
+                rotate_axis_x = False),
+        ],
         input_feat_dim = 512,
         regressor_cfg = dict(
             layers = [1024,1024],

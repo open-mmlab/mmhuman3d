@@ -89,6 +89,33 @@ model = dict(
         num_expression_coeffs = 10,
         mean_pose_path = 'data/body_models/all_means.pkl',
         shape_mean_path = 'data/body_models/shape_mean.npy',
+        pose_param_conf = [
+            dict(
+                name = 'global_orient',
+                num_angles = 1,
+                use_mean = False,
+                rotate_axis_x = True),
+            dict(
+                name = 'body_pose',
+                num_angles = 21,
+                use_mean = True,
+                rotate_axis_x = False),
+            dict(
+                name = 'left_hand_pose',
+                num_angles = 15,
+                use_mean = True,
+                rotate_axis_x = False),
+            dict(
+                name = 'right_hand_pose',
+                num_angles = 15,
+                use_mean = True,
+                rotate_axis_x = False),
+            dict(
+                name = 'jaw_pose',
+                num_angles = 1,
+                use_mean = False,
+                rotate_axis_x = False),
+        ],
         input_feat_dim = 2048,
         regressor_cfg = dict(
             layers = [1024,1024],

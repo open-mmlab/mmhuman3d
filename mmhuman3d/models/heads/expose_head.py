@@ -272,38 +272,12 @@ class ExPoseHead(BaseModule):
 
     
 class ExPoseBodyHead(ExPoseHead):
-    def __init__(self, init_cfg=None, num_betas: int = 10, num_expression_coeffs: int = 10, mean_pose_path: str = '', shape_mean_path: str = '', input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
+    def __init__(self, init_cfg=None, num_betas: int = 10, num_expression_coeffs: int = 10, mean_pose_path: str = '', shape_mean_path: str = '', pose_param_conf: list = None, input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
         super().__init__(init_cfg)
         self.num_betas = num_betas
         self.num_expression_coeffs = num_expression_coeffs
         # poses
-        self.pose_param_conf = [
-            dict(
-                name = 'global_orient',
-                num_angles = 1,
-                use_mean = False,
-                rotate_axis_x = True),
-            dict(
-                name = 'body_pose',
-                num_angles = 21,
-                use_mean = True,
-                rotate_axis_x = False),
-            dict(
-                name = 'left_hand_pose',
-                num_angles = 15,
-                use_mean = True,
-                rotate_axis_x = False),
-            dict(
-                name = 'right_hand_pose',
-                num_angles = 15,
-                use_mean = True,
-                rotate_axis_x = False),
-            dict(
-                name = 'jaw_pose',
-                num_angles = 1,
-                use_mean = False,
-                rotate_axis_x = False),
-        ]
+        self.pose_param_conf = pose_param_conf
         mean_poses_dict = {}
         if os.path.exists(mean_pose_path):
             with open(mean_pose_path, 'rb') as f:
@@ -360,22 +334,11 @@ class ExPoseBodyHead(ExPoseHead):
 
 
 class ExPoseHandHead(ExPoseHead):
-    def __init__(self, init_cfg=None, num_betas: int = 10,  mean_pose_path: str = '',  input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
+    def __init__(self, init_cfg=None, num_betas: int = 10,  mean_pose_path: str = '', pose_param_conf: list = None, input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
         super().__init__(init_cfg)
         self.num_betas = num_betas
         # poses
-        self.pose_param_conf = [
-            dict(
-                name = 'global_orient',
-                num_angles = 1,
-                use_mean = False,
-                rotate_axis_x = False),
-            dict(
-                name = 'right_hand_pose',
-                num_angles = 15,
-                use_mean = True,
-                rotate_axis_x = False),
-        ]
+        self.pose_param_conf = pose_param_conf
         mean_poses_dict = {}
         if os.path.exists(mean_pose_path):
             with open(mean_pose_path, 'rb') as f:
@@ -419,23 +382,12 @@ class ExPoseHandHead(ExPoseHead):
         }
 
 class ExPoseFaceHead(ExPoseHead):
-    def __init__(self, init_cfg=None, num_betas: int = 10, num_expression_coeffs: int = 10, mean_pose_path: str = '', input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
+    def __init__(self, init_cfg=None, num_betas: int = 10, num_expression_coeffs: int = 10, pose_param_conf: list = None, mean_pose_path: str = '', input_feat_dim: int = 2048,  regressor_cfg: dict = None, camera_cfg: dict = None):
         super().__init__(init_cfg)
         self.num_betas = num_betas
         self.num_expression_coeffs = num_expression_coeffs
         # poses
-        self.pose_param_conf = [
-            dict(
-                name = 'global_orient',
-                num_angles = 1,
-                use_mean = False,
-                rotate_axis_x = True),
-            dict(
-                name = 'jaw_pose',
-                num_angles = 1,
-                use_mean = False,
-                rotate_axis_x = False),
-        ]
+        self.pose_param_conf = pose_param_conf
         mean_poses_dict = {}
         if os.path.exists(mean_pose_path):
             with open(mean_pose_path, 'rb') as f:

@@ -39,6 +39,18 @@ model = dict(
         type = 'ExPoseHandHead',
         num_betas = 10,
         mean_pose_path = 'data/body_models/all_means.pkl',
+        pose_param_conf = [
+            dict(
+                name = 'global_orient',
+                num_angles = 1,
+                use_mean = False,
+                rotate_axis_x = False),
+            dict(
+                name = 'right_hand_pose',
+                num_angles = 15,
+                use_mean = True,
+                rotate_axis_x = False),
+        ],
         input_feat_dim = 512,
         regressor_cfg = dict(
             layers = [1024,1024],

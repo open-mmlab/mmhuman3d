@@ -67,7 +67,7 @@ class MANO(_MANO):
         joints = mano_output.joints
 
 
-        joints = get_keypoints_from_mesh_ch(mano_output.vertices,joints)
+        joints = get_keypoints_from_mesh(mano_output.vertices,joints)
         
         joints, joint_mask = convert_kps(
             joints,
@@ -158,7 +158,7 @@ class MANOLayer(_MANOLayer):
         joints = mano_output.joints
 
 
-        joints = get_keypoints_from_mesh_ch(mano_output.vertices,joints)
+        joints = get_keypoints_from_mesh(mano_output.vertices,joints)
         
         joints, joint_mask = convert_kps(
             joints,
@@ -190,7 +190,7 @@ class MANOLayer(_MANOLayer):
         return output
 
 
-def get_keypoints_from_mesh_ch(mesh_vertices, keypoints_regressed):
+def get_keypoints_from_mesh(mesh_vertices, keypoints_regressed):
     """ Assembles the full 21 keypoint set from the 16 Mano Keypoints and 5 mesh vertices for the fingers. """
     batch_size = keypoints_regressed.shape[0]
     keypoints = torch.zeros((batch_size,21,3)).cuda()

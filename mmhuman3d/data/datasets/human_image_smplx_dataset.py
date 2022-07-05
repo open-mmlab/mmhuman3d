@@ -67,39 +67,6 @@ class HumanImageSMPLXDataset(HumanImageDataset):
 
     def prepare_raw_data(self, idx: int):
         """Get item from self.human_data."""
-        # if self.cache_reader is not None:
-        #     self.human_data = self.cache_reader.get_item(idx)
-        #     idx = idx % self.cache_reader.slice_size
-        # info = {}
-        # info['img_prefix'] = None
-        # image_path = self.human_data['image_path'][idx]
-        # info['image_path'] = os.path.join(self.data_prefix, 'datasets', self.dataset_name, image_path)
-        # info['dataset_name'] = self.dataset_name
-        # info['sample_idx'] = idx
-        # if 'bbox_xywh' in self.human_data:
-        #     info['bbox_xywh'] = self.human_data['bbox_xywh'][idx]
-        #     x, y, w, h, s = info['bbox_xywh']
-        #     cx = x + w / 2
-        #     cy = y + h / 2
-        #     w = h = max(w, h)
-        #     info['center'] = np.array([cx, cy])
-        #     info['scale'] = np.array([w, h])
-        # else:
-        #     info['bbox_xywh'] = np.zeros((5))
-        #     info['center'] = np.zeros((2))
-        #     info['scale'] = np.zeros((2))
-        # if 'keypoints2d' in self.human_data:
-        #     info['keypoints2d'] = self.human_data['keypoints2d'][idx]
-        #     info['has_keypoints2d'] = 1
-        # else:
-        #     info['keypoints2d'] = np.zeros((self.num_keypoints, 3))
-        #     info['has_keypoints2d'] = 0
-        # if 'keypoints3d' in self.human_data:
-        #     info['keypoints3d'] = self.human_data['keypoints3d'][idx]
-        #     info['has_keypoints3d'] = 1
-        # else:
-        #     info['keypoints3d'] = np.zeros((self.num_keypoints, 4))
-        #     info['has_keypoints3d'] = 0
         info = super().prepare_raw_data(idx)
         if self.cache_reader is not None:
             self.human_data = self.cache_reader.get_item(idx)
@@ -200,9 +167,6 @@ class HumanImageSMPLXDataset(HumanImageDataset):
         elif mode == 'keypoint':
             pred_keypoints3d = res['keypoints']
             assert len(pred_keypoints3d) == self.num_data
-            
-            
-
             if self.dataset_name == 'pw3d' or self.dataset_name == '3DPW':
                 betas = []
                 body_pose = []
