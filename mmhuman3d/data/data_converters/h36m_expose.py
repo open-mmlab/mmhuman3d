@@ -381,9 +381,11 @@ class H36mExPoseConverter(BaseModeConverter):
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'h36m_expose', 'human_data')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'h36m_expose',
+                                         'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
-        keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m_expose', 'human_data')
+        keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m_expose',
+                                      'human_data')
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_

@@ -1,7 +1,7 @@
-'''SPIN in smplx convention.
-SPIN_SMPLX_KEYPOINTS can be found in 
-https://github.com/vchoutas/expose
-'''
+"""SPIN in smplx convention.
+
+SPIN_SMPLX_KEYPOINTS can be found in https://github.com/vchoutas/expose
+"""
 SPIN_SMPLX_KEYPOINTS = [
     'right_ankle',
     'right_knee',

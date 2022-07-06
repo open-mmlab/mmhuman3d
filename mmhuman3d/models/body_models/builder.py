@@ -2,10 +2,10 @@
 
 from mmcv.utils import Registry
 
-from .smpl import SMPL, GenderedSMPL, HybrIKSMPL
-from .smplx import SMPLX, SMPLXLayer
 from .flame import FLAME, FLAMELayer
 from .mano import MANO, MANOLayer
+from .smpl import SMPL, GenderedSMPL, HybrIKSMPL
+from .smplx import SMPLX, SMPLXLayer
 
 BODY_MODELS = Registry('body_models')
 
@@ -16,10 +16,13 @@ BODY_MODELS.register_module(
     module=HybrIKSMPL)
 BODY_MODELS.register_module(name=['SMPLX', 'smplx'], module=SMPLX)
 BODY_MODELS.register_module(name=['flame', 'FLAME'], module=FLAME)
-BODY_MODELS.register_module(name = ['MANO','mano'], module=MANO)
-BODY_MODELS.register_module(name = ['SMPLXLayer','smplxlayer'], module=SMPLXLayer)
-BODY_MODELS.register_module(name = ['MANOLayer','manolayer'], module=MANOLayer)
-BODY_MODELS.register_module(name = ['FLAMELayer','flamelayer'], module=FLAMELayer)
+BODY_MODELS.register_module(name=['MANO', 'mano'], module=MANO)
+BODY_MODELS.register_module(
+    name=['SMPLXLayer', 'smplxlayer'], module=SMPLXLayer)
+BODY_MODELS.register_module(name=['MANOLayer', 'manolayer'], module=MANOLayer)
+BODY_MODELS.register_module(
+    name=['FLAMELayer', 'flamelayer'], module=FLAMELayer)
+
 
 def build_body_model(cfg):
     """Build body_models."""

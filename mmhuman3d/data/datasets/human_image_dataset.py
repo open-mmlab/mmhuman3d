@@ -1,9 +1,9 @@
-from ctypes import alignment
 import json
 import os
 import os.path
 from abc import ABCMeta
 from collections import OrderedDict
+from ctypes import alignment
 from typing import Any, List, Optional, Union
 
 import mmcv
@@ -453,7 +453,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
             return pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask
 
-    def _report_mpjpe(self, res_file, metric='mpjpe', body_part = ''):
+    def _report_mpjpe(self, res_file, metric='mpjpe', body_part=''):
         """Cauculate mean per joint position error (MPJPE) or its variants PA-
         MPJPE.
 
@@ -465,7 +465,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         err_name = metric.upper()
         if body_part != '':
-            err_name = body_part.upper() + " " + err_name
+            err_name = body_part.upper() + ' ' + err_name
 
         if metric == 'mpjpe':
             alignment = 'none'
@@ -541,14 +541,14 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         return name_value_tuples
 
-    def _report_pve(self, res_file, metric = 'pve', body_part = ''):
+    def _report_pve(self, res_file, metric='pve', body_part=''):
         """Cauculate per vertex error."""
         pred_verts, gt_verts, _ = \
             self._parse_result(res_file, mode='vertice', body_part= body_part)
         err_name = metric.upper()
         if body_part != '':
-            err_name = body_part.upper() + " " + err_name
-            
+            err_name = body_part.upper() + ' ' + err_name
+
         if metric == 'pve':
             alignment = 'none'
         elif metric == 'pa-pve':

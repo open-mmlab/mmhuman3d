@@ -210,6 +210,7 @@ def _flip_smpl_pose(pose):
     pose_flipped[2::3] = -pose_flipped[2::3]
     return pose_flipped
 
+
 def _flip_smplx_pose(pose):
     """Flip SMPLX pose parameters horizontally.
 
@@ -218,15 +219,17 @@ def _flip_smplx_pose(pose):
     Returns:
         pose_flipped (np.ndarray([21,3]))
     """
-    flippedParts = np.array([6, 7, 8, 3, 4, 5, 9, 10, 11, 15, 16, 17,
-                          12, 13, 14, 18, 19, 20, 24, 25, 26, 21, 22, 23, 27,
-                          28, 29, 33, 34, 35, 30, 31, 32,
-                          36, 37, 38, 42, 43, 44, 39, 40, 41, 45, 46, 47, 51,
-                          52, 53, 48, 49, 50, 57, 58, 59, 54, 55, 56, 63, 64,
-                          65, 60, 61, 62], dtype=np.int32) - 3
+    flippedParts = np.array([
+        6, 7, 8, 3, 4, 5, 9, 10, 11, 15, 16, 17, 12, 13, 14, 18, 19, 20, 24,
+        25, 26, 21, 22, 23, 27, 28, 29, 33, 34, 35, 30, 31, 32, 36, 37, 38, 42,
+        43, 44, 39, 40, 41, 45, 46, 47, 51, 52, 53, 48, 49, 50, 57, 58, 59, 54,
+        55, 56, 63, 64, 65, 60, 61, 62
+    ],
+                            dtype=np.int32) - 3
     dim_flip = np.array([1, -1, -1], dtype=pose.dtype)
     pose = (pose[flippedParts].reshape(21, 3) * dim_flip).copy()
     return pose
+
 
 def _flip_axis_angle(r):
     """Flip axis_angle horizontally.
@@ -240,11 +243,13 @@ def _flip_axis_angle(r):
     r = r * dim_flip
     return r
 
+
 def _flip_hand_pose(r_pose, l_pose):
     dim_flip = np.array([1, -1, -1], dtype=r_pose.dtype)
     ret_l_pose = r_pose * dim_flip
     ret_r_pose = l_pose * dim_flip
     return ret_r_pose, ret_l_pose
+
 
 def _flip_keypoints(keypoints, flip_pairs, img_width=None):
     """Flip human joints horizontally.
@@ -323,6 +328,7 @@ def _rotate_smpl_pose(pose, rot):
 
     return pose_rotated
 
+
 @PIPELINES.register_module()
 class RandomHorizontalFlip(object):
     """Flip the image randomly.
@@ -351,7 +357,7 @@ class RandomHorizontalFlip(object):
         if np.random.rand() > self.flip_prob:
             results['is_flipped'] = np.array([0])
             return results
-        
+
         results['is_flipped'] = np.array([1])
 
         # flip image
@@ -390,16 +396,16 @@ class RandomHorizontalFlip(object):
             results['smpl_body_pose'] = body_pose.reshape((-1, 3))
 
         if 'smplx_body_pose' in results:
-            
+
             body_pose = results['smplx_body_pose'].copy().reshape((-1))
             body_pose_flipped = _flip_smplx_pose(body_pose)
             results['smplx_body_pose'] = body_pose_flipped
-        
+
         if 'smplx_global_orient' in results:
             global_orient = results['smplx_global_orient'].copy().reshape((-1))
             global_orient_flipped = _flip_axis_angle(global_orient)
             results['smplx_global_orient'] = global_orient_flipped
-        
+
         if 'smplx_jaw_pose' in results:
             jaw_pose = results['smplx_jaw_pose'].copy().reshape((-1))
             jaw_pose_flipped = _flip_axis_angle(jaw_pose)
@@ -408,15 +414,16 @@ class RandomHorizontalFlip(object):
         if 'smplx_right_hand_pose' in results:
             right_hand_pose = results['smplx_right_hand_pose'].copy()
             left_hand_pose = results['smplx_left_hand_pose'].copy()
-            results['smplx_right_hand_pose'], results['smplx_left_hand_pose'] = _flip_hand_pose(right_hand_pose,left_hand_pose)
-            
-
+            results['smplx_right_hand_pose'], results[
+                'smplx_left_hand_pose'] = _flip_hand_pose(
+                    right_hand_pose, left_hand_pose)
 
         # Expressions are not symmetric, so we remove them from the labels when the image is flipped
         if 'smplx_expression' in results:
-            results['smplx_expression'] = np.zeros((results['smplx_expression'].shape[0]),dtype=np.float32)
+            results['smplx_expression'] = np.zeros(
+                (results['smplx_expression'].shape[0]), dtype=np.float32)
             results['has_smplx_expression'] = 0
-        
+
         return results
 
     def __repr__(self):
@@ -691,7 +698,7 @@ class RandomChannelNoise:
             img = cv2.multiply(img, pn)
 
             results['ori_img'] = img
-        
+
         return results
 
 
@@ -729,6 +736,7 @@ class GetRandomScaleRotation:
 
         return results
 
+
 @PIPELINES.register_module()
 class MeshAffine:
     """Affine transform the image to get input image.
@@ -755,7 +763,7 @@ class MeshAffine:
             ori_img = img.copy()
             results['crop_transform'] = trans
             results['ori_img'] = ori_img
-            results['img_fields'] = ['img','ori_img']
+            results['img_fields'] = ['img', 'ori_img']
 
             img = cv2.warpAffine(
                 img,
@@ -787,10 +795,11 @@ class MeshAffine:
 
         if 'smplx_global_orient' in results:
             global_orient = results['smplx_global_orient'].copy()
-            global_orient = _rotate_smpl_pose(global_orient,r)
+            global_orient = _rotate_smpl_pose(global_orient, r)
             results['smplx_global_orient'] = global_orient
 
         return results
+
 
 @PIPELINES.register_module()
 class Rotation:
@@ -800,12 +809,12 @@ class Rotation:
     'pose', 'rotation' and 'center'. Modifies key: 'img',
     ''keypoints2d', 'keypoints3d', 'pose'.
 
-    To avoid conflicts with MeshAffine, rotation will be set to 0.0 after rotate 
+    To avoid conflicts with MeshAffine, rotation will be set to 0.0 after rotate
     the image. The rotation value will be stored to 'ori_rotation'.
     """
 
     def __init__(self):
-       pass
+        pass
 
     def __call__(self, results):
         r = results['rotation']
@@ -836,9 +845,8 @@ class Rotation:
 
         if 'keypoints2d' in results:
             keypoints2d = results['keypoints2d'].copy()
-            keypoints2d[:,:2] = (
-                np.dot(keypoints2d[:, :2], M[:2, :2].T) + M[:2, 2] +
-                1).astype(np.int)
+            keypoints2d[:, :2] = (np.dot(keypoints2d[:, :2], M[:2, :2].T) +
+                                  M[:2, 2] + 1).astype(np.int)
             results['keypoints2d'] = keypoints2d
 
         if 'keypoints3d' in results:
@@ -856,21 +864,24 @@ class Rotation:
 
         if 'smplx_global_orient' in results:
             global_orient = results['smplx_global_orient'].copy()
-            global_orient = _rotate_smpl_pose(global_orient,r)
+            global_orient = _rotate_smpl_pose(global_orient, r)
             results['smplx_global_orient'] = global_orient
 
         results['rotation'] = 0.0
         results['ori_rotation'] = r
         return results
 
+
 @PIPELINES.register_module()
 class BBoxCenterJitter(object):
+
     def __init__(self, factor=0.0, dist='normal'):
         super(BBoxCenterJitter, self).__init__()
         self.factor = factor
         self.dist = dist
-        assert self.dist in ['normal', 'uniform'], (
-            f'Distribution must be normal or uniform, not {self.dist}')
+        assert self.dist in [
+            'normal', 'uniform'
+        ], (f'Distribution must be normal or uniform, not {self.dist}')
 
     def __str__(self):
         return f'BBoxCenterJitter({self.factor:0.2f})'
@@ -898,16 +909,16 @@ class BBoxCenterJitter(object):
         results['center'] = new_center
         return results
 
+
 @PIPELINES.register_module()
 class SimulateLowRes(object):
-    def __init__(
-        self,
-        dist: str = 'categorical',
-        factor: float = 1.0,
-        cat_factors = (1.0,),
-        factor_min: float = 1.0,
-        factor_max: float = 1.0
-    ) -> None:
+
+    def __init__(self,
+                 dist: str = 'categorical',
+                 factor: float = 1.0,
+                 cat_factors=(1.0, ),
+                 factor_min: float = 1.0,
+                 factor_max: float = 1.0) -> None:
         self.factor_min = factor_min
         self.factor_max = factor_max
         self.dist = dist
@@ -919,22 +930,17 @@ class SimulateLowRes(object):
             dist_str = (
                 f'{self.dist.title()}: [{self.factor_min}, {self.factor_max}]')
         else:
-            dist_str = (
-                f'{self.dist.title()}: [{self.cat_factors}]')
+            dist_str = (f'{self.dist.title()}: [{self.cat_factors}]')
         return f'SimulateLowResolution({dist_str})'
 
-    def _sample_low_res(
-        self,
-        image: np.ndarray
-    ) -> np.ndarray:
-        '''
-        '''
+    def _sample_low_res(self, image: np.ndarray) -> np.ndarray:
+        """"""
         if self.dist == 'uniform':
             downsample = self.factor_min != self.factor_max
             if not downsample:
                 return image
-            factor = np.random.rand() * (
-                self.factor_max - self.factor_min) + self.factor_min
+            factor = np.random.rand() * (self.factor_max -
+                                         self.factor_min) + self.factor_min
         elif self.dist == 'categorical':
             if len(self.cat_factors) < 2:
                 return image
@@ -942,16 +948,15 @@ class SimulateLowRes(object):
             factor = self.cat_factors[idx]
 
         H, W, _ = image.shape
-        downsampled_image = cv2.resize(
-            image, (int(W // factor), int(H // factor)), cv2.INTER_NEAREST
-        )
-        resized_image = cv2.resize(
-            downsampled_image, (W, H), cv2.INTER_LINEAR_EXACT)
+        downsampled_image = cv2.resize(image,
+                                       (int(W // factor), int(H // factor)),
+                                       cv2.INTER_NEAREST)
+        resized_image = cv2.resize(downsampled_image, (W, H),
+                                   cv2.INTER_LINEAR_EXACT)
         return resized_image
 
     def __call__(self, results):
-        '''
-        '''
+        """"""
         img = results['img']
         img = self._sample_low_res(img)
         results['img'] = img

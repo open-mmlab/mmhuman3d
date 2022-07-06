@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
+
 import numpy as np
+
 
 class BaseConverter(metaclass=ABCMeta):
     """Base dataset.
@@ -60,10 +62,10 @@ class BaseConverter(metaclass=ABCMeta):
         Args:
             keypoints (np.ndarray): Keypoints
             scale (float): Bounding Box scale
-        
+
         Returns:
             bbox_xyxy (np.ndarray): Bounding box in xyxy format
-        
+
         '''
         xmin, ymin = np.amin(keypoints, axis=0)
         xmax, ymax = np.amax(keypoints, axis=0)

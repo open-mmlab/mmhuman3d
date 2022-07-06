@@ -6,10 +6,15 @@ from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
 from .crowdpose import CrowdposeConverter
 from .eft import EftConverter
+from .ehf import EHFConverter
+from .expose_curated_fits import ExposeCuratedFitsConverter
+from .expose_spin_smplx import ExposeSPINSMPLXConverter
+from .ffhq_flame import FFHQFlameConverter
+from .freihand import FreihandConverter
 from .gta_human import GTAHumanConverter
 from .h36m import H36mConverter
-from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_expose import H36mExPoseConverter
+from .h36m_hybrik import H36mHybrIKConverter
 from .humman import HuMManConverter
 from .insta_vibe import InstaVibeConverter
 from .lsp import LspConverter
@@ -22,15 +27,10 @@ from .posetrack import PosetrackConverter
 from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .spin import SpinConverter
+from .stirling import StirlingConverter
 from .surreal import SurrealConverter
 from .up3d import Up3dConverter
 from .vibe import VibeConverter
-from .ffhq_flame import FFHQFlameConverter
-from .expose_curated_fits import ExposeCuratedFitsConverter
-from .expose_spin_smplx import ExposeSPINSMPLXConverter
-from .freihand import FreihandConverter
-from .stirling import StirlingConverter
-from .ehf import EHFConverter
 
 __all__ = [
     'build_data_converter', 'AgoraConverter', 'MpiiConverter', 'H36mConverter',
@@ -38,9 +38,10 @@ __all__ = [
     'H36mConverter', 'LspExtendedConverter', 'LspConverter',
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
-    'GTAHumanConverter', 'CocoHybrIKConverter', 'H36mHybrIKConverter','H36mExPoseConverter',
-    'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter', 'SurrealConverter',
-    'InstaVibeConverter', 'SpinConverter', 'VibeConverter', 'HuMManConverter',
-    'FFHQFlameConverter', 'ExposeCuratedFitsConverter','ExposeSPINSMPLXConverter',
-    'FreihandConverter','StirlingConverter', 'EHFConverter'
+    'GTAHumanConverter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
+    'H36mExPoseConverter', 'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter',
+    'SurrealConverter', 'InstaVibeConverter', 'SpinConverter', 'VibeConverter',
+    'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
+    'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
+    'EHFConverter'
 ]

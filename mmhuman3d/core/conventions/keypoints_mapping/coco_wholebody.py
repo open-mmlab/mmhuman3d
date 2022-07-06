@@ -22,23 +22,23 @@ COCO_WHOLEBODY_KEYPOINTS = [
     'right_bigtoe',
     'right_smalltoe',
     'right_heel',
-    'right_contour_1', # original name: face_contour_1
-    'right_contour_2', # original name: face_contour_2
-    'right_contour_3', # original name: face_contour_3
-    'right_contour_4', # original name: face_contour_4
-    'right_contour_5', # original name: face_contour_5
-    'right_contour_6', # original name: face_contour_6
-    'right_contour_7', # original name: face_contour_7
-    'right_contour_8', # original name: face_contour_8
-    'contour_middle', # original name: face_contour_9
-    'left_contour_8', # original name: face_contour_10
-    'left_contour_7', # original name: face_contour_11
-    'left_contour_6', # original name: face_contour_12
-    'left_contour_5', # original name: face_contour_13
-    'left_contour_4', # original name: face_contour_14
-    'left_contour_3', # original name: face_contour_15
-    'left_contour_2', # original name: face_contour_16
-    'left_contour_1', # original name: face_contour_17
+    'right_contour_1',  # original name: face_contour_1
+    'right_contour_2',  # original name: face_contour_2
+    'right_contour_3',  # original name: face_contour_3
+    'right_contour_4',  # original name: face_contour_4
+    'right_contour_5',  # original name: face_contour_5
+    'right_contour_6',  # original name: face_contour_6
+    'right_contour_7',  # original name: face_contour_7
+    'right_contour_8',  # original name: face_contour_8
+    'contour_middle',  # original name: face_contour_9
+    'left_contour_8',  # original name: face_contour_10
+    'left_contour_7',  # original name: face_contour_11
+    'left_contour_6',  # original name: face_contour_12
+    'left_contour_5',  # original name: face_contour_13
+    'left_contour_4',  # original name: face_contour_14
+    'left_contour_3',  # original name: face_contour_15
+    'left_contour_2',  # original name: face_contour_16
+    'left_contour_1',  # original name: face_contour_17
     'right_eyebrow_1',
     'right_eyebrow_2',
     'right_eyebrow_3',
@@ -53,11 +53,11 @@ COCO_WHOLEBODY_KEYPOINTS = [
     'nosebridge_2',
     'nosebridge_3',
     'nosebridge_4',
-    'right_nose_2', # original name: nose_1
-    'right_nose_1', # original name: nose_2
-    'nose_middle', # original name: nose_3
-    'left_nose_1', # original name: nose_4
-    'left_nose_2', # original name: nose_5
+    'right_nose_2',  # original name: nose_1
+    'right_nose_1',  # original name: nose_2
+    'nose_middle',  # original name: nose_3
+    'left_nose_1',  # original name: nose_4
+    'left_nose_2',  # original name: nose_5
     'right_eye_1',
     'right_eye_2',
     'right_eye_3',
@@ -82,14 +82,14 @@ COCO_WHOLEBODY_KEYPOINTS = [
     'mouth_bottom',  # original name: mouth_10
     'right_mouth_4',  # original name: mouth_11
     'right_mouth_5',  # original name: mouth_12
-    'right_lip_1', # original name: lip_1
-    'right_lip_2', # original name: lip_2
-    'lip_top', # original name: lip_3
-    'left_lip_2', # original name: lip_4
-    'left_lip_1', # original name: lip_5
-    'left_lip_3', # original name: lip_6
-    'lip_bottom', # original name: lip_7
-    'right_lip_3', # original name: lip_8
+    'right_lip_1',  # original name: lip_1
+    'right_lip_2',  # original name: lip_2
+    'lip_top',  # original name: lip_3
+    'left_lip_2',  # original name: lip_4
+    'left_lip_1',  # original name: lip_5
+    'left_lip_3',  # original name: lip_6
+    'lip_bottom',  # original name: lip_7
+    'right_lip_3',  # original name: lip_8
     'left_hand_root',
     'left_thumb_1',
     'left_thumb_2',

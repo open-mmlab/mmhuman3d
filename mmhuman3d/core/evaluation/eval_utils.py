@@ -1,8 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
-from .mesh_eval import compute_similarity_transform
 import trimesh
 from trimesh.proximity import closest_point
+
+from .mesh_eval import compute_similarity_transform
+
 
 def keypoint_mpjpe(pred, gt, mask, alignment='none'):
     """Calculate the mean per-joint position error (MPJPE) and the error after
@@ -80,7 +82,7 @@ def keypoint_accel_error(gt, pred, mask=None):
     return np.mean(normed[new_vis], axis=1)
 
 
-def vertice_pve(pred_verts, target_verts, alignment = 'none'):
+def vertice_pve(pred_verts, target_verts, alignment='none'):
     """Computes per vertex error (PVE).
 
     Args:
@@ -218,11 +220,14 @@ def keypoint_3d_auc(pred, gt, mask, alignment='none'):
 
     return auc
 
-def fg_vertices_to_mesh_distance(groundtruth_vertices, grundtruth_landmark_points, predicted_mesh_vertices,
-                                       predicted_mesh_faces,
-                                       predicted_mesh_landmark_points):
-    """
-    This script computes the reconstruction error between an input mesh and a ground truth mesh.
+
+def fg_vertices_to_mesh_distance(groundtruth_vertices,
+                                 grundtruth_landmark_points,
+                                 predicted_mesh_vertices, predicted_mesh_faces,
+                                 predicted_mesh_landmark_points):
+    """This script computes the reconstruction error between an input mesh and
+    a ground truth mesh.
+
     :param groundtruth_vertices: An n x 3 numpy array of vertices from a ground truth scan.
     :param grundtruth_landmark_points: A 7 x 3 list with annotations of the ground truth scan.
     :param predicted_mesh_vertices: An m x 3 numpy array of vertices from a predicted mesh.
@@ -237,30 +242,43 @@ def fg_vertices_to_mesh_distance(groundtruth_vertices, grundtruth_landmark_point
 
     # Do procrustes based on the 7 points:
     # The ground truth scan is in mm, so by aligning the prediction to the ground truth, we get meaningful units.
-    _,tform = compute_similarity_transform(predicted_mesh_landmark_points, grundtruth_landmark_points, return_tform= True)
+    _, tform = compute_similarity_transform(
+        predicted_mesh_landmark_points,
+        grundtruth_landmark_points,
+        return_tform=True)
     # Use tform to transform all vertices in predicted_mesh_vertices to the ground truth reference space:
-    predicted_mesh_vertices_aligned = (tform['scale'] * tform['rotation'].dot(predicted_mesh_vertices.T) + tform['translation']).T
-    
+    predicted_mesh_vertices_aligned = (
+        tform['scale'] * tform['rotation'].dot(predicted_mesh_vertices.T) +
+        tform['translation']).T
+
     # Compute the mask: A circular area around the center of the face. Take the nose-bottom and go upwards a bit:
     nose_bottom = np.array(grundtruth_landmark_points[4])
     nose_bridge = (np.array(grundtruth_landmark_points[1]) + np.array(
         grundtruth_landmark_points[2])) / 2  # between the inner eye corners
     face_centre = nose_bottom + 0.3 * (nose_bridge - nose_bottom)
     # Compute the radius for the face mask:
-    outer_eye_dist = np.linalg.norm(np.array(grundtruth_landmark_points[0]) - np.array(grundtruth_landmark_points[3]))
+    outer_eye_dist = np.linalg.norm(
+        np.array(grundtruth_landmark_points[0]) -
+        np.array(grundtruth_landmark_points[3]))
     nose_dist = np.linalg.norm(nose_bridge - nose_bottom)
     mask_radius = 1.2 * (outer_eye_dist + nose_dist) / 2
 
     # Find all the vertex indices in the ground truth scan that lie within the mask area:
-    vertex_indices_mask = []  # vertex indices in the source mesh (the ground truth scan)
+    vertex_indices_mask = [
+    ]  # vertex indices in the source mesh (the ground truth scan)
     points_on_groundtruth_scan_to_measure_from = []
     for vertex_idx, vertex in enumerate(groundtruth_vertices):
-        dist = np.linalg.norm(vertex - face_centre) # We use Euclidean distance for the mask area for now.
+        dist = np.linalg.norm(
+            vertex - face_centre
+        )  # We use Euclidean distance for the mask area for now.
         if dist <= mask_radius:
             vertex_indices_mask.append(vertex_idx)
             points_on_groundtruth_scan_to_measure_from.append(vertex)
-    assert len(vertex_indices_mask) == len(points_on_groundtruth_scan_to_measure_from)
+    assert len(vertex_indices_mask) == len(
+        points_on_groundtruth_scan_to_measure_from)
     # For each vertex on the ground truth mesh, caculate the distance to the surface of the predicted mesh:
-    predicted_mesh = trimesh.Trimesh(predicted_mesh_vertices_aligned, predicted_mesh_faces)
-    _, distance, _ =  closest_point(predicted_mesh, points_on_groundtruth_scan_to_measure_from)
+    predicted_mesh = trimesh.Trimesh(predicted_mesh_vertices_aligned,
+                                     predicted_mesh_faces)
+    _, distance, _ = closest_point(predicted_mesh,
+                                   points_on_groundtruth_scan_to_measure_from)
     return distance.mean()

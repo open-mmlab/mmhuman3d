@@ -14,6 +14,7 @@ BACKBONES.register_module(
 BACKBONES.register_module(
     name='PoseHighResolutionNetExpose', module=PoseHighResolutionNetExpose)
 
+
 def build_backbone(cfg):
     """Build backbone."""
     if cfg is None:

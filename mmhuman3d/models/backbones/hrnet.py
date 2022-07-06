@@ -663,29 +663,48 @@ class PoseHighResolutionNet(BaseModule):
                     m.eval()
 
 
-
 class PoseHighResolutionNetExpose(PoseHighResolutionNet):
-    """HRNet backbone for expose.
-    """
-    def __init__(self, extra, in_channels=3, conv_cfg=None, norm_cfg=dict(type='BN'), norm_eval=True, with_cp=False, num_joints=24, zero_init_residual=False, multiscale_output=True, pretrained=None, init_cfg=None):
-        super().__init__(extra, in_channels, conv_cfg, norm_cfg, norm_eval, with_cp, num_joints, zero_init_residual, multiscale_output, pretrained, init_cfg)
-        in_dims = (2 ** 2 * self.stage2_cfg['num_channels'][-1] + 
-                   2 ** 1 * self.stage3_cfg['num_channels'][-1] +
-                   self.stage4_cfg['num_channels'][-1]
-                )
-        self.conv_layers = self._make_conv_layer(in_channels=in_dims, num_layers=5)
-        self.subsample_3 = self._make_subsample_layer(in_channels=self.stage2_cfg['num_channels'][-1],num_layers=2)
-        self.subsample_2 = self._make_subsample_layer(in_channels=self.stage3_cfg['num_channels'][-1],num_layers=1)
+    """HRNet backbone for expose."""
 
-    def _make_conv_layer(self, in_channels=2048, num_layers=3, num_filters=2048, stride=1):
+    def __init__(self,
+                 extra,
+                 in_channels=3,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN'),
+                 norm_eval=True,
+                 with_cp=False,
+                 num_joints=24,
+                 zero_init_residual=False,
+                 multiscale_output=True,
+                 pretrained=None,
+                 init_cfg=None):
+        super().__init__(extra, in_channels, conv_cfg, norm_cfg, norm_eval,
+                         with_cp, num_joints, zero_init_residual,
+                         multiscale_output, pretrained, init_cfg)
+        in_dims = (2**2 * self.stage2_cfg['num_channels'][-1] +
+                   2**1 * self.stage3_cfg['num_channels'][-1] +
+                   self.stage4_cfg['num_channels'][-1])
+        self.conv_layers = self._make_conv_layer(
+            in_channels=in_dims, num_layers=5)
+        self.subsample_3 = self._make_subsample_layer(
+            in_channels=self.stage2_cfg['num_channels'][-1], num_layers=2)
+        self.subsample_2 = self._make_subsample_layer(
+            in_channels=self.stage3_cfg['num_channels'][-1], num_layers=1)
+
+    def _make_conv_layer(self,
+                         in_channels=2048,
+                         num_layers=3,
+                         num_filters=2048,
+                         stride=1):
 
         layers = []
         for i in range(num_layers):
 
-            downsample = nn.Conv2d(in_channels, num_filters, stride=1,
-                                   kernel_size=1, bias=False)
-            layers.append(Bottleneck(in_channels, num_filters // 4,
-                                     downsample=downsample))
+            downsample = nn.Conv2d(
+                in_channels, num_filters, stride=1, kernel_size=1, bias=False)
+            layers.append(
+                Bottleneck(
+                    in_channels, num_filters // 4, downsample=downsample))
             in_channels = num_filters
 
         return nn.Sequential(*layers)
@@ -698,11 +717,11 @@ class PoseHighResolutionNetExpose(PoseHighResolutionNet):
             layers.append(
                 nn.Conv2d(
                     in_channels=in_channels,
-                    out_channels=2*in_channels,
+                    out_channels=2 * in_channels,
                     kernel_size=3,
                     stride=stride,
                     padding=1))
-            in_channels = 2*in_channels
+            in_channels = 2 * in_channels
             layers.append(nn.BatchNorm2d(in_channels, momentum=0.1))
             layers.append(nn.ReLU(inplace=True))
 

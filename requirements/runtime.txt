@@ -9,10 +9,10 @@ numpy
 opencv-python
 pandas
 pickle5
+rtree
 scikit-image
 scipy
 smplx
 tqdm
-vedo
 trimesh
-rtree
+vedo

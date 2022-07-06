@@ -64,16 +64,19 @@ class ShapePriorLoss(nn.Module):
 
         return shape_prior_loss
 
+
 class ShapeThresholdPriorLoss(nn.Module):
-    """Threshold loss for betas. Soft constraint to prevent parameters for leaving feasible set. 
-    Implements a penalty constraint that encourages the parameters to stay in the feasible set of solutions.
+    """Threshold loss for betas. Soft constraint to prevent parameters for
+    leaving feasible set. Implements a penalty constraint that encourages the
+    parameters to stay in the feasible set of solutions.
 
     Args:
         margin (int, optional): The threshold value
         norm (str, optional): The loss method. Options are 'l1', l2'
         loss_weight (float, optional): The weight of the loss. Defaults to 1.0
     """
-    def __init__(self, margin=1, norm='l2', epsilon=1e-7, loss_weight = 1.0):
+
+    def __init__(self, margin=1, norm='l2', epsilon=1e-7, loss_weight=1.0):
         super().__init__()
         self.margin = margin
         assert norm in ['l1', 'l2'], 'Norm variable must me l1 or l2'
@@ -95,12 +98,11 @@ class ShapeThresholdPriorLoss(nn.Module):
 
         if self.norm == 'l1':
             return self.loss_weight * invalid_values.abs().sum() / (
-                mask.to(dtype=betas.dtype).sum() + self.epsilon
-            )
+                mask.to(dtype=betas.dtype).sum() + self.epsilon)
         elif self.norm == 'l2':
             return self.loss_weight * invalid_values.pow(2).sum() / (
-                mask.to(dtype=betas.dtype).sum() + self.epsilon
-            )
+                mask.to(dtype=betas.dtype).sum() + self.epsilon)
+
 
 class PoseRegLoss(nn.Module):
     """Regulizer loss for body pose parameters.

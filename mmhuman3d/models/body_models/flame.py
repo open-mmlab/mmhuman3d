@@ -8,13 +8,16 @@ from smplx import FLAMELayer as _FLAMELayer
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
-    get_keypoint_num
+    get_keypoint_num,
 )
+
 
 class FLAME(_FLAME):
     """Extension of the official FLAME implementation."""
     head_pose_keys = {'global_orient', 'jaw_pose'}
-    full_pose_keys = {'global_orient', 'neck_pose', 'jaw_pose', 'leye_pose', 'reye_pose'}
+    full_pose_keys = {
+        'global_orient', 'neck_pose', 'jaw_pose', 'leye_pose', 'reye_pose'
+    }
 
     NUM_VERTS = 5023
     NUM_FACES = 9976
@@ -48,7 +51,7 @@ class FLAME(_FLAME):
 
         self.num_verts = self.get_num_verts()
         self.num_faces = self.get_num_faces()
-        self.num_joints = get_keypoint_num(convention = self.keypoint_dst)
+        self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
 
     def forward(self,
                 *args,
@@ -66,42 +69,44 @@ class FLAME(_FLAME):
         Returns:
             output: contains output parameters and attributes
         """
-        flame_output = super(FLAME,self).forward(*args, **kwargs)
+        flame_output = super(FLAME, self).forward(*args, **kwargs)
         joints = flame_output.joints
         joints, joint_mask = convert_kps(
             joints,
-            src = self.keypoint_src,
-            dst = self.keypoint_dst,
-            approximate = self.keypoint_approximate
-        )
+            src=self.keypoint_src,
+            dst=self.keypoint_dst,
+            approximate=self.keypoint_approximate)
         if isinstance(joint_mask, np.ndarray):
             joint_mask = torch.tensor(
                 joint_mask, dtype=torch.uint8, device=joints.device)
 
         batch_size = joints.shape[0]
-        joint_mask = joint_mask.reshape(1,-1).expand(batch_size,-1)
+        joint_mask = joint_mask.reshape(1, -1).expand(batch_size, -1)
 
         output = dict(
-            global_orient = flame_output.global_orient,
-            neck_pose = flame_output.neck_pose,
-            jaw_pose = flame_output.jaw_pose,
-            joints = joints,
-            joint_mask = joint_mask,
-            keypoints = torch.cat([joints, joint_mask[:,:,None]], dim = -1),
-            betas = flame_output.betas,
-            expression = flame_output.expression)
-        
+            global_orient=flame_output.global_orient,
+            neck_pose=flame_output.neck_pose,
+            jaw_pose=flame_output.jaw_pose,
+            joints=joints,
+            joint_mask=joint_mask,
+            keypoints=torch.cat([joints, joint_mask[:, :, None]], dim=-1),
+            betas=flame_output.betas,
+            expression=flame_output.expression)
+
         if return_verts:
-            output['vertices'] =  flame_output.vertices
+            output['vertices'] = flame_output.vertices
         if return_full_pose:
             output['full_pose'] = flame_output.full_pose
-        
+
         return output
+
 
 class FLAMELayer(_FLAMELayer):
     """Extension of the official FLAME implementation."""
     head_pose_keys = {'global_orient', 'jaw_pose'}
-    full_pose_keys = {'global_orient', 'neck_pose', 'jaw_pose', 'leye_pose', 'reye_pose'}
+    full_pose_keys = {
+        'global_orient', 'neck_pose', 'jaw_pose', 'leye_pose', 'reye_pose'
+    }
 
     NUM_VERTS = 5023
     NUM_FACES = 9976
@@ -135,7 +140,7 @@ class FLAMELayer(_FLAMELayer):
 
         self.num_verts = self.get_num_verts()
         self.num_faces = self.get_num_faces()
-        self.num_joints = get_keypoint_num(convention = self.keypoint_dst)
+        self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
 
     def forward(self,
                 *args,
@@ -153,34 +158,33 @@ class FLAMELayer(_FLAMELayer):
         Returns:
             output: contains output parameters and attributes
         """
-        flame_output = super(FLAMELayer,self).forward(*args, **kwargs)
+        flame_output = super(FLAMELayer, self).forward(*args, **kwargs)
         joints = flame_output.joints
         joints, joint_mask = convert_kps(
             joints,
-            src = self.keypoint_src,
-            dst = self.keypoint_dst,
-            approximate = self.keypoint_approximate
-        )
+            src=self.keypoint_src,
+            dst=self.keypoint_dst,
+            approximate=self.keypoint_approximate)
         if isinstance(joint_mask, np.ndarray):
             joint_mask = torch.tensor(
                 joint_mask, dtype=torch.uint8, device=joints.device)
 
         batch_size = joints.shape[0]
-        joint_mask = joint_mask.reshape(1,-1).expand(batch_size,-1)
+        joint_mask = joint_mask.reshape(1, -1).expand(batch_size, -1)
 
         output = dict(
-            global_orient = flame_output.global_orient,
-            neck_pose = flame_output.neck_pose,
-            jaw_pose = flame_output.jaw_pose,
-            joints = joints,
-            joint_mask = joint_mask,
-            keypoints = torch.cat([joints, joint_mask[:,:,None]], dim = -1),
-            betas = flame_output.betas,
-            expression = flame_output.expression)
-        
+            global_orient=flame_output.global_orient,
+            neck_pose=flame_output.neck_pose,
+            jaw_pose=flame_output.jaw_pose,
+            joints=joints,
+            joint_mask=joint_mask,
+            keypoints=torch.cat([joints, joint_mask[:, :, None]], dim=-1),
+            betas=flame_output.betas,
+            expression=flame_output.expression)
+
         if return_verts:
-            output['vertices'] =  flame_output.vertices
+            output['vertices'] = flame_output.vertices
         if return_full_pose:
             output['full_pose'] = flame_output.full_pose
-        
+
         return output

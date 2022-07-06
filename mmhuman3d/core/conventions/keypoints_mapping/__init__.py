@@ -10,12 +10,15 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     coco,
     coco_wholebody,
     crowdpose,
+    face3d,
+    flame,
     gta,
     h36m,
     human_data,
     hybrik,
     instavariety,
     lsp,
+    mano,
     mpi_inf_3dhp,
     mpii,
     openpose,
@@ -24,10 +27,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     pw3d,
     smpl,
     smplx,
-    flame,
-    face3d,
-    mano,
-    spin_smplx
+    spin_smplx,
 )
 
 KEYPOINTS_FACTORY = {
@@ -61,8 +61,8 @@ KEYPOINTS_FACTORY = {
     'hybrik_hp3d': mpi_inf_3dhp.HYBRIK_MPI_INF_3DHP_KEYPOINTS,
     'gta': gta.GTA_KEYPOINTS,
     'flame': flame.FLAME_73_KEYPOINTS,
-    'face3d':face3d.FACE3D_IND,
-    'spin_smplx':spin_smplx.SPIN_SMPLX_KEYPOINTS,
+    'face3d': face3d.FACE3D_IND,
+    'spin_smplx': spin_smplx.SPIN_SMPLX_KEYPOINTS,
     'mano': mano.MANO_KEYPOINTS,
 }
 
@@ -261,7 +261,7 @@ def get_mapping(src: str,
                 intersection.append(dst_name)
             # approximate mapping
             if approximate and not matched:
-                
+
                 try:
                     part_list = human_data.APPROXIMATE_MAP[dst_name]
                 except KeyError:
