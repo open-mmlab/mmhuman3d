@@ -11,7 +11,7 @@ optimizer = dict(
 optimizer_config = dict(grad_clip=None)
 lr_config = dict(policy='step',step=[60, 100],gamma = 0.1)
 
-runner = dict(type='EpochBasedRunner', max_epochs=120)
+runner = dict(type='EpochBasedRunner', max_epochs=100)
 
 log_config = dict(
     interval=50, hooks=[
