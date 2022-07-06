@@ -29,6 +29,7 @@ from .transforms import (
     RandomHorizontalFlip,
     BBoxCenterJitter,
     SimulateLowRes,
+    Rotation,
 )
 
 __all__ = [
@@ -53,6 +54,7 @@ __all__ = [
     'GenerateHybrIKTarget',
     'RandomDPG',
     'RandomOcclusion',
+    'Rotation',
     'NewKeypointsSelection',
     'Normalize',
     'SyntheticOcclusion',

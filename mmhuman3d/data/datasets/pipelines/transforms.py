@@ -748,32 +748,12 @@ class MeshAffine:
         r = results['rotation']
         trans = get_affine_transform(c, s, r, self.image_size)
 
-
-
         if 'img' in results:
             img = results['img']
 
             # img before affine
             ori_img = img.copy()
-            (h, w) = ori_img.shape[:2]
-            (cX, cY) = (w // 2, h // 2)
-            M = cv2.getRotationMatrix2D((cX, cY), r, 1.0)
-            cos = np.abs(M[0, 0])
-            sin = np.abs(M[0, 1])
-            # compute the new bounding dimensions of the image
-            nW = int((h * sin) + (w * cos))
-            nH = int((h * cos) + (w * sin))
-            # adjust the rotation matrix to take into account translation
-            M[0, 2] += (nW / 2) - cX
-            M[1, 2] += (nH / 2) - cY
-            # perform the actual rotation and return the image
-            ori_img = cv2.warpAffine(ori_img, M, (nW, nH))
-            M = np.concatenate([M,np.array([[0.0,0.0,1.0]])])
-            M = np.linalg.inv(M)
-            N = np.concatenate([trans,np.array([[0.0,0.0,1.0]])])
-            crop_trans = np.dot(N,M)
-            results['crop_transform'] = crop_trans[:2]
-
+            results['crop_transform'] = trans
             results['ori_img'] = ori_img
             results['img_fields'] = ['img','ori_img']
 
@@ -812,6 +792,76 @@ class MeshAffine:
 
         return results
 
+@PIPELINES.register_module()
+class Rotation:
+    """Rotate the image with the given rotation.
+
+    Rotate the 2D keypoints, 3D kepoints, poses. Required keys: 'img',
+    'pose', 'rotation' and 'center'. Modifies key: 'img',
+    ''keypoints2d', 'keypoints3d', 'pose'.
+
+    To avoid conflicts with MeshAffine, rotation will be set to 0.0 after rotate 
+    the image. The rotation value will be stored to 'ori_rotation'.
+    """
+
+    def __init__(self):
+       pass
+
+    def __call__(self, results):
+        r = results['rotation']
+        if r == 0.0:
+            return results
+        img = results['img']
+
+        # img before affine
+        (h, w) = img.shape[:2]
+        (cX, cY) = (w // 2, h // 2)
+        M = cv2.getRotationMatrix2D((cX, cY), r, 1.0)
+        cos = np.abs(M[0, 0])
+        sin = np.abs(M[0, 1])
+        # compute the new bounding dimensions of the image
+        nW = int((h * sin) + (w * cos))
+        nH = int((h * cos) + (w * sin))
+        # adjust the rotation matrix to take into account translation
+        M[0, 2] += (nW / 2) - cX
+        M[1, 2] += (nH / 2) - cY
+        # perform the actual rotation and return the image
+        img = cv2.warpAffine(img, M, (nW, nH))
+
+        results['img'] = img
+
+        c = results['center']
+        c = np.dot(M[:2, :2], c) + M[:2, 2]
+        results['center'] = c
+
+        if 'keypoints2d' in results:
+            keypoints2d = results['keypoints2d'].copy()
+            keypoints2d[:,:2] = (
+                np.dot(keypoints2d[:, :2], M[:2, :2].T) + M[:2, 2] +
+                1).astype(np.int)
+            results['keypoints2d'] = keypoints2d
+
+        if 'keypoints3d' in results:
+            keypoints3d = results['keypoints3d'].copy()
+            keypoints3d[:, :3] = _rotate_joints_3d(keypoints3d[:, :3], r)
+            results['keypoints3d'] = keypoints3d
+
+        if 'smpl_body_pose' in results:
+            global_orient = results['smpl_global_orient'].copy()
+            body_pose = results['smpl_body_pose'].copy().reshape((-1))
+            pose = np.concatenate((global_orient, body_pose), axis=-1)
+            pose = _rotate_smpl_pose(pose, r)
+            results['smpl_global_orient'] = pose[:3]
+            results['smpl_body_pose'] = pose[3:].reshape((-1, 3))
+
+        if 'smplx_global_orient' in results:
+            global_orient = results['smplx_global_orient'].copy()
+            global_orient = _rotate_smpl_pose(global_orient,r)
+            results['smplx_global_orient'] = global_orient
+
+        results['rotation'] = 0.0
+        results['ori_rotation'] = r
+        return results
 
 @PIPELINES.register_module()
 class BBoxCenterJitter(object):
