@@ -180,33 +180,8 @@ class ContinuousRotReprDecoder:
         mean = mean.reshape(-1)
         self.mean = mean
 
-    def get_type(self):
-        return 'cont_rot_repr'
-
-    def extra_repr(self):
-        msg = 'Num angles: {}\n'.format(self.num_angles)
-        msg += 'Mean: {}'.format(self.mean.shape)
-        return msg
-
-    def get_param_dim(self):
-        return 6
-
-    def get_dim_size(self):
-        return self.num_angles * 6
-
     def get_mean(self):
         return self.mean.clone()
-
-    def to_offsets(self, x):
-        latent = x.reshape(-1, 3, 3)[:, :3, :2].reshape(-1, 6)
-        return (latent - self.mean).reshape(x.shape[0], -1, 6)
-
-    def encode(self, x, subtract_mean=False):
-        orig_shape = x.shape
-        if subtract_mean:
-            raise NotImplementedError
-        output = x.reshape(-1, 3, 3)[:, :3, :2].contiguous()
-        return output.reshape(orig_shape[0], orig_shape[1], 3, 2)
 
     def __call__(self, module_input):
         batch_size = module_input.shape[0]
@@ -376,6 +351,11 @@ class ExPoseBodyHead(ExPoseHead):
         self.load_regressor(input_feat_dim, param_mean, regressor_cfg)
 
     def forward(self, features):
+        """Forward function of ExPose Body Head.
+        Args:
+            features (List[torch.tensor]) : Output of restnet.
+            cond : Initial params. If none, use the mean params.
+        """
         body_parameters = self.regressor(features)[-1]
         params_dict, raw_dict = self.flat_params_to_dict(body_parameters)
         params_dict['betas'] = torch.index_select(body_parameters, 1,
@@ -438,6 +418,11 @@ class ExPoseHandHead(ExPoseHead):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
     def forward(self, features, cond=None):
+        """Forward function of ExPose Hand Head.
+        Args:
+            features (List[torch.tensor]) : Output of restnet.
+            cond : Initial params. If none, use the mean params.
+        """
         batch_size = features[-1].size(0)
         features = self.avgpool(features[-1]).view(batch_size, -1)
         hand_parameters = self.regressor(features, cond=cond)[-1]
@@ -511,7 +496,12 @@ class ExPoseFaceHead(ExPoseHead):
         self.load_regressor(input_feat_dim, param_mean, regressor_cfg)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-    def forward(self, features, cond=None):
+    def forward(self, features, cond=None): 
+        """Forward function of ExPose Face Head.
+        Args:
+            features (List[torch.tensor]) : Output of restnet.
+            cond : Initial params. If none, use the mean params.
+        """
         batch_size = features[-1].size(0)
         features = self.avgpool(features[-1]).view(batch_size, -1)
         head_parameters = self.regressor(features, cond=cond)[-1]
