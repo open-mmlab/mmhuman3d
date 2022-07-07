@@ -71,6 +71,7 @@ class SMPLify(object):
         ignore_keypoints: List[int] = None,
         device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
         verbose: bool = False,
+        quiet: bool = False,
     ) -> None:
         """
         Args:
@@ -100,6 +101,7 @@ class SMPLify(object):
                 loss computation
             device: torch device
             verbose: whether to print individual losses during registration
+            quiet: whether to print auxiliary information
 
         Returns:
             None
@@ -152,6 +154,7 @@ class SMPLify(object):
 
         self.ignore_keypoints = ignore_keypoints
         self.verbose = verbose
+        self.quiet = quiet
 
         self._set_keypoint_idxs()
 
@@ -219,7 +222,8 @@ class SMPLify(object):
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
-                print(f'epoch {i}, stage {stage_idx}')
+                if not self.quiet:
+                    print(f'epoch {i}, stage {stage_idx}')
                 self._optimize_stage(
                     global_orient=global_orient,
                     transl=transl,
@@ -379,7 +383,8 @@ class SMPLify(object):
                 loss_rel_change = self._compute_relative_change(
                     pre_loss, loss.item())
                 if loss_rel_change < ftol:
-                    print(f'[ftol={ftol}] Early stop at {iter_idx} iter!')
+                    if not self.quiet:
+                        print(f'[ftol={ftol}] Early stop at {iter_idx} iter!')
                     break
             pre_loss = loss.item()
 
@@ -638,7 +643,8 @@ class SMPLify(object):
             msg = ''
             for loss_name, loss in losses.items():
                 msg += f'{loss_name}={loss.mean().item():.6f}, '
-            print(msg.strip(', '))
+            if not self.quiet:
+                print(msg.strip(', '))
 
         total_loss = 0
         for loss_name, loss in losses.items():

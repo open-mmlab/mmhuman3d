@@ -57,7 +57,10 @@ registrant = dict(
         in_ndc=False,
         focal_length=5000,
         image_size=(img_res, img_res),
-        principal_point=(img_res / 2, img_res / 2)))
+        principal_point=(img_res / 2, img_res / 2)),
+    quiet=True)
+
+registration = dict(mode='in_the_loop', registrant=registrant)
 
 # optimizer
 optimizer = dict(
@@ -94,7 +97,7 @@ model = dict(
         keypoint_dst='h36m',
         model_path='data/body_models/smpl',
         joints_regressor='data/body_models/J_regressor_h36m.npy'),
-    registrant=registrant,
+    registration=registration,
     convention='smpl_49',
     loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=100),
     loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=10),
@@ -146,9 +149,18 @@ inference_pipeline = [
         meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 
+cache_files = {
+    'h36m': 'data/cache/h36m_mosh_train_smpl_49.npz',
+    'mpi_inf_3dhp': 'data/cache/spin_mpi_inf_3dhp_train_smpl_49.npz',
+    'lsp': 'data/cache/spin_lsp_train_smpl_49.npz',
+    'lspet': 'data/cache/spin_lspet_train_smpl_49.npz',
+    'mpii': 'data/cache/spin_mpii_train_smpl_49.npz',
+    'coco': 'data/cache/spin_coco_2014_train_smpl_49.npz'
+}
+
 data = dict(
     samples_per_gpu=32,
-    workers_per_gpu=1,
+    workers_per_gpu=2,
     train=dict(
         type='MixedDataset',
         configs=[
@@ -158,6 +170,7 @@ data = dict(
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_49',
+                cache_data_path=cache_files['h36m'],
                 ann_file='h36m_mosh_train.npz'),
             dict(
                 type=dataset_type,
@@ -165,6 +178,7 @@ data = dict(
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_49',
+                cache_data_path=cache_files['mpi_inf_3dhp'],
                 ann_file='spin_mpi_inf_3dhp_train.npz'),
             dict(
                 type=dataset_type,
@@ -172,6 +186,7 @@ data = dict(
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_49',
+                cache_data_path=cache_files['lsp'],
                 ann_file='spin_lsp_train.npz'),
             dict(
                 type=dataset_type,
@@ -179,6 +194,7 @@ data = dict(
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_49',
+                cache_data_path=cache_files['lspet'],
                 ann_file='spin_lspet_train.npz'),
             dict(
                 type=dataset_type,
@@ -186,6 +202,7 @@ data = dict(
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_49',
+                cache_data_path=cache_files['mpii'],
                 ann_file='spin_mpii_train.npz'),
             dict(
                 type=dataset_type,
@@ -193,6 +210,7 @@ data = dict(
                 data_prefix='data',
                 pipeline=train_pipeline,
                 convention='smpl_49',
+                cache_data_path=cache_files['coco'],
                 ann_file='spin_coco_2014_train.npz'),
         ],
         partition=[0.35, 0.15, 0.1, 0.10, 0.10, 0.2],

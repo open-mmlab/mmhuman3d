@@ -160,6 +160,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
     def prepare_raw_data(self, idx: int):
         """Get item from self.human_data."""
+        sample_idx = idx
         if self.cache_reader is not None:
             self.human_data = self.cache_reader.get_item(idx)
             idx = idx % self.cache_reader.slice_size
@@ -173,7 +174,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             info['image_id'] = (device, int(device_id), int(frame_id))
 
         info['dataset_name'] = self.dataset_name
-        info['sample_idx'] = idx
+        info['sample_idx'] = sample_idx
         if 'bbox_xywh' in self.human_data:
             info['bbox_xywh'] = self.human_data['bbox_xywh'][idx]
             x, y, w, h, s = info['bbox_xywh']
