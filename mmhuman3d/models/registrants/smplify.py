@@ -51,27 +51,26 @@ class SMPLify(object):
     - 3D keypoints
     """
 
-    def __init__(
-        self,
-        body_model: Union[dict, torch.nn.Module],
-        num_epochs: int = 20,
-        camera: Union[dict, torch.nn.Module] = None,
-        img_res: Union[Tuple[int], int] = 224,
-        stages: dict = None,
-        optimizer: dict = None,
-        keypoints2d_loss: dict = None,
-        keypoints3d_loss: dict = None,
-        shape_prior_loss: dict = None,
-        joint_prior_loss: dict = None,
-        smooth_loss: dict = None,
-        pose_prior_loss: dict = None,
-        pose_reg_loss: dict = None,
-        limb_length_loss: dict = None,
-        use_one_betas_per_video: bool = False,
-        ignore_keypoints: List[int] = None,
-        device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-        verbose: bool = False
-    ) -> None:
+    def __init__(self,
+                 body_model: Union[dict, torch.nn.Module],
+                 num_epochs: int = 20,
+                 camera: Union[dict, torch.nn.Module] = None,
+                 img_res: Union[Tuple[int], int] = 224,
+                 stages: dict = None,
+                 optimizer: dict = None,
+                 keypoints2d_loss: dict = None,
+                 keypoints3d_loss: dict = None,
+                 shape_prior_loss: dict = None,
+                 joint_prior_loss: dict = None,
+                 smooth_loss: dict = None,
+                 pose_prior_loss: dict = None,
+                 pose_reg_loss: dict = None,
+                 limb_length_loss: dict = None,
+                 use_one_betas_per_video: bool = False,
+                 ignore_keypoints: List[int] = None,
+                 device=torch.device(
+                     'cuda' if torch.cuda.is_available() else 'cpu'),
+                 verbose: bool = False) -> None:
         """
         Args:
             body_model: config or an object of body model.

@@ -242,7 +242,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         # it comes from SMPL
         gt_out = self.body_model_train(
             betas=gt_betas, body_pose=gt_pose, global_orient=gt_global_orient)
-         # TODO: support more convention
+        # TODO: support more convention
         assert num_keypoints == 49
         gt_model_joints = gt_out['joints']
         gt_vertices = gt_out['vertices']
