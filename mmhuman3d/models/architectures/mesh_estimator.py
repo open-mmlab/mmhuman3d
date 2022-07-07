@@ -110,6 +110,8 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             self.fits_dict = FitsDict(fits='static')
             self.registration_mode = self.registration['mode']
             self.registrant = build_registrant(registration['registrant'])
+        else:
+            self.registrant = None
 
         self.loss_keypoints2d = build_loss(loss_keypoints2d)
         self.loss_keypoints3d = build_loss(loss_keypoints3d)
@@ -240,6 +242,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         # it comes from SMPL
         gt_out = self.body_model_train(
             betas=gt_betas, body_pose=gt_pose, global_orient=gt_global_orient)
+         # TODO: support more convention
         assert num_keypoints == 49
         gt_model_joints = gt_out['joints']
         gt_vertices = gt_out['vertices']

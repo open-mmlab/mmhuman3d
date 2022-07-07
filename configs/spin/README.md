@@ -87,4 +87,4 @@ We evaluate SPIN on 3DPW. Values are MPJPE/PA-MPJPE.
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [resnet50_spin_pw3d.py](resnet50_spin_pw3d.py) | 94.11 / 57.54 | [model]() &#124; [log]() |
+| [resnet50_spin_pw3d_cache.py](resnet50_spin_pw3d_cache.py) | 94.11 / 57.54 | [model]() &#124; [log]() |

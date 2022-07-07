@@ -70,8 +70,7 @@ class SMPLify(object):
         use_one_betas_per_video: bool = False,
         ignore_keypoints: List[int] = None,
         device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-        verbose: bool = False,
-        quiet: bool = False,
+        verbose: bool = False
     ) -> None:
         """
         Args:
@@ -100,8 +99,7 @@ class SMPLify(object):
             ignore_keypoints: list of keypoint names to ignore in keypoint
                 loss computation
             device: torch device
-            verbose: whether to print individual losses during registration
-            quiet: whether to print auxiliary information
+            verbose: whether to print information during registration
 
         Returns:
             None
@@ -154,7 +152,6 @@ class SMPLify(object):
 
         self.ignore_keypoints = ignore_keypoints
         self.verbose = verbose
-        self.quiet = quiet
 
         self._set_keypoint_idxs()
 
@@ -222,7 +219,7 @@ class SMPLify(object):
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
-                if not self.quiet:
+                if self.verbose:
                     print(f'epoch {i}, stage {stage_idx}')
                 self._optimize_stage(
                     global_orient=global_orient,
@@ -383,7 +380,7 @@ class SMPLify(object):
                 loss_rel_change = self._compute_relative_change(
                     pre_loss, loss.item())
                 if loss_rel_change < ftol:
-                    if not self.quiet:
+                    if self.verbose:
                         print(f'[ftol={ftol}] Early stop at {iter_idx} iter!')
                     break
             pre_loss = loss.item()
@@ -643,7 +640,7 @@ class SMPLify(object):
             msg = ''
             for loss_name, loss in losses.items():
                 msg += f'{loss_name}={loss.mean().item():.6f}, '
-            if not self.quiet:
+            if self.verbose:
                 print(msg.strip(', '))
 
         total_loss = 0
