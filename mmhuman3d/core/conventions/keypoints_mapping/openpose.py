@@ -469,6 +469,5 @@ OPENPOSE_FEET_KEYPOINTS = [
     'left_bigtoe', 'left_smalltoe', 'left_heel', 'right_bigtoe',
     'right_smalltoe', 'right_heel'
 ]
-OPENPOSE_137_KEYPOINTS = OPENPOSE_JOINTS[:
-                                         19] + OPENPOSE_FEET_KEYPOINTS + OPENPOSE_JOINTS[
-                                             19:]
+OPENPOSE_137_KEYPOINTS = OPENPOSE_JOINTS[:19] + \
+    OPENPOSE_FEET_KEYPOINTS + OPENPOSE_JOINTS[19:]

@@ -1,6 +1,3 @@
-from turtle import forward
-from typing import Optional
-
 import numpy as np
 import torch
 from smplx import FLAME as _FLAME

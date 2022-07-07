@@ -71,6 +71,96 @@ hrnet_extra = dict(
     final_conv_kernel=1,
     return_list=False)
 
+extra_hand_model_cfg = dict(
+    backbone=dict(
+        type='ResNet',
+        depth=18,
+        init_cfg=dict(
+            type='Pretrained',
+            checkpoint='data/pretrained_models/resnet18_hmr_expose_hand.pth',
+            prefix='backbone')),
+    head=dict(
+        type='ExPoseHandHead',
+        num_betas=10,
+        mean_pose_path='data/body_models/all_means.pkl',
+        pose_param_conf=[
+            dict(
+                name='global_orient',
+                num_angles=1,
+                use_mean=False,
+                rotate_axis_x=False),
+            dict(
+                name='right_hand_pose',
+                num_angles=15,
+                use_mean=True,
+                rotate_axis_x=False),
+        ],
+        input_feat_dim=512,
+        regressor_cfg=dict(
+            layers=[1024, 1024], activ_type='ReLU', dropout=0.5, gain=0.01),
+        camera_cfg=dict(pos_func='softplus', mean_scale=0.9),
+        init_cfg=dict(
+            type='Pretrained',
+            checkpoint='data/pretrained_models/resnet18_hmr_expose_hand.pth',
+            prefix='head')),
+    crop_cfg=dict(
+        img_res=256,
+        scale_factor=3.0,
+        crop_size=224,
+        condition_hand_wrist_pose=True,
+        condition_hand_shape=False,
+        condition_hand_finger_pose=True,
+    ),
+    loss_hand_crop=dict(type='L1Loss', reduction='sum', loss_weight=1),
+)
+
+extra_face_model_cfg = dict(
+    backbone=dict(
+        type='ResNet',
+        depth=18,
+        init_cfg=dict(
+            type='Pretrained',
+            checkpoint='data/pretrained_models/resnet18_hmr_expose_face.pth',
+            prefix='backbone')),
+    head=dict(
+        type='ExPoseFaceHead',
+        num_betas=100,
+        num_expression_coeffs=50,
+        mean_pose_path='data/body_models/all_means.pkl',
+        pose_param_conf=[
+            dict(
+                name='global_orient',
+                num_angles=1,
+                use_mean=False,
+                rotate_axis_x=True),
+            dict(
+                name='jaw_pose',
+                num_angles=1,
+                use_mean=False,
+                rotate_axis_x=False),
+        ],
+        input_feat_dim=512,
+        regressor_cfg=dict(
+            layers=[1024, 1024], activ_type='ReLU', dropout=0.5, gain=0.01),
+        camera_cfg=dict(pos_func='softplus', mean_scale=8.0),
+        init_cfg=dict(
+            type='Pretrained',
+            checkpoint='data/pretrained_models/resnet18_hmr_expose_face.pth',
+            prefix='head'),
+    ),
+    crop_cfg=dict(
+        img_res=256,
+        scale_factor=2.0,
+        crop_size=256,
+        num_betas=10,
+        num_expression_coeffs=10,
+        condition_face_neck_pose=False,
+        condition_face_jaw_pose=True,
+        condition_face_shape=False,
+        condition_face_expression=True),
+    loss_face_crop=dict(type='L1Loss', reduction='sum', loss_weight=1),
+)
+
 find_unused_parameters = True
 
 model = dict(
@@ -160,100 +250,8 @@ model = dict(
     loss_smplx_expression=dict(type='MSELoss', reduction='sum', loss_weight=1),
     loss_smplx_betas_prior=dict(
         type='ShapeThresholdPriorLoss', margin=3.0, norm='l2', loss_weight=1),
-    extra_hand_model_cfg=dict(
-        backbone=dict(
-            type='ResNet',
-            depth=18,
-            init_cfg=dict(
-                type='Pretrained',
-                checkpoint=
-                'data/pretrained_models/resnet18_hmr_expose_hand.pth',
-                prefix='backbone')),
-        head=dict(
-            type='ExPoseHandHead',
-            num_betas=10,
-            mean_pose_path='data/body_models/all_means.pkl',
-            pose_param_conf=[
-                dict(
-                    name='global_orient',
-                    num_angles=1,
-                    use_mean=False,
-                    rotate_axis_x=False),
-                dict(
-                    name='right_hand_pose',
-                    num_angles=15,
-                    use_mean=True,
-                    rotate_axis_x=False),
-            ],
-            input_feat_dim=512,
-            regressor_cfg=dict(
-                layers=[1024, 1024], activ_type='ReLU', dropout=0.5,
-                gain=0.01),
-            camera_cfg=dict(pos_func='softplus', mean_scale=0.9),
-            init_cfg=dict(
-                type='Pretrained',
-                checkpoint=
-                'data/pretrained_models/resnet18_hmr_expose_hand.pth',
-                prefix='head')),
-        crop_cfg=dict(
-            img_res=256,
-            scale_factor=3.0,
-            crop_size=224,
-            condition_hand_wrist_pose=True,
-            condition_hand_shape=False,
-            condition_hand_finger_pose=True,
-        ),
-        loss_hand_crop=dict(type='L1Loss', reduction='sum', loss_weight=1),
-    ),
-    extra_face_model_cfg=dict(
-        backbone=dict(
-            type='ResNet',
-            depth=18,
-            init_cfg=dict(
-                type='Pretrained',
-                checkpoint=
-                'data/pretrained_models/resnet18_hmr_expose_face.pth',
-                prefix='backbone')),
-        head=dict(
-            type='ExPoseFaceHead',
-            num_betas=100,
-            num_expression_coeffs=50,
-            mean_pose_path='data/body_models/all_means.pkl',
-            pose_param_conf=[
-                dict(
-                    name='global_orient',
-                    num_angles=1,
-                    use_mean=False,
-                    rotate_axis_x=True),
-                dict(
-                    name='jaw_pose',
-                    num_angles=1,
-                    use_mean=False,
-                    rotate_axis_x=False),
-            ],
-            input_feat_dim=512,
-            regressor_cfg=dict(
-                layers=[1024, 1024], activ_type='ReLU', dropout=0.5,
-                gain=0.01),
-            camera_cfg=dict(pos_func='softplus', mean_scale=8.0),
-            init_cfg=dict(
-                type='Pretrained',
-                checkpoint=
-                'data/pretrained_models/resnet18_hmr_expose_face.pth',
-                prefix='head'),
-        ),
-        crop_cfg=dict(
-            img_res=256,
-            scale_factor=2.0,
-            crop_size=256,
-            num_betas=10,
-            num_expression_coeffs=10,
-            condition_face_neck_pose=False,
-            condition_face_jaw_pose=True,
-            condition_face_shape=False,
-            condition_face_expression=True),
-        loss_face_crop=dict(type='L1Loss', reduction='sum', loss_weight=1),
-    ),
+    extra_hand_model_cfg=extra_hand_model_cfg,
+    extra_face_model_cfg=extra_face_model_cfg,
     frozen_batchnorm=True,
     convention='smplx')
 
@@ -281,7 +279,7 @@ train_pipeline = [
         scale_factor=0.25,
         rot_prob=0.6),
     dict(type='Rotation'),
-    dict(type='MeshAffine', img_res=256),  #hand = 224, body = head = 256
+    dict(type='MeshAffine', img_res=256),  # hand = 224, body = head = 256
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(
         type='SimulateLowRes',

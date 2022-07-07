@@ -227,31 +227,35 @@ def fg_vertices_to_mesh_distance(groundtruth_vertices,
                                  predicted_mesh_landmark_points):
     """This script computes the reconstruction error between an input mesh and
     a ground truth mesh.
+    Args:
+        groundtruth_vertices (np.ndarray[N,3]): Ground truth vertices.
+        grundtruth_landmark_points (List[7,3]): Ground truth annotations.
+        predicted_mesh_vertices (np.ndarray[M,3]): Predicted vertices.
+        predicted_mesh_faces (np.ndarray[K,3]): Vertex indices
+            composing the predicted mesh.
+        predicted_mesh_landmark_points (List[7,3]): Predicted points.
 
-    :param groundtruth_vertices: An n x 3 numpy array of vertices from a ground truth scan.
-    :param grundtruth_landmark_points: A 7 x 3 list with annotations of the ground truth scan.
-    :param predicted_mesh_vertices: An m x 3 numpy array of vertices from a predicted mesh.
-    :param predicted_mesh_faces: A k x 3 numpy array of vertex indices composing the predicted mesh.
-    :param predicted_mesh_landmark_points: A 7 x 3 list containing the annotated 3D point locations in the predicted mesh.
-    :return: A list of distances (errors), one for each vertex in the groundtruth mesh, and the associated vertex index in the ground truth scan.
+    Return:
+        distance: Mean point to mesh distance.
 
-    The grundtruth_landmark_points and predicted_mesh_landmark_points have to contain points in the following order:
-    (1) right eye outer corner, (2) right eye inner corner, (3) left eye inner corner, (4) left eye outer corner,
+    The grundtruth_landmark_points and predicted_mesh_landmark_points have to
+    contain points in the following order:
+    (1) right eye outer corner, (2) right eye inner corner,
+    (3) left eye inner corner, (4) left eye outer corner,
     (5) nose bottom, (6) right mouth corner, (7) left mouth corner.
     """
 
     # Do procrustes based on the 7 points:
-    # The ground truth scan is in mm, so by aligning the prediction to the ground truth, we get meaningful units.
     _, tform = compute_similarity_transform(
         predicted_mesh_landmark_points,
         grundtruth_landmark_points,
         return_tform=True)
-    # Use tform to transform all vertices in predicted_mesh_vertices to the ground truth reference space:
+    # Use tform to transform all vertices.
     predicted_mesh_vertices_aligned = (
         tform['scale'] * tform['rotation'].dot(predicted_mesh_vertices.T) +
         tform['translation']).T
 
-    # Compute the mask: A circular area around the center of the face. Take the nose-bottom and go upwards a bit:
+    # Compute the mask: A circular area around the center of the face.
     nose_bottom = np.array(grundtruth_landmark_points[4])
     nose_bridge = (np.array(grundtruth_landmark_points[1]) + np.array(
         grundtruth_landmark_points[2])) / 2  # between the inner eye corners
@@ -263,9 +267,9 @@ def fg_vertices_to_mesh_distance(groundtruth_vertices,
     nose_dist = np.linalg.norm(nose_bridge - nose_bottom)
     mask_radius = 1.2 * (outer_eye_dist + nose_dist) / 2
 
-    # Find all the vertex indices in the ground truth scan that lie within the mask area:
-    vertex_indices_mask = [
-    ]  # vertex indices in the source mesh (the ground truth scan)
+    # Find all the vertex indices in mask area.
+    vertex_indices_mask = []
+    # vertex indices in the source mesh (the ground truth scan)
     points_on_groundtruth_scan_to_measure_from = []
     for vertex_idx, vertex in enumerate(groundtruth_vertices):
         dist = np.linalg.norm(
@@ -276,7 +280,7 @@ def fg_vertices_to_mesh_distance(groundtruth_vertices,
             points_on_groundtruth_scan_to_measure_from.append(vertex)
     assert len(vertex_indices_mask) == len(
         points_on_groundtruth_scan_to_measure_from)
-    # For each vertex on the ground truth mesh, caculate the distance to the surface of the predicted mesh:
+    # Calculate the distance to the surface of the predicted mesh.
     predicted_mesh = trimesh.Trimesh(predicted_mesh_vertices_aligned,
                                      predicted_mesh_faces)
     _, distance, _ = closest_point(predicted_mesh,

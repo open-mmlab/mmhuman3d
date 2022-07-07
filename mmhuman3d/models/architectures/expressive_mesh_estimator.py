@@ -1,21 +1,16 @@
 from abc import ABCMeta, abstractmethod
-from tkinter.messagebox import NO
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import mmhuman3d.core.visualization.visualize_smpl as visualize_smpl
 from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_idx,
     get_keypoint_idxs_by_part,
 )
-from mmhuman3d.models.utils import FitsDict
 from mmhuman3d.utils.geometry import (
     batch_rodrigues,
-    estimate_translation,
-    rotation_matrix_to_angle_axis,
     weak_perspective_projection,
 )
 from ..backbones.builder import build_backbone
@@ -24,7 +19,6 @@ from ..discriminators.builder import build_discriminator
 from ..heads.builder import build_head
 from ..losses.builder import build_loss
 from ..necks.builder import build_neck
-from ..registrants.builder import build_registrant
 from ..utils import (
     SMPLXFaceCropFunc,
     SMPLXFaceMergeFunc,
@@ -76,16 +70,16 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             2D keypoints. Default: None.
         loss_keypoints3d (dict | None, optional): Losses config dict for
             3D keypoints. Default: None.
-        loss_smplx_global_orient (dict | None, optional): Losses config dict for smplx
-            global orient. Default: None
-        loss_smplx_body_pose (dict | None, optional): Losses config dict for smplx
-            body pose. Default: None
-        loss_smplx_hand_pose (dict | None, optional): Losses config dict for smplx
-            hand pose. Default: None
-        loss_smplx_jaw_pose (dict | None, optional): Losses config dict for smplx
-            jaw pose. Default: None
-        loss_smplx_expression (dict | None, optional): Losses config dict for smplx
-            expression. Default: None
+        loss_smplx_global_orient (dict | None, optional): Losses config dict
+            for smplx global orient. Default: None
+        loss_smplx_body_pose (dict | None, optional): Losses config dict
+            for smplx body pose. Default: None
+        loss_smplx_hand_pose (dict | None, optional): Losses config dict
+            for smplx hand pose. Default: None
+        loss_smplx_jaw_pose (dict | None, optional): Losses config dict
+            for smplx jaw pose. Default: None
+        loss_smplx_expression (dict | None, optional): Losses config dict
+            for smplx expression. Default: None
         loss_smplx_betas (dict | None, optional): Losses config dict for smplx
             betas. Default: None
         loss_camera (dict | None, optional): Losses config dict for predicted
@@ -653,7 +647,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         if self.body_model_train is not None:
             pred_output = self.body_model_train(**pred_param)
             pred_keypoints3d = pred_output['joints']
-            pred_vertices = pred_output['vertices']
         if 'has_keypoints3d' in targets:
             has_keypoints3d = targets['has_keypoints3d'].squeeze(-1)
         else:
@@ -682,8 +675,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             gt_global_orient = targets['smplx_global_orient']
             has_smplx_global_orient = targets[
                 'has_smplx_global_orient'].squeeze(-1)
-            losses[
-                'smplx_global_orient_loss'] = self.compute_smplx_global_orient_loss(
+            losses['smplx_global_orient_loss'] = \
+                self.compute_smplx_global_orient_loss(
                     pred_global_orient, gt_global_orient,
                     has_smplx_global_orient)
         if self.loss_smplx_body_pose is not None:
@@ -691,7 +684,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             pred_pose = pose2rotmat(pred_pose)
             gt_pose = targets['smplx_body_pose']
             has_smplx_body_pose = targets['has_smplx_body_pose'].squeeze(-1)
-            losses['smplx_body_pose_loss'] = self.compute_smplx_body_pose_loss(
+            losses['smplx_body_pose_loss'] = \
+                self.compute_smplx_body_pose_loss(
                 pred_pose, gt_pose, has_smplx_body_pose)
         if self.loss_smplx_jaw_pose is not None:
             pred_jaw_pose = pred_param['jaw_pose']
@@ -710,8 +704,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                 'right_hand', self.convention)
             has_smplx_right_hand_pose = targets[
                 'has_smplx_right_hand_pose'].squeeze(-1)
-            losses[
-                'smplx_right_hand_pose_loss'] = self.compute_smplx_hand_pose_loss(
+            losses['smplx_right_hand_pose_loss'] = \
+                self.compute_smplx_hand_pose_loss(
                     pred_right_hand_pose, gt_right_hand_pose,
                     has_smplx_right_hand_pose,
                     gt_keypoints2d[:, right_hand_conf, 2])
@@ -723,8 +717,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                     'left_hand', self.convention)
                 has_smplx_left_hand_pose = targets[
                     'has_smplx_left_hand_pose'].squeeze(-1)
-                losses[
-                    'smplx_left_hand_pose_loss'] = self.compute_smplx_hand_pose_loss(
+                losses['smplx_left_hand_pose_loss'] = \
+                    self.compute_smplx_hand_pose_loss(
                         pred_left_hand_pose, gt_left_hand_pose,
                         has_smplx_left_hand_pose,
                         gt_keypoints2d[:, left_hand_conf, 2])
@@ -745,8 +739,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                     gt_keypoints2d[:, face_conf, 2])
         if self.loss_smplx_betas_piror is not None:
             pred_betas = pred_param['betas']
-            losses[
-                'smplx_betas_prior_loss'] = self.compute_smplx_betas_prior_loss(
+            losses['smplx_betas_prior_loss'] = \
+                self.compute_smplx_betas_prior_loss(
                     pred_betas)
         if self.loss_camera is not None:
             losses['camera_loss'] = self.compute_camera_loss(pred_cam)

@@ -2,23 +2,16 @@ import os
 import os.path
 import pickle
 from collections import OrderedDict
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
-    convert_kps,
     get_keypoint_idx,
     get_keypoint_idxs_by_part,
-    get_keypoint_num,
 )
 from mmhuman3d.core.evaluation import fg_vertices_to_mesh_distance
-from mmhuman3d.data.data_structures.human_data import HumanData
-from mmhuman3d.data.data_structures.human_data_cache import (
-    HumanDataCacheReader,
-    HumanDataCacheWriter,
-)
 from mmhuman3d.utils.transforms import aa_to_rotmat
 from .builder import DATASETS
 from .human_image_dataset import HumanImageDataset
@@ -294,10 +287,10 @@ class HumanImageSMPLXDataset(HumanImageDataset):
     def _report_3d_rmse(self, res_file):
         """compute the 3DRMSE between a predicted 3D face shape and the 3D
         ground truth scan."""
-        pred_vertices, gt_vertices, _ = \
-            self._parse_result(res_file, mode = 'vertice')
-        pred_keypoints3d, gt_keypoints3d, _ = \
-            self._parse_result(res_file, mode = 'keypoint')
+        pred_vertices, gt_vertices, _ = self._parse_result(
+            res_file, mode='vertice')
+        pred_keypoints3d, gt_keypoints3d, _ = self._parse_result(
+            res_file, mode='keypoint')
         errors = []
         for pred_vertice, gt_vertice, pred_points, gt_points in zip(
                 pred_vertices, gt_vertices, pred_keypoints3d, gt_keypoints3d):

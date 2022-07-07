@@ -1,18 +1,10 @@
 import csv
 import os
-from typing import List
 
-import cv2
 import mmcv
 import numpy as np
-import torch
-from tqdm import tqdm
 
-from mmhuman3d.core.cameras.camera_parameters import CameraParameter
-from mmhuman3d.core.conventions.keypoints_mapping import (
-    convert_kps,
-    get_keypoint_idx,
-)
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_converters.builder import DATA_CONVERTERS
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
@@ -98,7 +90,7 @@ class StirlingConverter(BaseModeConverter):
             with open(annot_file, newline='') as csvfile:
                 reader = csv.reader(csvfile, delimiter=' ')
                 for row in reader:
-                    if row:  # there might be an empty line at the end of the file
+                    if row:
                         keypoints3d.append(
                             np.array([row[1], row[2], row[3]],
                                      dtype=np.float32))

@@ -1,12 +1,7 @@
 import os
-from typing import List
 
-import cv2
 import numpy as np
-import torch
-from tqdm import tqdm
 
-from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idxs_by_part,
@@ -122,7 +117,6 @@ class ExposeSPINSMPLXConverter(BaseModeConverter):
             kps[LEFT_HAND_IDXS, -1] = left_hand_conf
             kps[RIGHT_HAND_IDXS, -1] = right_hand_conf
             kps[FACE_IDXS, -1] = face_conf
-            conf = kps[:, -1]
             center = centers[index]
             scale = scales[index]
             bbox = np.concatenate([center - scale * 100, center + scale * 100])

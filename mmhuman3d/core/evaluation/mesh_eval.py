@@ -24,7 +24,8 @@ def compute_similarity_transform(source_points,
         return_tform (bool) : Whether return transform
     Returns:
         source_points_hat (np.ndarray([N, 3])): Transformed source point set.
-        transform (dict): Returns if return_tform is True. Returns rotation: r, 'scale': s, 'translation':t.
+        transform (dict): Returns if return_tform is True.
+            Returns rotation: r, 'scale': s, 'translation':t.
     """
 
     assert target_points.shape[0] == source_points.shape[0]

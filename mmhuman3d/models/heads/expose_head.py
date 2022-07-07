@@ -1,20 +1,16 @@
 import os
 import pickle
 from abc import abstractmethod
-from turtle import forward
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.nn.init as nninit
 from mmcv.cnn import build_activation_layer, initialize
 from mmcv.runner.base_module import BaseModule
-from torch.nn.modules.utils import _pair
 
 from mmhuman3d.utils.geometry import rot6d_to_rotmat
-from mmhuman3d.utils.transforms import rot6d_to_aa
 
 
 class IterativeRegression(nn.Module):
@@ -108,9 +104,9 @@ class MLP(nn.Module):
         self.blocks = nn.ModuleList()
         for layer_idx, layer_dim in enumerate(layers):
             if activ_type == 'none':
-                activ = None
+                active = None
             else:
-                activ = build_activation_layer(
+                active = build_activation_layer(
                     cfg=dict(type=activ_type, inplace=True))
             linear = nn.Linear(curr_input_dim, layer_dim, bias=True)
             curr_input_dim = layer_dim
@@ -118,8 +114,8 @@ class MLP(nn.Module):
             layer = []
             layer.append(linear)
 
-            if activ is not None:
-                layer.append(activ)
+            if active is not None:
+                layer.append(active)
 
             if dropout > 0.0:
                 layer.append(nn.Dropout(dropout))

@@ -1,6 +1,5 @@
 import math
 import random
-from unittest import result
 
 import cv2
 import mmcv
@@ -418,7 +417,7 @@ class RandomHorizontalFlip(object):
                 'smplx_left_hand_pose'] = _flip_hand_pose(
                     right_hand_pose, left_hand_pose)
 
-        # Expressions are not symmetric, so we remove them from the labels when the image is flipped
+        # Expressions are not symmetric. Remove them when flipped.
         if 'smplx_expression' in results:
             results['smplx_expression'] = np.zeros(
                 (results['smplx_expression'].shape[0]), dtype=np.float32)
@@ -809,8 +808,9 @@ class Rotation:
     'pose', 'rotation' and 'center'. Modifies key: 'img',
     ''keypoints2d', 'keypoints3d', 'pose'.
 
-    To avoid conflicts with MeshAffine, rotation will be set to 0.0 after rotate
-    the image. The rotation value will be stored to 'ori_rotation'.
+    To avoid conflicts with MeshAffine, rotation will be set to 0.0
+    after rotate the image.
+    The rotation value will be stored to 'ori_rotation'.
     """
 
     def __init__(self):

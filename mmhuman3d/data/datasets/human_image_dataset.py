@@ -3,7 +3,6 @@ import os
 import os.path
 from abc import ABCMeta
 from collections import OrderedDict
-from ctypes import alignment
 from typing import Any, List, Optional, Union
 
 import mmcv
@@ -461,7 +460,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         position error after rigid alignment (PA-MPJPE)
         """
         pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
-            self._parse_result(res_file, mode='keypoint',body_part = body_part)
+            self._parse_result(res_file, mode='keypoint', body_part=body_part)
 
         err_name = metric.upper()
         if body_part != '':
@@ -544,7 +543,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def _report_pve(self, res_file, metric='pve', body_part=''):
         """Cauculate per vertex error."""
         pred_verts, gt_verts, _ = \
-            self._parse_result(res_file, mode='vertice', body_part= body_part)
+            self._parse_result(res_file, mode='vertice', body_part=body_part)
         err_name = metric.upper()
         if body_part != '':
             err_name = body_part.upper() + ' ' + err_name

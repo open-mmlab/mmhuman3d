@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 
-from .utils import weighted_loss
-
 
 def rotation_distance_loss(pred, target, epsilon):
     """Warpper of rotation distance loss."""
@@ -31,8 +29,6 @@ class RotationDistance(nn.Module):
                 avg_factor=None,
                 reduction_override=None):
         assert reduction_override in (None, 'none', 'mean', 'sum')
-        reduction = (
-            reduction_override if reduction_override else self.reduction)
         loss = self.loss_weight * rotation_distance_loss(
             pred, target, epsilon=self.epsilon)
         if weight is not None:

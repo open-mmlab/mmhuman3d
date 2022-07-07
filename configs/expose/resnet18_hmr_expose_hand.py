@@ -102,7 +102,7 @@ train_pipeline = [
         rot_factor=30.0,
         scale_factor=0.2,
         rot_prob=0.6),
-    dict(type='MeshAffine', img_res=224),  #hand = 224, body = head = 256
+    dict(type='MeshAffine', img_res=224),  # hand = 224, body = head = 256
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(
         type='SimulateLowRes',
@@ -137,7 +137,7 @@ cache_files = {
     'freihand': 'data/cache/freihand_train_mano.npz',
 }
 data = dict(
-    samples_per_gpu=64,  #body 48, head = hand = 64
+    samples_per_gpu=64,  # body 48, head = hand = 64
     workers_per_gpu=8,
     train=dict(
         type=dataset_type,

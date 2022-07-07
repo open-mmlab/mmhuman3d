@@ -456,7 +456,7 @@ class SMPLXHandCropFunc():
         left_hand_cropper_out = self.hand_cropper(full_imgs, left_hand_center,
                                                   left_hand_orig_bbox_size)
         left_hand_crops = left_hand_cropper_out['images']
-        left_hand_points = left_hand_cropper_out['sampling_grid']
+        # left_hand_points = left_hand_cropper_out['sampling_grid']
         left_hand_crop_transform = left_hand_cropper_out['transform']
 
         # right hand
@@ -468,13 +468,13 @@ class SMPLXHandCropFunc():
                                                   self.img_res)
         right_hand_center = right_hand_points_to_crop['center']
         right_hand_orig_bbox_size = right_hand_points_to_crop['orig_bbox_size']
-        right_hand_inv_crop_transforms = right_hand_points_to_crop[
-            'inv_crop_transforms']
+        # right_hand_inv_crop_transforms = right_hand_points_to_crop[
+        #     'inv_crop_transforms']
         right_hand_cropper_out = self.hand_cropper(full_imgs,
                                                    right_hand_center,
                                                    right_hand_orig_bbox_size)
         right_hand_crops = right_hand_cropper_out['images']
-        right_hand_points = right_hand_cropper_out['sampling_grid']
+        # right_hand_points = right_hand_cropper_out['sampling_grid']
         right_hand_crop_transform = right_hand_cropper_out['transform']
 
         # concat
@@ -545,7 +545,6 @@ class SMPLXFaceCropFunc():
         neck_pose_abs = find_joint_global_rotation(self.neck_kin_chain,
                                                    global_orient, body_pose)
         # Convert the absolute neck pose to offsets
-        # neck_pose = rotmat_to_rot6d(neck_pose_abs.unsqueeze(dim=1)).reshape(batch_size, -1)
         neck_pose = neck_pose_abs[:, :3, :2].contiguous().reshape(
             batch_size, -1)
 
@@ -568,7 +567,8 @@ class SMPLXFaceCropFunc():
 
         face_num_expression_coeffs = self.model_head.get_num_expression_coeffs(
         )
-        expr_padding_size = face_num_expression_coeffs - self.num_expression_coeffs
+        expr_padding_size = face_num_expression_coeffs \
+            - self.num_expression_coeffs
         expression_condition = (
             F.pad(expression.reshape(batch_size, -1),
                   (0, expr_padding_size)) if self.condition_face_expression
@@ -617,7 +617,7 @@ class SMPLXFaceCropFunc():
         face_cropper_out = self.face_cropper(full_imgs, face_center,
                                              face_orig_bbox_size)
         face_crops = face_cropper_out['images']
-        face_points = face_cropper_out['sampling_grid']
+        # face_points = face_cropper_out['sampling_grid']
         face_crop_transform = face_cropper_out['transform']
 
         all_face_imgs = [face_crops]

@@ -197,13 +197,13 @@ def get_keypoints_from_mesh(mesh_vertices, keypoints_regressed):
 
     # fill keypoints which are regressed
     KpId2manokps = {
-        0: 0,  #Wrist
+        0: 0,  # Wrist
         1: 5,
         2: 6,
-        3: 7,  #Index
+        3: 7,  # Index
         4: 9,
         5: 10,
-        6: 11,  #Middle
+        6: 11,  # Middle
         7: 17,
         8: 18,
         9: 19,  # Pinky
@@ -215,11 +215,11 @@ def get_keypoints_from_mesh(mesh_vertices, keypoints_regressed):
         15: 3
     }  # Thumb
     kpId2vertices = {
-        4: 744,  #ThumbT
-        8: 320,  #IndexT
-        12: 443,  #MiddleT
-        16: 555,  #RingT
-        20: 672  #PinkT
+        4: 744,  # Thumb
+        8: 320,  # Index
+        12: 443,  # Middle
+        16: 555,  # Ring
+        20: 672  # Pink
     }
     for manoId, myId in KpId2manokps.items():
         keypoints[:, myId, :] = keypoints_regressed[:, manoId, :]

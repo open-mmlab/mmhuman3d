@@ -1,12 +1,7 @@
 import os
-from typing import List
 
-import cv2
 import numpy as np
-import torch
-from tqdm import tqdm
 
-from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idxs_by_part,

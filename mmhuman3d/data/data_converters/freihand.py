@@ -2,19 +2,10 @@ import json
 import os
 import os.path as osp
 import pickle as pk
-import random
-from typing import List
 
-import cv2
 import numpy as np
-import torch
-from tqdm import tqdm
 
-from mmhuman3d.core.cameras.camera_parameters import CameraParameter
-from mmhuman3d.core.conventions.keypoints_mapping import (
-    convert_kps,
-    get_keypoint_idxs_by_part,
-)
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_converters.builder import DATA_CONVERTERS
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
@@ -86,8 +77,8 @@ class FreihandConverter(BaseModeConverter):
         intrinsics = np.asarray(intrinsics)
         pose = param[:, :48].reshape(num_green_bg, -1, 3)
         betas = param[:, 48:58]
-        uv_root = param[:, 58:60]
-        scale = param[:, 60:]
+        # uv_root = param[:, 58:60]
+        # scale = param[:, 60:]
         global_pose = pose[:, 0:1]
         right_hand_pose = pose[:, 1:]
 
