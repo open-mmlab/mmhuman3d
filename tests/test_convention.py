@@ -191,7 +191,7 @@ def test_get_flip_pairs():
     stable_conventions = [
         'coco', 'smpl', 'smplx', 'mpi_inf_3dhp', 'openpose_25'
     ]
-    pair_len = [8, 9, 45, 10, 11]
+    pair_len = [8, 9, 63, 10, 11]
     for idx in range(len(stable_conventions)):
         convention = stable_conventions[idx]
         flip_pairs = get_flip_pairs(convention)
