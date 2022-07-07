@@ -14,6 +14,7 @@ from mmhuman3d.utils.geometry import rot6d_to_rotmat
 
 
 class IterativeRegression(nn.Module):
+    """Regressor for ExPose Head."""
 
     def __init__(self,
                  module,
@@ -39,6 +40,7 @@ class IterativeRegression(nn.Module):
         self.detach_mean = detach_mean
 
     def get_mean(self):
+        """Get the initial mean param."""
         return self.mean_param.clone()
 
     @property
@@ -87,6 +89,15 @@ class IterativeRegression(nn.Module):
 
 
 class MLP(nn.Module):
+    """MLP
+    Args:
+        input_dim (int): Input dim of MLP.
+        output_dim (int): Output dim of MLP.
+        layers (List): Layer dims.
+        activ_type (str): Activation layer type.
+        dropout (float): Dropout.
+        gain (float): Xavier init gain value.
+    """
 
     def __init__(
         self,
@@ -137,6 +148,13 @@ class MLP(nn.Module):
 
 
 class ContinuousRotReprDecoder:
+    """ExPose Decoder Decode latent representation to rotation.
+
+    Args:
+        num_angles (int): Joint num.
+        dtype: dtype.
+        mean (torch.tensor): Mean value for params.
+    """
 
     def __init__(self, num_angles, dtype=torch.float32, mean=None):
         self.num_angles = num_angles
@@ -200,6 +218,7 @@ class ContinuousRotReprDecoder:
 
 
 class ExPoseHead(BaseModule):
+    """General Head for ExPose."""
 
     def __init__(self, init_cfg=None):
         super().__init__(init_cfg)
@@ -208,12 +227,14 @@ class ExPoseHead(BaseModule):
                        input_feat_dim: int = 2048,
                        param_mean: torch.Tensor = None,
                        regressor_cfg: dict = None):
+        """Build regressor for ExPose Head."""
         param_dim = param_mean.numel()
         regressor = MLP(input_feat_dim + param_dim, param_dim, **regressor_cfg)
         self.regressor = IterativeRegression(
             regressor, param_mean, num_stages=3)
 
     def load_param_decoder(self, mean_poses_dict):
+        """Build decoders for each pose."""
         start = 0
         mean_lst = []
         self.pose_param_decoders = {}
@@ -242,6 +263,7 @@ class ExPoseHead(BaseModule):
         return start, mean_lst
 
     def get_camera_param(self, camera_cfg):
+        """Build camera param."""
         camera_pos_scale = camera_cfg.get('pos_func')
         if camera_pos_scale == 'softplus':
             camera_scale_func = F.softplus
@@ -263,6 +285,7 @@ class ExPoseHead(BaseModule):
         return camera_mean, camera_param_dim, camera_scale_func
 
     def flat_params_to_dict(self, param_tensor):
+        """Turn param tensors to dict."""
         smplx_dict = {}
         raw_dict = {}
         for pose_param in self.pose_param_conf:
@@ -275,6 +298,7 @@ class ExPoseHead(BaseModule):
         return smplx_dict, raw_dict
 
     def get_mean(self, name, batch_size):
+        """Get mean value of params."""
         mean_param = self.regressor.get_mean().view(-1)
         if name is None:
             return mean_param.reshape(1, -1).expand(batch_size, -1)
@@ -293,6 +317,7 @@ class ExPoseHead(BaseModule):
 
 
 class ExPoseBodyHead(ExPoseHead):
+    """Head for ExPose Body Model."""
 
     def __init__(self,
                  init_cfg=None,
@@ -372,6 +397,7 @@ class ExPoseBodyHead(ExPoseHead):
 
 
 class ExPoseHandHead(ExPoseHead):
+    """Head for ExPose Hand Model."""
 
     def __init__(self,
                  init_cfg=None,
@@ -433,6 +459,7 @@ class ExPoseHandHead(ExPoseHead):
 
 
 class ExPoseFaceHead(ExPoseHead):
+    """Head for ExPose Face Model."""
 
     def __init__(self,
                  init_cfg=None,

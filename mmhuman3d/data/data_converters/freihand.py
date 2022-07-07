@@ -12,6 +12,10 @@ from .base_converter import BaseModeConverter
 
 
 def project_points(K, xyz):
+    """Project keypoints 3D to keypoints 2D on images.
+
+    Using intrinsics K.
+    """
     uv = np.matmul(K, xyz.T).T
     return uv[:, :2] / uv[:, -1:]
 

@@ -34,6 +34,13 @@ class SMPLXHandMergeFunc():
             self.right_wrist_idx, self.body_model.parents)
 
     def __call__(self, body_predictions, hand_predictions):
+        """Function
+        Args:
+            body_predictions (dict): The prediction from body model.
+            hand_predictions (dict): The prediction from hand model.
+        Returns:
+            dict: Merged prediction.
+        """
         pred_param = body_predictions['pred_param']
         global_orient = pred_param['global_orient']
         body_pose = pred_param['body_pose']
@@ -95,6 +102,13 @@ class SMPLXFaceMergeFunc():
         self.num_expression_coeffs = num_expression_coeffs
 
     def __call__(self, body_predictions, face_predictions):
+        """Function
+        Args:
+            body_predictions (dict): The prediction from body model.
+            face_predictions (dict): The prediction from face model.
+        Returns:
+            dict: Merged prediction.
+        """
         body_predictions['pred_param']['jaw_pose'] = face_predictions[
             'pred_param']['jaw_pose']
         body_predictions['pred_param']['expression'] = face_predictions[
@@ -103,7 +117,7 @@ class SMPLXFaceMergeFunc():
 
 
 def points_to_bbox(points, bbox_scale_factor: float = 1.0):
-
+    """Get scaled bounding box from keypoints 2D."""
     min_coords, _ = torch.min(points, dim=1)
     xmin, ymin = min_coords[:, 0], min_coords[:, 1]
     max_coords, _ = torch.max(points, dim=1)
@@ -124,6 +138,8 @@ def get_crop_info(points,
                   img_metas,
                   scale_factor: float = 1.0,
                   crop_size: int = 256):
+    """Get the transformation of points on the cropped image to the points on
+    the original image."""
     device = points.device
     dtype = points.dtype
     batch_size = points.shape[0]
@@ -169,6 +185,7 @@ def get_crop_info(points,
 
 
 def concat_images(images: List[torch.Tensor]):
+    """Concat images of different size."""
     sizes = [img.shape[1:] for img in images]
     H, W = [max(s) for s in zip(*sizes)]
     batch_size = len(images)
@@ -182,6 +199,10 @@ def concat_images(images: List[torch.Tensor]):
 
 
 def flip_rotmat(pose_rotmat):
+    """Flip function.
+
+    Flip rotmat.
+    """
     rot_mats = pose_rotmat.reshape(-1, 9).clone()
 
     rot_mats[:, [1, 2, 3, 6]] *= -1
@@ -199,6 +220,7 @@ def find_joint_global_rotation(kin_chain, root_pose, body_pose):
 
 
 class CropSampler():
+    """This function crops the HD images using bilinear interpolation."""
 
     def __init__(self, crop_size: int = 256) -> None:
         """Uses bilinear sampling to extract square crops.
@@ -425,6 +447,15 @@ class SMPLXHandCropFunc():
         return hand_mean
 
     def __call__(self, body_predictions, img_metas):
+        """Function
+        Args:
+            body_predictions (dict): The prediction from body model.
+            img_metas (dict): Information of the input images.
+        Returns:
+            all_hand_imgs (torch.tensor): Cropped hand images.
+            hand_mean (torch.tensor): Mean value of hand params.
+            crop_info (dict): Hand crop transforms.
+        """
         pred_param = body_predictions['pred_param']
         pred_cam = body_predictions['pred_cam']
         pred_raw = body_predictions['pred_raw']
@@ -540,6 +571,7 @@ class SMPLXFaceCropFunc():
 
     def build_face_mean(self, global_orient, body_pose, betas, raw_jaw_pose,
                         expression, batch_size):
+        """Builds the initial point for the iterative regressor of the face."""
         face_mean = []
         # Compute the absolute pose of the right wrist
         neck_pose_abs = find_joint_global_rotation(self.neck_kin_chain,
@@ -589,6 +621,15 @@ class SMPLXFaceCropFunc():
         return face_mean
 
     def __call__(self, body_predictions, img_metas):
+        """Function
+        Args:
+            body_predictions (dict): The prediction from body model.
+            img_metas (dict): Information of the input images.
+        Returns:
+            all_face_imgs (torch.tensor): Cropped face images.
+            face_mean (torch.tensor): Mean value of face params.
+            crop_info (dict): Face crop transforms.
+        """
         pred_param = body_predictions['pred_param']
         pred_cam = body_predictions['pred_cam']
         pred_raw = body_predictions['pred_raw']
