@@ -352,6 +352,7 @@ class ExPoseBodyHead(ExPoseHead):
 
     def forward(self, features):
         """Forward function of ExPose Body Head.
+
         Args:
             features (List[torch.tensor]) : Output of restnet.
             cond : Initial params. If none, use the mean params.
@@ -419,6 +420,7 @@ class ExPoseHandHead(ExPoseHead):
 
     def forward(self, features, cond=None):
         """Forward function of ExPose Hand Head.
+
         Args:
             features (List[torch.tensor]) : Output of restnet.
             cond : Initial params. If none, use the mean params.
@@ -496,8 +498,9 @@ class ExPoseFaceHead(ExPoseHead):
         self.load_regressor(input_feat_dim, param_mean, regressor_cfg)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-    def forward(self, features, cond=None): 
+    def forward(self, features, cond=None):
         """Forward function of ExPose Face Head.
+
         Args:
             features (List[torch.tensor]) : Output of restnet.
             cond : Initial params. If none, use the mean params.
