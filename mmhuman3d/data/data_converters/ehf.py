@@ -22,6 +22,7 @@ class EHFConverter(BaseModeConverter):
     """
     NUM_BETAS = 10
     NUM_EXPRESSION = 10
+    ACCEPTED_MODES = ['val']
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:
@@ -74,7 +75,7 @@ class EHFConverter(BaseModeConverter):
             conf = keypoints2d[:, -1]
             keypoints2d_.append(keypoints2d)
             bbox = self._keypoints_to_scaled_bbox(
-                keypoints2d[:, :2][conf > 1], scale=1.2)
+                keypoints2d[:, :2][conf > 0], scale=1.2)
             bbox_xywh = self._xyxy2xywh(bbox)
             bbox_xywh_.append(bbox_xywh)
 

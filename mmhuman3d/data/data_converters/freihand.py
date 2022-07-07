@@ -23,10 +23,11 @@ class FreihandConverter(BaseModeConverter):
 
     https://lmb.informatik.uni-freiburg.de/projects/freihand/
     Args:
-        modes (list): 'train / val' for accepted modes
+        modes (list): 'train / val / test' for accepted modes
     """
     NUM_BETAS = 10
     NUM_EXPRESSION = 10
+    ACCEPTED_MODES = ['val', 'train', 'test']
 
     def convert_by_mode(self,
                         dataset_path: str,

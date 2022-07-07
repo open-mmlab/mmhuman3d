@@ -22,6 +22,7 @@ class ExposeCuratedFitsConverter(BaseModeConverter):
     """
     NUM_BETAS = 10
     NUM_EXPRESSION = 10
+    ACCEPTED_MODES = ['train']
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:

@@ -28,6 +28,7 @@ class FFHQFlameConverter(BaseModeConverter):
     """
     NUM_BETAS = 100
     NUM_EXPRESSION = 50
+    ACCEPTED_MODES = ['val', 'train']
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:

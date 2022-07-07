@@ -219,6 +219,50 @@ def test_preprocess():
     assert os.path.exists(
         '/tmp/preprocessed_npzs/humman_test_iphone_ds10_smpl.npz')
 
+    EXPOSE_CURATED_FITS_ROOT = os.path.join(root_path, 'ExPose_curated_fits')
+    cfg = dict(type='ExposeCuratedFitsConverter', modes=['train'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(EXPOSE_CURATED_FITS_ROOT, output_path)
+    assert os.path.exists(output_path + '/curated_fits_train.npz')
+
+    SPIN_IN_SMPLX_ROOT = os.path.join(root_path, 'spin_in_smplx')
+    cfg = dict(type='ExposeSPINSMPLXConverter', modes=['train'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(SPIN_IN_SMPLX_ROOT, output_path)
+    assert os.path.exists(output_path + '/spin_smplx_train.npz')
+
+    EHF_ROOT = os.path.join(root_path, 'EHF')
+    cfg = dict(type='EHFConverter', modes=['val'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(EHF_ROOT, output_path)
+    assert os.path.exists(output_path + '/ehf_val.npz')
+
+    FFHQ_FLAME_ROOT = os.path.join(root_path, 'ffhq')
+    cfg = dict(type='FFHQFlameConverter', modes=['train', 'val'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(FFHQ_FLAME_ROOT, output_path)
+    assert os.path.exists(output_path + '/ffhq_flame_train.npz')
+    assert os.path.exists(output_path + '/ffhq_flame_val.npz')
+
+    FREIHAND_ROOT = os.path.join(root_path, 'FreiHand')
+    cfg = dict(type='FreihandConverter', modes=['train', 'val', 'test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(
+        FREIHAND_ROOT,
+        output_path,
+        mean_pose_path='data/body_models/all_means.pkl')
+    assert os.path.exists(output_path + '/freihand_train.npz')
+    assert os.path.exists(output_path + '/freihand_val.npz')
+    assert os.path.exists(output_path + '/freihand_test.npz')
+
+    STRILING_ROOT = os.path.join(root_path, 'stirling')
+    cfg = dict(type='StirlingConverter', modes=['test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(STRILING_ROOT, output_path, img_quality='HQ')
+    data_converter.convert(STRILING_ROOT, output_path, img_quality='LQ')
+    assert os.path.exists(output_path + '/stirling_ESRC3D_HQ.npz')
+    assert os.path.exists(output_path + '/stirling_ESRC3D_LQ.npz')
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'

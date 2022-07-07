@@ -109,6 +109,10 @@ mmhuman3d
         │   ├── lspet.npz
         │   └── mpii.npz
         └── stirling
+            ├── annotations
+            ├── F_3D_N
+            ├── M_3D_N
+            └── Subset_2D_FG2018
 ```
 
 ## Results and Models

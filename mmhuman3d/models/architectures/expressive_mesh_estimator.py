@@ -45,6 +45,7 @@ def set_requires_grad(nets, requires_grad=False):
 
 
 def pose2rotmat(pred_pose):
+    """aa2rotmat."""
     if len(pred_pose.shape) == 3:
         num_joints = pred_pose.shape[1]
         pred_pose = batch_rodrigues(pred_pose.view(-1, 3)).view(

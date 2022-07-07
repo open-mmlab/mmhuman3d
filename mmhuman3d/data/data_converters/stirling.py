@@ -16,6 +16,7 @@ class StirlingConverter(BaseModeConverter):
 
     http://pics.psych.stir.ac.uk/ESRC/index.htm
     """
+    ACCEPTED_MODES = ['test']
 
     def convert_by_mode(self, dataset_path: str, out_path: str, mode: str,
                         img_quality: str) -> dict:

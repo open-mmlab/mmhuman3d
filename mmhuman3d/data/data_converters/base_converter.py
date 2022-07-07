@@ -92,9 +92,9 @@ class BaseModeConverter(BaseConverter):
         modes (list): the modes of data for converter
     """
 
-    def convert(self, dataset_path: str, out_path: str):
+    def convert(self, dataset_path: str, out_path: str, **kwargs):
         for mode in self.modes:
-            self.convert_by_mode(dataset_path, out_path, mode)
+            self.convert_by_mode(dataset_path, out_path, mode, **kwargs)
 
     @abstractmethod
     def convert_by_mode(self):
