@@ -34,58 +34,54 @@ class STAR(nn.Module):
                  create_transl: bool = True,
                  transl: torch.Tensor = None,
                  batch_size: int = 1,
-                 dtype=torch.float32) -> None:
+                 dtype: torch.dtype = torch.float32) -> None:
         """STAR model constructor.
 
-        Parameters
-        ----------
-        model_path: str
-            The path to the folder or to the file where the model
-            parameters are stored.
-        gender: str, optional
-            Which gender to load.
-        keypoint_src: str
-            Source convention of keypoints. This convention is used for
-            keypoints obtained from joint regressors. Keypoints then
-            undergo  conversion into keypoint_dst convention.
-        keypoint_dst: destination convention of keypoints. This convention
-            is used for keypoints in the output.
-        keypoint_approximate: whether to use approximate matching in
-            convention conversion for keypoints.
-        create_global_orient: bool, optional
-            Flag for creating a member variable for the global orientation
-            of the body. (default = True)
-        global_orient: torch.tensor, optional, Bx3
-            The default value for the global orientation variable.
-            (default = None)
-        create_body_pose: bool, optional
-            Flag for creating a member variable for the pose of the body.
-            (default = True)
-        body_pose: torch.tensor, optional, Bx(3*24)
-            The default value for the body pose variable.
-            (default = None)
-        num_betas: int, optional
-            Number of shape components to use
-            (default = 10).
-        create_betas: bool, optional
-            Flag for creating a member variable for the shape space
-            (default = True).
-        betas: torch.tensor, optional, Bx10
-            The default value for the shape member variable.
-            (default = None)
-        create_transl: bool, optional
-            Flag for creating a member variable for the translation
-            of the body. (default = True)
-        transl: torch.tensor, optional, Bx3
-            The default value for the transl variable.
-            (default = None)
-        dtype: torch.dtype, optional
+        Args:
+            model_path: str
+                The path to the folder or to the file where the model
+                parameters are stored.
+            gender: str, optional
+                Which gender to load.
+            keypoint_src: str
+                Source convention of keypoints. This convention is used for
+                keypoints obtained from joint regressors. Keypoints then
+                undergo  conversion into keypoint_dst convention.
+            keypoint_dst: destination convention of keypoints. This convention
+                is used for keypoints in the output.
+            keypoint_approximate: whether to use approximate matching in
+                convention conversion for keypoints.
+            create_global_orient: bool, optional
+                Flag for creating a member variable for the global orientation
+                of the body. (default = True)
+            global_orient: torch.tensor, optional, Bx3
+                The default value for the global orientation variable.
+                (default = None)
+            create_body_pose: bool, optional
+                Flag for creating a member variable for the pose of the body.
+                (default = True)
+            body_pose: torch.tensor, optional, Bx(3*24)
+                The default value for the body pose variable.
+                (default = None)
+            num_betas: int, optional
+                Number of shape components to use
+                (default = 10).
+            create_betas: bool, optional
+                Flag for creating a member variable for the shape space
+                (default = True).
+            betas: torch.tensor, optional, Bx10
+                The default value for the shape member variable.
+                (default = None)
+            create_transl: bool, optional
+                Flag for creating a member variable for the translation
+                of the body. (default = True)
+            transl: torch.tensor, optional, Bx3
+                The default value for the transl variable.
+                (default = None)
+            batch_size: int, optional
+                The batch size used for creating the member variables.
+            dtype: torch.dtype, optional
                 The data type for the created variables.
-        batch_size: int, optional
-            The batch size used for creating the member variables.
-        num_betas: int, optional
-            Number of shape components to use
-            (default = 10).
         """
         if gender not in ['male', 'female', 'neutral']:
             raise RuntimeError('Invalid gender! Should be one of '

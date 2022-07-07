@@ -1,11 +1,11 @@
 import torch
 
 from mmhuman3d.models.body_models.builder import build_body_model
-from mmhuman3d.utils.transforms import (
+from mmhuman3d.models.body_models.utils import (
     batch_transform_to_camera_frame,
-    ee_to_rotmat,
     transform_to_camera_frame,
 )
+from mmhuman3d.utils.transforms import ee_to_rotmat
 
 
 def test_transform_to_camera_frame():
