@@ -561,3 +561,33 @@ def sja_to_aa(
         raise ValueError(f'Invalid input R_t_inv shape f{R_t.shape}.')
     t = Compose([_sja_to_aa])
     return t(sja, R_t=R_t, R_t_inv=R_t_inv)
+
+
+def make_homegeneous_rotmat_batch(input: torch.Tensor) -> torch.Tensor:
+    """Appends a row of [0,0,0,1] to a batch size x 3 x 4 Tensor.
+
+    Parameters
+    ----------
+    :param input: A tensor of dimensions batch size x 3 x 4
+    :return: A tensor batch size x 4 x 4 (appended with 0,0,0,1)
+    """
+    batch_size = input.shape[0]
+    row_append = torch.tensor([0.0, 0.0, 0.0, 1.0], dtype=torch.float)
+    row_append.requires_grad = False
+    padded_tensor = torch.cat(
+        [input, row_append.view(1, 1, 4).repeat(batch_size, 1, 1)], dim=1)
+    return padded_tensor
+
+
+def make_homegeneous_rotmat(input: torch.Tensor) -> torch.Tensor:
+    """Appends a row of [0,0,0,1] to a 3 x 4 Tensor.
+
+    Parameters
+    ----------
+    :param input: A tensor of dimensions 3 x 4
+    :return: A tensor batch size x 4 x 4 (appended with 0,0,0,1)
+    """
+    row_append = torch.tensor([0.0, 0.0, 0.0, 1.0], dtype=torch.float)
+    row_append.requires_grad = False
+    padded_tensor = torch.cat(input, row_append, dim=1)
+    return padded_tensor

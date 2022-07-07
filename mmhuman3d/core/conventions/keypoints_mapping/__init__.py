@@ -24,6 +24,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     pw3d,
     smpl,
     smplx,
+    star,
 )
 
 KEYPOINTS_FACTORY = {
@@ -38,6 +39,7 @@ KEYPOINTS_FACTORY = {
     'smpl_54': smpl.SMPL_54_KEYPOINTS,
     'smpl_49': smpl.SMPL_49_KEYPOINTS,
     'smpl_24': smpl.SMPL_24_KEYPOINTS,
+    'star': star.STAR_KEYPOINTS,
     'mpi_inf_3dhp': mpi_inf_3dhp.MPI_INF_3DHP_KEYPOINTS,
     'mpi_inf_3dhp_test': mpi_inf_3dhp.MPI_INF_3DHP_TEST_KEYPOINTS,
     'penn_action': penn_action.PENN_ACTION_KEYPOINTS,
