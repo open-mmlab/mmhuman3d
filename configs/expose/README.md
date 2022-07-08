@@ -23,9 +23,9 @@ We provide the config files for ExPose: [Monocular Expressive Body Regression th
 - [SMPL](https://smpl.is.tue.mpg.de/) v1.0 is used for body evaluation on 3DPW.
 - [all_means.pkl](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/body_models/smplx/all_means.pkl?versionId=CAEQRBiBgIChyabujhgiIDQwNDMzNzlmM2U4ZTQzNWY5NjUxMmU4ZGQ4NGMwNmIx)
 - [J_regressor_h36m.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_h36m.npy?versionId=CAEQHhiBgIDE6c3V6xciIDdjYzE3MzQ4MmU4MzQyNmRiZDA5YTg2YTI5YWFkNjRi)
-- [MANO_SMPLX_vertex_ids.pkl](https://smpl-x.is.tue.mpg.de/)
+- [MANO_SMPLX_vertex_ids.pkl](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/body_models/smplx/MANO_SMPLX_vertex_ids.pkl?versionId=CAEQRBiBgIDjx9v4jhgiIDJjZjhiMWI1ZGRmMTRmMTI5MDVkMzJkMWUyYTQxZDk2)
 - [shape_mean.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/body_models/smplx/shape_mean.npy?versionId=CAEQRBiBgIDqwKbujhgiIGM4OTIxMWM3MDNiNzQxN2RiOTRjNDIwZTNiMzdmMDVi)
-- [SMPL-X__FLAME_vertex_ids.npy](https://smpl-x.is.tue.mpg.de/)
+- [SMPL-X__FLAME_vertex_ids.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/body_models/smplx/SMPL-X__FLAME_vertex_ids.npy?versionId=CAEQRBiBgMDUyNv4jhgiIDBlYzNkOTI2YzFlZjRmZWZiZTJkM2IwZGZhZjg4NzE5)
 - [SMPLX_to_J14.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/body_models/smplx/SMPLX_to_J14.npy?versionId=CAEQRBiBgMDd26fujhgiIDQ3ODhmOGJhMzhhMzQ2M2Y4MTRlNDcxY2VjNmUzY2Qy)
 - [flame_dynamic_embedding.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/body_models/smplx/flame_dynamic_embedding.npy?versionId=CAEQRBiBgMCn4abujhgiIDBmNmEzYTBiZmIzYjQ5NTg4MmVhZGRjYTYwNWU2MGRk)
 - [flame_static_embedding.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/body_models/smplx/flame_static_embedding.pkl?versionId=CAEQRBiBgMCAxqbujhgiIGIzMTRiZjZkZjRhMDQ4NzA5YmU2YjQyMTNmYmQ5OWI5)
