@@ -43,9 +43,9 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 ## News
 - 2022-07-08: MMHuman3D [v0.9.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.9.0) is released. Major updates include:
-  - Support SMPL-X estimation with ExPose for simultaneous recovery of face, hands and body
-  - Support new body model STAR
-  - Release of GTA-Human dataset with SPIN-FT (51.98 mm) and PARE-FT (46.84 mm) baselines! (Official)
+  - Support SMPL-X estimation with [ExPose](https://expose.is.tue.mpg.de/) for simultaneous recovery of face, hands and body
+  - Support new body model [STAR](https://star.is.tue.mpg.de/)
+  - Release of [GTA-Human](https://caizhongang.github.io/projects/GTA-Human/) dataset with SPIN-FT (51.98 mm) and PARE-FT (46.84 mm) baselines! (Official)
   - Refactor registration and improve performance of SPIN to 57.54 mm
 - 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) is released. Major updates include:
   - Support SmoothNet (added by paper authors)
@@ -68,6 +68,9 @@ Supported body models:
 
 - [x] [SMPL](https://smpl.is.tue.mpg.de/) (SIGGRAPH Asia'2015)
 - [x] [SMPL-X](https://smpl-x.is.tue.mpg.de/) (CVPR'2019)
+- [x] [MANO](https://mano.is.tue.mpg.de/) (SIGGRAPH ASIA'2017)
+- [x] [FLAME](https://flame.is.tue.mpg.de/) (SIGGRAPH ASIA'2017)
+- [x] [STAR](https://star.is.tue.mpg.de/) (ECCV'2020)
 
 </details>
 
@@ -83,8 +86,8 @@ Supported methods:
 - [x] [VIBE](https://github.com/mkocabas/VIBE) (CVPR'2020)
 - [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
 - [x] [PARE](https://pare.is.tue.mpg.de/) (ICCV'2021)
-- [x] [DeciWatch](https://ailingzeng.site/deciwatch) (arXiv'2022)
-- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (arXiv'2022)
+- [x] [DeciWatch](https://ailingzeng.site/deciwatch) (ECCV'2022)
+- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (ECCV'2022)
 
 </details>
 
@@ -100,6 +103,7 @@ Supported datasets:
 - [x] [COCO-WholeBody](https://github.com/jin-s13/COCO-WholeBody) (ECCV'2020)
 - [x] [CrowdPose](https://github.com/Jeff-sjtu/CrowdPose) (CVPR'2019)
 - [x] [EFT](https://github.com/facebookresearch/eft) (3DV'2021)
+- [x] [GTA-Human](https://caizhongang.github.io/projects/GTA-Human/) (arXiv'2021)
 - [x] [Human3.6M](http://vision.imar.ro/human3.6m/description.php) (TPAMI'2014)
 - [x] [InstaVariety](https://github.com/akanazawa/human_dynamics/blob/master/doc/insta_variety.md) (CVPR'2019)
 - [x] [LSP](https://sam.johnson.io/research/lsp.html) (BMVC'2010)

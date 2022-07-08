@@ -43,9 +43,9 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 ## 最新进展
 - 2022-07-08: MMHuman3D [v0.9.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.9.0) 已经发布. 主要更新包括:
-  - 支持 SMPL-X 估计方法 ExPose，同时重建脸、手、身体
-  - 支持新的人体参数化模型 STAR
-  - 开源 GTA-Human 数据集，以及 SPIN-FT (51.98 mm) 和 PARE-FT (46.84 mm) 基线! (官方开源)
+  - 支持 SMPL-X 估计方法 [ExPose](https://expose.is.tue.mpg.de/)，同时重建脸、手、身体
+  - 支持新的人体参数化模型 [STAR](https://star.is.tue.mpg.de/)
+  - 开源 [GTA-Human](https://caizhongang.github.io/projects/GTA-Human/) 数据集，以及 SPIN-FT (51.98 mm) 和 PARE-FT (46.84 mm) 基线! (官方开源)
   - 重构配准管线并提升SPIN至 57.54 mm
 - 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) 已经发布. 主要更新包括:
   - 支持 SmoothNet（由论文作者添加）
@@ -68,6 +68,9 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 - [x] [SMPL](https://smpl.is.tue.mpg.de/) (SIGGRAPH Asia'2015)
 - [x] [SMPL-X](https://smpl-x.is.tue.mpg.de/) (CVPR'2019)
+- [x] [MANO](https://mano.is.tue.mpg.de/) (SIGGRAPH ASIA'2017)
+- [x] [FLAME](https://flame.is.tue.mpg.de/) (SIGGRAPH ASIA'2017)
+- [x] [STAR](https://star.is.tue.mpg.de/) (ECCV'2020)
 
 </details>
 
@@ -83,8 +86,8 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [VIBE](https://github.com/mkocabas/VIBE) (CVPR'2020)
 - [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
 - [x] [PARE](https://pare.is.tue.mpg.de/) (ICCV'2021)
-- [x] [DeciWatch](https://ailingzeng.site/deciwatch) (arXiv'2022)
-- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (arXiv'2022)
+- [x] [DeciWatch](https://ailingzeng.site/deciwatch) (ECCV'2022)
+- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (ECCV'2022)
 
 </details>
 
@@ -100,6 +103,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [COCO-WholeBody](https://github.com/jin-s13/COCO-WholeBody) (ECCV'2020)
 - [x] [CrowdPose](https://github.com/Jeff-sjtu/CrowdPose) (CVPR'2019)
 - [x] [EFT](https://github.com/facebookresearch/eft) (3DV'2021)
+- [x] [GTA-Human](https://caizhongang.github.io/projects/GTA-Human/) (arXiv'2021)
 - [x] [Human3.6M](http://vision.imar.ro/human3.6m/description.php) (TPAMI'2014)
 - [x] [InstaVariety](https://github.com/akanazawa/human_dynamics/blob/master/doc/insta_variety.md) (CVPR'2019)
 - [x] [LSP](https://sam.johnson.io/research/lsp.html) (BMVC'2010)
