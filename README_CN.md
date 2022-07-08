@@ -42,6 +42,11 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
 ## 最新进展
+- 2022-07-08: MMHuman3D [v0.9.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.9.0) 已经发布. 主要更新包括:
+  - 支持 SMPL-X 估计方法 ExPose，同时重建脸、手、身体
+  - 支持新的人体参数化模型 STAR
+  - 开源 GTA-Human 数据集，以及 SPIN-FT (51.98 mm) 和 PARE-FT (46.84 mm) 基线! (官方开源)
+  - 重构配准管线并提升SPIN至 57.54 mm
 - 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) 已经发布. 主要更新包括:
   - 支持 SmoothNet（由论文作者添加）
   - 修复循环引用问题，获得最多2.5倍速度提升
@@ -51,10 +56,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - 支持DeciWatch（由论文作者添加）
   - 添加GTA-Human的HMR基线（官方开源）
   - 支持存储推理结果
-- 2022-04-01: MMHuman3D [v0.6.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.6.0) 已经发布. 主要更新包括:
-  - 增加HumanDataCache，大幅削减(96%)训练时内存占用
-  - 重构可微渲染器并支持UV map渲染
-  - HumanData支持slice/concat操作
 
 ## 基准与模型库
 

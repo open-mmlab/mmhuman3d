@@ -42,6 +42,11 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   A suite of differentiale visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
 
 ## News
+- 2022-07-08: MMHuman3D [v0.9.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.9.0) is released. Major updates include:
+  - Support SMPL-X estimation with ExPose for simultaneous recovery of face, hands and body
+  - Support new body model STAR
+  - Release of GTA-Human dataset with SPIN-FT (51.98 mm) and PARE-FT (46.84 mm) baselines! (Official)
+  - Refactor registration and improve performance of SPIN to 57.54 mm
 - 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) is released. Major updates include:
   - Support SmoothNet (added by paper authors)
   - Fix circular import and up to 2.5x speed up in module initialization
@@ -51,10 +56,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - Support DeciWatch (added by paper authors)
   - Add GTA-Human HMR baseline (official release)
   - Support saving inference results
-- 2022-04-01: MMHuman3D [v0.6.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.6.0) is released. Major updates include:
-  - Add HumanDataCache that requires 96% less RAM during training
-  - Refactor differentiable renderers and support UV map rendering
-  - Support slice/concat operations for HumanData
 
 ## Benchmark and Model Zoo
 
