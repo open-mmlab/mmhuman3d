@@ -33,7 +33,7 @@ Notes:
 
 | Google Drive | OneDrive (CN) | 
 |:------:|:-------:|
-|[Download]()|[Download]()|
+|[Download](https://drive.google.com/drive/folders/1-vaWuFkYRNyFj1ONaCrYr009KNitHAqA?usp=sharing)|[Download](https://pjlab-my.sharepoint.cn/:f:/g/personal/openmmlab_pjlab_org_cn/EjT3W_PHhApGvDB0geyC_g0BoBPK0tZfLVATnecU_bJl1A?e=rm3tSe)|
 
 The downloaded compressed .zip files consist of: 
 - 31 image files (total ~280 GB)
