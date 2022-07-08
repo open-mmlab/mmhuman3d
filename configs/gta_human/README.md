@@ -31,11 +31,11 @@ Notes:
 
 ## Downloads and Data Preparation
 
-| Google Drive | OneDrive (CN) | 
+| Google Drive | OneDrive (CN) |
 |:------:|:-------:|
 |[Download](https://drive.google.com/drive/folders/1-vaWuFkYRNyFj1ONaCrYr009KNitHAqA?usp=sharing)|[Download](https://pjlab-my.sharepoint.cn/:f:/g/personal/openmmlab_pjlab_org_cn/EjT3W_PHhApGvDB0geyC_g0BoBPK0tZfLVATnecU_bJl1A?e=rm3tSe)|
 
-The downloaded compressed .zip files consist of: 
+The downloaded compressed .zip files consist of:
 - 31 image files (total ~280 GB)
 - one annotation file (~4 GB, optional)
 
@@ -59,9 +59,9 @@ mmhuman3d
 
 However, MMHuman3D uses the standardized [`HumanData`](../../docs/human_data.md).  
 Hence, `gta_human_4x.npz` is used as the training, it may be obtained in two ways:
-1. (Recommended) Directly download from this [link](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/gta_human_4x.npz?versionId=CAEQRBiBgIDzq.n4jhgiIDJkZDU4OWU5MWEzYzQ5ZjA4ZjJiN2IwNjUzN2FmMTJl) 
+1. (Recommended) Directly download from this [link](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/gta_human_4x.npz?versionId=CAEQRBiBgIDzq.n4jhgiIDJkZDU4OWU5MWEzYzQ5ZjA4ZjJiN2IwNjUzN2FmMTJl)
    as we have already preprocessed it for you.
-2. Decompress the annotation file and run data_converter (use `gta_human` for dataset name). 
+2. Decompress the annotation file and run data_converter (use `gta_human` for dataset name).
    See [preprocess_dataset.md](../../docs/preprocess_dataset.md) for details.
 
 ## Notes
