@@ -2,6 +2,9 @@ import numpy as np
 
 from mmhuman3d.data.datasets import HumanImageSMPLXDataset
 
+face_vertex_ids_path = 'data/body_models/smplx/SMPL-X__FLAME_vertex_ids.npy'
+hand_vertex_ids_path = 'data/body_models/smplx/MANO_SMPLX_vertex_ids.pkl'
+
 
 def test_human_image_smplx_dataset():
     train_dataset = HumanImageSMPLXDataset(
@@ -33,8 +36,8 @@ def test_human_image_smplx_dataset():
             keypoint_dst='smplx',
             model_path='data/body_models/smplx'),
         ann_file='sample_ehf_val.npz',
-        face_vertex_ids_path='data/body_models/smplx/SMPL-X__FLAME_vertex_ids.npy',
-        hand_vertex_ids_path='data/body_models/smplx/MANO_SMPLX_vertex_ids.pkl',
+        face_vertex_ids_path=face_vertex_ids_path,
+        hand_vertex_ids_path=hand_vertex_ids_path,
         convention='smplx')
     num_data = 1
     test_dataset.num_data = num_data
