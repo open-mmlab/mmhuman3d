@@ -5,8 +5,7 @@ use_adversarial_train = True
 evaluation = dict(metric=['pa-mpjpe', 'mpjpe'])
 # optimizer
 optimizer = dict(
-    backbone=dict(type='Adam', lr=3e-5),
-    head=dict(type='Adam', lr=3e-5))
+    backbone=dict(type='Adam', lr=3e-5), head=dict(type='Adam', lr=3e-5))
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(policy='Fixed', by_epoch=False)
@@ -18,7 +17,6 @@ log_config = dict(
         dict(type='TextLoggerHook'),
         # dict(type='TensorboardLoggerHook')
     ])
-
 
 img_res = 224
 
@@ -60,10 +58,7 @@ registrant = dict(
         principal_point=(img_res / 2, img_res / 2)),
     quiet=True)
 
-registration=dict(
-    mode='static',
-    registrant=registrant
-)
+registration = dict(mode='static', registrant=registrant)
 
 keypoint_weight = [0] * 25 + [1] * 24
 # model settings
@@ -96,7 +91,8 @@ model = dict(
     loss_smpl_betas=dict(type='MSELoss', loss_weight=0.02),
     loss_camera=dict(type='CameraPriorLoss', loss_weight=60),
     init_cfg=dict(
-        type='Pretrained', checkpoint='data/pretrained_models/spin_official.pth'))
+        type='Pretrained',
+        checkpoint='data/pretrained_models/spin_official.pth'))
 # dataset settings
 dataset_type = 'HumanImageDataset'
 img_norm_cfg = dict(
@@ -106,6 +102,7 @@ data_keys = [
     'smpl_transl', 'keypoints2d', 'keypoints3d', 'is_flipped', 'center',
     'scale', 'rotation', 'sample_idx'
 ]
+meta_keys = ['dataset_name', 'image_path', 'center', 'scale', 'rotation']
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='RandomChannelNoise', noise_factor=0.4),
@@ -115,10 +112,7 @@ train_pipeline = [
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),
-    dict(
-        type='Collect',
-        keys=['img', *data_keys],
-        meta_keys=['dataset_name', 'image_path', 'center', 'scale', 'rotation'])
+    dict(type='Collect', keys=['img', *data_keys], meta_keys=meta_keys)
 ]
 data_keys.remove('is_flipped')
 test_pipeline = [

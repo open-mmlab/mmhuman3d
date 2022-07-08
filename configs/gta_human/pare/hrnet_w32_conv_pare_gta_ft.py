@@ -230,8 +230,7 @@ data = dict(
                 ann_file='gta_human_4x.npz'),
         ],
         partition=[0.5, 0.233, 0.046, 0.021, 0.2, 1.0],
-        num_data=100000
-    ),
+        num_data=100000),
     test=dict(
         type=dataset_type,
         body_model=dict(
