@@ -250,7 +250,7 @@ def test_preprocess():
     data_converter.convert(
         FREIHAND_ROOT,
         output_path,
-        mean_pose_path='data/body_models/all_means.pkl')
+        mean_pose_path='data/body_models/smplx/all_means.pkl')
     assert os.path.exists(output_path + '/freihand_train.npz')
     assert os.path.exists(output_path + '/freihand_val.npz')
     assert os.path.exists(output_path + '/freihand_test.npz')
@@ -259,9 +259,7 @@ def test_preprocess():
     cfg = dict(type='StirlingConverter', modes=['test'])
     data_converter = build_data_converter(cfg)
     data_converter.convert(STRILING_ROOT, output_path, img_quality='HQ')
-    data_converter.convert(STRILING_ROOT, output_path, img_quality='LQ')
     assert os.path.exists(output_path + '/stirling_ESRC3D_HQ.npz')
-    assert os.path.exists(output_path + '/stirling_ESRC3D_LQ.npz')
 
 
 def test_preprocessed_npz():
@@ -279,7 +277,7 @@ def test_preprocessed_npz():
         'features', 'has_smpl', 'keypoints2d_gta', 'keypoints3d_gta',
         'keypoints2d_gta_mask', 'keypoints3d_gta_mask', 'image_id',
         'keypoints2d_humman', 'keypoints3d_humman', 'keypoints2d_humman_mask',
-        'keypoints3d_humman_mask'
+        'keypoints3d_humman_mask', 'vertices'
     ]
 
     for npf in os.listdir(npz_folder):
@@ -378,7 +376,8 @@ def test_preprocessed_npz():
                     elif smplx_key == 'global_orient':
                         assert smplx_dict[smplx_key].shape == (N, 3)
                     elif smplx_key == 'betas':
-                        assert smplx_dict[smplx_key].shape == (N, 10)
+                        assert smplx_dict[smplx_key].shape == (
+                            N, 10) or smplx_dict[smplx_key].shape == (N, 100)
                     elif smplx_key == 'transl':
                         assert smplx_dict[smplx_key].shape == (N, 3)
                     elif smplx_key == 'left_hand_pose':
@@ -386,7 +385,8 @@ def test_preprocessed_npz():
                     elif smplx_key == 'right_hand_pose':
                         assert smplx_dict[smplx_key].shape == (N, 15, 3)
                     elif smplx_key == 'expression':
-                        assert smplx_dict[smplx_key].shape == (N, 10)
+                        assert smplx_dict[smplx_key].shape == (
+                            N, 10) or smplx_dict[smplx_key].shape == (N, 50)
                     elif smplx_key == 'leye_pose':
                         assert smplx_dict[smplx_key].shape == (N, 3)
                     elif smplx_key == 'reye_pose':

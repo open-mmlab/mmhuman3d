@@ -124,7 +124,8 @@ class FreihandConverter(BaseModeConverter):
         keypoints3d, keypoints3d_mask = convert_kps(
             keypoints3d, src='mano', dst='human_data')
 
-        smplx['global_orient'] = np.array(smplx['global_orient'])
+        smplx['global_orient'] = np.array(smplx['global_orient']).reshape(
+            -1, 3)
         smplx['betas'] = np.array(smplx['betas'])
         smplx['right_hand_pose'] = np.array(smplx['right_hand_pose'])
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))

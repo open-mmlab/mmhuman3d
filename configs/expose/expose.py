@@ -26,7 +26,8 @@ log_config = dict(
     ])
 
 checkpoint_config = dict(interval=10)
-
+face_vertex_ids_path = 'data/body_models/smplx/SMPL-X__FLAME_vertex_ids.npy'
+hand_vertex_ids_path = 'data/body_models/smplx/MANO_SMPLX_vertex_ids.pkl'
 # model settings
 hrnet_extra = dict(
     stage1=dict(
@@ -82,7 +83,7 @@ extra_hand_model_cfg = dict(
     head=dict(
         type='ExPoseHandHead',
         num_betas=10,
-        mean_pose_path='data/body_models/all_means.pkl',
+        mean_pose_path='data/body_models/smplx/all_means.pkl',
         pose_param_conf=[
             dict(
                 name='global_orient',
@@ -126,7 +127,7 @@ extra_face_model_cfg = dict(
         type='ExPoseFaceHead',
         num_betas=100,
         num_expression_coeffs=50,
-        mean_pose_path='data/body_models/all_means.pkl',
+        mean_pose_path='data/body_models/smplx/all_means.pkl',
         pose_param_conf=[
             dict(
                 name='global_orient',
@@ -176,8 +177,8 @@ model = dict(
         type='ExPoseBodyHead',
         num_betas=10,
         num_expression_coeffs=10,
-        mean_pose_path='data/body_models/all_means.pkl',
-        shape_mean_path='data/body_models/shape_mean.npy',
+        mean_pose_path='data/body_models/smplx/all_means.pkl',
+        shape_mean_path='data/body_models/smplx/shape_mean.npy',
         pose_param_conf=[
             dict(
                 name='global_orient',
@@ -235,7 +236,7 @@ model = dict(
         model_path='data/body_models/smplx',
         keypoint_src='lsp',
         keypoint_dst='lsp',
-        joints_regressor='data/body_models/SMPLX_to_J14.npy'),
+        joints_regressor='data/body_models/smplx/SMPLX_to_J14.npy'),
     loss_keypoints3d=dict(type='L1Loss', reduction='sum', loss_weight=1),
     loss_keypoints2d=dict(type='L1Loss', reduction='sum', loss_weight=1),
     loss_smplx_global_orient=dict(
@@ -357,13 +358,13 @@ data = dict(
             keypoint_src='smplx',
             keypoint_dst='smplx',
             model_path='data/body_models/smplx',
-            joints_regressor='data/body_models/SMPLX_to_J14.npy'),
+            joints_regressor='data/body_models/smplx/SMPLX_to_J14.npy'),
         dataset_name='EHF',
         data_prefix='data',
         pipeline=test_pipeline,
         ann_file='ehf_val.npz',
-        face_vertex_ids_path='data/body_models/SMPL-X__FLAME_vertex_ids.npy',
-        hand_vertex_ids_path='data/body_models/MANO_SMPLX_vertex_ids.pkl',
+        face_vertex_ids_path=face_vertex_ids_path,
+        hand_vertex_ids_path=hand_vertex_ids_path,
         convention='smplx'),
     test=dict(
         type=dataset_type,
@@ -372,12 +373,12 @@ data = dict(
             keypoint_src='smplx',
             keypoint_dst='smplx',
             model_path='data/body_models/smplx',
-            joints_regressor='data/body_models/SMPLX_to_J14.npy'),
+            joints_regressor='data/body_models/smplx/SMPLX_to_J14.npy'),
         dataset_name='EHF',
         data_prefix='data',
         pipeline=test_pipeline,
         ann_file='ehf_val.npz',
-        face_vertex_ids_path='data/body_models/SMPL-X__FLAME_vertex_ids.npy',
-        hand_vertex_ids_path='data/body_models/MANO_SMPLX_vertex_ids.pkl',
+        face_vertex_ids_path=face_vertex_ids_path,
+        hand_vertex_ids_path=hand_vertex_ids_path,
         convention='smplx'),
 )

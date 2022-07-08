@@ -112,7 +112,7 @@ Supported datasets:
 - [x] [UP3D](https://files.is.tuebingen.mpg.de/classner/up/) (CVPR'2017)
 - [x] [FreiHand](https://lmb.informatik.uni-freiburg.de/projects/freihand/) (ICCV'2019)
 - [x] [EHF](https://smpl-x.is.tue.mpg.de/) (CVPR'2019)
-- [x] [Stirling/ESRC-Face3D](http://pics.psych.stir.ac.uk/ESRC/index.htm) (IEEE'2018)
+- [x] [Stirling/ESRC-Face3D](http://pics.psych.stir.ac.uk/ESRC/index.htm) (FG'2018)
 
 </details>
 

@@ -78,8 +78,8 @@ model = dict(
         type='ExPoseBodyHead',
         num_betas=10,
         num_expression_coeffs=10,
-        mean_pose_path='data/body_models/all_means.pkl',
-        shape_mean_path='data/body_models/shape_mean.npy',
+        mean_pose_path='data/body_models/smplx/all_means.pkl',
+        shape_mean_path='data/body_models/smplx/shape_mean.npy',
         pose_param_conf=[
             dict(
                 name='global_orient',
@@ -132,7 +132,7 @@ model = dict(
         model_path='data/body_models/smplx',
         keypoint_src='lsp',
         keypoint_dst='lsp',
-        joints_regressor='data/body_models/SMPLX_to_J14.npy'),
+        joints_regressor='data/body_models/smplx/SMPLX_to_J14.npy'),
     loss_keypoints3d=dict(type='L1Loss', reduction='sum', loss_weight=1),
     loss_keypoints2d=dict(type='L1Loss', reduction='sum', loss_weight=1),
     loss_smplx_global_orient=dict(
