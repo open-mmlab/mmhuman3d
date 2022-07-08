@@ -355,7 +355,7 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         gt_keypoints3d = gt_keypoints3d[:, :, :3].float()
 
         if has_keypoints3d is None:
-            has_keypoints3d
+            has_keypoints3d = torch.ones((keypoints3d_conf.shape[0]))
         if keypoints3d_conf[has_keypoints3d == 1].numel() == 0:
             return torch.Tensor([0]).type_as(gt_keypoints3d)
         # Center the predictions using the pelvis
@@ -386,6 +386,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
         keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
         gt_keypoints2d = gt_keypoints2d[:, :, :2].float()
+        if has_keypoints2d is None:
+            has_keypoints2d = torch.ones((keypoints2d_conf.shape[0]))
         if keypoints2d_conf[has_keypoints2d == 1].numel() == 0:
             return torch.Tensor([0]).type_as(gt_keypoints2d)
 

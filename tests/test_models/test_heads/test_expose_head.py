@@ -1,11 +1,31 @@
 import numpy as np
 import torch
 
+from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.models.heads.builder import (
     ExPoseBodyHead,
     ExPoseFaceHead,
     ExPoseHandHead,
 )
+from mmhuman3d.models.utils import (
+    SMPLXFaceCropFunc,
+    SMPLXFaceMergeFunc,
+    SMPLXHandCropFunc,
+    SMPLXHandMergeFunc,
+)
+
+body_model_cfg = dict(
+    type='SMPLXLayer',
+    num_expression_coeffs=10,
+    num_betas=10,
+    use_face_contour=True,
+    use_pca=False,
+    flat_hand_mean=True,
+    model_path='data/body_models/smplx',
+    keypoint_src='smplx',
+    keypoint_dst='smplx',
+)
+body_model = build_body_model(body_model_cfg)
 
 
 def test_expose_body_head():
@@ -73,6 +93,37 @@ def test_expose_body_head():
                 assert predictions[k][rk].shape[0] == batch_size
         else:
             assert predictions[k].shape[0] == batch_size
+
+    img_meta = dict(
+        ori_img=torch.rand(3, 300, 300),
+        crop_transform=np.random.rand(2, 3),
+        scale=np.random.rand(2))
+    img_metas = [img_meta, img_meta]
+    face_crop = SMPLXFaceCropFunc(head, body_model)
+    face_imgs, face_mean, crop_info = face_crop(predictions, img_metas)
+    assert face_imgs.shape[0] == batch_size
+    hand_crop = SMPLXHandCropFunc(head, body_model)
+    hand_imgs, hand_mean, crop_info = hand_crop(predictions, img_metas)
+    assert hand_imgs.shape[0] == 2 * batch_size
+
+    hand_predictions = dict(
+        pred_param=dict(
+            global_orient=torch.rand(batch_size * 2, 1, 3, 3),
+            right_hand_pose=torch.rand(batch_size * 2, 15, 3, 3)))
+    hand_merge = SMPLXHandMergeFunc(body_model)
+    predictions = hand_merge(predictions, hand_predictions)
+
+    face_predictions = dict(
+        pred_param=dict(
+            global_orient=torch.rand(batch_size, 1, 3, 3),
+            jaw_pose=torch.rand(batch_size, 1, 3, 3),
+            expression=torch.rand(batch_size, 10)))
+    face_merge = SMPLXFaceMergeFunc(body_model)
+    predictions = face_merge(predictions, face_predictions)
+    assert predictions['pred_param']['jaw_pose'].shape[0] == batch_size
+    assert predictions['pred_param']['right_hand_pose'].shape[0] == batch_size
+    assert predictions['pred_param']['left_hand_pose'].shape[0] == batch_size
+    assert predictions['pred_param']['expression'].shape[0] == batch_size
 
 
 def test_expose_hand_head():
