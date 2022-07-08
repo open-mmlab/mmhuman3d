@@ -14,8 +14,8 @@
     - [lsp_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/lsp_fits.npy?versionId=CAEQHhiBgIDS4ZvV6xciIGFmMzdhMWJjZWQ1MjRkODBiZDY3NGU0MTc1Yzg0Nzlh)
     - [mpii_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/mpii_fits.npy?versionId=CAEQHhiBgMCm4ZvV6xciIGM1OTIzZDlkNjVhODQ2MDY5ODkyZWE4ZDEzZGJlNTdi)
     - [mpi_inf_3dhp_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/mpi_inf_3dhp_fits.npy?versionId=CAEQHhiBgMDf4ZvV6xciIDQyYjRmMzdhODdmNDQ1YTBhYzY4MTk1OTAxNzc4MmVj)
-    - [gta_fits.npy]()
-- Pretrained SPIN model [spin_official.pth]()
+    - [gta_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/static_fits/gta_fits.npy?versionId=CAEQRBiBgMCp4fPzjhgiIDhkZjhlODY2MjBkZjRjNzQ5ODZmNmVhY2IzNzA2ZmIy)
+- Pretrained SPIN model [spin_official.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/pretrained_models/spin_official.pth?versionId=CAEQRBiBgMC3zJPvjhgiIDNjODIxODJjYzEyNzRmNDhhNzU3Nzg3N2FlY2Y0ZWMx)
 
 Download the above resources and arrange them in the following file structure:
 
