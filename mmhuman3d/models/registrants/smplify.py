@@ -51,27 +51,26 @@ class SMPLify(object):
     - 3D keypoints
     """
 
-    def __init__(
-        self,
-        body_model: Union[dict, torch.nn.Module],
-        num_epochs: int = 20,
-        camera: Union[dict, torch.nn.Module] = None,
-        img_res: Union[Tuple[int], int] = 224,
-        stages: dict = None,
-        optimizer: dict = None,
-        keypoints2d_loss: dict = None,
-        keypoints3d_loss: dict = None,
-        shape_prior_loss: dict = None,
-        joint_prior_loss: dict = None,
-        smooth_loss: dict = None,
-        pose_prior_loss: dict = None,
-        pose_reg_loss: dict = None,
-        limb_length_loss: dict = None,
-        use_one_betas_per_video: bool = False,
-        ignore_keypoints: List[int] = None,
-        device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-        verbose: bool = False,
-    ) -> None:
+    def __init__(self,
+                 body_model: Union[dict, torch.nn.Module],
+                 num_epochs: int = 20,
+                 camera: Union[dict, torch.nn.Module] = None,
+                 img_res: Union[Tuple[int], int] = 224,
+                 stages: dict = None,
+                 optimizer: dict = None,
+                 keypoints2d_loss: dict = None,
+                 keypoints3d_loss: dict = None,
+                 shape_prior_loss: dict = None,
+                 joint_prior_loss: dict = None,
+                 smooth_loss: dict = None,
+                 pose_prior_loss: dict = None,
+                 pose_reg_loss: dict = None,
+                 limb_length_loss: dict = None,
+                 use_one_betas_per_video: bool = False,
+                 ignore_keypoints: List[int] = None,
+                 device=torch.device(
+                     'cuda' if torch.cuda.is_available() else 'cpu'),
+                 verbose: bool = False) -> None:
         """
         Args:
             body_model: config or an object of body model.
@@ -99,7 +98,7 @@ class SMPLify(object):
             ignore_keypoints: list of keypoint names to ignore in keypoint
                 loss computation
             device: torch device
-            verbose: whether to print individual losses during registration
+            verbose: whether to print information during registration
 
         Returns:
             None
@@ -219,7 +218,8 @@ class SMPLify(object):
 
         for i in range(self.num_epochs):
             for stage_idx, stage_config in enumerate(self.stage_config):
-                print(f'epoch {i}, stage {stage_idx}')
+                if self.verbose:
+                    print(f'epoch {i}, stage {stage_idx}')
                 self._optimize_stage(
                     global_orient=global_orient,
                     transl=transl,
@@ -379,7 +379,8 @@ class SMPLify(object):
                 loss_rel_change = self._compute_relative_change(
                     pre_loss, loss.item())
                 if loss_rel_change < ftol:
-                    print(f'[ftol={ftol}] Early stop at {iter_idx} iter!')
+                    if self.verbose:
+                        print(f'[ftol={ftol}] Early stop at {iter_idx} iter!')
                     break
             pre_loss = loss.item()
 
@@ -638,7 +639,8 @@ class SMPLify(object):
             msg = ''
             for loss_name, loss in losses.items():
                 msg += f'{loss_name}={loss.mean().item():.6f}, '
-            print(msg.strip(', '))
+            if self.verbose:
+                print(msg.strip(', '))
 
         total_loss = 0
         for loss_name, loss in losses.items():

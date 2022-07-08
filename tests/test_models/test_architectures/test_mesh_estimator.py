@@ -409,8 +409,10 @@ def test_run_registration():
         device=torch.device('cpu'),
         camera=camera)
 
+    registration = dict(mode='in_the_loop', registrant=registrant)
+
     model = ImageBodyModelEstimator(
-        body_model_train=body_model, registrant=registrant)
+        body_model_train=body_model, registration=registration)
     assert model.registrant is not None
     assert model.fits_dict is not None
 
