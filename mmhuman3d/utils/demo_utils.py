@@ -1,9 +1,13 @@
 import colorsys
 import os
+from collections import defaultdict
+from contextlib import contextmanager
+from functools import partial
 from pathlib import Path
 
 import mmcv
 import numpy as np
+from mmcv import Timer
 from scipy import interpolate
 
 from mmhuman3d.core.post_processing import build_post_processing
@@ -158,7 +162,7 @@ def convert_bbox_to_intrinsic(bboxes: np.ndarray,
     """Convert bbox to intrinsic parameters.
 
     Args:
-        bbox (np.ndarray): (frame, num_person, 4) or (frame, 4)
+        bbox (np.ndarray): (frame, num_person, 4), (frame, 4), or (4,)
         img_width (int): image width of training data.
         img_height (int): image height of training data.
         bbox_scale_factor (float): scale factor for expanding the bbox.
@@ -167,7 +171,7 @@ def convert_bbox_to_intrinsic(bboxes: np.ndarray,
             'xywh' means the left-up point and the width and height of the
             bbox.
     Returns:
-        np.ndarray: (frame, num_person, 3, 3) or  (frame, 3, 3)
+        np.ndarray: (frame, num_person, 3, 3), (frame, 3, 3) or (3,3)
     """
     if not isinstance(bboxes, np.ndarray):
         raise TypeError(
@@ -258,20 +262,22 @@ def convert_kp2d_to_bbox(
     return bbox
 
 
-def conver_verts_to_cam_coord(verts,
-                              pred_cams,
-                              bboxes_xy,
-                              focal_length=5000.,
-                              bbox_scale_factor=1.25,
-                              bbox_format='xyxy'):
+def convert_verts_to_cam_coord(verts,
+                               pred_cams,
+                               bboxes_xy,
+                               focal_length=5000.,
+                               bbox_scale_factor=1.25,
+                               bbox_format='xyxy'):
     """Convert vertices from the world coordinate to camera coordinate.
 
     Args:
         verts ([np.ndarray]): The vertices in the world coordinate.
-            The shape is (frame,num_person,6890,3) or (frame,6890,3).
+            The shape is (frame,num_person,6890,3), (frame,6890,3),
+            or (6890,3).
         pred_cams ([np.ndarray]): Camera parameters estimated by HMR or SPIN.
-            The shape is (frame,num_person,3) or (frame,6890,3).
-        bboxes_xy ([np.ndarray]): (frame, num_person, 4|5) or (frame, 4|5)
+            The shape is (frame,num_person,3), (frame,3), or (3,).
+        bboxes_xy ([np.ndarray]): (frame, num_person, 4|5), (frame, 4|5),
+            or (4|5,)
         focal_length ([float],optional): Defined same as your training.
         bbox_scale_factor (float): scale factor for expanding the bbox.
         bbox_format (Literal['xyxy', 'xywh'] ): 'xyxy' means the left-up point
@@ -302,6 +308,8 @@ def conver_verts_to_cam_coord(verts,
         verts = np.einsum('fnij,fnkj->fnki', Ks, verts)
     elif verts.ndim == 3:
         verts = np.einsum('fij,fkj->fki', Ks, verts)
+    elif verts.ndim == 2:
+        verts = np.einsum('fij,fkj->fki', Ks, verts[None])
     return verts, K0
 
 
@@ -707,3 +715,113 @@ def get_different_colors(number_of_colors,
         colors_final.append(color_dict[channel])
     colors_final = np.concatenate(colors_final, -1)
     return colors_final
+
+
+class RunningAverage():
+    r"""A helper class to calculate running average in a sliding window.
+
+    Args:
+        window (int): The size of the sliding window.
+    """
+
+    def __init__(self, window: int = 1):
+        self.window = window
+        self._data = []
+
+    def update(self, value):
+        """Update a new data sample."""
+        self._data.append(value)
+        self._data = self._data[-self.window:]
+
+    def average(self):
+        """Get the average value of current window."""
+        return np.mean(self._data)
+
+
+class StopWatch:
+    r"""A helper class to measure FPS and detailed time consuming of each phase
+    in a video processing loop or similar scenarios.
+
+    Args:
+        window (int): The sliding window size to calculate the running average
+            of the time consuming.
+
+    Example:
+        >>> from mmpose.utils import StopWatch
+        >>> import time
+        >>> stop_watch = StopWatch(window=10)
+        >>> with stop_watch.timeit('total'):
+        >>>     time.sleep(0.1)
+        >>>     # 'timeit' support nested use
+        >>>     with stop_watch.timeit('phase1'):
+        >>>         time.sleep(0.1)
+        >>>     with stop_watch.timeit('phase2'):
+        >>>         time.sleep(0.2)
+        >>>     time.sleep(0.2)
+        >>> report = stop_watch.report()
+    """
+
+    def __init__(self, window=1):
+        self.window = window
+        self._record = defaultdict(partial(RunningAverage, window=self.window))
+        self._timer_stack = []
+
+    @contextmanager
+    def timeit(self, timer_name='_FPS_'):
+        """Timing a code snippet with an assigned name.
+
+        Args:
+            timer_name (str): The unique name of the interested code snippet to
+                handle multiple timers and generate reports. Note that '_FPS_'
+                is a special key that the measurement will be in `fps` instead
+                of `millisecond`. Also see `report` and `report_strings`.
+                Default: '_FPS_'.
+        Note:
+            This function should always be used in a `with` statement, as shown
+            in the example.
+        """
+        self._timer_stack.append((timer_name, Timer()))
+        try:
+            yield
+        finally:
+            timer_name, timer = self._timer_stack.pop()
+            self._record[timer_name].update(timer.since_start())
+
+    def report(self, key=None):
+        """Report timing information.
+
+        Returns:
+            dict: The key is the timer name and the value is the \
+                corresponding average time consuming.
+        """
+        result = {
+            name: r.average() * 1000.
+            for name, r in self._record.items()
+        }
+
+        if '_FPS_' in result:
+            result['_FPS_'] = 1000. / result.pop('_FPS_')
+
+        if key is None:
+            return result
+        return result[key]
+
+    def report_strings(self):
+        """Report timing information in texture strings.
+
+        Returns:
+            list(str): Each element is the information string of a timed \
+                event, in format of '{timer_name}: {time_in_ms}'. \
+                Specially, if timer_name is '_FPS_', the result will \
+                be converted to fps.
+        """
+        result = self.report()
+        strings = []
+        if '_FPS_' in result:
+            strings.append(f'FPS: {result["_FPS_"]:>5.1f}')
+        strings += [f'{name}: {val:>3.0f}' for name, val in result.items()]
+        return strings
+
+    def reset(self):
+        self._record = defaultdict(list)
+        self._active_timer_stack = []

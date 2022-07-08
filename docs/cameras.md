@@ -275,14 +275,14 @@ Convert functions are also defined in conventions.cameras.
 
 - **Compute depth of points:**
 
-    You can simply convert points to the view coordinates and get the z value as depth. Example could be found in [DepthRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/visualization/renderer/torch3d_renderer/depth_renderer.py).
+    You can simply convert points to the view coordinates and get the z value as depth. Example could be found in [DepthRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/renderer/torch3d_renderer/depth_renderer.py).
     ```python
     points_depth = cameras.compute_depth_of_points(points)
     ```
 
 - **Compute normal of meshes:**
 
-    Use `Pytorch3D` to compute normal of meshes. Example could be found in [NormalRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/visualization/renderer/torch3d_renderer/normal_renderer.py).
+    Use `Pytorch3D` to compute normal of meshes. Example could be found in [NormalRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/renderer/torch3d_renderer/normal_renderer.py).
     ```python
     normals = cameras.compute_normal_of_meshes(meshes)
     ```

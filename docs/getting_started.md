@@ -5,8 +5,8 @@
   - [Data Preparation](#data-preparation)
   - [Body Model Preparation](#body-model-preparation)
   - [Inference / Demo](#inference--demo)
-    - [Single-person](#single-person)
-    - [Multi-person](#multi-person)
+    - [Offline Demo](#Offline-Demo)
+    - [Online Demo](#Online-Demo)
   - [Evaluation](#evaluation)
     - [Evaluate with a single GPU / multiple GPUs](#evaluate-with-a-single-gpu--multiple-gpus)
     - [Evaluate with slurm](#evaluate-with-slurm)
@@ -54,14 +54,16 @@ mmhuman3d
 ```
 
 ## Inference / Demo
-We provide a demo script to estimate SMPL parameters for single-person or multi-person from the input image or video with the bounding box detected by MMDetection or MMTracking. With this demo script, you only need to choose a pre-trained model (we currently only support [HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/), [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/), and [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/), more SOTA methods will be added in the future) from our model zoo and specify a few arguments, and then you can get the estimated results.
+### Offline Demo
+We provide a demo script to estimate SMPL parameters for single-person or multi-person from the input image or video with the bounding box detected by MMDetection or MMTracking. With this demo script, you only need to choose a pre-trained model (we currently only support [HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/), [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/), [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/) and [PARE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/pare/), more SOTA methods will be added in the future) from our model zoo and specify a few arguments, and then you can get the estimated results.
 
 Some useful configs are explained here:
 
 - If you specify `--output` and `--show_path`, the demo script will save the estimated results into `human_data` and render the estimated human mesh.
 - If you specify `--smooth_type`, the demo will be smoothed using specific method. We now support filters `guas1d`,`oneeuro`, `savgol` and learning-based method `smoothnet`, more information can be find [here](../configs/_base_/post_processing/README.md).
 - If you specify `--speed_up_type`, the demo will be processed more quickly using specific method. We now support learning-based method `deciwatch`, more information can be find [here](../configs/_base_/post_processing/README.md).
-### Single-person
+
+For single-person:
 
 ```shell
 python demo/estimate_smpl.py \
@@ -93,8 +95,7 @@ python demo/estimate_smpl.py \
     --speed_up_type deciwatch \
     --draw_bbox
 ```
-### Multi-person
-
+For multi-person:
 
 ```shell
 python demo/estimate_smpl.py \
@@ -125,6 +126,25 @@ python demo/estimate_smpl.py \
 ```
 Note that the MMHuman3D checkpoints can be downloaded from the [model zoo](model_zoo.md).
 Here we take HMR (resnet50_hmr_pw3d.pth) as an example.
+
+### Online Demo
+
+We provide a webcam demo script to estimate SMPL parameters from the camera or a specified video file. You can simply run the following command:
+
+```shell
+python demo/webcam_demo.py
+```
+
+Some useful arguments are explained here:
+- If you specify `--output`, the webcam demo script will save the visualization results into a file. This may reduce the frame rate.
+- If you specify `--synchronous`, video I/O and inference will be temporally aligned. Note that this will reduce the frame rate.
+- If you want run the webcam demo in offline mode on a video file, you should set `--cam-id=VIDEO_FILE_PATH`. Note that `--synchronous` should be set to `True` in this case.
+- The video I/O and model inference are running asynchronously and the latter usually takes more time for a single frame. To allevidate the time delay, you can:
+
+  - set `--display-delay=MILLISECONDS` to defer the video stream, according to the inference delay shown at the top left corner. Or,
+
+  - set `--synchronous=True` to force video stream being aligned with inference results. This may reduce the frame rate.
+
 ## Evaluation
 
 We provide pretrained models in the respective method folders in [config](https://github.com/open-mmlab/mmhuman3d/tree/main/configs).

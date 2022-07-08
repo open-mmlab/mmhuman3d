@@ -10,8 +10,8 @@ from mmhuman3d.apis import (
     init_model,
 )
 from mmhuman3d.utils.demo_utils import (
-    conver_verts_to_cam_coord,
     convert_crop_cam_to_orig_img,
+    convert_verts_to_cam_coord,
     extract_feature_sequence,
     get_speed_up_interval,
     prepare_frames,
@@ -38,7 +38,7 @@ def test_inference_image_based_model():
     smooth_process(verts.repeat(20, 0))
     speed_up_process(torch.ones(100, 24, 3, 3))
     get_speed_up_interval('deciwatch')
-    _, _ = conver_verts_to_cam_coord(verts, pred_cams, bboxes_xy)
+    _, _ = convert_verts_to_cam_coord(verts, pred_cams, bboxes_xy)
 
 
 def test_inference_video_based_model():
