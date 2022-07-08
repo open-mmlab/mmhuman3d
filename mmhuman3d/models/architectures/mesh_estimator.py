@@ -97,7 +97,10 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         self.backbone = build_backbone(backbone)
         self.neck = build_neck(neck)
         self.head = build_head(head)
-        self.disc = build_discriminator(disc)
+        if disc is not None:
+            self.disc = build_discriminator(disc)
+        else:
+            self.disc=None
 
         self.body_model_train = build_body_model(body_model_train)
         self.body_model_test = build_body_model(body_model_test)
@@ -180,7 +183,6 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             optimizer['neck'].step()
         if self.head is not None:
             optimizer['head'].step()
-
         outputs = dict(
             loss=loss,
             log_vars=log_vars,
@@ -426,12 +428,13 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         # currently, only mpi_inf_3dhp and h36m have 3d keypoints
         # both datasets have right_hip_extra and left_hip_extra
-        right_hip_idx = get_keypoint_idx('right_hip_extra', self.convention)
-        left_hip_idx = get_keypoint_idx('left_hip_extra', self.convention)
-        gt_pelvis = (gt_keypoints3d[:, right_hip_idx, :] +
-                     gt_keypoints3d[:, left_hip_idx, :]) / 2
-        pred_pelvis = (pred_keypoints3d[:, right_hip_idx, :] +
-                       pred_keypoints3d[:, left_hip_idx, :]) / 2
+        
+        # right_hip_idx = get_keypoint_idx('right_hip_extra', self.convention)
+        # left_hip_idx = get_keypoint_idx('left_hip_extra', self.convention)
+        pelvis_idx = get_keypoint_idx('pelvis')
+        # agora don't have right_hip_extra. use pelvis instead
+        gt_pelvis = gt_keypoints3d[:, pelvis_idx, :]
+        pred_pelvis = pred_keypoints3d[:, pelvis_idx, :]
 
         gt_keypoints3d = gt_keypoints3d - gt_pelvis[:, None, :]
         pred_keypoints3d = pred_keypoints3d - pred_pelvis[:, None, :]
