@@ -56,4 +56,4 @@ mmhuman3d
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [hrnet_w32_conv_pare_gta_ft.py](hrnet_w32_conv_pare_gta_ft.py) | 77.52 / 46.84 | [model]() &#124; [log]() |
+| [hrnet_w32_conv_pare_gta_ft.py](hrnet_w32_conv_pare_gta_ft.py) | 77.52 / 46.84 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/hrnet_w32_conv_pare_gta_ft/hrnet_w32_conv_pare_gta_ft-838829bc_20220708.pth?versionId=CAEQRBiBgMDRxNjujhgiIGY3ZmUzMjUzZjJhNjQ2MTg5ODNjMWFlNTJmMGJhMmFh) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/hrnet_w32_conv_pare_gta_ft/hrnet_w32_conv_pare_gta_ft.log?versionId=CAEQRBiBgICjxdfujhgiIGZiZDFmMmI1YWI0MzQyZjM4MmQ2MjZiYzY5OGQ5ODk1) |
