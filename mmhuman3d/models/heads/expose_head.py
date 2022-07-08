@@ -43,9 +43,6 @@ class IterativeRegression(nn.Module):
         """Get the initial mean param."""
         return self.mean_param.clone()
 
-    def get_dim_size(self):
-        return self.num_angles * 6
-
     @property
     def num_stages(self):
         return self._num_stages
@@ -185,6 +182,9 @@ class ContinuousRotReprDecoder:
 
     def get_mean(self):
         return self.mean.clone()
+
+    def get_dim_size(self):
+        return self.num_angles * 6
 
     def __call__(self, module_input):
         batch_size = module_input.shape[0]
