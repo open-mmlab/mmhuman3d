@@ -108,7 +108,7 @@ class AgoraConverter(BaseModeConverter):
         # flip pose
         R_mod = cv2.Rodrigues(np.array([np.pi, 0, 0]))[0]
         R_root = cv2.Rodrigues(globalOrient.reshape(-1))[0]
-        new_root = R_root.dot(R_mod)
+        new_root = R_mod.dot(R_root)
         globalOrient = cv2.Rodrigues(new_root)[0].reshape(3)
 
         # apply camera matrices
@@ -212,11 +212,16 @@ class AgoraConverter(BaseModeConverter):
                     occlusion = df.iloc[idx]['occlusion'][pidx]
                     ethnicity = df.iloc[idx]['ethnicity'][pidx]
 
+                    # skip kid since they use different model
+                    if kid:
+                        continue
+
                     # obtain keypoints
                     keypoints2d = df.iloc[idx]['gt_joints_2d'][pidx]
                     if self.res == (1280, 720):
                         keypoints2d *= (720 / 2160)
                     keypoints3d = df.iloc[idx]['gt_joints_3d'][pidx]
+                    keypoints3d -= keypoints3d[0]  # root-centered
 
                     gt_bodymodel_path = os.path.join(
                         dataset_path,
