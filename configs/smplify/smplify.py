@@ -44,7 +44,7 @@ shape_prior_loss = dict(type='ShapePriorLoss', loss_weight=1, reduction='sum')
 
 joint_prior_loss = dict(
     type='JointPriorLoss',
-    loss_weight=20,
+    loss_weight=2,
     reduction='sum',
     smooth_spine=True,
     smooth_spine_loss_weight=20,
@@ -69,5 +69,5 @@ camera = dict(
     convention='opencv',
     in_ndc=False,
     focal_length=5000,
-    image_size=(224, 224),
-    principal_point=(112, 112))
+    image_size=(1000, 1000),
+    principal_point=(500, 500))
