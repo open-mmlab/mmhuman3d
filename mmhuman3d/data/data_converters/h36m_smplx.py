@@ -171,8 +171,7 @@ class H36mSMPLXConverter(BaseModeConverter):
         keypoints2d_, mask = convert_kps(keypoints2d_, 'h36m_smplx',
                                          'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
-        keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m_smplx',
-                                      'human_data')
+        keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m_smplx', 'human_data')
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
