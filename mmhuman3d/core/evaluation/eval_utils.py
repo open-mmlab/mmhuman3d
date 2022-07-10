@@ -229,11 +229,11 @@ def fg_vertices_to_mesh_distance(groundtruth_vertices,
     a ground truth mesh.
     Args:
         groundtruth_vertices (np.ndarray[N,3]): Ground truth vertices.
-        grundtruth_landmark_points (List[7,3]): Ground truth annotations.
+        grundtruth_landmark_points (np.ndarray[7,3]): Ground truth annotations.
         predicted_mesh_vertices (np.ndarray[M,3]): Predicted vertices.
         predicted_mesh_faces (np.ndarray[K,3]): Vertex indices
             composing the predicted mesh.
-        predicted_mesh_landmark_points (List[7,3]): Predicted points.
+        predicted_mesh_landmark_points (np.ndarray[7,3]): Predicted points.
 
     Return:
         distance: Mean point to mesh distance.

@@ -261,6 +261,12 @@ def test_preprocess():
     data_converter.convert(STRILING_ROOT, output_path, img_quality='HQ')
     assert os.path.exists(output_path + '/stirling_ESRC3D_HQ.npz')
 
+    H36M_EXPOSE_ROOT = osp.join(root_path, 'h36m')
+    cfg = dict(type='H36mExPoseConverter', modes=['train'], protocol=1)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(H36M_EXPOSE_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'h36m_expose_train.npz'))
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'

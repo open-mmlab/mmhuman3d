@@ -26,8 +26,6 @@ def test_smplx_image_body_mesh_estimator():
     assert model.loss_smplx_global_orient is None
     assert model.loss_smplx_hand_pose is None
     assert model.loss_camera is None
-    assert model.loss_adv is None
-    assert model.disc is None
 
     backbone = dict(
         type='ResNet',
@@ -108,6 +106,51 @@ def test_smplx_image_body_mesh_estimator():
     assert model.loss_smplx_global_orient is not None
     assert model.loss_smplx_hand_pose is not None
 
+    model = SMPLXImageBodyModelEstimator(
+        backbone=backbone,
+        neck=neck,
+        head=head,
+        body_model_train=body_model_train,
+        body_model_test=body_model_test,
+        convention=convention,
+        extra_hand_model_cfg=dict(
+            backbone=backbone,
+            neck=neck,
+            head=head,
+            crop_cfg=dict(
+                img_res=256,
+                scale_factor=3.0,
+                crop_size=224,
+            ),
+            loss_hand_crop=dict(type='L1Loss', reduction='sum',
+                                loss_weight=1)),
+        extra_face_model_cfg=dict(
+            backbone=backbone,
+            neck=neck,
+            head=head,
+            crop_cfg=dict(
+                img_res=256,
+                scale_factor=2.0,
+                crop_size=256,
+            ),
+            loss_face_crop=dict(type='L1Loss', reduction='sum', loss_weight=1),
+        ),
+        frozen_batchnorm=True)
+    assert model.apply_hand_model is True
+    assert model.hand_backbone is not None
+    assert model.hand_neck is not None
+    assert model.hand_head is not None
+    assert model.crop_hand_func is not None
+    assert model.hand_merge_func is not None
+    assert model.hand_crop_loss is not None
+    assert model.apply_face_model is True
+    assert model.face_backbone is not None
+    assert model.face_neck is not None
+    assert model.face_head is not None
+    assert model.crop_face_func is not None
+    assert model.face_merge_func is not None
+    assert model.face_crop_loss is not None
+
 
 def test_compute_keypoints3d_loss():
     model = SMPLXImageBodyModelEstimator(
@@ -115,6 +158,7 @@ def test_compute_keypoints3d_loss():
         loss_keypoints3d=dict(type='L1Loss', reduction='sum', loss_weight=1))
     pred_keypoints3d = torch.zeros((32, 144, 3))
     gt_keypoints3d = torch.zeros((32, 144, 4))
+    gt_keypoints3d[:, :, -1] = 1
     loss_empty = model.compute_keypoints3d_loss(pred_keypoints3d,
                                                 gt_keypoints3d)
     assert loss_empty == 0
@@ -127,7 +171,7 @@ def test_compute_keypoints2d_loss():
 
     pred_keypoints3d = torch.zeros((32, 144, 3))
     gt_keypoints2d = torch.zeros((32, 144, 3))
-    pred_cam = torch.randn((32, 3))
+    pred_cam = torch.zeros((32, 3))
     loss_empty = model.compute_keypoints2d_loss(pred_keypoints3d, pred_cam,
                                                 gt_keypoints2d)
     assert loss_empty == 0
@@ -242,4 +286,42 @@ def test_smplx_betas_prior_loss():
     pred_betas = torch.zeros((32, 10))
     loss_empty = model.compute_smplx_betas_prior_loss(pred_betas)
 
+    assert loss_empty == 0
+
+
+def test_hand_crop_loss():
+    model = SMPLXImageBodyModelEstimator(
+        convention='smplx',
+        extra_hand_model_cfg=dict(
+            loss_hand_crop=dict(type='L1Loss', reduction='sum',
+                                loss_weight=1)),
+    )
+    pred_keypoints3d = torch.zeros((32, 144, 3))
+    pred_cam = torch.randn((32, 3))
+    gt_keypoints2d = torch.zeros((32, 144, 3))
+    hand_crop_info = dict(
+        hand_inv_crop_transforms=torch.randn((32, 3, 3)),
+        left_hand_crop_transform=torch.randn((32, 3, 3)),
+        right_hand_crop_transform=torch.randn((32, 3, 3)))
+    loss_empty = model.compute_hand_crop_loss(pred_keypoints3d, pred_cam,
+                                              gt_keypoints2d, hand_crop_info)
+    assert loss_empty == 0
+
+
+def test_face_crop_loss():
+    model = SMPLXImageBodyModelEstimator(
+        convention='smplx',
+        extra_face_model_cfg=dict(
+            loss_face_crop=dict(type='L1Loss', reduction='sum',
+                                loss_weight=1)),
+    )
+    pred_keypoints3d = torch.zeros((32, 144, 3))
+    pred_cam = torch.randn((32, 3))
+    gt_keypoints2d = torch.zeros((32, 144, 3))
+    hand_crop_info = dict(
+        face_inv_crop_transforms=torch.randn((32, 3, 3)),
+        face_crop_transform=torch.randn((32, 3, 3)),
+    )
+    loss_empty = model.compute_face_crop_loss(pred_keypoints3d, pred_cam,
+                                              gt_keypoints2d, hand_crop_info)
     assert loss_empty == 0

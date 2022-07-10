@@ -85,7 +85,7 @@ mmhuman3d
     │   ├── freihand_test.npz
     │   ├── freihand_train.npz
     │   ├── freihand_val.npz
-    │   ├── h36m_train.npz
+    │   ├── h36m_expose_train.npz
     │   ├── pw3d_test.npz
     │   ├── spin_smplx_train.npz
     │   └── stirling_ESRC3D_HQ.npz

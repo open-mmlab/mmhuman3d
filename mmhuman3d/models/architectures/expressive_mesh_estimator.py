@@ -15,7 +15,6 @@ from mmhuman3d.utils.geometry import (
 )
 from ..backbones.builder import build_backbone
 from ..body_models.builder import build_body_model
-from ..discriminators.builder import build_discriminator
 from ..heads.builder import build_head
 from ..losses.builder import build_loss
 from ..necks.builder import build_neck
@@ -60,8 +59,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         backbone (dict | None, optional): Backbone config dict. Default: None.
         neck (dict | None, optional): Neck config dict. Default: None
         head (dict | None, optional): Regressor config dict. Default: None.
-        disc (dict | None, optional): Discriminator config dict.
-            Default: None.
         body_model_train (dict | None, optional): SMPL config dict during
             training. Default: None.
         body_model_test (dict | None, optional): SMPL config dict during
@@ -85,8 +82,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             betas. Default: None
         loss_camera (dict | None, optional): Losses config dict for predicted
             camera parameters. Default: None
-        loss_adv (dict | None, optional): Losses config for adversial
-            training. Default: None.
         extra_hand_model_cfg (dict | None, optional) : Hand model config for
             refining body model prediction. Default: None
         extra_face_model_cfg (dict | None, optional) : Face model config for
@@ -99,7 +94,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                  backbone: Optional[Union[dict, None]] = None,
                  neck: Optional[Union[dict, None]] = None,
                  head: Optional[Union[dict, None]] = None,
-                 disc: Optional[Union[dict, None]] = None,
                  body_model_train: Optional[Union[dict, None]] = None,
                  body_model_test: Optional[Union[dict, None]] = None,
                  convention: Optional[str] = 'human_data',
@@ -113,7 +107,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                  loss_smplx_betas: Optional[Union[dict, None]] = None,
                  loss_smplx_betas_prior: Optional[Union[dict, None]] = None,
                  loss_camera: Optional[Union[dict, None]] = None,
-                 loss_adv: Optional[Union[dict, None]] = None,
                  extra_hand_model_cfg: Optional[Union[dict, None]] = None,
                  extra_face_model_cfg: Optional[Union[dict, None]] = None,
                  frozen_batchnorm: bool = False,
@@ -122,7 +115,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         self.backbone = build_backbone(backbone)
         self.neck = build_neck(neck)
         self.head = build_head(head)
-        self.disc = build_discriminator(disc)
 
         if frozen_batchnorm:
             for param in self.backbone.parameters():
@@ -145,13 +137,15 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                 extra_hand_model_cfg.get('backbone', None))
             self.hand_neck = build_neck(extra_hand_model_cfg.get('neck', None))
             self.hand_head = build_head(extra_hand_model_cfg.get('head', None))
-            self.crop_hand_func = SMPLXHandCropFunc(
-                self.hand_head,
-                self.body_model_train,
-                convention=self.convention,
-                **extra_hand_model_cfg.get('crop_cfg', None))
-            self.hand_merge_func = SMPLXHandMergeFunc(self.body_model_train,
-                                                      self.convention)
+            crop_cfg = extra_hand_model_cfg.get('crop_cfg', None)
+            if crop_cfg is not None:
+                self.crop_hand_func = SMPLXHandCropFunc(
+                    self.hand_head,
+                    self.body_model_train,
+                    convention=self.convention,
+                    **crop_cfg)
+                self.hand_merge_func = SMPLXHandMergeFunc(
+                    self.body_model_train, self.convention)
             self.hand_crop_loss = build_loss(
                 extra_hand_model_cfg.get('loss_hand_crop', None))
             self.apply_hand_model = True
@@ -171,13 +165,15 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                 extra_face_model_cfg.get('backbone', None))
             self.face_neck = build_neck(extra_face_model_cfg.get('neck', None))
             self.face_head = build_head(extra_face_model_cfg.get('head', None))
-            self.crop_face_func = SMPLXFaceCropFunc(
-                self.face_head,
-                self.body_model_train,
-                convention=self.convention,
-                **extra_face_model_cfg.get('crop_cfg', None))
-            self.face_merge_func = SMPLXFaceMergeFunc(self.body_model_train,
-                                                      self.convention)
+            crop_cfg = extra_face_model_cfg.get('crop_cfg', None)
+            if crop_cfg is not None:
+                self.crop_face_func = SMPLXFaceCropFunc(
+                    self.face_head,
+                    self.body_model_train,
+                    convention=self.convention,
+                    **crop_cfg)
+                self.face_merge_func = SMPLXFaceMergeFunc(
+                    self.body_model_train, self.convention)
             self.face_crop_loss = build_loss(
                 extra_face_model_cfg.get('loss_face_crop', None))
             self.apply_face_model = True
@@ -194,7 +190,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         self.loss_smplx_expression = build_loss(loss_smplx_expression)
         self.loss_smplx_betas = build_loss(loss_smplx_betas)
         self.loss_smplx_betas_piror = build_loss(loss_smplx_betas_prior)
-        self.loss_adv = build_loss(loss_adv)
         self.loss_camera = build_loss(loss_camera)
         set_requires_grad(self.body_model_train, False)
         set_requires_grad(self.body_model_test, False)
@@ -202,18 +197,10 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
     def train_step(self, data_batch, optimizer, **kwargs):
         """Train step function.
 
-        In this function, the detector will finish the train step following
-        the pipeline:
-        1. optimize discriminator (if have)
-        2. optimize generator
-        If `self.train_cfg.disc_step > 1`, the train step will contain multiple
-        iterations for optimizing discriminator with different input data and
-        only one iteration for optimizing generator after `disc_step`
-        iterations for discriminator.
         Args:
             data_batch (torch.Tensor): Batch of data as input.
             optimizer (dict[torch.optim.Optimizer]): Dict with optimizers for
-                generator and discriminator (if have).
+                generator.
         Returns:
             outputs (dict): Dict with loss, information for logger,
             the number of samples.
@@ -249,15 +236,7 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         targets = self.prepare_targets(data_batch)
 
-        # optimize discriminator (if have)
-        if self.disc is not None:
-            self.optimize_discrinimator(predictions, data_batch, optimizer)
-
         losses = self.compute_losses(predictions, targets)
-        # optimizer generator part
-        if self.disc is not None:
-            adv_loss = self.optimize_generator(predictions)
-            losses.update(adv_loss)
 
         loss, log_vars = self._parse_losses(losses)
         if self.backbone is not None:
@@ -312,36 +291,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             log_vars=log_vars,
             num_samples=len(next(iter(data_batch.values()))))
         return outputs
-
-    def optimize_discrinimator(self, predictions: dict, data_batch: dict,
-                               optimizer: dict):
-        """Optimize discrinimator during adversarial training."""
-        set_requires_grad(self.disc, True)
-        fake_data = self.make_fake_data(predictions, requires_grad=False)
-        real_data = self.make_real_data(data_batch)
-        fake_score = self.disc(fake_data)
-        real_score = self.disc(real_data)
-
-        disc_losses = {}
-        disc_losses['real_loss'] = self.loss_adv(
-            real_score, target_is_real=True, is_disc=True)
-        disc_losses['fake_loss'] = self.loss_adv(
-            fake_score, target_is_real=False, is_disc=True)
-        loss_disc, log_vars_d = self._parse_losses(disc_losses)
-
-        optimizer['disc'].zero_grad()
-        loss_disc.backward()
-        optimizer['disc'].step()
-
-    def optimize_generator(self, predictions: dict):
-        """Optimize generator during adversarial training."""
-        set_requires_grad(self.disc, False)
-        fake_data = self.make_fake_data(predictions, requires_grad=True)
-        pred_score = self.disc(fake_data)
-        loss_adv = self.loss_adv(
-            pred_score, target_is_real=True, is_disc=False)
-        loss = dict(adv_loss=loss_adv)
-        return loss
 
     def compute_keypoints3d_loss(
             self,
@@ -531,6 +480,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
         keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
         gt_keypoints2d = gt_keypoints2d[:, :, :2].float()
+        if has_keypoints2d is None:
+            has_keypoints2d = torch.ones((keypoints2d_conf.shape[0]))
         if keypoints2d_conf[has_keypoints2d == 1].numel() == 0:
             return torch.Tensor([0]).type_as(gt_keypoints2d)
 
@@ -581,6 +532,8 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
         keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
         gt_keypoints2d = gt_keypoints2d[:, :, :2].float()
+        if has_keypoints2d is None:
+            has_keypoints2d = torch.ones((keypoints2d_conf.shape[0]))
         if keypoints2d_conf[has_keypoints2d == 1].numel() == 0:
             return torch.Tensor([0]).type_as(gt_keypoints2d)
 
@@ -760,14 +713,6 @@ class SMPLXBodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         return losses
 
     @abstractmethod
-    def make_fake_data(self, predictions, requires_grad):
-        pass
-
-    @abstractmethod
-    def make_real_data(self, data_batch):
-        pass
-
-    @abstractmethod
     def prepare_targets(self, data_batch):
         pass
 
@@ -791,12 +736,6 @@ class SMPLXImageBodyModelEstimator(SMPLXBodyModelEstimator):
     def prepare_targets(self, data_batch: dict):
         # Image Mesh Estimator does not need extra process for ground truth
         return data_batch
-
-    def make_fake_data(self, predictions, requires_grad):
-        return super().make_fake_data(predictions, requires_grad)
-
-    def make_real_data(self, data_batch):
-        return super().make_real_data(data_batch)
 
     def forward_test(self, img: torch.Tensor, img_metas: dict, **kwargs):
         """Defines the computation performed at every call when testing."""
