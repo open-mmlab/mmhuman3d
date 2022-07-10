@@ -159,9 +159,7 @@ class HumanImageSMPLXDataset(HumanImageDataset):
         elif mode == 'keypoint':
             pred_keypoints3d = res['keypoints']
             assert len(pred_keypoints3d) == self.num_data
-            if self.dataset_name == 'pw3d' \
-                or self.dataset_name == '3DPW' \
-                    or self.dataset_name == '3dpw':
+            if self.dataset_name in {'pw3d', '3DPW', '3dpw'}:
                 betas = []
                 body_pose = []
                 global_orient = []

@@ -14,7 +14,7 @@ from .builder import DATA_CONVERTERS
 
 
 @DATA_CONVERTERS.register_module()
-class H36mExPoseConverter(BaseModeConverter):
+class H36mSMPLXConverter(BaseModeConverter):
     """Human3.6M dataset
     `Human3.6M: Large Scale Datasets and Predictive Methods for 3D Human
     Sensing in Natural Environments' TPAMI`2014
@@ -30,7 +30,7 @@ class H36mExPoseConverter(BaseModeConverter):
     ACCEPTED_MODES = ['train']
 
     def __init__(self, modes: List = [], protocol: int = 1) -> None:
-        super(H36mExPoseConverter, self).__init__(modes)
+        super(H36mSMPLXConverter, self).__init__(modes)
         accepted_protocol = [1, 2]
         if protocol not in accepted_protocol:
             raise ValueError('Input protocol not in accepted protocol. \
@@ -168,10 +168,10 @@ class H36mExPoseConverter(BaseModeConverter):
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'h36m_expose',
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'h36m_smplx',
                                          'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
-        keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m_expose',
+        keypoints3d_, _ = convert_kps(keypoints3d_, 'h36m_smplx',
                                       'human_data')
 
         human_data['image_path'] = image_path_
@@ -187,5 +187,5 @@ class H36mExPoseConverter(BaseModeConverter):
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
-        out_file = os.path.join(out_path, f'h36m_expose_{mode}.npz')
+        out_file = os.path.join(out_path, f'h36m_smplx_{mode}.npz')
         human_data.dump(out_file)

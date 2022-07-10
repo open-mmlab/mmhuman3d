@@ -372,7 +372,7 @@ h36m, EHF, FreiHand, 3DPW, stirling, spin_in_smplx, ffhq, ExPose_curated_fits
 - [freihand_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/freihand_test.npz?versionId=CAEQRBiBgMDX3qzvjhgiIGY3ZmFiZGRjYWQ3NjQwOWU5MWRkZGU5ZmM4YjEyZDYw)
 - [freihand_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/freihand_train.npz?versionId=CAEQRBiBgIDr46zvjhgiIGQ1YmM2MGRkNDdhNTRkMzdiNTc3ZTJmMWFhOGNhOGVh)
 - [freihand_val.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/freihand_val.npz?versionId=CAEQRBiBgID03qzvjhgiIDY3MmQ1MDA1ZjY3NDRkZTFhYjc2MDFiOGFhNjFhNDNm)
-- [h36m_expose_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_expose_train.npz?versionId=CAEQRBiCgID03qzvjhgiIGNhYmI2MzA0YzE4ODQ2Yjk4MmEzNThkODVkMjI3MTI2)
+- [h36m_smplx_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_expose_train.npz?versionId=CAEQRBiCgID03qzvjhgiIGNhYmI2MzA0YzE4ODQ2Yjk4MmEzNThkODVkMjI3MTI2)
 - [spin_smplx_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_smplx_train.npz?versionId=CAEQRBiBgIDd3qzvjhgiIDhlZjM2OTdiYmQ5MTRmYTdiMDI5ZmFjOGI0YmI0YmMx)
 - [stirling_ESRC3D_HQ.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/stirling_ESRC3D_HQ.npz?versionId=CAEQRBiBgIDm3qzvjhgiIDI1NGY1NDEyZDVlZDQzNWNiNGYxOWVlZjhhYzZlMmY3)
 - [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
@@ -395,7 +395,7 @@ mmhuman3d
         ├── freihand_test.npz
         ├── freihand_train.npz
         ├── freihand_val.npz
-        ├── h36m_expose_train.npz
+        ├── h36m_smplx_train.npz
         ├── pw3d_test.npz
         ├── spin_smplx_train.npz
         └── stirling_ESRC3D_HQ.npz

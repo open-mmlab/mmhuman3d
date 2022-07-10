@@ -38,7 +38,7 @@ H36M_KEYPOINTS_MMPOSE = [
     'right_wrist',
 ]
 
-H36M_KEYPOINTS_EXPOSE = [
+H36M_KEYPOINTS_SMPLX = [
     'pelvis',
     'left_hip',
     'left_knee',

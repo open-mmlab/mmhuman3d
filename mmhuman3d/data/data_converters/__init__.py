@@ -13,8 +13,8 @@ from .ffhq_flame import FFHQFlameConverter
 from .freihand import FreihandConverter
 from .gta_human import GTAHumanConverter
 from .h36m import H36mConverter
-from .h36m_expose import H36mExPoseConverter
 from .h36m_hybrik import H36mHybrIKConverter
+from .h36m_smplx import H36mSMPLXConverter
 from .humman import HuMManConverter
 from .insta_vibe import InstaVibeConverter
 from .lsp import LspConverter
@@ -39,7 +39,7 @@ __all__ = [
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
     'GTAHumanConverter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
-    'H36mExPoseConverter', 'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter',
+    'H36mSMPLXConverter', 'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter',
     'SurrealConverter', 'InstaVibeConverter', 'SpinConverter', 'VibeConverter',
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
