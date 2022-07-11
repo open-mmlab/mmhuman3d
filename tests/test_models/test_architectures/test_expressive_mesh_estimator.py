@@ -318,10 +318,109 @@ def test_face_crop_loss():
     pred_keypoints3d = torch.zeros((32, 144, 3))
     pred_cam = torch.randn((32, 3))
     gt_keypoints2d = torch.zeros((32, 144, 3))
-    hand_crop_info = dict(
+    face_crop_info = dict(
         face_inv_crop_transforms=torch.randn((32, 3, 3)),
         face_crop_transform=torch.randn((32, 3, 3)),
     )
     loss_empty = model.compute_face_crop_loss(pred_keypoints3d, pred_cam,
-                                              gt_keypoints2d, hand_crop_info)
+                                              gt_keypoints2d, face_crop_info)
     assert loss_empty == 0
+
+
+def test_compute_losses():
+    N = 32
+    predictions = {}
+    predictions['pred_param'] = dict(
+        global_orient=torch.randn(N, 1, 3, 3),
+        body_pose=torch.randn(N, 21, 3, 3),
+        jaw_pose=torch.randn(N, 1, 3, 3),
+        right_hand_pose=torch.randn(N, 15, 3, 3),
+        left_hand_pose=torch.randn(N, 15, 3, 3),
+        betas=torch.randn(N, 10),
+        expression=torch.randn(N, 10))
+    predictions['pred_cam'] = torch.randn(N, 3)
+    predictions['hand_crop_info'] = dict(
+        hand_inv_crop_transforms=torch.randn((N, 3, 3)),
+        left_hand_crop_transform=torch.randn((N, 3, 3)),
+        right_hand_crop_transform=torch.randn((N, 3, 3)))
+    predictions['face_crop_info'] = dict(
+        face_inv_crop_transforms=torch.randn((N, 3, 3)),
+        face_crop_transform=torch.randn((N, 3, 3)),
+    )
+
+    targets = {}
+    targets['keypoints3d'] = torch.randn(N, 144, 4)
+    targets['has_keypoints3d'] = torch.ones(N)
+    targets['keypoints2d'] = torch.randn(N, 144, 3)
+    targets['has_keypoints2d'] = torch.ones(N)
+    targets['img'] = torch.randn(N, 3, 256, 256)
+    targets['smplx_global_orient'] = torch.randn(N, 1, 3)
+    targets['has_smplx_global_orient'] = torch.ones(N)
+    targets['smplx_body_pose'] = torch.randn(N, 21, 3)
+    targets['has_smplx_body_pose'] = torch.ones(N)
+    targets['smplx_jaw_pose'] = torch.randn(N, 1, 3)
+    targets['has_smplx_jaw_pose'] = torch.ones(N)
+    targets['smplx_right_hand_pose'] = torch.randn(N, 15, 3)
+    targets['has_smplx_right_hand_pose'] = torch.ones(N)
+    targets['smplx_left_hand_pose'] = torch.randn(N, 15, 3)
+    targets['has_smplx_left_hand_pose'] = torch.ones(N)
+    targets['smplx_betas'] = torch.randn(N, 10)
+    targets['has_smplx_betas'] = torch.ones(N)
+    targets['smplx_expression'] = torch.randn(N, 10)
+    targets['has_smplx_expression'] = torch.ones(N)
+
+    model = SMPLXImageBodyModelEstimator(convention='smplx')
+    loss = model.compute_losses(predictions, targets)
+    assert loss == {}
+
+    model = SMPLXImageBodyModelEstimator(
+        convention='smplx',
+        body_model_train=dict(
+            type='SMPLXLayer',
+            num_expression_coeffs=10,
+            num_betas=10,
+            use_face_contour=True,
+            use_pca=False,
+            flat_hand_mean=True,
+            model_path='data/body_models/smplx',
+            keypoint_src='smplx',
+            keypoint_dst='smplx',
+        ),
+        loss_keypoints3d=dict(type='L1Loss', reduction='sum', loss_weight=1),
+        loss_keypoints2d=dict(type='L1Loss', reduction='sum', loss_weight=1),
+        loss_smplx_body_pose=dict(
+            type='L1Loss', reduction='sum', loss_weight=1),
+        loss_smplx_global_orient=dict(
+            type='L1Loss', reduction='sum', loss_weight=1),
+        loss_smplx_jaw_pose=dict(
+            type='L1Loss', reduction='sum', loss_weight=1),
+        loss_smplx_hand_pose=dict(
+            type='L1Loss', reduction='sum', loss_weight=1),
+        loss_smplx_betas=dict(type='L1Loss', reduction='sum', loss_weight=1),
+        loss_smplx_expression=dict(
+            type='L1Loss', reduction='sum', loss_weight=1),
+        loss_smplx_betas_prior=dict(
+            type='ShapeThresholdPriorLoss',
+            margin=3.0,
+            norm='l2',
+            loss_weight=1),
+        extra_hand_model_cfg=dict(
+            loss_hand_crop=dict(type='L1Loss', reduction='sum',
+                                loss_weight=1)),
+        extra_face_model_cfg=dict(
+            loss_face_crop=dict(type='L1Loss', reduction='sum',
+                                loss_weight=1)),
+    )
+    loss = model.compute_losses(predictions, targets)
+    assert 'keypoints3d_loss' in loss
+    assert 'keypoints2d_loss' in loss
+    assert 'smplx_global_orient_loss' in loss
+    assert 'smplx_body_pose_loss' in loss
+    assert 'smplx_jaw_pose_loss' in loss
+    assert 'smplx_right_hand_pose_loss' in loss
+    assert 'smplx_left_hand_pose_loss' in loss
+    assert 'smplx_betas_loss' in loss
+    assert 'smplx_expression_loss' in loss
+    assert 'smplx_betas_prior_loss' in loss
+    assert 'hand_crop_loss' in loss
+    assert 'face_crop_loss' in loss

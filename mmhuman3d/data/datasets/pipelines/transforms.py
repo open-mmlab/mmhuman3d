@@ -883,9 +883,6 @@ class BBoxCenterJitter(object):
             'normal', 'uniform'
         ], (f'Distribution must be normal or uniform, not {self.dist}')
 
-    def __str__(self):
-        return f'BBoxCenterJitter({self.factor:0.2f})'
-
     def __call__(self, results):
         # body model: no process
         if self.factor <= 1e-3:
@@ -924,14 +921,6 @@ class SimulateLowRes(object):
         self.dist = dist
         self.cat_factors = cat_factors
         assert dist in ['uniform', 'categorical']
-
-    def __str__(self) -> str:
-        if self.dist == 'uniform':
-            dist_str = (
-                f'{self.dist.title()}: [{self.factor_min}, {self.factor_max}]')
-        else:
-            dist_str = (f'{self.dist.title()}: [{self.cat_factors}]')
-        return f'SimulateLowResolution({dist_str})'
 
     def _sample_low_res(self, image: np.ndarray) -> np.ndarray:
         """"""
