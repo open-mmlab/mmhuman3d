@@ -12,10 +12,12 @@ from .prior_loss import (
     MaxMixturePrior,
     PoseRegLoss,
     ShapePriorLoss,
+    ShapeThresholdPriorLoss,
     SmoothJointLoss,
     SmoothPelvisLoss,
     SmoothTranslationLoss,
 )
+from .rotaion_distance_loss import RotationDistance
 from .smooth_l1_loss import L1Loss, SmoothL1Loss
 
 LOSSES = Registry('losses')
@@ -31,11 +33,14 @@ LOSSES.register_module(name='SmoothJointLoss', module=SmoothJointLoss)
 LOSSES.register_module(name='SmoothPelvisLoss', module=SmoothPelvisLoss)
 LOSSES.register_module(
     name='SmoothTranslationLoss', module=SmoothTranslationLoss)
+LOSSES.register_module(
+    name='ShapeThresholdPriorLoss', module=ShapeThresholdPriorLoss)
 LOSSES.register_module(name='CameraPriorLoss', module=CameraPriorLoss)
 LOSSES.register_module(name='MaxMixturePrior', module=MaxMixturePrior)
 LOSSES.register_module(name='L1Loss', module=L1Loss)
 LOSSES.register_module(name='SmoothL1Loss', module=SmoothL1Loss)
 LOSSES.register_module(name='CrossEntropyLoss', module=CrossEntropyLoss)
+LOSSES.register_module(name='RotationDistance', module=RotationDistance)
 
 
 def build_loss(cfg):

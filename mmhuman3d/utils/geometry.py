@@ -376,3 +376,18 @@ def project_points(points_3d, camera, focal_length, img_res):
         focal_length=focal_length,
         camera_center=camera_center)
     return keypoints_2d
+
+
+def weak_perspective_projection(points, scale, translation):
+    """This function computes the weak perspective projection of a set of
+    points.
+
+    Input:
+        points (bs, N, 3): 3D points
+        scale (bs,1): scalar
+        translation (bs, 2): point 2D translation
+    """
+    projected_points = scale.view(-1, 1, 1) * (
+        points[:, :, :2] + translation.view(-1, 1, 2))
+
+    return projected_points

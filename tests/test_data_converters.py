@@ -219,6 +219,54 @@ def test_preprocess():
     assert os.path.exists(
         '/tmp/preprocessed_npzs/humman_test_iphone_ds10_smpl.npz')
 
+    EXPOSE_CURATED_FITS_ROOT = os.path.join(root_path, 'ExPose_curated_fits')
+    cfg = dict(type='ExposeCuratedFitsConverter', modes=['train'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(EXPOSE_CURATED_FITS_ROOT, output_path)
+    assert os.path.exists(output_path + '/curated_fits_train.npz')
+
+    SPIN_IN_SMPLX_ROOT = os.path.join(root_path, 'spin_in_smplx')
+    cfg = dict(type='ExposeSPINSMPLXConverter', modes=['train'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(SPIN_IN_SMPLX_ROOT, output_path)
+    assert os.path.exists(output_path + '/spin_smplx_train.npz')
+
+    EHF_ROOT = os.path.join(root_path, 'EHF')
+    cfg = dict(type='EHFConverter', modes=['val'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(EHF_ROOT, output_path)
+    assert os.path.exists(output_path + '/ehf_val.npz')
+
+    FFHQ_FLAME_ROOT = os.path.join(root_path, 'ffhq')
+    cfg = dict(type='FFHQFlameConverter', modes=['train', 'val'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(FFHQ_FLAME_ROOT, output_path)
+    assert os.path.exists(output_path + '/ffhq_flame_train.npz')
+    assert os.path.exists(output_path + '/ffhq_flame_val.npz')
+
+    FREIHAND_ROOT = os.path.join(root_path, 'FreiHand')
+    cfg = dict(type='FreihandConverter', modes=['train', 'val', 'test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(
+        FREIHAND_ROOT,
+        output_path,
+        mean_pose_path='data/body_models/smplx/all_means.pkl')
+    assert os.path.exists(output_path + '/freihand_train.npz')
+    assert os.path.exists(output_path + '/freihand_val.npz')
+    assert os.path.exists(output_path + '/freihand_test.npz')
+
+    STRILING_ROOT = os.path.join(root_path, 'stirling')
+    cfg = dict(type='StirlingConverter', modes=['test'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(STRILING_ROOT, output_path, img_quality='HQ')
+    assert os.path.exists(output_path + '/stirling_ESRC3D_HQ.npz')
+
+    H36M_SMPLX_ROOT = osp.join(root_path, 'h36m')
+    cfg = dict(type='H36mSMPLXConverter', modes=['train'], protocol=1)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(H36M_SMPLX_ROOT, output_path)
+    assert osp.exists(osp.join(output_path, 'h36m_smplx_train.npz'))
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'
@@ -235,7 +283,7 @@ def test_preprocessed_npz():
         'features', 'has_smpl', 'keypoints2d_gta', 'keypoints3d_gta',
         'keypoints2d_gta_mask', 'keypoints3d_gta_mask', 'image_id',
         'keypoints2d_humman', 'keypoints3d_humman', 'keypoints2d_humman_mask',
-        'keypoints3d_humman_mask'
+        'keypoints3d_humman_mask', 'vertices'
     ]
 
     for npf in os.listdir(npz_folder):
@@ -334,7 +382,8 @@ def test_preprocessed_npz():
                     elif smplx_key == 'global_orient':
                         assert smplx_dict[smplx_key].shape == (N, 3)
                     elif smplx_key == 'betas':
-                        assert smplx_dict[smplx_key].shape == (N, 10)
+                        assert smplx_dict[smplx_key].shape == (
+                            N, 10) or smplx_dict[smplx_key].shape == (N, 100)
                     elif smplx_key == 'transl':
                         assert smplx_dict[smplx_key].shape == (N, 3)
                     elif smplx_key == 'left_hand_pose':
@@ -342,7 +391,8 @@ def test_preprocessed_npz():
                     elif smplx_key == 'right_hand_pose':
                         assert smplx_dict[smplx_key].shape == (N, 15, 3)
                     elif smplx_key == 'expression':
-                        assert smplx_dict[smplx_key].shape == (N, 10)
+                        assert smplx_dict[smplx_key].shape == (
+                            N, 10) or smplx_dict[smplx_key].shape == (N, 50)
                     elif smplx_key == 'leye_pose':
                         assert smplx_dict[smplx_key].shape == (N, 3)
                     elif smplx_key == 'reye_pose':

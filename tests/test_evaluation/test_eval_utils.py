@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from mmhuman3d.core.evaluation import (
+    fg_vertices_to_mesh_distance,
     keypoint_3d_auc,
     keypoint_3d_pck,
     keypoint_accel_error,
@@ -10,7 +11,7 @@ from mmhuman3d.core.evaluation import (
 )
 
 
-def tets_accel_error():
+def test_accel_error():
     target = np.random.rand(10, 5, 3)
     output = np.copy(target)
     mask = np.ones((output.shape[0]), dtype=bool)
@@ -22,7 +23,7 @@ def tets_accel_error():
     np.testing.assert_almost_equal(error, 0)
 
 
-def tets_keypoinyt_mpjpe():
+def test_keypoinyt_mpjpe():
     target = np.random.rand(2, 5, 3)
     output = np.copy(target)
     mask = np.ones((output.shape[0], output.shape[1]), dtype=bool)
@@ -49,11 +50,28 @@ def tets_keypoinyt_mpjpe():
     np.testing.assert_almost_equal(error, 0)
 
 
-def tets_keypoinyt_pve():
+def test_keypoinyt_pve():
     target = np.random.rand(2, 6890, 3)
     output = np.copy(target)
 
     error = vertice_pve(output, target)
+    np.testing.assert_almost_equal(error, 0)
+
+    error = vertice_pve(output, target, alignment='scale')
+    np.testing.assert_almost_equal(error, 0)
+
+    error = vertice_pve(output, target, alignment='procrustes')
+    np.testing.assert_almost_equal(error, 0)
+
+    R = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+    output = np.dot(target, R)
+
+    error = vertice_pve(output, target, alignment='none')
+    assert error > 1e-10
+
+    R = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+    output = np.dot(target, R)
+    error = vertice_pve(output, target, alignment='procrustes')
     np.testing.assert_almost_equal(error, 0)
 
 
@@ -99,3 +117,14 @@ def test_keypoint_3d_auc():
     output = target + 2000
     auc = keypoint_3d_auc(output, target, mask, alignment='procrustes')
     np.testing.assert_almost_equal(auc, 30 / 31 * 100)
+
+
+def test_fg_vertices_to_mesh_distance():
+    target = np.random.rand(10, 3) * 1000
+    output = np.copy(target)
+    target_points = target[:7]
+    output_points = np.copy(target_points)
+    faces = np.array([[i, i + 1, (i + 2) % 10] for i in range(0, 9, 2)])
+    error = fg_vertices_to_mesh_distance(target, target_points, output, faces,
+                                         output_points)
+    np.testing.assert_almost_equal(error, 0)

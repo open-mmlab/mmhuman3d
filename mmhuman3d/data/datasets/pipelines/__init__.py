@@ -19,6 +19,7 @@ from .hybrik_transforms import (
 from .loading import LoadImageFromFile
 from .synthetic_occlusion_augmentation import SyntheticOcclusion
 from .transforms import (
+    BBoxCenterJitter,
     CenterCrop,
     ColorJitter,
     GetRandomScaleRotation,
@@ -27,6 +28,8 @@ from .transforms import (
     Normalize,
     RandomChannelNoise,
     RandomHorizontalFlip,
+    Rotation,
+    SimulateLowRes,
 )
 
 __all__ = [
@@ -51,7 +54,10 @@ __all__ = [
     'GenerateHybrIKTarget',
     'RandomDPG',
     'RandomOcclusion',
+    'Rotation',
     'NewKeypointsSelection',
     'Normalize',
     'SyntheticOcclusion',
+    'BBoxCenterJitter',
+    'SimulateLowRes',
 ]

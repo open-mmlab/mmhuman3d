@@ -1,7 +1,12 @@
 import pytest
 import torch
 
-from mmhuman3d.models.losses.builder import CrossEntropyLoss, L1Loss, MSELoss
+from mmhuman3d.models.losses.builder import (
+    CrossEntropyLoss,
+    L1Loss,
+    MSELoss,
+    RotationDistance,
+)
 
 
 @pytest.mark.parametrize('loss_class', [MSELoss, L1Loss, CrossEntropyLoss])
@@ -92,3 +97,22 @@ def test_loss_with_ignore_index(use_sigmoid, reduction):
     target = torch.ones((10, ), dtype=torch.long) * 255
     loss = loss_class(pred, target, reduction_override=reduction)
     assert loss == 0
+
+
+@pytest.mark.parametrize('loss_class', [RotationDistance])
+def test_rotation_distance_losses(loss_class):
+    pred = torch.rand((10, 3, 3))
+    target = torch.rand((10, 3, 3))
+    weight = torch.rand((10, 3, 3))
+
+    # Test loss forward
+    loss = loss_class()(pred, target)
+    assert isinstance(loss, torch.Tensor)
+
+    # Test loss forward with weight
+    loss = loss_class()(pred, target, weight)
+    assert isinstance(loss, torch.Tensor)
+
+    target = torch.eye(3).reshape(1, 3, 3)
+    pred = target.clone()
+    assert loss_class()(pred, target) < torch.tensor(0.1)

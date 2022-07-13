@@ -161,3 +161,10 @@ def test_pose_reg_loss():
 
     body_pose = torch.ones(1, 3, 2)
     assert torch.allclose(loss(body_pose), torch.tensor(2.))
+
+
+def test_shape_threshold_prior_loss():
+    loss_cfg = dict(type='ShapeThresholdPriorLoss', loss_weight=1.)
+    loss = build_loss(loss_cfg)
+    shape = torch.zeros(1, 10)
+    assert torch.allclose(loss(shape), torch.tensor(0.))
