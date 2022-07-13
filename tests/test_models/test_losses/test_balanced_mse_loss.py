@@ -18,10 +18,10 @@ def test_balanced_mse_loss():
 
     from mmcv.runner import init_dist
     import os
-    os.environ['RANK'] = "0"
-    os.environ['WORLD_SIZE'] = "1"
-    os.environ['MASTER_ADDR'] = "127.0.0.1"
-    os.environ['MASTER_PORT'] = "29500"
+    os.environ['RANK'] = '0'
+    os.environ['WORLD_SIZE'] = '1'
+    os.environ['MASTER_ADDR'] = '127.0.0.1'
+    os.environ['MASTER_PORT'] = '29500'
     init_dist('pytorch')
     loss_cfg = dict(type='BMCLossMD', all_gather=True)
     loss = build_loss(loss_cfg)
