@@ -84,6 +84,11 @@ _HumanData_SUPPORTED_KEYS = {
         'type': str,
         'dim': None
     },
+    'vertices': {
+        'type': np.ndarray,
+        'shape': (-1, ),
+        'dim': None
+    },
     'misc': {
         'type': dict,
     },

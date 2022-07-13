@@ -349,6 +349,58 @@ mmhuman3d
         └── pw3d_test.npz
 ```
 
+For ExPose training, the following datasets are required:
+  - [Human3.6M](#human36m)
+  - [FreiHand](#FreiHand)
+  - [EHF](#EHF)
+  - [FFHQ](#FFHQ)
+  - [ExPose-Curated-fits](#ExPose)
+  - [SPIN_SMPLX](#ExPose)
+  - [Stirling-ESRC3D](#Stirling)
+  - [PW3D](#pw3d)
+
+
+Convert datasets with the following `dataset-names`:
+```
+h36m, EHF, FreiHand, 3DPW, stirling, spin_in_smplx, ffhq, ExPose_curated_fits
+```
+
+**Alternatively**, you may download the preprocessed files directly:
+- [curated_fits_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/curated_fits_train.npz?versionId=CAEQRBiBgICB7KzvjhgiIDI3NmRjZTM5ODQxYzQwZWNhZGZlMTMwZGIwYTM2ZTZk)
+- [ehf_val.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/ehf_val.npz?versionId=CAEQRBiBgIC65qzvjhgiIGMyOTUwZDM3NzUwNzRlODU5MGE1NjlmMDA1OGMxNjdk)
+- [ffhq_flame_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/ffhq_flame_train.npz?versionId=CAEQRBiBgMCT4KzvjhgiIGMwMjFkZWNmMGZlNTQzYjVhMDdhMzA0MTQ1MTBjZDRi)
+- [freihand_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/freihand_test.npz?versionId=CAEQRBiBgMDX3qzvjhgiIGY3ZmFiZGRjYWQ3NjQwOWU5MWRkZGU5ZmM4YjEyZDYw)
+- [freihand_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/freihand_train.npz?versionId=CAEQRBiBgIDr46zvjhgiIGQ1YmM2MGRkNDdhNTRkMzdiNTc3ZTJmMWFhOGNhOGVh)
+- [freihand_val.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/freihand_val.npz?versionId=CAEQRBiBgID03qzvjhgiIDY3MmQ1MDA1ZjY3NDRkZTFhYjc2MDFiOGFhNjFhNDNm)
+- [h36m_smplx_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/h36m_expose_train.npz?versionId=CAEQRBiCgID03qzvjhgiIGNhYmI2MzA0YzE4ODQ2Yjk4MmEzNThkODVkMjI3MTI2)
+- [spin_smplx_train.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/spin_smplx_train.npz?versionId=CAEQRBiBgIDd3qzvjhgiIDhlZjM2OTdiYmQ5MTRmYTdiMDI5ZmFjOGI0YmI0YmMx)
+- [stirling_ESRC3D_HQ.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/stirling_ESRC3D_HQ.npz?versionId=CAEQRBiBgIDm3qzvjhgiIDI1NGY1NDEyZDVlZDQzNWNiNGYxOWVlZjhhYzZlMmY3)
+- [pw3d_test.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/pw3d_test.npz?versionId=CAEQHhiBgMDaq_bS6xciIGVjY2YzZGJkNjNmMjQ2NGU4OTZkYjMwMjhhYWM1Y2I0)
+
+
+The preprocessed datasets should have this structure:
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    ├── datasets
+    └── preprocessed_datasets
+        ├── curated_fits_train.npz
+        ├── ehf_val.npz
+        ├── ffhq_flame_train.npz
+        ├── freihand_test.npz
+        ├── freihand_train.npz
+        ├── freihand_val.npz
+        ├── h36m_smplx_train.npz
+        ├── pw3d_test.npz
+        ├── spin_smplx_train.npz
+        └── stirling_ESRC3D_HQ.npz
+```
+
 ## Folder structure
 
 ### AGORA
@@ -1313,4 +1365,243 @@ mmhuman3d
         └── vibe_data
             ├── mpi_inf_3dhp_train.npz
             └── pw3d_test.npz
+```
+
+### FreiHand
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1909.04349.pdf">FreiHand (ICCV'2019)</a></summary>
+
+```bibtex
+@inproceedings{zimmermann2019freihand,
+  title={Freihand: A dataset for markerless capture of hand pose and shape from single rgb images},
+  author={Zimmermann, Christian and Ceylan, Duygu and Yang, Jimei and Russell, Bryan and Argus, Max and Brox, Thomas},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
+  pages={813--822},
+  year={2019}
+}
+```
+
+</details>
+
+For [FreiHand](https://lmb.informatik.uni-freiburg.de/projects/freihand/) data, please download from [FreiHand Dataset](https://lmb.informatik.uni-freiburg.de/resources/datasets/FreihandDataset.en.html).
+Extract them under `$MMHUMAN3D/data/datasets`. Place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    └── datasets
+        └── FreiHand
+            |── evaluation
+            |   └── rgb
+            |       ├── 00000000.jpg
+            |       ├── 00000001.jpg
+            |       └── ...
+            |── training
+            |   └── rgb
+            |       ├── 00000000.jpg
+            |       ├── 00000001.jpg
+            |       └── ...
+            |── evaluation_K.json
+            |── evaluation_mano.json
+            |── evaluation_scale.json
+            |── evaluation_verts.json
+            |── evaluation_xyz.json
+            |── training_K.json
+            |── training_mano.json
+            |── training_scale.json
+            |── training_verts.json
+            └── training_xyz.json
+```
+
+### EHF
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://ps.is.mpg.de/uploads_file/attachment/attachment/497/SMPL-X.pdf">SMPLX (CVPR'2019)</a></summary>
+
+```bibtex
+@inproceedings{SMPL-X:2019,
+  title = {Expressive Body Capture: {3D} Hands, Face, and Body from a Single Image},
+  author = {Pavlakos, Georgios and Choutas, Vasileios and Ghorbani, Nima and Bolkart, Timo and Osman, Ahmed A. A. and Tzionas, Dimitrios and Black, Michael J.},
+  booktitle = {Proceedings IEEE Conf. on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {10975--10985},
+  year = {2019}
+}
+```
+
+</details>
+
+For [EHF](https://smpl-x.is.tue.mpg.de/index.html) data, please download from [EHF Dataset](https://smpl-x.is.tue.mpg.de/index.html).
+Extract them under `$MMHUMAN3D/data/datasets`. Place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    └── datasets
+        └── EHF
+            |── 01_2Djnt.json
+            |── 01_2Djnt.png
+            |── 01_align.ply
+            |── 01_img.jpg
+            |── 01_img.png
+            |── 01_scan.obj
+            └── ...
+```
+
+### FFHQ
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/abs/1812.04948">FFHQ (CVPR'2019)</a></summary>
+
+```bibtex
+@inproceedings{karras2019style,
+  title={A style-based generator architecture for generative adversarial networks},
+  author={Karras, Tero and Laine, Samuli and Aila, Timo},
+  booktitle={Proceedings of the IEEE/CVF conference on computer vision and pattern recognition},
+  pages={4401--4410},
+  year={2019}
+}
+```
+
+</details>
+
+For [FFHQ](https://github.com/NVlabs/ffhq-dataset) data, please download from [FFHQ Dataset](https://github.com/NVlabs/ffhq-dataset).
+We present [ffhq_annotations.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/ffhq_flame_train.npz?versionId=CAEQRBiBgMCT4KzvjhgiIGMwMjFkZWNmMGZlNTQzYjVhMDdhMzA0MTQ1MTBjZDRi) by running [RingNet](https://ringnet.is.tue.mpg.de/) on FFHQ and then fitting to FAN 2D landmarks by [flame-fitting](https://github.com/HavenFeng/photometric_optimization).
+Extract them under `$MMHUMAN3D/data/datasets`. Place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    └── datasets
+        └── FFHQ
+            |── ffhq_global_images_1024
+            |       ├── 00000.png
+            |       ├── 00001.png
+            |       └── ...
+            └── ffhq_annotations.npz
+```
+
+
+### ExPose
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://ps.is.mpg.de/uploads_file/attachment/attachment/620/0983.pdf">ExPose (ECCV'2020)</a></summary>
+
+```bibtex
+@inproceedings{ExPose:2020,
+  title = {Monocular Expressive Body Regression through Body-Driven Attention},
+  author = {Choutas, Vasileios and Pavlakos, Georgios and Bolkart, Timo and Tzionas, Dimitrios and Black, Michael J.},
+  booktitle = {European Conference on Computer Vision (ECCV)},
+  pages = {20--40},
+  year = {2020},
+  url = {https://expose.is.tue.mpg.de}
+}
+```
+
+</details>
+
+For [ExPose](https://expose.is.tue.mpg.de/) data, please download from [Curated Fits Dataset](https://psfiles.is.tuebingen.mpg.de/downloads/expose/expose_curated_fits-zip) and [SPIN IN SMPLX Dataset](https://psfiles.is.tuebingen.mpg.de/downloads/expose/spin_in_smplx-zip).
+Extract them under `$MMHUMAN3D/data/datasets`. Place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    └── datasets
+        |── ExPose_curated_fits
+        |   |── train.npz
+        |   └── val.npz
+        └── spin_in_smplx
+            |── coco.npz
+            |── lsp.npz
+            |── lspet.npz
+            └── mpii.npz
+```
+
+### Stirling
+
+<!-- [DATASET] -->
+
+<details>
+<summary align="right"><a href="https://arxiv.org/pdf/1803.05536.pdf">Stirling ESRC3D Face (FG'2018)</a></summary>
+
+```bibtex
+@inproceedings{feng2018evaluation,
+  title={Evaluation of dense 3D reconstruction from 2D face images in the wild},
+  author={Feng, Zhen-Hua and Huber, Patrik and Kittler, Josef and Hancock, Peter and Wu, Xiao-Jun and Zhao, Qijun and Koppen, Paul and R{\"a}tsch, Matthias},
+  booktitle={2018 13th IEEE International Conference on Automatic Face \& Gesture Recognition (FG 2018)},
+  pages={780--786},
+  year={2018},
+  organization={IEEE}
+}
+```
+
+</details>
+
+For [Stirling ESRC3D Face](http://pics.psych.stir.ac.uk/ESRC/index.htm) data, please download from [Stirling ESRC3D Face Dataset](http://pics.psych.stir.ac.uk/ESRC/index.htm).
+Extract them under `$MMHUMAN3D/data/datasets`. Place them in the folder structure below:
+
+```text
+mmhuman3d
+├── mmhuman3d
+├── docs
+├── tests
+├── tools
+├── configs
+└── data
+    └── datasets
+        └── stirling
+            |── annotations
+            |   ├── F_3D_N
+            |   |   ├── F1001_N.lnd
+            |   |   ├── F1002_N.lnd
+            |   |   └── ...
+            |   └── M_3D_N
+            |       ├── M1001_N.lnd
+            |       ├── M1002_N.lnd
+            |       └── ...
+            |── F_3D_N
+            |   ├── F1001_N.obj
+            |   ├── F1002_N.obj
+            |   └── ...
+            |── M_3D_N
+            |   ├── M1001_N.obj
+            |   ├── M1002_N.obj
+            |   └── ...
+            └── Subset_2D_FG2018
+                ├── HQ
+                |   ├── F1001_001.jpg
+                |   ├── F1001_002.jpg
+                |   └── ...
+                └── LQ
+                    ├── F1001_008.jpg
+                    ├── F1001_009.jpg
+                    └── ...
 ```
