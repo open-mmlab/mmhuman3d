@@ -16,6 +16,32 @@ class MANO(_MANO):
     NUM_VERTS = 776
     NUM_FACES = 9976
 
+    KpId2manokps = {
+        0: 0,  # Wrist
+        1: 5,
+        2: 6,
+        3: 7,  # Index
+        4: 9,
+        5: 10,
+        6: 11,  # Middle
+        7: 17,
+        8: 18,
+        9: 19,  # Pinky
+        10: 13,
+        11: 14,
+        12: 15,  # Ring
+        13: 1,
+        14: 2,
+        15: 3
+    }  # Thumb
+    kpId2vertices = {
+        4: 744,  # Thumb
+        8: 320,  # Index
+        12: 443,  # Middle
+        16: 555,  # Ring
+        20: 672  # Pink
+    }
+
     def __init__(self,
                  *args,
                  keypoint_src: str = 'mano',
@@ -68,7 +94,7 @@ class MANO(_MANO):
         mano_output = super(MANO, self).forward(*args, **kwargs)
         joints = mano_output.joints
 
-        joints = get_keypoints_from_mesh(mano_output.vertices, joints)
+        joints = self.get_keypoints_from_mesh(mano_output.vertices, joints)
 
         joints, joint_mask = convert_kps(
             joints,
@@ -98,6 +124,21 @@ class MANO(_MANO):
 
         return output
 
+    def get_keypoints_from_mesh(self, mesh_vertices, keypoints_regressed):
+        """Assembles the full 21 keypoint set from the 16 Mano Keypoints and 5
+        mesh vertices for the fingers."""
+        batch_size = keypoints_regressed.shape[0]
+        keypoints = torch.zeros((batch_size, 21, 3)).cuda()
+
+        # fill keypoints which are regressed
+        for manoId, myId in self.KpId2manokps.items():
+            keypoints[:, myId, :] = keypoints_regressed[:, manoId, :]
+        # get other keypoints from mesh
+        for myId, meshId in self.kpId2vertices.items():
+            keypoints[:, myId, :] = mesh_vertices[:, meshId, :]
+
+        return keypoints
+
 
 class MANOLayer(_MANOLayer):
     """Extension of the official MANO implementation."""
@@ -105,6 +146,32 @@ class MANOLayer(_MANOLayer):
 
     NUM_VERTS = 776
     NUM_FACES = 9976
+
+    KpId2manokps = {
+        0: 0,  # Wrist
+        1: 5,
+        2: 6,
+        3: 7,  # Index
+        4: 9,
+        5: 10,
+        6: 11,  # Middle
+        7: 17,
+        8: 18,
+        9: 19,  # Pinky
+        10: 13,
+        11: 14,
+        12: 15,  # Ring
+        13: 1,
+        14: 2,
+        15: 3
+    }  # Thumb
+    kpId2vertices = {
+        4: 744,  # Thumb
+        8: 320,  # Index
+        12: 443,  # Middle
+        16: 555,  # Ring
+        20: 672  # Pink
+    }
 
     def __init__(self,
                  *args,
@@ -158,7 +225,7 @@ class MANOLayer(_MANOLayer):
         mano_output = super(MANOLayer, self).forward(*args, **kwargs)
         joints = mano_output.joints
 
-        joints = get_keypoints_from_mesh(mano_output.vertices, joints)
+        joints = self.get_keypoints_from_mesh(mano_output.vertices, joints)
 
         joints, joint_mask = convert_kps(
             joints,
@@ -188,43 +255,17 @@ class MANOLayer(_MANOLayer):
 
         return output
 
+    def get_keypoints_from_mesh(self, mesh_vertices, keypoints_regressed):
+        """Assembles the full 21 keypoint set from the 16 Mano Keypoints and 5
+        mesh vertices for the fingers."""
+        batch_size = keypoints_regressed.shape[0]
+        keypoints = torch.zeros((batch_size, 21, 3)).cuda()
 
-def get_keypoints_from_mesh(mesh_vertices, keypoints_regressed):
-    """Assembles the full 21 keypoint set from the 16 Mano Keypoints and 5 mesh
-    vertices for the fingers."""
-    batch_size = keypoints_regressed.shape[0]
-    keypoints = torch.zeros((batch_size, 21, 3)).cuda()
+        # fill keypoints which are regressed
+        for manoId, myId in self.KpId2manokps.items():
+            keypoints[:, myId, :] = keypoints_regressed[:, manoId, :]
+        # get other keypoints from mesh
+        for myId, meshId in self.kpId2vertices.items():
+            keypoints[:, myId, :] = mesh_vertices[:, meshId, :]
 
-    # fill keypoints which are regressed
-    KpId2manokps = {
-        0: 0,  # Wrist
-        1: 5,
-        2: 6,
-        3: 7,  # Index
-        4: 9,
-        5: 10,
-        6: 11,  # Middle
-        7: 17,
-        8: 18,
-        9: 19,  # Pinky
-        10: 13,
-        11: 14,
-        12: 15,  # Ring
-        13: 1,
-        14: 2,
-        15: 3
-    }  # Thumb
-    kpId2vertices = {
-        4: 744,  # Thumb
-        8: 320,  # Index
-        12: 443,  # Middle
-        16: 555,  # Ring
-        20: 672  # Pink
-    }
-    for manoId, myId in KpId2manokps.items():
-        keypoints[:, myId, :] = keypoints_regressed[:, manoId, :]
-    # get other keypoints from mesh
-    for myId, meshId in kpId2vertices.items():
-        keypoints[:, myId, :] = mesh_vertices[:, meshId, :]
-
-    return keypoints
+        return keypoints

@@ -2,6 +2,11 @@
 
 SPIN_SMPLX_KEYPOINTS can be found in https://github.com/vchoutas/expose
 """
+
+# TODO: SMPL_24->HumanData->SMPLX causes hip, spine to be lost.
+# SMPL_24: left/right_hip_extra
+# SMPLX: left/right_hip
+
 SPIN_SMPLX_KEYPOINTS = [
     'right_ankle',
     'right_knee',
