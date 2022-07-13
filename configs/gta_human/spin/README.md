@@ -1,20 +1,4 @@
-# SPIN
-
-## Introduction
-
-We provide the config files for SPIN: [Learning to Reconstruct 3D Human Pose and Shape via Model-fitting in the Loop](https://arxiv.org/pdf/1909.12828.pdf).
-
-```BibTeX
-@inproceedings{SPIN,
-  author    = {Nikos Kolotouros and
-               Georgios Pavlakos and
-               Michael J. Black and
-               Kostas Daniilidis},
-  title     = {Learning to Reconstruct 3D Human Pose and Shape via Model-fitting in the Loop},
-  booktitle = {ICCV},
-  year      = {2019}
-}
-```
+# GTA-Human (SPIN)
 
 ## Notes
 
@@ -30,8 +14,8 @@ We provide the config files for SPIN: [Learning to Reconstruct 3D Human Pose and
     - [lsp_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/lsp_fits.npy?versionId=CAEQHhiBgIDS4ZvV6xciIGFmMzdhMWJjZWQ1MjRkODBiZDY3NGU0MTc1Yzg0Nzlh)
     - [mpii_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/mpii_fits.npy?versionId=CAEQHhiBgMCm4ZvV6xciIGM1OTIzZDlkNjVhODQ2MDY5ODkyZWE4ZDEzZGJlNTdi)
     - [mpi_inf_3dhp_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/mpi_inf_3dhp_fits.npy?versionId=CAEQHhiBgMDf4ZvV6xciIDQyYjRmMzdhODdmNDQ1YTBhYzY4MTk1OTAxNzc4MmVj)
-
-As for pretrained model (spin_pretrain.pth), checkpoints of HMR can be directly used. You can download it from [here](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hmr/resnet50_hmr_pw3d-04f40f58_20211201.pth?versionId=CAEQHhiBgMD6zJfR6xciIDE0ODQ3OGM2OWJjMTRlNmQ5Y2ZjMWZhMzRkOTFiZDFm) and rename it as "spin_pretrain.pth" (or you can change the path of pretrained model in the config).
+    - [gta_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/static_fits/gta_fits.npy?versionId=CAEQRBiBgMCp4fPzjhgiIDhkZjhlODY2MjBkZjRjNzQ5ODZmNmVhY2IzNzA2ZmIy)
+- Pretrained SPIN model [spin_official.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/data/pretrained_models/spin_official.pth?versionId=CAEQRBiBgMC3zJPvjhgiIDNjODIxODJjYzEyNzRmNDhhNzU3Nzg3N2FlY2Y0ZWMx)
 
 Download the above resources and arrange them in the following file structure:
 
@@ -52,8 +36,8 @@ mmhuman3d
     │       ├── SMPL_FEMALE.pkl
     │       ├── SMPL_MALE.pkl
     │       └── SMPL_NEUTRAL.pkl
-    ├── pretrained
-    │   └── spin_pretrain.pth
+    ├── pretrained_models
+    │   └── spin_official.pth
     ├── preprocessed_datasets
     │   ├── spin_coco_2014_train.npz
     │   ├── h36m_mosh_train.npz
@@ -80,11 +64,8 @@ mmhuman3d
 
 ```
 
-
 ## Results and Models
-
-We evaluate SPIN on 3DPW. Values are MPJPE/PA-MPJPE.
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [resnet50_spin_pw3d_cache.py](resnet50_spin_pw3d_cache.py) | 94.11 / 57.54 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/resnet50_spin_pw3d-e1d70119_20220708.pth?versionId=CAEQRBiBgMC9xJDujhgiIDQwMGY5Nzc0MDY3YzQzM2U4MmJiMWJiZmRlZWMzOWZh) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/resnet50_spin_pw3d.log?versionId=CAEQRBiBgIDYwZDujhgiIDMxYjFjYTQ2NTI3MzQzNTdiYTU0NjM4N2I2ODQzY2E1) |
+| [resnet50_spin_gta_ft.py](resnet50_spin_gta_ft.py) | 83.20 / 51.98 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_spin_gta_ft/resnet50_spin_gta_ft-2538df81_20220708.pth?versionId=CAEQRBiBgICJxdjujhgiIGQwMTcwOGI5YzdlMTQ1ZjVhYzRhNWZkOTVhY2U3NjFm) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_spin_gta_ft/resnet50_spin_gta_ft.log?versionId=CAEQRBiBgMCHrdfujhgiIGRhZDA4NjY0NDBmNDRkMGRhMWRmODZlMzM1YmRiNzRj) |

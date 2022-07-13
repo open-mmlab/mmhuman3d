@@ -6,9 +6,8 @@ We provide the config files for GTA-Human: Playing for 3D Human Recovery.
 [[Homepage]](https://caizhongang.github.io/projects/GTA-Human/) [[Preprint]](https://arxiv.org/pdf/2110.07588.pdf)
 
 Notes:
-- the pretrained models for HMR baseline is currently available.
-- more baselines (HMR+, SPIN, VIBE, and PARE) are coming soon.  
-- we are working on the release of data, which is not available for downloads yet
+- the pretrained models for HMR, SPIN and PARE baselines are currently available.
+- more baselines (HMR+ and VIBE) are coming soon.
 
 ```BibTeX
 @article{GTAHuman,
@@ -30,15 +29,17 @@ Notes:
 }
 ```
 
-## Notes
+## Downloads and Data Preparation
 
-- [SMPL](https://smpl.is.tue.mpg.de/) v1.0 is used in our experiments.
-- [J_regressor_extra.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_extra.npy?versionId=CAEQHhiBgIDD6c3V6xciIGIwZDEzYWI5NTBlOTRkODU4OTE1M2Y4YTI0NTVlZGM1)
-- [J_regressor_h36m.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_h36m.npy?versionId=CAEQHhiBgIDE6c3V6xciIDdjYzE3MzQ4MmU4MzQyNmRiZDA5YTg2YTI5YWFkNjRi)
-- [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
-- [resnet50_hmr-2672873c_20220415.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/hmr/resnet50_hmr-2672873c_20220415.pth?versionId=CAEQLxiBgIDuou6vgRgiIDFiOGRiZTA1ZTQ5NjRmMzdhYzkzY2ZmZGQwYjE0MzBl)
+| Google Drive | OneDrive (CN) |
+|:------:|:-------:|
+|[Download](https://drive.google.com/drive/folders/1-vaWuFkYRNyFj1ONaCrYr009KNitHAqA?usp=sharing)|[Download](https://pjlab-my.sharepoint.cn/:f:/g/personal/openmmlab_pjlab_org_cn/EjT3W_PHhApGvDB0geyC_g0BoBPK0tZfLVATnecU_bJl1A?e=rm3tSe)|
 
-Download the above resources and arrange them in the following file structure:
+The downloaded compressed .zip files consist of:
+- 31 image files (total ~280 GB)
+- one annotation file (~4 GB, optional)
+
+Download the data files and decompress them under data/datasets/gta/ :
 
 ```text
 mmhuman3d
@@ -48,43 +49,32 @@ mmhuman3d
 ├── tools
 ├── configs
 └── data
-    ├── body_models
-    │   ├── J_regressor_extra.npy
-    │   ├── J_regressor_h36m.npy
-    │   ├── smpl_mean_params.npz
-    │   └── smpl
-    │       ├── SMPL_FEMALE.pkl
-    │       ├── SMPL_MALE.pkl
-    │       └── SMPL_NEUTRAL.pkl
     ├── preprocessed_datasets
-    │   ├── cmu_mosh.npz
-    │   ├── coco_2014_train.npz
-    │   ├── h36m_mosh_train.npz
-    │   ├── lspet_train.npz
-    │   ├── lsp_train.npz
-    │   ├── mpi_inf_3dhp_train.npz
-    │   ├── mpii_train.npz
-    │   ├── gta_human_4x.npz  
-    │   └── pw3d_test.npz
-    ├── pretrained
-    │   └── resnet50_hmr-2672873c_20220415.pth
+    │   └── gta_human_4x.npz  
     └── datasets
-        ├── coco
-        ├── h36m
-        ├── lspet
-        ├── lsp
-        ├── mpi_inf_3dhp
-        ├── mpii
-        ├── gta
-        └── pw3d
-
+        └── gta
+            ├── annotations (optional)
+            └── images
 ```
+
+However, MMHuman3D uses the standardized [`HumanData`](../../docs/human_data.md).  
+Hence, `gta_human_4x.npz` is used as the training, it may be obtained in two ways:
+1. (Recommended) Directly download from this [link](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/gta_human_4x.npz?versionId=CAEQRBiBgIDzq.n4jhgiIDJkZDU4OWU5MWEzYzQ5ZjA4ZjJiN2IwNjUzN2FmMTJl)
+   as we have already preprocessed it for you.
+2. Decompress the annotation file and run data_converter (use `gta_human` for dataset name).
+   See [preprocess_dataset.md](../../docs/preprocess_dataset.md) for details.
+
+## Notes
+
+For different base models, you can find detailed data preparation steps in each subfolder.
 
 ## Results and Models
 
-We evaluate HMR on 3DPW. Values are MPJPE/PA-MPJPE.
+We evaluate HMR, SPIN and PARE on 3DPW. Values are MPJPE/PA-MPJPE.
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [resnet50_hmr_gta_bt.py](resnet50_hmr_gta_bt.py) | 98.72 / 60.49 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_hmr_gta_bt-aa643b97_20220416.pth?versionId=CAEQLxiBgIDa4qHFgRgiIGUwNWJjZGFjMDE0OTRjYTg5MjI4MjcyZjI2YTVhMjli) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_hmr_gta_bt.log?versionId=CAEQLxiBgMCN4qHFgRgiIGZkNjJhMWY0YjFhODQxMGY5NTdmNjBhYTUwZDI3MmJj) |
-| [resnet50_hmr_gta_ft.py](resnet50_hmr_gta_ft.py) | 91.42 / 55.71 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_hmr_gta_ft-f444e49c_20220416.pth?versionId=CAEQLxiBgMD04aHFgRgiIDg0YTExY2IzNWFmMjQ3MTc5NDFjY2MyNWU4MmM5Mzcz) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_hmr_gta_ft.log?versionId=CAEQLxiBgID936HFgRgiIDAwMDM5NDlkM2MyNzQxYTE4ZTgzZDc3ZGE4NTJlZTVh) |
+| [resnet50_hmr_gta_bt.py](hmr/resnet50_hmr_gta_bt.py) | 98.72 / 60.49 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_hmr_gta_bt-aa643b97_20220416.pth?versionId=CAEQLxiBgIDa4qHFgRgiIGUwNWJjZGFjMDE0OTRjYTg5MjI4MjcyZjI2YTVhMjli) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_hmr_gta_bt.log?versionId=CAEQLxiBgMCN4qHFgRgiIGZkNjJhMWY0YjFhODQxMGY5NTdmNjBhYTUwZDI3MmJj) |
+| [resnet50_hmr_gta_ft.py](hmr/resnet50_hmr_gta_ft.py) | 91.42 / 55.71 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_hmr_gta_ft-f444e49c_20220416.pth?versionId=CAEQLxiBgMD04aHFgRgiIDg0YTExY2IzNWFmMjQ3MTc5NDFjY2MyNWU4MmM5Mzcz) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_hmr_gta_ft.log?versionId=CAEQLxiBgID936HFgRgiIDAwMDM5NDlkM2MyNzQxYTE4ZTgzZDc3ZGE4NTJlZTVh) |
+| [resnet50_spin_gta_ft.py](resnet50_spin_gta_ft.py) | 83.20 / 51.98 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_spin_gta_ft/resnet50_spin_gta_ft-2538df81_20220708.pth?versionId=CAEQRBiBgICJxdjujhgiIGQwMTcwOGI5YzdlMTQ1ZjVhYzRhNWZkOTVhY2U3NjFm) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/resnet50_spin_gta_ft/resnet50_spin_gta_ft.log?versionId=CAEQRBiBgMCHrdfujhgiIGRhZDA4NjY0NDBmNDRkMGRhMWRmODZlMzM1YmRiNzRj) |
+| [hrnet_w32_conv_pare_gta_ft.py](hrnet_w32_conv_pare_gta_ft.py) | 77.52 / 46.84 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/hrnet_w32_conv_pare_gta_ft/hrnet_w32_conv_pare_gta_ft-838829bc_20220708.pth?versionId=CAEQRBiBgMDRxNjujhgiIGY3ZmUzMjUzZjJhNjQ2MTg5ODNjMWFlNTJmMGJhMmFh) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/gta_human/hrnet_w32_conv_pare_gta_ft/hrnet_w32_conv_pare_gta_ft.log?versionId=CAEQRBiBgICjxdfujhgiIGZiZDFmMmI1YWI0MzQyZjM4MmQ2MjZiYzY5OGQ5ODk1) |
