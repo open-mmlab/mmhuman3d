@@ -543,7 +543,7 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
         name_value_tuples = [(err_name, error)]
 
         return name_value_tuples
-      
+
     def _report_pve(self, res_file, metric='pve', body_part=''):
         """Cauculate per vertex error."""
         pred_verts, gt_verts, _ = \
