@@ -59,3 +59,11 @@ def test_keypoint_mse_loss():
     pred = torch.ones(1, 3, 2)
     target = torch.zeros(1, 3, 2)
     assert torch.allclose(loss(pred, target), torch.tensor(1.))
+
+    # test keypoint weight
+    loss_cfg = dict(type='KeypointMSELoss', keypoint_weight=[1.0, 0.0])
+    loss = build_loss(loss_cfg)
+    pred = torch.Tensor([[[1, 1], [2, 2]]])
+    target = torch.zeros(1, 2, 2)
+    print(loss(pred, target))
+    assert torch.allclose(loss(pred, target), torch.tensor(0.25))
