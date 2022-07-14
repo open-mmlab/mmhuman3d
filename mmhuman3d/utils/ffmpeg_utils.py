@@ -230,7 +230,7 @@ def array_to_images(
         '-f',
         'image2',
         '-start_number',
-        '0',
+        str(len(os.listdir(output_folder))),
         os.path.join(output_folder, img_format),
     ]
     if not disable_log:

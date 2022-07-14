@@ -7,6 +7,7 @@ import numpy as np
 from scipy import interpolate
 
 from mmhuman3d.core.post_processing import build_post_processing
+from mmhuman3d.utils.ffmpeg_utils import array_to_images
 
 try:
     from typing import Literal
@@ -707,3 +708,25 @@ def get_different_colors(number_of_colors,
         colors_final.append(color_dict[channel])
     colors_final = np.concatenate(colors_final, -1)
     return colors_final
+
+
+def batch_array_to_images(frames_iter: list,
+                          frame_id_list: list,
+                          frames_folder: str,
+                          splits: int = 10):
+    """Batch process the total amount of frames to avoid oom problems that
+    might arise when loading a large number of images to memory.
+
+    Args:
+        frames_iter (list): image frames list
+        frame_id_list (list): image frames indices
+        frames_folder (str): frames folder
+        splits (int): number of array splits
+    """
+
+    def frames_array_split(frames_iter: list, frame_id_list: list):
+        for f_i_l in np.array_split(frame_id_list, splits):
+            yield np.array(frames_iter)[f_i_l]
+
+    for frames_iter_split in frames_array_split(frames_iter, frame_id_list):
+        array_to_images(frames_iter_split, output_folder=frames_folder)
