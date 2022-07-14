@@ -129,7 +129,8 @@ class SMPLifyX(SMPLify):
                     **stage_config,
                 )
 
-        return {
+        # collate results
+        ret = {
             'global_orient': global_orient,
             'transl': transl,
             'body_pose': body_pose,
@@ -141,6 +142,46 @@ class SMPLifyX(SMPLify):
             'leye_pose': leye_pose,
             'reye_pose': reye_pose
         }
+
+        if return_verts or return_joints or \
+                return_full_pose or return_losses:
+            eval_ret = self.evaluate(
+                global_orient=global_orient,
+                transl=transl,
+                body_pose=body_pose,
+                betas=betas,
+                left_hand_pose=left_hand_pose,
+                right_hand_pose=right_hand_pose,
+                expression=expression,
+                jaw_pose=jaw_pose,
+                leye_pose=leye_pose,
+                reye_pose=reye_pose,
+                keypoints2d=keypoints2d,
+                keypoints2d_conf=keypoints2d_conf,
+                keypoints3d=keypoints3d,
+                keypoints3d_conf=keypoints3d_conf,
+                return_verts=return_verts,
+                return_full_pose=return_full_pose,
+                return_joints=return_joints,
+                reduction_override='none'  # sample-wise loss
+            )
+
+            if return_verts:
+                ret['vertices'] = eval_ret['vertices']
+            if return_joints:
+                ret['joints'] = eval_ret['joints']
+            if return_full_pose:
+                ret['full_pose'] = eval_ret['full_pose']
+            if return_losses:
+                for k in eval_ret.keys():
+                    if 'loss' in k:
+                        ret[k] = eval_ret[k]
+
+        for k, v in ret.items():
+            if isinstance(v, torch.Tensor):
+                ret[k] = v.detach().clone()
+
+        return ret
 
     def _optimize_stage(self,
                         betas: torch.Tensor,
