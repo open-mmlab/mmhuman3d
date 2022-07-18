@@ -116,7 +116,7 @@ For more version download link, refer to [openmmlab-download](https://download.o
 Optionally you can choose to compile mmcv from source by the following command
 
 ```shell
-git clone https://github.com/open-mmlab/mmcv.git -b v1.4.2
+git clone https://github.com/open-mmlab/mmcv.git -b v1.3.17
 cd mmcv
 MMCV_WITH_OPS=1 pip install -e .  # package mmcv-full, which contains cuda ops, will be installed after this step
 # OR pip install -e .  # package mmcv, which contains no cuda ops, will be installed after this step
