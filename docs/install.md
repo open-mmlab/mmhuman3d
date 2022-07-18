@@ -23,7 +23,7 @@
 Optional:
 - [MMPOSE](https://github.com/open-mmlab/mmpose) (Only for demo.)
 - [MMDETECTION](https://github.com/open-mmlab/mmdetection) (Only for demo.)
-- [MMTRACKING](https://github.com/open-mmlab/mmtracking) (Only for multi-person demo. If you use mmtrack, please install mmcls<0.23.1, mmcv-full>=1.3.16,<1.6.0 for GPU
+- [MMTRACKING](https://github.com/open-mmlab/mmtracking) (Only for multi-person demo. If you use mmtrack, please install mmcls<0.23.1, mmcv-full>=1.3.17,<1.6.0 for GPU
 
 ## Prepare environment
 
