@@ -118,7 +118,7 @@ __global__ void rasterize_cuda_kernel(
 
         // negative vertex
         is_bad_face = false;
-        if (face_ndc[2] < eps or face_ndc[5] < eps or face_ndc[8] < eps) {
+        if (face_ndc[2] < eps || face_ndc[5] < eps || face_ndc[8] || eps) {
             is_bad_face = true;
             global_is_bad_face[face_indx] = 1;
             return;
