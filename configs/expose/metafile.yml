@@ -1,0 +1,37 @@
+Collections:
+  - Name: ExPose
+    Metadata:
+      Training Data:
+         - COCO
+         - Human3.6M
+         - LSP-Extended
+         - LSP
+         - MPII
+         - FreiHand
+         - FFHQ
+      Architecture:
+        - PoseHighResolutionNet
+        - ExPoseHead
+    Paper:
+      URL: https://arxiv.org/abs/2008.09062
+      Title: "Monocular Expressive Body Regression through Body-Driven Attention"
+    README: configs/expose/README.md
+
+Models:
+  - Name: expose
+    In Collection: ExPose
+    Config: configs/expose/expose.py
+    Metadata:
+      Epochs: 100
+    Results:
+      - Task: Human Pose and Shape Estimation
+        Dataset: EHF
+        Metrics:
+          BODY PA-MPJPE: 55.70
+          RIGHT_HAND PA-MPJPE: 14.6
+          LEFT_HAND PA-MPJPE: 14.4
+          PA-PVE: 56.65
+          RIGHT_HAND PA-PVE: 14.6
+          LEFT_HAND PA-PVE: 14.5
+          FACE PA-PVE: 6.90
+    Weights:

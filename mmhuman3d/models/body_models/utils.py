@@ -1,5 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
-
 import numpy as np
 
 from mmhuman3d.utils.transforms import aa_to_rotmat, rotmat_to_aa
@@ -9,14 +7,14 @@ def transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
     """Transform body model parameters to camera frame.
 
     Args:
-        global_orient (np.ndarray): shape (3, ). Only global_orient and
+        global_orient (numpy.ndarray): shape (3, ). Only global_orient and
             transl needs to be updated in the rigid transformation
-        transl (np.ndarray): shape (3, ).
-        pelvis (np.ndarray): shape (3, ). 3D joint location of pelvis
+        transl (numpy.ndarray): shape (3, ).
+        pelvis (numpy.ndarray): shape (3, ). 3D joint location of pelvis
             This is necessary to eliminate the offset from SMPL
             canonical space origin to pelvis, because the global orient
             is conducted around the pelvis, not the canonical space origin
-        extrinsic (np.ndarray): shape (4, 4). Transformation matrix
+        extrinsic (numpy.ndarray): shape (4, 4). Transformation matrix
             from world frame to camera frame
     Returns:
         (new_gloabl_orient, new_transl)
@@ -52,10 +50,10 @@ def transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
 
     # decompose into new global orient and new transl
     new_global_orient_mat = T_v2np[:3, :3]
-    new_gloabl_orient = rotmat_to_aa(new_global_orient_mat)
+    new_global_orient = rotmat_to_aa(new_global_orient_mat)
     new_transl = T_v2np[:3, 3]
 
-    return new_gloabl_orient, new_transl
+    return new_global_orient, new_transl
 
 
 def batch_transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
@@ -109,10 +107,10 @@ def batch_transform_to_camera_frame(global_orient, transl, pelvis, extrinsic):
 
     # decompose into new global orient and new transl
     new_global_orient_mat = T_v2np[:, :3, :3]
-    new_gloabl_orient = rotmat_to_aa(new_global_orient_mat)
+    new_global_orient = rotmat_to_aa(new_global_orient_mat)
     new_transl = T_v2np[:, :3, 3]
 
-    assert new_gloabl_orient.shape == (N, 3)
+    assert new_global_orient.shape == (N, 3)
     assert new_transl.shape == (N, 3)
 
-    return new_gloabl_orient, new_transl
+    return new_global_orient, new_transl

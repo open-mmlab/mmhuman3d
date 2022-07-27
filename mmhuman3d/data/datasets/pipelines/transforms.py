@@ -210,6 +210,46 @@ def _flip_smpl_pose(pose):
     return pose_flipped
 
 
+def _flip_smplx_pose(pose):
+    """Flip SMPLX pose parameters horizontally.
+
+    Args:
+        pose (np.ndarray([63])): SMPLX pose parameters
+    Returns:
+        pose_flipped (np.ndarray([21,3]))
+    """
+    flippedParts = np.array([
+        6, 7, 8, 3, 4, 5, 9, 10, 11, 15, 16, 17, 12, 13, 14, 18, 19, 20, 24,
+        25, 26, 21, 22, 23, 27, 28, 29, 33, 34, 35, 30, 31, 32, 36, 37, 38, 42,
+        43, 44, 39, 40, 41, 45, 46, 47, 51, 52, 53, 48, 49, 50, 57, 58, 59, 54,
+        55, 56, 63, 64, 65, 60, 61, 62
+    ],
+                            dtype=np.int32) - 3
+    dim_flip = np.array([1, -1, -1], dtype=pose.dtype)
+    pose = (pose[flippedParts].reshape(21, 3) * dim_flip).copy()
+    return pose
+
+
+def _flip_axis_angle(r):
+    """Flip axis_angle horizontally.
+
+    Args:
+        r (np.ndarray([3]))
+    Returns:
+        f_flipped
+    """
+    dim_flip = np.array([1, -1, -1], dtype=r.dtype)
+    r = r * dim_flip
+    return r
+
+
+def _flip_hand_pose(r_pose, l_pose):
+    dim_flip = np.array([1, -1, -1], dtype=r_pose.dtype)
+    ret_l_pose = r_pose * dim_flip
+    ret_r_pose = l_pose * dim_flip
+    return ret_r_pose, ret_l_pose
+
+
 def _flip_keypoints(keypoints, flip_pairs, img_width=None):
     """Flip human joints horizontally.
 
@@ -353,6 +393,36 @@ class RandomHorizontalFlip(object):
             body_pose = smpl_pose_flipped[3:]
             results['smpl_global_orient'] = global_orient
             results['smpl_body_pose'] = body_pose.reshape((-1, 3))
+
+        if 'smplx_body_pose' in results:
+
+            body_pose = results['smplx_body_pose'].copy().reshape((-1))
+            body_pose_flipped = _flip_smplx_pose(body_pose)
+            results['smplx_body_pose'] = body_pose_flipped
+
+        if 'smplx_global_orient' in results:
+            global_orient = results['smplx_global_orient'].copy().reshape((-1))
+            global_orient_flipped = _flip_axis_angle(global_orient)
+            results['smplx_global_orient'] = global_orient_flipped
+
+        if 'smplx_jaw_pose' in results:
+            jaw_pose = results['smplx_jaw_pose'].copy().reshape((-1))
+            jaw_pose_flipped = _flip_axis_angle(jaw_pose)
+            results['smplx_jaw_pose'] = jaw_pose_flipped
+
+        if 'smplx_right_hand_pose' in results:
+            right_hand_pose = results['smplx_right_hand_pose'].copy()
+            left_hand_pose = results['smplx_left_hand_pose'].copy()
+            results['smplx_right_hand_pose'], results[
+                'smplx_left_hand_pose'] = _flip_hand_pose(
+                    right_hand_pose, left_hand_pose)
+
+        # Expressions are not symmetric. Remove them when flipped.
+        if 'smplx_expression' in results:
+            results['smplx_expression'] = np.zeros(
+                (results['smplx_expression'].shape[0]), dtype=np.float32)
+            results['has_smplx_expression'] = 0
+
         return results
 
     def __repr__(self):
@@ -621,6 +691,13 @@ class RandomChannelNoise:
         img = cv2.multiply(img, pn)
 
         results['img'] = img
+
+        if 'ori_img' in results:
+            img = results['ori_img']
+            img = cv2.multiply(img, pn)
+
+            results['ori_img'] = img
+
         return results
 
 
@@ -680,6 +757,13 @@ class MeshAffine:
 
         if 'img' in results:
             img = results['img']
+
+            # img before affine
+            ori_img = img.copy()
+            results['crop_transform'] = trans
+            results['ori_img'] = ori_img
+            results['img_fields'] = ['img', 'ori_img']
+
             img = cv2.warpAffine(
                 img,
                 trans, (int(self.image_size[0]), int(self.image_size[1])),
@@ -707,5 +791,163 @@ class MeshAffine:
             pose = _rotate_smpl_pose(pose, r)
             results['smpl_global_orient'] = pose[:3]
             results['smpl_body_pose'] = pose[3:].reshape((-1, 3))
+
+        if 'smplx_global_orient' in results:
+            global_orient = results['smplx_global_orient'].copy()
+            global_orient = _rotate_smpl_pose(global_orient, r)
+            results['smplx_global_orient'] = global_orient
+
+        return results
+
+
+@PIPELINES.register_module()
+class Rotation:
+    """Rotate the image with the given rotation.
+
+    Rotate the 2D keypoints, 3D kepoints, poses. Required keys: 'img',
+    'pose', 'rotation' and 'center'. Modifies key: 'img',
+    ''keypoints2d', 'keypoints3d', 'pose'.
+
+    To avoid conflicts with MeshAffine, rotation will be set to 0.0
+    after rotate the image.
+    The rotation value will be stored to 'ori_rotation'.
+    """
+
+    def __init__(self):
+        pass
+
+    def __call__(self, results):
+        r = results['rotation']
+        if r == 0.0:
+            return results
+        img = results['img']
+
+        # img before affine
+        (h, w) = img.shape[:2]
+        (cX, cY) = (w // 2, h // 2)
+        M = cv2.getRotationMatrix2D((cX, cY), r, 1.0)
+        cos = np.abs(M[0, 0])
+        sin = np.abs(M[0, 1])
+        # compute the new bounding dimensions of the image
+        nW = int((h * sin) + (w * cos))
+        nH = int((h * cos) + (w * sin))
+        # adjust the rotation matrix to take into account translation
+        M[0, 2] += (nW / 2) - cX
+        M[1, 2] += (nH / 2) - cY
+        # perform the actual rotation and return the image
+        img = cv2.warpAffine(img, M, (nW, nH))
+
+        results['img'] = img
+
+        c = results['center']
+        c = np.dot(M[:2, :2], c) + M[:2, 2]
+        results['center'] = c
+
+        if 'keypoints2d' in results:
+            keypoints2d = results['keypoints2d'].copy()
+            keypoints2d[:, :2] = (np.dot(keypoints2d[:, :2], M[:2, :2].T) +
+                                  M[:2, 2] + 1).astype(np.int)
+            results['keypoints2d'] = keypoints2d
+
+        if 'keypoints3d' in results:
+            keypoints3d = results['keypoints3d'].copy()
+            keypoints3d[:, :3] = _rotate_joints_3d(keypoints3d[:, :3], r)
+            results['keypoints3d'] = keypoints3d
+
+        if 'smpl_body_pose' in results:
+            global_orient = results['smpl_global_orient'].copy()
+            body_pose = results['smpl_body_pose'].copy().reshape((-1))
+            pose = np.concatenate((global_orient, body_pose), axis=-1)
+            pose = _rotate_smpl_pose(pose, r)
+            results['smpl_global_orient'] = pose[:3]
+            results['smpl_body_pose'] = pose[3:].reshape((-1, 3))
+
+        if 'smplx_global_orient' in results:
+            global_orient = results['smplx_global_orient'].copy()
+            global_orient = _rotate_smpl_pose(global_orient, r)
+            results['smplx_global_orient'] = global_orient
+
+        results['rotation'] = 0.0
+        results['ori_rotation'] = r
+        return results
+
+
+@PIPELINES.register_module()
+class BBoxCenterJitter(object):
+
+    def __init__(self, factor=0.0, dist='normal'):
+        super(BBoxCenterJitter, self).__init__()
+        self.factor = factor
+        self.dist = dist
+        assert self.dist in [
+            'normal', 'uniform'
+        ], (f'Distribution must be normal or uniform, not {self.dist}')
+
+    def __call__(self, results):
+        # body model: no process
+        if self.factor <= 1e-3:
+            return results
+
+        bbox_size = results['scale'][0]
+
+        jitter = bbox_size * self.factor
+
+        if self.dist == 'normal':
+            center_jitter = np.random.randn(2) * jitter
+        elif self.dist == 'uniform':
+            center_jitter = np.random.rand(2) * 2 * jitter - jitter
+
+        center = results['center']
+        H, W = results['img_shape']
+        new_center = center + center_jitter
+        new_center[0] = np.clip(new_center[0], 0, W)
+        new_center[1] = np.clip(new_center[1], 0, H)
+
+        results['center'] = new_center
+        return results
+
+
+@PIPELINES.register_module()
+class SimulateLowRes(object):
+
+    def __init__(self,
+                 dist: str = 'categorical',
+                 factor: float = 1.0,
+                 cat_factors=(1.0, ),
+                 factor_min: float = 1.0,
+                 factor_max: float = 1.0) -> None:
+        self.factor_min = factor_min
+        self.factor_max = factor_max
+        self.dist = dist
+        self.cat_factors = cat_factors
+        assert dist in ['uniform', 'categorical']
+
+    def _sample_low_res(self, image: np.ndarray) -> np.ndarray:
+        """"""
+        if self.dist == 'uniform':
+            downsample = self.factor_min != self.factor_max
+            if not downsample:
+                return image
+            factor = np.random.rand() * (self.factor_max -
+                                         self.factor_min) + self.factor_min
+        elif self.dist == 'categorical':
+            if len(self.cat_factors) < 2:
+                return image
+            idx = np.random.randint(0, len(self.cat_factors))
+            factor = self.cat_factors[idx]
+
+        H, W, _ = image.shape
+        downsampled_image = cv2.resize(image,
+                                       (int(W // factor), int(H // factor)),
+                                       cv2.INTER_NEAREST)
+        resized_image = cv2.resize(downsampled_image, (W, H),
+                                   cv2.INTER_LINEAR_EXACT)
+        return resized_image
+
+    def __call__(self, results):
+        """"""
+        img = results['img']
+        img = self._sample_low_res(img)
+        results['img'] = img
 
         return results

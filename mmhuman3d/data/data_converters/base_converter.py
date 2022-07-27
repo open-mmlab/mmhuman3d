@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
 
+import numpy as np
+
 
 class BaseConverter(metaclass=ABCMeta):
     """Base dataset.
@@ -54,6 +56,33 @@ class BaseConverter(metaclass=ABCMeta):
         x1, y1, x2, y2 = bbox_xyxy
         return [x1, y1, x2 - x1, y2 - y1]
 
+    @staticmethod
+    def _keypoints_to_scaled_bbox(keypoints, scale=1.0):
+        '''Obtain scaled bbox in xyxy format given keypoints
+        Args:
+            keypoints (np.ndarray): Keypoints
+            scale (float): Bounding Box scale
+
+        Returns:
+            bbox_xyxy (np.ndarray): Bounding box in xyxy format
+
+        '''
+        xmin, ymin = np.amin(keypoints, axis=0)
+        xmax, ymax = np.amax(keypoints, axis=0)
+
+        width = (xmax - xmin) * scale
+        height = (ymax - ymin) * scale
+
+        x_center = 0.5 * (xmax + xmin)
+        y_center = 0.5 * (ymax + ymin)
+        xmin = x_center - 0.5 * width
+        xmax = x_center + 0.5 * width
+        ymin = y_center - 0.5 * height
+        ymax = y_center + 0.5 * height
+
+        bbox = np.stack([xmin, ymin, xmax, ymax], axis=0).astype(np.float32)
+        return bbox
+
 
 class BaseModeConverter(BaseConverter):
     """Convert datasets by mode.
@@ -63,9 +92,9 @@ class BaseModeConverter(BaseConverter):
         modes (list): the modes of data for converter
     """
 
-    def convert(self, dataset_path: str, out_path: str):
+    def convert(self, dataset_path: str, out_path: str, **kwargs):
         for mode in self.modes:
-            self.convert_by_mode(dataset_path, out_path, mode)
+            self.convert_by_mode(dataset_path, out_path, mode, **kwargs)
 
     @abstractmethod
     def convert_by_mode(self):

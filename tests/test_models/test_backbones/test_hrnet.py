@@ -1,7 +1,11 @@
 import pytest
 import torch
 
-from mmhuman3d.models.backbones.hrnet import HRModule, PoseHighResolutionNet
+from mmhuman3d.models.backbones.hrnet import (
+    HRModule,
+    PoseHighResolutionNet,
+    PoseHighResolutionNetExpose,
+)
 from mmhuman3d.models.backbones.resnet import BasicBlock, Bottleneck
 
 
@@ -171,3 +175,38 @@ def test_hrnet_backbone():
         PoseHighResolutionNet(extra=extra, pretrained=1)
 
     PoseHighResolutionNet(extra=extra, pretrained=pretrained)
+
+    extra = dict(
+        stage1=dict(
+            num_modules=1,
+            num_branches=1,
+            block='BOTTLENECK',
+            num_blocks=(4, ),
+            num_channels=(64, )),
+        stage2=dict(
+            num_modules=1,
+            num_branches=2,
+            block='BASIC',
+            num_blocks=(4, 4),
+            num_channels=(48, 96)),
+        stage3=dict(
+            num_modules=4,
+            num_branches=3,
+            block='BASIC',
+            num_blocks=(4, 4, 4),
+            num_channels=(48, 96, 192)),
+        stage4=dict(
+            num_modules=3,
+            num_branches=4,
+            block='BASIC',
+            num_blocks=(4, 4, 4, 4),
+            num_channels=(48, 96, 192, 384)),
+        downsample=True,
+        use_conv=True,
+        final_conv_kernel=1,
+        return_list=False)
+    model = PoseHighResolutionNetExpose(extra=extra)
+    model.init_weights()
+    imgs = torch.randn(1, 3, 256, 256)
+    feats = model(imgs)
+    assert feats.shape == torch.Size([1, 2048])

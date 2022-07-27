@@ -42,6 +42,11 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
 ## 最新进展
+- 2022-07-08: MMHuman3D [v0.9.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.9.0) 已经发布. 主要更新包括:
+  - 支持 SMPL-X 估计方法 [ExPose](https://expose.is.tue.mpg.de/)，同时重建脸、手、身体
+  - 支持新的人体参数化模型 [STAR](https://star.is.tue.mpg.de/)
+  - 开源 [GTA-Human](https://caizhongang.github.io/projects/GTA-Human/) 数据集，以及 SPIN-FT (51.98 mm) 和 PARE-FT (46.84 mm) 基线! (官方开源)
+  - 重构配准管线并提升SPIN至 57.54 mm
 - 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) 已经发布. 主要更新包括:
   - 支持 SmoothNet（由论文作者添加）
   - 修复循环引用问题，获得最多2.5倍速度提升
@@ -51,10 +56,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - 支持DeciWatch（由论文作者添加）
   - 添加GTA-Human的HMR基线（官方开源）
   - 支持存储推理结果
-- 2022-04-01: MMHuman3D [v0.6.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.6.0) 已经发布. 主要更新包括:
-  - 增加HumanDataCache，大幅削减(96%)训练时内存占用
-  - 重构可微渲染器并支持UV map渲染
-  - HumanData支持slice/concat操作
 
 ## 基准与模型库
 
@@ -67,6 +68,9 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 - [x] [SMPL](https://smpl.is.tue.mpg.de/) (SIGGRAPH Asia'2015)
 - [x] [SMPL-X](https://smpl-x.is.tue.mpg.de/) (CVPR'2019)
+- [x] [MANO](https://mano.is.tue.mpg.de/) (SIGGRAPH ASIA'2017)
+- [x] [FLAME](https://flame.is.tue.mpg.de/) (SIGGRAPH ASIA'2017)
+- [x] [STAR](https://star.is.tue.mpg.de/) (ECCV'2020)
 
 </details>
 
@@ -82,8 +86,9 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [VIBE](https://github.com/mkocabas/VIBE) (CVPR'2020)
 - [x] [HybrIK](https://jeffli.site/HybrIK/) (CVPR'2021)
 - [x] [PARE](https://pare.is.tue.mpg.de/) (ICCV'2021)
-- [x] [DeciWatch](https://ailingzeng.site/deciwatch) (arXiv'2022)
-- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (arXiv'2022)
+- [x] [DeciWatch](https://ailingzeng.site/deciwatch) (ECCV'2022)
+- [x] [SmoothNet](https://ailingzeng.site/smoothnet) (ECCV'2022)
+- [x] [ExPose](https://expose.is.tue.mpg.de) (ECCV'2020)
 
 </details>
 
@@ -99,6 +104,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [COCO-WholeBody](https://github.com/jin-s13/COCO-WholeBody) (ECCV'2020)
 - [x] [CrowdPose](https://github.com/Jeff-sjtu/CrowdPose) (CVPR'2019)
 - [x] [EFT](https://github.com/facebookresearch/eft) (3DV'2021)
+- [x] [GTA-Human](https://caizhongang.github.io/projects/GTA-Human/) (arXiv'2021)
 - [x] [Human3.6M](http://vision.imar.ro/human3.6m/description.php) (TPAMI'2014)
 - [x] [InstaVariety](https://github.com/akanazawa/human_dynamics/blob/master/doc/insta_variety.md) (CVPR'2019)
 - [x] [LSP](https://sam.johnson.io/research/lsp.html) (BMVC'2010)
@@ -109,6 +115,9 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [PoseTrack18](https://posetrack.net/users/download.php) (CVPR'2018)
 - [x] [SURREAL](https://www.di.ens.fr/willow/research/surreal/data/) (CVPR'2017)
 - [x] [UP3D](https://files.is.tuebingen.mpg.de/classner/up/) (CVPR'2017)
+- [x] [FreiHand](https://lmb.informatik.uni-freiburg.de/projects/freihand/) (ICCV'2019)
+- [x] [EHF](https://smpl-x.is.tue.mpg.de/) (CVPR'2019)
+- [x] [Stirling/ESRC-Face3D](http://pics.psych.stir.ac.uk/ESRC/index.htm) (FG'2018)
 
 </details>
 

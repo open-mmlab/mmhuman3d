@@ -51,6 +51,7 @@ def build_dataloader(dataset: Dataset,
                      shuffle: Optional[bool] = True,
                      round_up: Optional[bool] = True,
                      seed: Optional[Union[int, None]] = None,
+                     persistent_workers: Optional[bool] = True,
                      **kwargs):
     """Build PyTorch DataLoader.
 
@@ -70,6 +71,11 @@ def build_dataloader(dataset: Dataset,
             Default: True.
         round_up (bool, optional): Whether to round up the length of dataset by
             adding extra samples to make it evenly divisible. Default: True.
+        persistent_workers (bool): If True, the data loader will not shutdown
+            the worker processes after a dataset has been consumed once.
+            This allows to maintain the workers Dataset instances alive.
+            The argument also has effect in PyTorch>=1.7.0.
+            Default: True
         kwargs: any keyword argument to be used to initialize DataLoader
 
     Returns:
@@ -100,6 +106,7 @@ def build_dataloader(dataset: Dataset,
         pin_memory=False,
         shuffle=shuffle,
         worker_init_fn=init_fn,
+        persistent_workers=persistent_workers,
         **kwargs)
 
     return data_loader

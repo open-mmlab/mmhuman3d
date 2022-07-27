@@ -59,6 +59,8 @@ registrant = dict(
         image_size=(img_res, img_res),
         principal_point=(img_res / 2, img_res / 2)))
 
+registration = dict(mode='in_the_loop', registrant=registrant)
+
 # optimizer
 optimizer = dict(
     backbone=dict(type='Adam', lr=3e-5), head=dict(type='Adam', lr=3e-5))
@@ -94,7 +96,7 @@ model = dict(
         keypoint_dst='h36m',
         model_path='data/body_models/smpl',
         joints_regressor='data/body_models/J_regressor_h36m.npy'),
-    registrant=registrant,
+    registration=registration,
     convention='smpl_49',
     loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=100),
     loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=10),
@@ -148,7 +150,7 @@ inference_pipeline = [
 
 data = dict(
     samples_per_gpu=32,
-    workers_per_gpu=1,
+    workers_per_gpu=2,
     train=dict(
         type='MixedDataset',
         configs=[

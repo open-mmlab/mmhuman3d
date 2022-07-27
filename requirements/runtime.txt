@@ -9,8 +9,11 @@ numpy
 opencv-python
 pandas
 pickle5
+plyfile
+rtree
 scikit-image
 scipy
 smplx
 tqdm
+trimesh
 vedo
