@@ -129,17 +129,22 @@ Here we take HMR (resnet50_hmr_pw3d.pth) as an example.
 
 ### Online Demo
 
-We provide a webcam demo script to estimate SMPL parameters from the camera or a specified video file.
+We provide a webcam demo script to estimate SMPL parameters from the camera or a specified video file. You can simply run the following command:
+
+```shell
+python demo/webcam_demo.py
+```
 
 Some useful arguments are explained here:
 - If you specify `--output`, the webcam demo script will save the visualization results into a file. This may reduce the frame rate.
-- If you specify `--synchronous`, video I/O and inference will be temporally aligned. Note that this will reduce the display FPS.
+- If you specify `--synchronous`, video I/O and inference will be temporally aligned. Note that this will reduce the frame rate.
 - If you want run the webcam demo in offline mode on a video file, you should set `--cam-id=VIDEO_FILE_PATH`. Note that `--synchronous` should be set to `True` in this case.
 - The video I/O and model inference are running asynchronously and the latter usually takes more time for a single frame. To allevidate the time delay, you can:
 
   - set `--display-delay=MILLISECONDS` to defer the video stream, according to the inference delay shown at the top left corner. Or,
 
-  - set `--synchronous=True` to force video stream being aligned with inference results. This may reduce the video display FPS.
+  - set `--synchronous=True` to force video stream being aligned with inference results. This may reduce the frame rate.
+
 ## Evaluation
 
 We provide pretrained models in the respective method folders in [config](https://github.com/open-mmlab/mmhuman3d/tree/main/configs).

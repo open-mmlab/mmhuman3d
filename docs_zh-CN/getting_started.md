@@ -131,8 +131,10 @@ MMHuman3D的checkpoints文件可以从[model zoo](../docs_zh-CN/model_zoo.md)下
 这里我们使用HMR (resnet50_hmr_pw3d.pth)作为示例。
 
 ### 在线Demo
-我们提供一个从相机或者一个指定的视频文件估计SMPL参数的webcam演示脚本。
-
+我们提供一个从相机或者一个指定的视频文件估计SMPL参数的webcam演示脚本。你可以简单的运行下面的命令：
+```shell
+python demo/webcam_demo.py
+```
 以下是一些参数的释义:
 - 如果指定`--output`, 演示脚本会将可视化结果储存到对应的文件中。这可能会降低帧率。
 - 如果指定`--synchronous`, 视频的 I/O 和模型的推理在时序上将会对齐. 注意这会降低帧率.
@@ -142,6 +144,7 @@ MMHuman3D的checkpoints文件可以从[model zoo](../docs_zh-CN/model_zoo.md)下
   - 根据显示在左上角的推理延时设置`--display-delay=MILLISECONDS` 来延时视频流. 或者,
 
   - 设置 `--synchronous=True` 强制视频流和推理结果对齐. 这可能降低视频的帧率。
+
 
 ## 测试
 
