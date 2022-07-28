@@ -89,6 +89,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [DeciWatch](https://ailingzeng.site/deciwatch) (ECCV'2022)
 - [x] [SmoothNet](https://ailingzeng.site/smoothnet) (ECCV'2022)
 - [x] [ExPose](https://expose.is.tue.mpg.de) (ECCV'2020)
+- [x] [BalancedMSE](https://sites.google.com/view/balanced-mse/home) (CVPR'2022)
 
 </details>
 

@@ -1,4 +1,4 @@
-# GTA-Human
+# Balanced MSE
 
 ## Introduction
 
@@ -24,6 +24,7 @@ We provide the config files for **Balanced MSE for Imbalanced Visual Regression(
 - [J_regressor_extra.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_extra.npy?versionId=CAEQHhiBgIDD6c3V6xciIGIwZDEzYWI5NTBlOTRkODU4OTE1M2Y4YTI0NTVlZGM1)
 - [J_regressor_h36m.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/J_regressor_h36m.npy?versionId=CAEQHhiBgIDE6c3V6xciIDdjYzE3MzQ4MmU4MzQyNmRiZDA5YTg2YTI5YWFkNjRi)
 - [smpl_mean_params.npz](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/smpl_mean_params.npz?versionId=CAEQHhiBgICN6M3V6xciIDU1MzUzNjZjZGNiOTQ3OWJiZTJmNThiZmY4NmMxMTM4)
+- Pretrained model [spin_official_nofc.pth](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/balanced_mse/pretrained_models/spin_official_nofc.pth?versionId=CAEQSBiBgMCBm4STkhgiIDVmZGQwNTBmNTU1YjQyYjRhMzJjNzM1Mjc1OTgwNzJj)
 - Static fits required for the training:
     - [coco_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/coco_fits.npy?versionId=CAEQHhiBgMCr4ZvV6xciIGY1OTZjM2NlZWI3ZDRjMzI5ODE0MWQxYjM2M2Y4NTVk)
     - [h36m_fits.npy](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/spin/static_fits/h36m_fits.npy?versionId=CAEQHhiBgIC54ZvV6xciIDc2YjExNmM0NjBiMDQwMmU5NjJmODljNjgxYWE1MGQx)
@@ -84,5 +85,5 @@ We evaluate methods on 3DPW with new metrics: bMPVPE, bMPJPE, bPA-MPJPE. For eac
 
 | Config |  bMPVPE | bMPJPE | bPA-MPJPE | Download |
 |:------:|:-------:|:------:|:------:|:------:|
-| [resnet50_spin_ihmr_ft_baseline.py](resnet50_spin_ihmr_ft_baseline.py) | 115.33/126.98/132.20 | 98.69/111.79/113.61 | 65.98/76.89/76.76 | [model]() &#124; [log]() |
-| [resnet50_spin_ihmr_ft_bmc.py](resnet50_spin_ihmr_ft_bmc.py) | 112.67/126.13/130.42 | 95.70/110.22/111.62 | 65.65/75.61/75.86 | [model]() &#124; [log]() |
+| [resnet50_spin_ihmr_ft_baseline.py](resnet50_spin_ihmr_ft_baseline.py) | 115.33/126.98/132.20 | 98.69/111.79/113.61 | 65.98/76.89/76.76 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/balanced_mse/resnet50_spin_ihmr_ft_baseline/resnet50_spin_ihmr_ft_baseline.pth?versionId=CAEQSBiBgMDpm4STkhgiIDU0ODBlNjUzMjk1MjQ2MjQ5MDgxNzBlZjZjNWQyODVl) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/balanced_mse/resnet50_spin_ihmr_ft_baseline/resnet50_spin_ihmr_ft_baseline.log?versionId=CAEQSBiBgMCzwYGTkhgiIDFlMDVkMDU5M2UxYzQwMDA4NTNjODgzMmRiNzNmOGYy) |
+| [resnet50_spin_ihmr_ft_bmc.py](resnet50_spin_ihmr_ft_bmc.py) | 112.67/126.13/130.42 | 95.70/110.22/111.62 | 65.65/75.61/75.86 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/balanced_mse/resnet50_spin_ihmr_ft_bmc/resnet50_spin_ihmr_ft_bmc.pth?versionId=CAEQSBiBgMCK8IKTkhgiIGRlNzA2MGYwMmM4YjRhMzE4NjA2MmNmYzAwMmM0ZmRj) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/balanced_mse/resnet50_spin_ihmr_ft_bmc/resnet50_spin_ihmr_ft_bmc.log?versionId=CAEQSBiBgICSv4GTkhgiIDljMzdjMGQ3MGJjNDQ4OTJiN2M2YjI4OTI2ZjQ3ZTc3) |
