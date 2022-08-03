@@ -59,7 +59,7 @@ d. 从源代码安装PyTorch3D.
 ```shell
 git clone https://github.com/facebookresearch/pytorch3d.git
 cd pytorch3d
-pip install -e .
+pip install .
 cd ..
 ```
 用户也可以参考 [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) 的细节。
@@ -190,10 +190,10 @@ conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 
 # 安装 PyTorch3D
 
-conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
-conda install -c bottler nvidiacub -y
-
-conda install pytorch3d -c pytorch3d
+git clone https://github.com/facebookresearch/pytorch3d.git
+cd pytorch3d
+pip install .
+cd ..
 
 # 安装 mmcv-full
 

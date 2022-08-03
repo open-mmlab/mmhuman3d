@@ -60,7 +60,7 @@ d. Install PyTorch3D from source.
 ```shell
 git clone https://github.com/facebookresearch/pytorch3d.git
 cd pytorch3d
-pip install -e .
+pip install .
 cd ..
 ```
 Users may also refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details.
@@ -191,11 +191,10 @@ conda activate open-mmlab
 conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 
 # install PyTorch3D
-
-conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
-conda install -c bottler nvidiacub -y
-
-conda install pytorch3d -c pytorch3d
+git clone https://github.com/facebookresearch/pytorch3d.git
+cd pytorch3d
+pip install .
+cd ..
 
 # install mmcv-full
 
