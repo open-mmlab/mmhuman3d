@@ -186,31 +186,25 @@ pip install -v -e .  # 或者 "python setup.py develop"
 conda create -n open-mmlab python=3.8 -y
 conda activate open-mmlab
 
+# install PyTorch
 conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 
-# 安装 PyTorch3D
-
+# install PyTorch3D
 git clone https://github.com/facebookresearch/pytorch3d.git
 cd pytorch3d
 pip install .
 cd ..
 
-# 安装 mmcv-full
-
+# install mmcv-full
 pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
-
-# 可选
-# 安装 mmdetection 、 mmpose 和 mmtracking
-
+# Optional
+# install mmdetection & mmpose & mmtracking
 pip install mmdet
-
 pip install mmpose
-
 pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
 
-# 安装 mmhuman3d
-
+# install mmhuman3d
 git clone https://github.com/open-mmlab/mmhuman3d.git
 cd mmhuman3d
 pip install -v -e .
