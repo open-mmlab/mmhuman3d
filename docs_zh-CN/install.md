@@ -39,7 +39,7 @@ b. 安装 ffmpeg
 conda install ffmpeg
 ```
 
-c. 根据[官方指导](https://pytorch.org/)，安装PyTorch和torchvision .
+c. 根据 [官方指导](https://pytorch.org/) ，安装PyTorch和torchvision .
 ```shell
 conda install pytorch={torch_version} torchvision cudatoolkit={cu_version} -c pytorch
 ```
@@ -49,22 +49,25 @@ conda install pytorch={torch_version} torchvision cudatoolkit={cu_version} -c py
 conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 ```
 
-**注意:** 请确保compilation CUDA version和runtime CUDA version相匹配.
+**注意:** 请确保compilation CUDA version和runtime CUDA version相匹配。
+另外， 对于RTX 30系列的显卡， 需要cudatoolkit>=11.0。
 
-d. 在Linux或者Windows上安装PyTorch3D.
+d. 从源代码安装PyTorch3D.
 
 对于Linux：
 
 ```shell
-conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
-conda install -c bottler nvidiacub -y
-
-conda install pytorch3d -c pytorch3d
+git clone https://github.com/facebookresearch/pytorch3d.git
+cd pytorch3d
+pip install -e .
+cd ..
 ```
+用户也可以参考 [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) 的细节。
+然而我们近期的测试显示使用 conda 安装会遇到依赖冲突的问题。
 
 对于Windows：
 
-请参考[官方安装文档](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md). 这里我们提供一个[例子](https://github.com/open-mmlab/mmhuman3d/pull/199#issue-1274739041)供用户参考。
+请参考 [官方安装文档](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) 。 这里我们提供一个 [例子](https://github.com/open-mmlab/mmhuman3d/pull/199#issue-1274739041) 供用户参考。
 **注意:** 这部分是针对想在Windows平台安装MMHuman3D的用户。
 
 运行如下命令测试PyTorch3D是否安装成功:
@@ -106,8 +109,8 @@ pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/{torch_ver
 ```shell
 pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 ```
-您可以从[这里](https://mmcv.readthedocs.io/en/latest/get_started/installation.html)查看适配于不同CUDA版本和PyTorch版本的MMCV.
-更多版本的下载信息，请参考[openmmlab-download](https://download.openmmlab.com/mmcv/dist/index.html).
+您可以从 [这里](https://mmcv.readthedocs.io/en/latest/get_started/installation.html) 查看适配于不同CUDA版本和PyTorch版本的MMCV.
+更多版本的下载信息，请参考 [openmmlab-download](https://download.openmmlab.com/mmcv/dist/index.html) 。
 
 您也可以使用如下命令，从源码编译mmcv
 

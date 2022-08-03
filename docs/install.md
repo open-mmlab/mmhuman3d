@@ -53,17 +53,18 @@ conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 ```
 
 **Important:** Make sure that your compilation CUDA version and runtime CUDA version match.
+Besides, for RTX 30 series GPU, cudatoolkit>=11.0 is required.
 
-d. Install PyTorch3D on Linux or Windows.
-
-For Linux:
+d. Install PyTorch3D from source.
 
 ```shell
-conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
-conda install -c bottler nvidiacub -y
-
-conda install pytorch3d -c pytorch3d
+git clone https://github.com/facebookresearch/pytorch3d.git
+cd pytorch3d
+pip install -e .
+cd ..
 ```
+Users may also refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details.
+However, our recent tests show that installing using conda runs into dependency conflicts.  
 
 For Windows:
 
