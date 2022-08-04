@@ -46,12 +46,4 @@ class VisualizerMeshSMPL:
             # convert gray to 3 channel img
             vis = vis.detach().cpu().numpy()
             vis = cv2.merge((vis, vis, vis))
-        # z_buffer = project_mesh(
-        #     vertices=vertices,
-        #     faces=self.faces,
-        #     vertice_values=vertices[:, [2]],
-        #     pinhole=self.pinhole2d)
-        # z_buffer = z_buffer[:, :, 0].cpu().numpy()
-        # vis = colormap_z(z_buffer, percentile=1)
-        # vis = (vis * 255).round().clip(0,255).astype(np.uint8)[..., :3]
         return vis
