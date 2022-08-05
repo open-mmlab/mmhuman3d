@@ -283,7 +283,7 @@ MMHuman3D遵循 `PyTorch3D` 中的相机规范：其外参矩阵定义为从相�
 - **计算点的深度:**
 
     可以简单地将点转化为视图坐标，并且得到深度z。
-    更多的用例请参考[DepthRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/visualization/renderer/torch3d_renderer/depth_renderer.py).
+    更多的用例请参考[DepthRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/renderer/torch3d_renderer/depth_renderer.py).
     ```python
     points_depth = cameras.compute_depth_of_points(points)
     ```
@@ -291,7 +291,7 @@ MMHuman3D遵循 `PyTorch3D` 中的相机规范：其外参矩阵定义为从相�
 - **获取mesh的法线:**
 
     使用`Pytorch3D`计算mesh的法线。
-    更多的用例请参考[NormalRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/visualization/renderer/torch3d_renderer/normal_renderer.py).
+    更多的用例请参考[NormalRenderer](https://github.com/open-mmlab/mmhuman3d/tree/main/mmhuman3d/core/renderer/torch3d_renderer/normal_renderer.py).
     ```python
     normals = cameras.compute_normal_of_meshes(meshes)
     ```
