@@ -403,7 +403,7 @@ def multi_person_with_mmtracking(args, frames_iter):
     elif smpl_poses.shape[2:] == (24, 3):
         smpl_poses = smpl_poses
     else:
-        raise (f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
+        raise Exception(f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
 
     if args.output is not None:
         body_pose_, global_orient_, smpl_betas_, verts_, pred_cams_, \
