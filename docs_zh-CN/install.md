@@ -20,7 +20,7 @@
 Optional:
 - [MMPose](https://github.com/open-mmlab/mmpose) (只用于演示)
 - [MMDetection](https://github.com/open-mmlab/mmdetection) (只用于演示)
-- [MMTracking](https://github.com/open-mmlab/mmtracking) (只用于多人的演示。请安装 mmcls<1.18.0, mmcv-full>=1.3.16,<1.6.0)
+- [MMTracking](https://github.com/open-mmlab/mmtracking) (只用于多人的演示。请安装 mmcls<0.23.1, mmcv-full>=1.3.17,<1.6.0)
 
 ## 准备环境
 
@@ -152,13 +152,13 @@ pip install -v -e .
 - mmtracking (可选)
 
 ```shell
-pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
+pip install "mmcls<0.23.1" "mmtrack<0.13.0"
 ```
 
 如果您想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmtracking：
 
 ```shell
-git clone git@github.com:open-mmlab/mmtracking.git -b v0.8.0
+git clone git@github.com:open-mmlab/mmtracking.git -b v0.13.0
 cd mmtracking
 pip install -r requirements/build.txt
 pip install -v -e .  # 或者 "python setup.py develop"
@@ -204,7 +204,7 @@ pip install mmdet
 
 pip install mmpose
 
-pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
+pip install "mmcls<0.23.1" "mmtrack<0.13.0"
 
 # 安装 mmhuman3d
 

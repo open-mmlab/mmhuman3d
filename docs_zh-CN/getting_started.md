@@ -1,19 +1,19 @@
 # 开始使用
 
 - [开始](#getting-started)
-  - [安装](#installation)
-  - [数据预处理](#data-preparation)
-  - [人体模型](#body-model-preparation)
-  - [推理 / 演示](#inference--demo)
-    - [单人](#single-person)
-    - [多人](#multi-person)
-  - [测试](#evaluation)
-    - [使用单（多）个GPU进行测试](#evaluate-with-a-single-gpu--multiple-gpus)
-    - [使用slurm进行测试](#evaluate-with-slurm)
-  - [训练](#training)
-    - [使用单（多）个GPU进行训练](#training-with-a-single--multiple-gpus)
-    - [通过slurm进行训练](#training-with-slurm)
-  - [更多教程](#more-tutorials)
+  - [安装](#安装)
+  - [数据预处理](#数据预处理)
+  - [人体模型](#人体模型)
+  - [推理 / 演示](#推理-/-演示)
+    - [离线Demo](#离线Demo)
+    - [在线Demo](#在线Demo)
+  - [测试](#测试)
+    - [使用单（多）个GPU进行测试](#使用单（多）个GPU进行测试)
+    - [使用slurm进行测试](#使用slurm进行测试)
+  - [训练](#训练)
+    - [使用单（多）个GPU进行训练](#使用单（多）个GPU进行训练)
+    - [通过slurm进行训练](#通过slurm进行训练)
+  - [更多教程](#更多教程)
 
 ## 安装
 
@@ -54,7 +54,8 @@ mmhuman3d
 ```
 
 ## 推理 / 演示
-我们提供了用于从图像或视频中估计单人或多人`SMPL`模型参数的演示脚本，运行该脚本可能会用到`MMDetection`和`MMTracking`。通过该脚本进行演示，您只需要从模型库中选择用到的预训练模型(我们目前只支持[HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/)、 [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/)和 [VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/), 未来会加入更多的SOTA方法)，并指定少量的参数。
+### 离线Demo
+我们提供了用于从图像或视频中估计单人或多人`SMPL`模型参数的演示脚本，运行该脚本可能会用到`MMDetection`和`MMTracking`。通过该脚本进行演示，您只需要从模型库中选择用到的预训练模型(我们目前只支持[HMR](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/hmr/)、 [SPIN](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/spin/)、[VIBE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/vibe/) 和[PARE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/pare/), 未来会加入更多的SOTA方法)，并指定少量的参数。
 
 以下是一些参数的释义:
 
@@ -62,7 +63,7 @@ mmhuman3d
 - 如果指定`--smooth_type`, 演示脚本会使用特定的方法进行平滑。目前可以选择的平滑方法包括`guas1d`、`oneeuro`和 `savgol`。
 - 如果指定`--speed_up_type`, 演示脚本会使用特定的方法进行加速处理。目前支持基于学习的方法`deciwatch`, 更多的信息请参考[DeciWatch](../configs/_base_/post_processing/README.md)。
 
-### 单人
+对于单人
 
 ```shell
 python demo/estimate_smpl.py \
@@ -95,7 +96,7 @@ python demo/estimate_smpl.py \
     --draw_bbox
 ```
 
-### 多人
+对于多人
 
 
 ```shell
@@ -128,6 +129,23 @@ python demo/estimate_smpl_image.py \
 ```
 MMHuman3D的checkpoints文件可以从[model zoo](../docs_zh-CN/model_zoo.md)下载。
 这里我们使用HMR (resnet50_hmr_pw3d.pth)作为示例。
+
+### 在线Demo
+我们提供一个从相机或者一个指定的视频文件估计SMPL参数的webcam演示脚本。你可以简单的运行下面的命令：
+```shell
+python demo/webcam_demo.py
+```
+以下是一些参数的释义:
+- 如果指定`--output`, 演示脚本会将可视化结果储存到对应的文件中。这可能会降低帧率。
+- 如果指定`--synchronous`, 视频的 I/O 和模型的推理在时序上将会对齐. 注意这会降低帧率.
+- 如果你想以离线的方式在视频文件上运行webcam演示, 你应该指定`--cam-id=VIDEO_FILE_PATH`. 注意`--synchronous` 在这种情形下应该被设置为 `True`.
+- 视频的I/O和模型的推理是异步的运行，而且后者往往需要更多的时间. 为了缓解延时，你可以:
+
+  - 根据显示在左上角的推理延时设置`--display-delay=MILLISECONDS` 来延时视频流. 或者,
+
+  - 设置 `--synchronous=True` 强制视频流和推理结果对齐. 这可能降低视频的帧率。
+
+
 ## 测试
 
 我们提供的预训练模型可以参见 [config](https://github.com/open-mmlab/mmhuman3d/tree/main/configs).
