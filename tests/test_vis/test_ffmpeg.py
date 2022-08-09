@@ -4,6 +4,7 @@ import os.path as osp
 import numpy as np
 import pytest
 
+from mmhuman3d.utils.demo_utils import batch_array_to_images
 from mmhuman3d.utils.ffmpeg_utils import (
     array_to_images,
     array_to_video,
@@ -98,7 +99,8 @@ def test_array_saver():
 
     v = np.random.randint(
         low=0, high=255, size=(30, 512, 512, 3), dtype=np.uint8)
-    array_to_images(v, osp.join(root, 'img_folder_saver'))
+    batch_array_to_images(v, list(range(len(v))),
+                          osp.join(root, 'img_folder_saver'))
     array_to_video(v, osp.join(root, 'test_saver.mp4'))
     array_to_video(v[:, :-1, :-1, :], osp.join(root, 'test_even.mp4'))
     assert os.path.isfile(osp.join(root, 'test_saver.mp4'))
