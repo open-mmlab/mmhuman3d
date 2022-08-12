@@ -20,7 +20,7 @@
 Optional:
 - [MMPose](https://github.com/open-mmlab/mmpose) (只用于演示)
 - [MMDetection](https://github.com/open-mmlab/mmdetection) (只用于演示)
-- [MMTracking](https://github.com/open-mmlab/mmtracking) (只用于多人的演示。请安装 mmcls<1.18.0, mmcv-full>=1.3.16,<1.6.0)
+- [MMTracking](https://github.com/open-mmlab/mmtracking) (只用于多人的演示。请安装 mmcls<0.23.1, mmcv-full>=1.3.17,<1.6.0)
 
 ## 准备环境
 
@@ -50,15 +50,16 @@ conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 ```
 
 **注意:** 请确保compilation CUDA version和runtime CUDA version相匹配。
-另外， 对于RTX 30系列的显卡， 需要cudatoolkit>=11.0。
+另外， 对于RTX 30系列的显卡， 需要cudatoolkit>=11.0.
 
-d. 从源代码安装PyTorch3D.
+d. 在Linux或者Windows上安装PyTorch3D.
 
 对于Linux：
 
 ```shell
 conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
 conda install -c bottler nvidiacub -y
+
 conda install pytorch3d -c pytorch3d
 ```
 
@@ -163,13 +164,13 @@ pip install -v -e .
 - mmtracking (可选)
 
 ```shell
-pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
+pip install "mmcls<0.23.1" "mmtrack<0.13.0"
 ```
 
 如果您想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmtracking：
 
 ```shell
-git clone https://github.com/open-mmlab/mmtracking.git -b v0.8.0
+git clone https://github.com/open-mmlab/mmtracking.git -b v0.13.0
 cd mmtracking
 pip install -r requirements/build.txt
 pip install -v -e .  # 或者 "python setup.py develop"
@@ -214,7 +215,7 @@ pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/di
 # 可选: 安装 mmdetection，mmpose 及 mmtracking
 pip install mmdet
 pip install mmpose
-pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
+pip install "mmcls<0.23.1" "mmtrack<0.13.0"
 
 # 安装 mmhuman3d
 git clone https://github.com/open-mmlab/mmhuman3d.git

@@ -23,7 +23,7 @@
 Optional:
 - [MMPOSE](https://github.com/open-mmlab/mmpose) (Only for demo.)
 - [MMDETECTION](https://github.com/open-mmlab/mmdetection) (Only for demo.)
-- [MMTRACKING](https://github.com/open-mmlab/mmtracking) (Only for multi-person demo. If you use mmtrack, please install mmcls<1.18.0, mmcv-full>=1.3.16,<1.6.0 for GPU
+- [MMTRACKING](https://github.com/open-mmlab/mmtracking) (Only for multi-person demo. If you use mmtrack, please install mmcls<0.23.1, mmcv-full>=1.3.17,<1.6.0 for GPU.)
 
 ## Prepare environment
 
@@ -168,13 +168,13 @@ pip install -v -e .
 - mmtracking (optional)
 
 ```shell
-pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
+pip install "mmcls<0.23.1 " "mmtrack<0.13.0"
 ```
 
 Alternatively, you can also build MMTracking from source in case you want to modify the code:
 
 ```shell
-git clone https://github.com/open-mmlab/mmtracking.git -b v0.8.0
+git clone https://github.com/open-mmlab/mmtracking.git -b v0.13.0
 cd mmtracking
 pip install -r requirements/build.txt
 pip install -v -e .  # or "python setup.py develop"
@@ -219,7 +219,7 @@ pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/di
 # Optional: install mmdetection & mmpose & mmtracking
 pip install mmdet
 pip install mmpose
-pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
+pip install "mmcls<0.23.1 " "mmtrack<0.13.0"
 
 # Install mmhuman3d
 git clone https://github.com/open-mmlab/mmhuman3d.git
