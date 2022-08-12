@@ -1,6 +1,4 @@
-# SMC(SenseMoCap) File Formate Description
-
-
+# SMC(SenseMoCap) File Format Description
 
 SMC (SenseMoCap) is a file format designed with multi-camera multi-model support in mind. Each smc file is essentially a HDF5 database，made easy for cross-platform, cross-language support (h5py, H5Cpp).
 
@@ -16,12 +14,12 @@ Each SMC file contains the following structure.
 
   - ### Extrinsics (Dataset):
 
-    - A JSON String with N calibrated Kinects and M iPhone extrinsic parameters with 
+    - A JSON String with N calibrated Kinects and M iPhone extrinsic parameters with
       - Indexing cameras:
         - Kinect Color Index: i*2,  0<=i<N
         - Kinect Depth Index: i*2 + 1,  0<=i<N
         - iPhone Index: N*2 + j,  0<=j<M
-      - Paramters:
+      - Parameters:
         - Extrinsic: cam2world transformation
           - R: Rotation Matrix [3,3]
           - T: Translation [3]
@@ -43,13 +41,13 @@ Each SMC file contains the following structure.
         - ###### Color (HDF5 Group)
 
           - Intrinsics (Dataset): K4A SDK factory calibrated intrinsic, float32, shape (15,)
-          - Resolution (Dataset): color camera resolution (width, height), uint16, shape (2,), 
+          - Resolution (Dataset): color camera resolution (width, height), uint16, shape (2,),
           - MetricRadius (Dataset): metric radius from K4A SDK, float32 scalar
 
         - ###### Depth (HDF5 Group)
 
           - Intrinsics (Dataset): K4A SDK factory calibrated intrinsic, float32, shape (15,)
-          - Resolution (Dataset): color camera resolution (width, height), uint16, shape (2,), 
+          - Resolution (Dataset): color camera resolution (width, height), uint16, shape (2,),
           - MetricRadius (Dataset): metric radius from K4A SDK, float32 scalar
 
       - ##### Color (Group)
@@ -84,7 +82,7 @@ Each SMC file contains the following structure.
 
       - ##### Background (Group)
 
-        - Background Images for matting. Avaliable from v3 data
+        - Background Images for matting. Available from v3 data
           - Color : Same as Kinect Color
           - Depth: Same as Kinect Depth
 
@@ -122,7 +120,7 @@ Each SMC file contains the following structure.
 
         - Dataset with F(number of frames) camera information
           - JSON with camera intrinsics, timestamp etc
-          - 
+          -
 
   - ### Keypoints3D (Group)
 
