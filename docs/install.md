@@ -57,14 +57,25 @@ Besides, for RTX 30 series GPU, cudatoolkit>=11.0 is required.
 
 d. Install PyTorch3D from source.
 
+For Linux:
+
+```shell
+conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
+conda install -c bottler nvidiacub -y
+
+conda install pytorch3d -c pytorch3d
+```
+
+Users may also refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for more details.
+However, our recent tests show that installing using ``conda`` sometimes runs into dependency conflicts.
+Hence, users may alternatively install Pytorch3D from source following the steps below.
+
 ```shell
 git clone https://github.com/facebookresearch/pytorch3d.git
 cd pytorch3d
 pip install .
 cd ..
 ```
-Users may also refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for details.
-However, our recent tests show that installing using conda runs into dependency conflicts.  
 
 For Windows:
 
@@ -132,7 +143,7 @@ Important: You need to run `pip uninstall mmcv` first if you have mmcv installed
 pip install mmdet
 ```
 
-Optionally, you can also build MMDetection from source in case you want to modify the code:
+Alternatively, you can also build MMDetection from source in case you want to modify the code:
 ```shell
 git clone https://github.com/open-mmlab/mmdetection.git
 cd mmdetection
@@ -145,7 +156,7 @@ pip install -v -e .
 pip install mmpose
 ```
 
-Optionally, you can also build MMPose from source in case you want to modify the code:
+Alternatively, you can also build MMPose from source in case you want to modify the code:
 
 ```shell
 git clone https://github.com/open-mmlab/mmpose.git
@@ -160,10 +171,10 @@ pip install -v -e .
 pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
 ```
 
-Optionally, you can also build MMTracking from source in case you want to modify the code:
+Alternatively, you can also build MMTracking from source in case you want to modify the code:
 
 ```shell
-git clone git@github.com:open-mmlab/mmtracking.git -b v0.8.0
+git clone https://github.com/open-mmlab/mmtracking.git -b v0.8.0
 cd mmtracking
 pip install -r requirements/build.txt
 pip install -v -e .  # or "python setup.py develop"
@@ -175,7 +186,6 @@ git clone https://github.com/open-mmlab/mmhuman3d.git
 cd mmhuman3d
 ```
 
-
 c. Install build requirements and then install mmhuman3d.
 
 ```shell
@@ -185,28 +195,33 @@ pip install -v -e .  # or "python setup.py develop"
 ## A from-scratch setup script
 
 ```shell
+
+# Create conda environment
 conda create -n open-mmlab python=3.8 -y
 conda activate open-mmlab
 
-# install PyTorch
+# Install PyTorch
 conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 
-# install PyTorch3D
-git clone https://github.com/facebookresearch/pytorch3d.git
-cd pytorch3d
-pip install .
-cd ..
+# Install PyTorch3D
+conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
+conda install -c bottler nvidiacub -y
+conda install pytorch3d -c pytorch3d
+# Alternatively from source in case of dependency conflicts
+# git clone https://github.com/facebookresearch/pytorch3d.git
+# cd pytorch3d
+# pip install .
+# cd ..
 
-# install mmcv-full
+# Install mmcv-full
 pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
-# Optional
-# install mmdetection & mmpose & mmtracking
+# Optional: install mmdetection & mmpose & mmtracking
 pip install mmdet
 pip install mmpose
 pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
 
-# install mmhuman3d
+# Install mmhuman3d
 git clone https://github.com/open-mmlab/mmhuman3d.git
 cd mmhuman3d
 pip install -v -e .

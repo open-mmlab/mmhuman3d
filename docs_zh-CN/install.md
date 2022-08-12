@@ -57,13 +57,21 @@ d. 从源代码安装PyTorch3D.
 对于Linux：
 
 ```shell
+conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
+conda install -c bottler nvidiacub -y
+conda install pytorch3d -c pytorch3d
+```
+
+用户也可以参考 [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) 的更多细节。
+然而我们近期的测试显示使用 conda 安装会遇到依赖冲突的问题。
+因此，用户也可选择按照下列步骤从源码安装Pytorch3D。
+
+```shell
 git clone https://github.com/facebookresearch/pytorch3d.git
 cd pytorch3d
 pip install .
 cd ..
 ```
-用户也可以参考 [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) 的细节。
-然而我们近期的测试显示使用 conda 安装会遇到依赖冲突的问题。
 
 对于Windows：
 
@@ -161,7 +169,7 @@ pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
 如果您想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmtracking：
 
 ```shell
-git clone git@github.com:open-mmlab/mmtracking.git -b v0.8.0
+git clone https://github.com/open-mmlab/mmtracking.git -b v0.8.0
 cd mmtracking
 pip install -r requirements/build.txt
 pip install -v -e .  # 或者 "python setup.py develop"
@@ -183,28 +191,32 @@ pip install -v -e .  # 或者 "python setup.py develop"
 ## 从头开始安装的脚本
 
 ```shell
+# 安装 conda 环境
 conda create -n open-mmlab python=3.8 -y
 conda activate open-mmlab
 
-# install PyTorch
+# 安装 PyTorch
 conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 
-# install PyTorch3D
-git clone https://github.com/facebookresearch/pytorch3d.git
-cd pytorch3d
-pip install .
-cd ..
+# 安装 PyTorch3D
+conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
+conda install -c bottler nvidiacub -y
+conda install pytorch3d -c pytorch3d
+# 在遇到依赖冲突的情况下也可使用从源码中安装
+# git clone https://github.com/facebookresearch/pytorch3d.git
+# cd pytorch3d
+# pip install .
+# cd ..
 
-# install mmcv-full
+# 安装 mmcv-full
 pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
-# Optional
-# install mmdetection & mmpose & mmtracking
+# 可选: 安装 mmdetection，mmpose 及 mmtracking
 pip install mmdet
 pip install mmpose
 pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
 
-# install mmhuman3d
+# 安装 mmhuman3d
 git clone https://github.com/open-mmlab/mmhuman3d.git
 cd mmhuman3d
 pip install -v -e .
