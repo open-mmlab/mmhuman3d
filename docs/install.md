@@ -140,7 +140,7 @@ Important: You need to run `pip uninstall mmcv` first if you have mmcv installed
 - mmdetection (optional)
 
 ```shell
-pip install mmdet
+pip install git+https://github.com/open-mmlab/mmdetection.git
 ```
 
 Alternatively, you can also build MMDetection from source in case you want to modify the code:
@@ -153,7 +153,7 @@ pip install -v -e .
 
 - mmpose (optional)
 ```shell
-pip install mmpose
+pip install git+https://github.com/open-mmlab/mmpose.git
 ```
 
 Alternatively, you can also build MMPose from source in case you want to modify the code:
@@ -200,6 +200,9 @@ pip install -v -e .  # or "python setup.py develop"
 conda create -n open-mmlab python=3.8 -y
 conda activate open-mmlab
 
+# Install ffmpeg
+conda install ffmpeg
+
 # Install PyTorch
 conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 
@@ -217,9 +220,9 @@ conda install pytorch3d -c pytorch3d
 pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
 # Optional: install mmdetection & mmpose & mmtracking
-pip install mmdet
-pip install mmpose
-pip install "mmcls<0.23.1 " "mmtrack<0.13.0"
+pip install git+https://github.com/open-mmlab/mmdetection.git
+pip install git+https://github.com/open-mmlab/mmpose.git
+pip install "mmcls<0.23.1" "mmtrack<0.13.0"
 
 # Install mmhuman3d
 git clone https://github.com/open-mmlab/mmhuman3d.git

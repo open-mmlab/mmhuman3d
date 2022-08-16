@@ -136,7 +136,7 @@ cd ..
 - mmdetection (可选)
 
 ```shell
-pip install mmdet
+pip install git+https://github.com/open-mmlab/mmdetection.git
 ```
 
 如果想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmdet：
@@ -149,7 +149,7 @@ pip install -v -e .
 
 - mmpose (可选)
 ```shell
-pip install mmpose
+pip install git+https://github.com/open-mmlab/mmpose.git
 ```
 
 如果您想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmpose：
@@ -196,6 +196,9 @@ pip install -v -e .  # 或者 "python setup.py develop"
 conda create -n open-mmlab python=3.8 -y
 conda activate open-mmlab
 
+# 安装 ffmpeg
+conda install ffmpeg
+
 # 安装 PyTorch
 conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 
@@ -213,8 +216,8 @@ conda install pytorch3d -c pytorch3d
 pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
 # 可选: 安装 mmdetection，mmpose 及 mmtracking
-pip install mmdet
-pip install mmpose
+pip install git+https://github.com/open-mmlab/mmdetection.git
+pip install git+https://github.com/open-mmlab/mmpose.git
 pip install "mmcls<0.23.1" "mmtrack<0.13.0"
 
 # 安装 mmhuman3d
