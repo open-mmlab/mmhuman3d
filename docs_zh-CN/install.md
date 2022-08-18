@@ -110,13 +110,13 @@ pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cpu/{torch_ver
 
 对于 GPU:
  ```shell
- pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
+ pip install "mmcv-full>=1.3.17,<=1.5.3" -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
  ```
 使用您的cuda版本号和pytorch版本号替换`{cu_version}`和`{torch_version}`
 
 以在CUDA 10.2和PyTorch 1.8.0的环境下, 安装mmcv-full为例:
 ```shell
-pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+pip install "mmcv-full>=1.3.17,<=1.5.3" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 ```
 您可以从 [这里](https://mmcv.readthedocs.io/en/latest/get_started/installation.html) 查看适配于不同CUDA版本和PyTorch版本的MMCV.
 更多版本的下载信息，请参考 [openmmlab-download](https://download.openmmlab.com/mmcv/dist/index.html) 。
@@ -124,7 +124,7 @@ pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/di
 您也可以使用如下命令，从源码编译mmcv
 
 ```shell
-git clone https://github.com/open-mmlab/mmcv.git -b v1.3.17
+git clone https://github.com/open-mmlab/mmcv.git -b v1.5.3
 cd mmcv
 MMCV_WITH_OPS=1 pip install -e .  # 执行此步骤会安装包含cuda算子的mmcv-full
 # 或者运行 pip install -e .  # 执行此步骤会安装不包含cuda算子的mmcv
@@ -136,12 +136,12 @@ cd ..
 - mmdetection (可选)
 
 ```shell
-pip install git+https://github.com/open-mmlab/mmdetection.git
+pip install "mmdet<=2.25.1"
 ```
 
 如果想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmdet：
 ```shell
-git clone https://github.com/open-mmlab/mmdetection.git
+git clone https://github.com/open-mmlab/mmdetection.git -b v2.25.1
 cd mmdetection
 pip install -r requirements/build.txt
 pip install -v -e .
@@ -149,13 +149,13 @@ pip install -v -e .
 
 - mmpose (可选)
 ```shell
-pip install git+https://github.com/open-mmlab/mmpose.git
+pip install "mmpose<=0.28.1"
 ```
 
 如果您想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmpose：
 
 ```shell
-git clone https://github.com/open-mmlab/mmpose.git
+git clone https://github.com/open-mmlab/mmpose.git -b v0.28.1
 cd mmpose
 pip install -r requirements.txt
 pip install -v -e .
@@ -164,7 +164,7 @@ pip install -v -e .
 - mmtracking (可选)
 
 ```shell
-pip install "mmcls<=0.23.2 " "mmtrack<=0.13.0""
+pip install "mmcls<=0.23.2" "mmtrack<=0.13.0"
 ```
 
 如果您想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmtracking：
@@ -216,8 +216,8 @@ conda install pytorch3d -c pytorch3d
 pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
 # 可选: 安装 mmdetection，mmpose 及 mmtracking
-pip install git+https://github.com/open-mmlab/mmdetection.git
-pip install git+https://github.com/open-mmlab/mmpose.git
+pip install "mmdet<=2.25.1"
+pip install "mmpose<=0.28.1"
 pip install "mmcls<0.23.1" "mmtrack<0.13.0"
 
 # 安装 mmhuman3d
