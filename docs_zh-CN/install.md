@@ -164,7 +164,7 @@ pip install -v -e .
 - mmtracking (可选)
 
 ```shell
-pip install "mmcls<0.23.1" "mmtrack<0.13.0"
+pip install "mmcls<=0.23.2 " "mmtrack<=0.13.0""
 ```
 
 如果您想要修改mmdet的代码，您也可以使用如下命令，从源码构建mmtracking：

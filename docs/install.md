@@ -168,7 +168,7 @@ pip install -v -e .
 - mmtracking (optional)
 
 ```shell
-pip install "mmcls<0.23.1 " "mmtrack<0.13.0"
+pip install "mmcls<=0.23.2 " "mmtrack<=0.13.0"
 ```
 
 Alternatively, you can also build MMTracking from source in case you want to modify the code:
