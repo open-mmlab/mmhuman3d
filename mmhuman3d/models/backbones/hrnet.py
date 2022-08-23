@@ -27,6 +27,7 @@ class HRModule(BaseModule):
                  multiscale_output=True,
                  with_cp=False,
                  conv_cfg=None,
+                 train_cliff=False,
                  norm_cfg=dict(type='BN'),
                  block_init_cfg=None,
                  init_cfg=None):
@@ -46,6 +47,7 @@ class HRModule(BaseModule):
                                             num_channels)
         self.fuse_layers = self._make_fuse_layers()
         self.relu = nn.ReLU(inplace=False)
+        self.train_cliff = train_cliff
 
     def _check_branches(self, num_branches, num_blocks, in_channels,
                         num_channels):
@@ -358,28 +360,76 @@ class PoseHighResolutionNet(BaseModule):
                                                        num_channels)
         self.stage4, pre_stage_channels = self._make_stage(
             self.stage4_cfg, num_channels, multiscale_output=multiscale_output)
-        # self.pretrained_layers = extra['pretrained_layers']
-        self.final_layer = build_conv_layer(
-            cfg=self.conv_cfg,
-            in_channels=pre_stage_channels[0],
-            out_channels=num_joints,
-            kernel_size=extra['final_conv_kernel'],
-            stride=1,
-            padding=1 if extra['final_conv_kernel'] == 3 else 0)
-        if extra['downsample'] and extra['use_conv']:
-            self.downsample_stage_1 = self._make_downsample_layer(
-                3, num_channel=self.stage2_cfg['num_channels'][0])
-            self.downsample_stage_2 = self._make_downsample_layer(
-                2, num_channel=self.stage2_cfg['num_channels'][-1])
-            self.downsample_stage_3 = self._make_downsample_layer(
-                1, num_channel=self.stage3_cfg['num_channels'][-1])
-        elif not extra['downsample'] and extra['use_conv']:
-            self.upsample_stage_2 = self._make_upsample_layer(
-                1, num_channel=self.stage2_cfg['num_channels'][-1])
-            self.upsample_stage_3 = self._make_upsample_layer(
-                2, num_channel=self.stage3_cfg['num_channels'][-1])
-            self.upsample_stage_4 = self._make_upsample_layer(
-                3, num_channel=self.stage4_cfg['num_channels'][-1])
+
+        # Modified head for Cliff
+        if self.train_cliff:
+            self.incre_modules, self.downsamp_modules, \
+                self.final_layer = self._make_head(pre_stage_channels)
+        else:
+            # self.pretrained_layers = extra['pretrained_layers']
+            self.final_layer = build_conv_layer(
+                cfg=self.conv_cfg,
+                in_channels=pre_stage_channels[0],
+                out_channels=num_joints,
+                kernel_size=extra['final_conv_kernel'],
+                stride=1,
+                padding=1 if extra['final_conv_kernel'] == 3 else 0)
+            if extra['downsample'] and extra['use_conv']:
+                self.downsample_stage_1 = self._make_downsample_layer(
+                    3, num_channel=self.stage2_cfg['num_channels'][0])
+                self.downsample_stage_2 = self._make_downsample_layer(
+                    2, num_channel=self.stage2_cfg['num_channels'][-1])
+                self.downsample_stage_3 = self._make_downsample_layer(
+                    1, num_channel=self.stage3_cfg['num_channels'][-1])
+            elif not extra['downsample'] and extra['use_conv']:
+                self.upsample_stage_2 = self._make_upsample_layer(
+                    1, num_channel=self.stage2_cfg['num_channels'][-1])
+                self.upsample_stage_3 = self._make_upsample_layer(
+                    2, num_channel=self.stage3_cfg['num_channels'][-1])
+                self.upsample_stage_4 = self._make_upsample_layer(
+                    3, num_channel=self.stage4_cfg['num_channels'][-1])
+
+    def _make_head(self, pre_stage_channels):
+        head_block = Bottleneck
+        head_channels = [32, 64, 128, 256]
+
+        # Increasing the #channels on each resolution
+        # from C, 2C, 4C, 8C to 128, 256, 512, 1024
+        incre_modules = []
+        for i, channels in enumerate(pre_stage_channels):
+            incre_module = self._make_layer(
+                head_block, channels, head_channels[i], 1, stride=1)
+            incre_modules.append(incre_module)
+        incre_modules = nn.ModuleList(incre_modules)
+
+        # downsampling modules
+        downsamp_modules = []
+        for i in range(len(pre_stage_channels) - 1):
+            in_channels = head_channels[i] * head_block.expansion
+            out_channels = head_channels[i + 1] * head_block.expansion
+
+            downsamp_module = nn.Sequential(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1), nn.BatchNorm2d(out_channels, momentum=0.1),
+                nn.ReLU(inplace=True))
+
+            downsamp_modules.append(downsamp_module)
+        downsamp_modules = nn.ModuleList(downsamp_modules)
+
+        final_layer = nn.Sequential(
+            nn.Conv2d(
+                in_channels=head_channels[3] * head_block.expansion,
+                out_channels=2048,
+                kernel_size=1,
+                stride=1,
+                padding=0), nn.BatchNorm2d(2048, momentum=0.1),
+            nn.ReLU(inplace=True))
+
+        return incre_modules, downsamp_modules, final_layer
 
     @property
     def norm1(self):
@@ -596,61 +646,74 @@ class PoseHighResolutionNet(BaseModule):
             else:
                 x_list.append(y_list[i])
         y_list = self.stage4(x_list)
-        if self.extra['return_list']:
-            return y_list
-        elif self.extra['downsample']:
-            if self.extra['use_conv']:
-                # Downsampling with strided convolutions
-                x1 = self.downsample_stage_1(y_list[0])
-                x2 = self.downsample_stage_2(y_list[1])
-                x3 = self.downsample_stage_3(y_list[2])
-                x = torch.cat([x1, x2, x3, y_list[3]], 1)
-            else:
-                # Downsampling with interpolation
-                x0_h, x0_w = y_list[3].size(2), y_list[3].size(3)
-                x1 = F.interpolate(
-                    y_list[0],
-                    size=(x0_h, x0_w),
-                    mode='bilinear',
-                    align_corners=True)
-                x2 = F.interpolate(
-                    y_list[1],
-                    size=(x0_h, x0_w),
-                    mode='bilinear',
-                    align_corners=True)
-                x3 = F.interpolate(
-                    y_list[2],
-                    size=(x0_h, x0_w),
-                    mode='bilinear',
-                    align_corners=True)
-                x = torch.cat([x1, x2, x3, y_list[3]], 1)
+
+        if self.train_cliff:
+            # Modified head for cliff
+            y = self.incre_modules[0](y_list[0])
+            for i in range(len(self.downsamp_modules)):
+                y = self.incre_modules[i + 1](y_list[i + 1]) + \
+                    self.downsamp_modules[i](y)
+
+            y = self.final_layer(y)
+
+            return y
         else:
-            if self.extra['use_conv']:
-                # Upsampling with interpolations + convolutions
-                x1 = self.upsample_stage_2(y_list[1])
-                x2 = self.upsample_stage_3(y_list[2])
-                x3 = self.upsample_stage_4(y_list[3])
-                x = torch.cat([y_list[0], x1, x2, x3], 1)
+            if self.extra['return_list']:
+                return y_list
+            elif self.extra['downsample']:
+                if self.extra['use_conv']:
+                    # Downsampling with strided convolutions
+                    x1 = self.downsample_stage_1(y_list[0])
+                    x2 = self.downsample_stage_2(y_list[1])
+                    x3 = self.downsample_stage_3(y_list[2])
+                    x = torch.cat([x1, x2, x3, y_list[3]], 1)
+                else:
+                    # Downsampling with interpolation
+                    x0_h, x0_w = y_list[3].size(2), y_list[3].size(3)
+                    x1 = F.interpolate(
+                        y_list[0],
+                        size=(x0_h, x0_w),
+                        mode='bilinear',
+                        align_corners=True)
+                    x2 = F.interpolate(
+                        y_list[1],
+                        size=(x0_h, x0_w),
+                        mode='bilinear',
+                        align_corners=True)
+                    x3 = F.interpolate(
+                        y_list[2],
+                        size=(x0_h, x0_w),
+                        mode='bilinear',
+                        align_corners=True)
+                    x = torch.cat([x1, x2, x3, y_list[3]], 1)
             else:
-                # Upsampling with interpolation
-                x0_h, x0_w = y_list[0].size(2), y_list[0].size(3)
-                x1 = F.interpolate(
-                    y_list[1],
-                    size=(x0_h, x0_w),
-                    mode='bilinear',
-                    align_corners=True)
-                x2 = F.interpolate(
-                    y_list[2],
-                    size=(x0_h, x0_w),
-                    mode='bilinear',
-                    align_corners=True)
-                x3 = F.interpolate(
-                    y_list[3],
-                    size=(x0_h, x0_w),
-                    mode='bilinear',
-                    align_corners=True)
-                x = torch.cat([y_list[0], x1, x2, x3], 1)
-        return x
+                if self.extra['use_conv']:
+                    # Upsampling with interpolations + convolutions
+                    x1 = self.upsample_stage_2(y_list[1])
+                    x2 = self.upsample_stage_3(y_list[2])
+                    x3 = self.upsample_stage_4(y_list[3])
+                    x = torch.cat([y_list[0], x1, x2, x3], 1)
+                else:
+                    # Upsampling with interpolation
+                    x0_h, x0_w = y_list[0].size(2), y_list[0].size(3)
+                    x1 = F.interpolate(
+                        y_list[1],
+                        size=(x0_h, x0_w),
+                        mode='bilinear',
+                        align_corners=True)
+                    x2 = F.interpolate(
+                        y_list[2],
+                        size=(x0_h, x0_w),
+                        mode='bilinear',
+                        align_corners=True)
+                    x3 = F.interpolate(
+                        y_list[3],
+                        size=(x0_h, x0_w),
+                        mode='bilinear',
+                        align_corners=True)
+                    x = torch.cat([y_list[0], x1, x2, x3], 1)
+
+            return x
 
     def train(self, mode=True):
         """Convert the model into training mode will keeping the normalization
