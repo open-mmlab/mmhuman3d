@@ -168,7 +168,7 @@ pip install -v -e .
 - mmtracking (optional)
 
 ```shell
-pip install "mmcls<=0.23.2 " "mmtrack<=0.13.0"
+pip install "mmcls<=0.23.2" "mmtrack<=0.13.0"
 ```
 
 Alternatively, you can also build MMTracking from source in case you want to modify the code:
@@ -209,7 +209,7 @@ conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 # Install PyTorch3D
 conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
 conda install -c bottler nvidiacub -y
-conda install pytorch3d -c pytorch3d
+conda install pytorch3d -c pytorch3d -y
 # Alternatively from source in case of dependency conflicts
 # git clone https://github.com/facebookresearch/pytorch3d.git
 # cd pytorch3d
@@ -222,7 +222,7 @@ pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/di
 # Optional: install mmdetection & mmpose & mmtracking
 pip install "mmdet<=2.25.1"
 pip install "mmpose<=0.28.1"
-pip install "mmcls<0.23.1" "mmtrack<0.13.0"
+pip install "mmcls<=0.23.2" "mmtrack<=0.13.0"
 
 # Install mmhuman3d
 git clone https://github.com/open-mmlab/mmhuman3d.git
