@@ -3,7 +3,7 @@
 ## Introduction
 
 We provide the config files for GTA-Human: Playing for 3D Human Recovery.
-[[Homepage]](https://caizhongang.github.io/projects/GTA-Human/) 
+[[Homepage]](https://caizhongang.github.io/projects/GTA-Human/)
 [[Preprint]](https://arxiv.org/abs/2110.07588)
 
 Notes:
@@ -12,14 +12,14 @@ Notes:
 
 ```BibTeX
 @article{GTAHuman,
-  author    = {Cai, Zhongang and 
-               Zhang, Mingyuan and 
-               Ren, Jiawei and 
-               Wei, Chen and 
-               Ren, Daxuan and 
-               Lin, Zhengyu and 
-               Zhao, Haiyu and 
-               Yang, Lei and 
+  author    = {Cai, Zhongang and
+               Zhang, Mingyuan and
+               Ren, Jiawei and
+               Wei, Chen and
+               Ren, Daxuan and
+               Lin, Zhengyu and
+               Zhao, Haiyu and
+               Yang, Lei and
                Liu, Ziwei},
   title     = {Playing for 3D human recovery},
   journal   = {arXiv preprint arXiv:2110.07588},
