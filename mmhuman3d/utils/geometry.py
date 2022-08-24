@@ -391,3 +391,25 @@ def weak_perspective_projection(points, scale, translation):
         points[:, :, :2] + translation.view(-1, 1, 2))
 
     return projected_points
+
+
+def cam_crop2full(crop_cam, center, scale, full_img_shape, focal_length):
+    """convert the camera parameters from the crop camera to the full camera.
+
+    :param crop_cam: shape=(N, 3) weak perspective camera in cropped
+       img coordinates (s, tx, ty)
+    :param center: shape=(N, 2) bbox coordinates (c_x, c_y)
+    :param scale: shape=(N, 1) square bbox resolution  (b / 200)
+    :param full_img_shape: shape=(N, 2) original image height and width
+    :param focal_length: shape=(N,)
+    :return:
+    """
+    img_h, img_w = full_img_shape[:, 0], full_img_shape[:, 1]
+    cx, cy, b = center[:, 0], center[:, 1], scale * 200
+    w_2, h_2 = img_w / 2., img_h / 2.
+    bs = b * crop_cam[:, 0] + 1e-9
+    tz = 2 * focal_length / bs
+    tx = (2 * (cx - w_2) / bs) + crop_cam[:, 1]
+    ty = (2 * (cy - h_2) / bs) + crop_cam[:, 2]
+    full_cam = torch.stack([tx, ty, tz], dim=-1)
+    return full_cam
