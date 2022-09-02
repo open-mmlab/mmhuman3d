@@ -180,7 +180,7 @@ iphone_extrinsics = smc_reader.get_iphone_extrinsics(iphone_id=0)
 kinect_images = smc_reader.get_color(device='Kinect', device_id=0)
 iphone_images = smc_reader.get_color(device='iPhone', device_id=0, vertical=True)
 
-# Get images
+# Get depth maps
 kinect_depth = smc_reader.get_kinect_depth(device='Kinect', device_id=0)
 iphone_depth = smc_reader.get_iphone_depth(device='iPhone', device_id=0)
 
