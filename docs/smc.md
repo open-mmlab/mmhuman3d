@@ -2,7 +2,7 @@
 
 SMC (SenseMoCap) is a file format designed with multi-camera multi-model support in mind. Each smc file is essentially a HDF5 database，made easy for cross-platform, cross-language support (h5py, H5Cpp).
 
-Each SMC file contains the following structure.
+Each SMC file contains **one** sequence of 4D human data, with multiple data modalities in the following structure.
 
 - ### *.smc (File)
 
@@ -131,21 +131,21 @@ Each SMC file contains the following structure.
     - keypoints3d (Dataset): 3D key point computed from triangulate_optim
     - Keypoints3d_mask (Dataset): corresponding mask
 
-  ### Keypoints2D
+  - ### Keypoints2D
 
-  - Kinect (Group)
+    - Kinect (Group)
 
-    - #### DeviceID (Group)
+      - #### DeviceID (Group)
 
-      - DeviceID
-        - Length aligned with 3D Keypoints，reprojection from 3D Keypoints
+        - DeviceID
+          - Length aligned with 3D Keypoints，reprojection from 3D Keypoints
 
-  - iPhone (Group)
+    - iPhone (Group)
 
-    - #### DeviceID (Group)
+      - #### DeviceID (Group)
 
-      - DeviceID
-        - Length aligned with 3D Keypoints，reprojection from 3D Keypoints
+        - DeviceID
+          - Length aligned with 3D Keypoints，reprojection from 3D Keypoints
 
   - ### SMPL (Group)
 
@@ -157,3 +157,40 @@ Each SMC file contains the following structure.
     - betas (Dataset): SMPL Betas: 1x10
     - transl (Dataset): Global Translation:  Nx3
     - keypoints3d (Dataset): SMPL Keypoints: Nx3
+
+
+# Tutorial
+
+Please first install MMHuman3D following the [installation](install.md) guide. 
+To read a `.smc` file, you may refer to the instructions below:
+
+```python
+from mmhuman3d.data.data_structures.smc_reader import SMCReader
+
+# Initialize a smc reader
+smc_reader = SMCReader('/path/to/pxxxxxx_axxxxxx.smc')
+ 
+# Get calibration
+# Kinect IDs: from 0 to 9
+# iPhone ID: 0; vertical: images are transformed from landscape to vertical
+kinect_extrinsics = smc_reader.get_kinect_color_extrinsics(kinect_id=0)
+iphone_extrinsics = smc_reader.get_iphone_extrinsics(iphone_id=0)
+
+# Get images
+kinect_images = smc_reader.get_color(device='Kinect', device_id=0)
+iphone_images = smc_reader.get_color(device='iPhone', device_id=0, vertical=True)
+
+# Get images
+kinect_depth = smc_reader.get_kinect_depth(device='Kinect', device_id=0)
+iphone_depth = smc_reader.get_iphone_depth(device='iPhone', device_id=0)
+
+# Get 2D keypoints
+iphone_keypoints2d = smc_reader.get_keypoints2d(device='Kinect', device_id=0)
+iphone_keypoints2d = smc_reader.get_keypoints2d(device='iPhone', device_id=0, vertical=True)
+
+# Get 3D keypoints
+keypoints3d = smc_reader.get_keypoints3d(device='Kinect', device_id=0)
+
+# Get SMPL
+smpl = smc_reader.get_smpl(device='Kinect', device_id=0)
+```
