@@ -1,3 +1,4 @@
+# yapf: disable
 import copy
 import glob
 import os
@@ -14,7 +15,6 @@ import torch
 import torch.nn as nn
 from colormap import Color
 
-import mmhuman3d
 from mmhuman3d.core.cameras import (
     WeakPerspectiveCameras,
     compute_orbit_cameras,
@@ -26,6 +26,9 @@ from mmhuman3d.core.conventions.segmentation import body_segmentation
 from mmhuman3d.core.renderer.torch3d_renderer import render_runner
 from mmhuman3d.core.renderer.torch3d_renderer.meshes import \
     ParametricMeshes  # noqa: E501
+from mmhuman3d.core.renderer.torch3d_renderer.render_smpl_config import (
+    RENDER_CONFIGS,
+)
 from mmhuman3d.core.renderer.torch3d_renderer.smpl_renderer import SMPLRenderer
 from mmhuman3d.core.renderer.torch3d_renderer.utils import \
     align_input_to_padded  # noqa: E501
@@ -47,6 +50,8 @@ from mmhuman3d.utils.ffmpeg_utils import (
 )
 from mmhuman3d.utils.mesh_utils import save_meshes_as_objs, save_meshes_as_plys
 from mmhuman3d.utils.path_utils import check_path_suffix
+
+# yapf: enable
 
 try:
     from typing import Literal
@@ -732,11 +737,6 @@ def render_smpl(
     """
     # initialize the device
     device = torch.device(device) if isinstance(device, str) else device
-
-    RENDER_CONFIGS = mmcv.Config.fromfile(
-        os.path.join(
-            Path(mmhuman3d.__file__).parents[1],
-            'configs/render/smpl.py'))['RENDER_CONFIGS']
 
     if isinstance(resolution, int):
         resolution = (resolution, resolution)
