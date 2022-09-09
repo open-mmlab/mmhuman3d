@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -79,15 +80,26 @@ class KeypointMSELoss(nn.Module):
         loss_weight (float, optional): The weight of the loss. Defaults to 1.0
         sigma (float, optional): Weighing parameter of Geman-McClure
                 error function. Defaults to 1.0 (no effect).
+        keypoint_weight (List[float], optional): Weighing parameter for each
+            keypoint. Shape should be (K). K: number of keypoints. Defaults to
+            None (no effect).
     """
 
-    def __init__(self, reduction='mean', loss_weight=1.0, sigma=1.0):
+    def __init__(self,
+                 reduction='mean',
+                 loss_weight=1.0,
+                 sigma=1.0,
+                 keypoint_weight=None):
         super().__init__()
         assert reduction in (None, 'none', 'mean', 'sum')
         reduction = 'none' if reduction is None else reduction
         self.reduction = reduction
         self.loss_weight = loss_weight
         self.sigma = sigma
+        if keypoint_weight is None:
+            self.keypoint_weight = None
+        else:
+            self.keypoint_weight = torch.Tensor(keypoint_weight)
 
     def forward(self,
                 pred,
@@ -135,10 +147,14 @@ class KeypointMSELoss(nn.Module):
         target_conf = target_conf.view((B, K, 1)) \
             if target_conf is not None else 1.0
         keypoint_weight = keypoint_weight.view((1, K, 1)) \
-            if keypoint_weight is not None else 1.0
+            if keypoint_weight is not None else \
+            self.keypoint_weight.view((1, K, 1)).type_as(pred) \
+            if self.keypoint_weight is not None else 1.0
 
         weight = keypoint_weight * pred_conf * target_conf
-        assert isinstance(weight, float) or weight.shape == (B, K, 1)
+        assert isinstance(
+            weight,
+            float) or weight.shape == (B, K, 1) or weight.shape == (1, K, 1)
 
         # B, J, D = pred.shape[:2]
         # if len(weight.shape) == 1:

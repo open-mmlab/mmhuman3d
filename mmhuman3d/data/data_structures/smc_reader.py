@@ -13,7 +13,8 @@ from mmhuman3d.models.body_models.utils import batch_transform_to_camera_frame
 class SMCReader:
 
     def __init__(self, file_path, body_model=None):
-        """Read SenseMocapFile endswith ".smc".
+        """Read SenseMocapFile endswith ".smc", see: https://github.com/open-
+        mmlab/mmhuman3d/blob/main/docs/smc.md.
 
         Args:
             file_path (str):

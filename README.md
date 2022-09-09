@@ -21,7 +21,7 @@
 
 English | [简体中文](README_CN.md)
 
-MMHuman3D is an open source PyTorch-based codebase for the use of 3D human parametric models in computer vision and computer graphics. It is a part of the [OpenMMLab](https://openmmlab.com/) project.
+MMHuman3D is an open-source PyTorch-based codebase for the use of 3D human parametric models in computer vision and computer graphics. It is a part of the [OpenMMLab](https://openmmlab.com/) project.
 
 The main branch works with **PyTorch 1.7+**.
 
@@ -89,6 +89,7 @@ Supported methods:
 - [x] [DeciWatch](https://ailingzeng.site/deciwatch) (ECCV'2022)
 - [x] [SmoothNet](https://ailingzeng.site/smoothnet) (ECCV'2022)
 - [x] [ExPose](https://expose.is.tue.mpg.de) (ECCV'2020)
+- [x] [BalancedMSE](https://sites.google.com/view/balanced-mse/home) (CVPR'2022)
 
 </details>
 

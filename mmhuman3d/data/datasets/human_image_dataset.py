@@ -63,7 +63,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
     """
     # metric
     ALLOWED_METRICS = {
-        'mpjpe', 'pa-mpjpe', 'pve', '3dpck', 'pa-3dpck', '3dauc', 'pa-3dauc'
+        'mpjpe', 'pa-mpjpe', 'pve', '3dpck', 'pa-3dpck', '3dauc', 'pa-3dauc',
+        'ihmr'
     }
 
     def __init__(self,
@@ -304,6 +305,8 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 _nv_tuples = self._report_3d_auc(res, metric='pa-3dauc')
             elif _metric == 'pve':
                 _nv_tuples = self._report_pve(res)
+            elif _metric == 'ihmr':
+                _nv_tuples = self._report_ihmr(res)
             else:
                 raise NotImplementedError
             name_value_tuples.extend(_nv_tuples)
@@ -557,3 +560,87 @@ class HumanImageDataset(BaseDataset, metaclass=ABCMeta):
             raise ValueError(f'Invalid metric: {metric}')
         error = vertice_pve(pred_verts, gt_verts, alignment)
         return [(err_name, error)]
+
+    def _report_ihmr(self, res_file):
+        """Calculate IHMR metric.
+
+        https://arxiv.org/abs/2203.16427
+        """
+        pred_keypoints3d, gt_keypoints3d, gt_keypoints3d_mask = \
+            self._parse_result(res_file, mode='keypoint')
+
+        pred_verts, gt_verts, _ = \
+            self._parse_result(res_file, mode='vertice')
+
+        from mmhuman3d.utils.geometry import rot6d_to_rotmat
+        mean_param_path = 'data/body_models/smpl_mean_params.npz'
+        mean_params = np.load(mean_param_path)
+        mean_pose = torch.from_numpy(mean_params['pose'][:]).unsqueeze(0)
+        mean_shape = torch.from_numpy(
+            mean_params['shape'][:].astype('float32')).unsqueeze(0)
+        mean_pose = rot6d_to_rotmat(mean_pose).view(1, 24, 3, 3)
+        mean_output = self.body_model(
+            betas=mean_shape,
+            body_pose=mean_pose[:, 1:],
+            global_orient=mean_pose[:, :1],
+            pose2rot=False)
+        mean_verts = mean_output['vertices'].detach().cpu().numpy() * 1000.
+        dis = (gt_verts - mean_verts) * (gt_verts - mean_verts)
+        dis = np.sqrt(dis.sum(axis=-1)).mean(axis=-1)
+        # from the most remote one to the nearest one
+        idx_order = np.argsort(dis)[::-1]
+        num_data = idx_order.shape[0]
+
+        def report_ihmr_idx(idx):
+            mpvpe = vertice_pve(pred_verts[idx], gt_verts[idx])
+            mpjpe = keypoint_mpjpe(pred_keypoints3d[idx], gt_keypoints3d[idx],
+                                   gt_keypoints3d_mask[idx], 'none')
+            pampjpe = keypoint_mpjpe(pred_keypoints3d[idx],
+                                     gt_keypoints3d[idx],
+                                     gt_keypoints3d_mask[idx], 'procrustes')
+            return (mpvpe, mpjpe, pampjpe)
+
+        def report_ihmr_tail(percentage):
+            cur_data = int(num_data * percentage / 100.0)
+            idx = idx_order[:cur_data]
+            mpvpe, mpjpe, pampjpe = report_ihmr_idx(idx)
+            res_mpvpe = ('bMPVPE Tail ' + str(percentage) + '%', mpvpe)
+            res_mpjpe = ('bMPJPE Tail ' + str(percentage) + '%', mpjpe)
+            res_pampjpe = ('bPA-MPJPE Tail ' + str(percentage) + '%', pampjpe)
+            return [res_mpvpe, res_mpjpe, res_pampjpe]
+
+        def report_ihmr_all(num_bin):
+            num_per_bin = np.array([0 for _ in range(num_bin)
+                                    ]).astype(np.float32)
+            sum_mpvpe = np.array([0
+                                  for _ in range(num_bin)]).astype(np.float32)
+            sum_mpjpe = np.array([0
+                                  for _ in range(num_bin)]).astype(np.float32)
+            sum_pampjpe = np.array([0 for _ in range(num_bin)
+                                    ]).astype(np.float32)
+            max_dis = dis[idx_order[0]]
+            min_dis = dis[idx_order[-1]]
+            delta = (max_dis - min_dis) / num_bin
+            for i in range(num_data):
+                idx = int((dis[i] - min_dis) / delta - 0.001)
+                res_mpvpe, res_mpjpe, res_pampjpe = report_ihmr_idx([i])
+                num_per_bin[idx] += 1
+                sum_mpvpe[idx] += res_mpvpe
+                sum_mpjpe[idx] += res_mpjpe
+                sum_pampjpe[idx] += res_pampjpe
+            for i in range(num_bin):
+                if num_per_bin[i] > 0:
+                    sum_mpvpe[i] = sum_mpvpe[i] / num_per_bin[i]
+                    sum_mpjpe[i] = sum_mpjpe[i] / num_per_bin[i]
+                    sum_pampjpe[i] = sum_pampjpe[i] / num_per_bin[i]
+            valid_idx = np.where(num_per_bin > 0)
+            res_mpvpe = ('bMPVPE All', sum_mpvpe[valid_idx].mean())
+            res_mpjpe = ('bMPJPE All', sum_mpjpe[valid_idx].mean())
+            res_pampjpe = ('bPA-MPJPE All', sum_pampjpe[valid_idx].mean())
+            return [res_mpvpe, res_mpjpe, res_pampjpe]
+
+        metrics = []
+        metrics.extend(report_ihmr_all(num_bin=100))
+        metrics.extend(report_ihmr_tail(percentage=10))
+        metrics.extend(report_ihmr_tail(percentage=5))
+        return metrics

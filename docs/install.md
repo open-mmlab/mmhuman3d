@@ -23,7 +23,7 @@
 Optional:
 - [MMPOSE](https://github.com/open-mmlab/mmpose) (Only for demo.)
 - [MMDETECTION](https://github.com/open-mmlab/mmdetection) (Only for demo.)
-- [MMTRACKING](https://github.com/open-mmlab/mmtracking) (Only for multi-person demo. If you use mmtrack, please install mmcls<1.18.0, mmcv-full>=1.3.16,<1.6.0 for GPU
+- [MMTRACKING](https://github.com/open-mmlab/mmtracking) (Only for multi-person demo. If you use mmtrack, please install mmcls<0.23.1, mmcv-full>=1.3.17,<1.6.0 for GPU.)
 
 ## Prepare environment
 
@@ -53,8 +53,9 @@ conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 ```
 
 **Important:** Make sure that your compilation CUDA version and runtime CUDA version match.
+Besides, for RTX 30 series GPU, cudatoolkit>=11.0 is required.
 
-d. Install PyTorch3D on Linux or Windows.
+d. Install PyTorch3D from source.
 
 For Linux:
 
@@ -63,6 +64,17 @@ conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
 conda install -c bottler nvidiacub -y
 
 conda install pytorch3d -c pytorch3d
+```
+
+Users may also refer to [PyTorch3D-install](https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md) for more details.
+However, our recent tests show that installing using ``conda`` sometimes runs into dependency conflicts.
+Hence, users may alternatively install Pytorch3D from source following the steps below.
+
+```shell
+git clone https://github.com/facebookresearch/pytorch3d.git
+cd pytorch3d
+pip install .
+cd ..
 ```
 
 For Windows:
@@ -101,13 +113,13 @@ Please replace `{torch_version}` in the url to your desired one.
 
 For GPU:
  ```shell
- pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
+ pip install "mmcv-full>=1.3.17,<=1.5.3" -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
  ```
 Please replace `{cu_version}` and `{torch_version}` in the url to your desired one.
 
 For example, to install mmcv-full with CUDA 10.2 and PyTorch 1.8.0, use the following command:
 ```shell
-pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+pip install "mmcv-full>=1.3.17,<=1.5.3" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 ```
 
 See [here](https://mmcv.readthedocs.io/en/latest/get_started/installation.html) for different versions of MMCV compatible to different PyTorch and CUDA versions.
@@ -116,7 +128,7 @@ For more version download link, refer to [openmmlab-download](https://download.o
 Optionally you can choose to compile mmcv from source by the following command
 
 ```shell
-git clone https://github.com/open-mmlab/mmcv.git -b v1.3.17
+git clone https://github.com/open-mmlab/mmcv.git -b v1.5.3
 cd mmcv
 MMCV_WITH_OPS=1 pip install -e .  # package mmcv-full, which contains cuda ops, will be installed after this step
 # OR pip install -e .  # package mmcv, which contains no cuda ops, will be installed after this step
@@ -128,12 +140,12 @@ Important: You need to run `pip uninstall mmcv` first if you have mmcv installed
 - mmdetection (optional)
 
 ```shell
-pip install mmdet
+pip install "mmdet<=2.25.1"
 ```
 
-Optionally, you can also build MMDetection from source in case you want to modify the code:
+Alternatively, you can also build MMDetection from source in case you want to modify the code:
 ```shell
-git clone https://github.com/open-mmlab/mmdetection.git
+git clone https://github.com/open-mmlab/mmdetection.git -b v2.25.1
 cd mmdetection
 pip install -r requirements/build.txt
 pip install -v -e .
@@ -141,13 +153,13 @@ pip install -v -e .
 
 - mmpose (optional)
 ```shell
-pip install mmpose
+pip install "mmpose<=0.28.1"
 ```
 
-Optionally, you can also build MMPose from source in case you want to modify the code:
+Alternatively, you can also build MMPose from source in case you want to modify the code:
 
 ```shell
-git clone https://github.com/open-mmlab/mmpose.git
+git clone https://github.com/open-mmlab/mmpose.git -b v0.28.1
 cd mmpose
 pip install -r requirements.txt
 pip install -v -e .
@@ -156,13 +168,13 @@ pip install -v -e .
 - mmtracking (optional)
 
 ```shell
-pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
+pip install "mmcls<=0.23.2" "mmtrack<=0.13.0"
 ```
 
-Optionally, you can also build MMTracking from source in case you want to modify the code:
+Alternatively, you can also build MMTracking from source in case you want to modify the code:
 
 ```shell
-git clone git@github.com:open-mmlab/mmtracking.git -b v0.8.0
+git clone https://github.com/open-mmlab/mmtracking.git -b v0.13.0
 cd mmtracking
 pip install -r requirements/build.txt
 pip install -v -e .  # or "python setup.py develop"
@@ -174,7 +186,6 @@ git clone https://github.com/open-mmlab/mmhuman3d.git
 cd mmhuman3d
 ```
 
-
 c. Install build requirements and then install mmhuman3d.
 
 ```shell
@@ -184,34 +195,36 @@ pip install -v -e .  # or "python setup.py develop"
 ## A from-scratch setup script
 
 ```shell
+
+# Create conda environment
 conda create -n open-mmlab python=3.8 -y
 conda activate open-mmlab
 
+# Install ffmpeg
+conda install ffmpeg
+
+# Install PyTorch
 conda install pytorch==1.8.0 torchvision cudatoolkit=10.2 -c pytorch -y
 
-# install PyTorch3D
-
+# Install PyTorch3D
 conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
 conda install -c bottler nvidiacub -y
+conda install pytorch3d -c pytorch3d -y
+# Alternatively from source in case of dependency conflicts
+# git clone https://github.com/facebookresearch/pytorch3d.git
+# cd pytorch3d
+# pip install .
+# cd ..
 
-conda install pytorch3d -c pytorch3d
-
-# install mmcv-full
-
+# Install mmcv-full
 pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
+# Optional: install mmdetection & mmpose & mmtracking
+pip install "mmdet<=2.25.1"
+pip install "mmpose<=0.28.1"
+pip install "mmcls<=0.23.2" "mmtrack<=0.13.0"
 
-# Optional
-# install mmdetection & mmpose & mmtracking
-
-pip install mmdet
-
-pip install mmpose
-
-pip install "mmcls<0.18.0" "mmtrack<0.9.0,>=0.8.0"
-
-# install mmhuman3d
-
+# Install mmhuman3d
 git clone https://github.com/open-mmlab/mmhuman3d.git
 cd mmhuman3d
 pip install -v -e .

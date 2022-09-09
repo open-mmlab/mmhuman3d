@@ -182,7 +182,8 @@ def single_person_with_mmdet(args, frames_iter):
                     bbox_thr=args.bbox_thr,
                     format='xyxy')
         else:
-            raise (f'{mesh_model.cfg.model.type} is not supported yet')
+            raise Exception(
+                f'{mesh_model.cfg.model.type} is not supported yet')
 
         smpl_betas.append(mesh_results[0]['smpl_beta'])
         smpl_pose = mesh_results[0]['smpl_pose']
@@ -228,7 +229,7 @@ def single_person_with_mmdet(args, frames_iter):
     elif smpl_poses.shape[1:] == (24, 3):
         smpl_poses = smpl_pose
     else:
-        raise (f'Wrong shape of `smpl_pose`: {smpl_pose.shape}')
+        raise Exception(f'Wrong shape of `smpl_pose`: {smpl_pose.shape}')
 
     if args.output is not None:
         body_pose_, global_orient_, smpl_betas_, verts_, pred_cams_, \
@@ -354,7 +355,8 @@ def multi_person_with_mmtracking(args, frames_iter):
                     bbox_thr=args.bbox_thr,
                     format='xyxy')
         else:
-            raise (f'{mesh_model.cfg.model.type} is not supported yet')
+            raise Exception(
+                f'{mesh_model.cfg.model.type} is not supported yet')
 
         track_ids = []
         for mesh_result in mesh_results:
@@ -398,7 +400,7 @@ def multi_person_with_mmtracking(args, frames_iter):
     elif smpl_poses.shape[2:] == (24, 3):
         smpl_poses = smpl_poses
     else:
-        raise (f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
+        raise Exception(f'Wrong shape of `smpl_pose`: {smpl_poses.shape}')
 
     if args.output is not None:
         body_pose_, global_orient_, smpl_betas_, verts_, pred_cams_, \
