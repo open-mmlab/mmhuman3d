@@ -7,13 +7,12 @@ import numpy as np
 from tqdm import tqdm
 import torch
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_converters.builder import DATA_CONVERTERS
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
 from mmhuman3d.models.body_models.builder import build_body_model
-
 
 @DATA_CONVERTERS.register_module()
 class Pw3dConverter(BaseModeConverter):
@@ -68,16 +67,16 @@ class Pw3dConverter(BaseModeConverter):
             os.path.join(dataset_path, f) for f in os.listdir(dataset_path)
             if f.endswith('.pkl')
         ]
-
-        # # # get smpl layer
-        body_model = dict(
-            type='GenderedSMPL',
-            keypoint_src='h36m',
-            keypoint_dst='h36m',
+        body_model=dict(
+            type='SMPL',
+            keypoint_src='smpl_54',
+            keypoint_dst='smpl_24',
             model_path='data/body_models/smpl',
-            joints_regressor='data/body_models/J_regressor_h36m.npy')
+            keypoint_approximate=True,
+            extra_joints_regressor='data/body_models/J_regressor_extra.npy')
         smpl_model = build_body_model(body_model)
-        gender_dict = {'f': 1, 'm': 0}
+        gender_dict = {'f':1, 'm':0}
+        num_joints = 24 # 17 if using h36m regressor
 
         # go through all the .pkl files
         for filename in tqdm(files):
@@ -152,9 +151,6 @@ class Pw3dConverter(BaseModeConverter):
                             np.dot(R,
                                    cv2.Rodrigues(pose[:3])[0]))[0].T[0]
 
-                        # keypoints3d = np.concatenate(
-                        #     [keypoints3d, np.ones((24, 1))], axis=1)
-
                         image_path_.append(image_path)
                         bbox_xywh_.append(bbox_xywh)
                         smpl['body_pose'].append(pose[3:].reshape((23, 3)))
@@ -168,8 +164,7 @@ class Pw3dConverter(BaseModeConverter):
                         pose = np.array(pose.reshape(1, 72), dtype=np.float32)
                         betas = np.array(
                             beta.reshape(1, 10), dtype=np.float32)
-                        transl = np.array(
-                            transl.reshape(1, 3), dtype=np.float32)
+                        transl = np.array(transl.reshape(1, 3), dtype=np.float32)
 
                         device = 'cpu'
                         output = smpl_model(
@@ -178,16 +173,14 @@ class Pw3dConverter(BaseModeConverter):
                             transl=torch.from_numpy(transl).to(device),
                             phis=None,
                             global_orient=None,
-                            gender=torch.Tensor([gender_dict[gender]]).to(
-                                device),  # add input for gender
+                            gender=torch.Tensor([gender_dict[gender]]).to(device), # add input for gender
                             return_verts=True)
 
-                        keypoints3d = output['joints'].detach(
-                        ).numpy().squeeze()
-                        keypoints3d -= keypoints3d[0]
+                        keypoints3d = output['joints'].detach().numpy().squeeze()
+                        keypoints3d -= keypoints3d[14] # pelvis
 
                         keypoints3d = np.concatenate(
-                            [keypoints3d, np.ones((17, 1))], axis=1)
+                            [keypoints3d, np.ones((num_joints, 1))], axis=1)
                         keypoints3d_.append(keypoints3d)
 
         # change list to np array
@@ -202,9 +195,9 @@ class Pw3dConverter(BaseModeConverter):
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 18, 3))
         keypoints2d_, keypoints2d_mask = convert_kps(keypoints2d_, 'pw3d',
                                                      'human_data')
-        keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
-        keypoints3d_, keypoints3d_mask = convert_kps(keypoints3d_, 'h36m',
-                                                     'human_data')
+        keypoints3d_ = np.array(keypoints3d_).reshape((-1, num_joints, 4))
+        keypoints3d_, keypoints3d_mask = convert_kps(keypoints3d_, 'smpl_24',
+                                                     'human_data') # h36m
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
@@ -216,12 +209,12 @@ class Pw3dConverter(BaseModeConverter):
         human_data['meta'] = meta
         human_data['cam_param'] = cam_param_
         human_data['config'] = 'pw3d'
-        human_data.compress_keypoints_by_mask()
 
         # store data
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
-        file_name = 'pw3d_{}_regressed.npz'.format(mode)
+        # file_name = 'pw3d_{}_regressed.npz'.format(mode)
+        file_name = 'pw3d_{}_cliff.npz'.format(mode)
         out_file = os.path.join(out_path, file_name)
         human_data.dump(out_file)
