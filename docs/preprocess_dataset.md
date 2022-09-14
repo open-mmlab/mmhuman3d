@@ -198,9 +198,9 @@ mmhuman3d
         ├── mpii_train.npz
         └── pw3d_test.npz
 ```
-Note that, to avoid generating npz files every iteration during training, please create a cache directory linked with the preprocessed files. To do so, run the following command:
+Note that, to avoid generating npz files every iteration during training, please create a blank cache directory. To do so, run the following command:
 ```
-ln -s data/cache data/preprocessed_datasets
+mkdir data/cache
 ```
 
 For SPIN training, the following datasets are required:
