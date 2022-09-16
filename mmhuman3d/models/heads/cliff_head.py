@@ -19,6 +19,7 @@ class CliffHead(BaseModule):
                  init_cfg=None):
         super(CliffHead, self).__init__(init_cfg=init_cfg)
         self.fc1 = nn.Linear(feat_dim + nbbox + npose + nbeta + ncam, hdim)
+        self.avgpool = nn.AvgPool2d((8, 6), stride=1)
         self.drop1 = nn.Dropout()
         self.fc2 = nn.Linear(hdim, hdim)
         self.drop2 = nn.Dropout()
@@ -60,7 +61,10 @@ class CliffHead(BaseModule):
         if len(x.shape) == 4:
             # use feature from the last layer of the backbone
             # apply global average pooling on the feature map
-            x = x.mean(dim=-1).mean(dim=-1)
+            x = self.avgpool(x)
+            # x = x.mean(dim=-1).mean(dim=-1)
+            x = x.view(batch_size, -1)
+
         elif len(x.shape) == 3:
             # temporal feature
             output_seq = True
