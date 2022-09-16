@@ -200,8 +200,9 @@ mmhuman3d
 ```
 Note that, to avoid generating npz files every iteration during training, please create a blank cache directory. To do so, run the following command:
 ```
-mkdir data/cache
+cp -r data/preprocessed_datasets data/cache
 ```
+Also, rememeber to use the *_cache.py config during training.
 
 For SPIN training, the following datasets are required:
   - [COCO](#coco)
