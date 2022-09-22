@@ -140,7 +140,7 @@ DATASET_CONFIGS = dict(
 
 ## Datasets for supported algorithms
 
-For all algorithms, the root path for our datasets and output path for our preprocessed npz files are stored in `data/datasets` and `data/preprocessed_datasets`. 
+For all algorithms, the root path for our datasets and output path for our preprocessed npz files are stored in `data/datasets` and `data/preprocessed_datasets`.
 As such, use this command with the listed `dataset-names`:
 
 ```bash
