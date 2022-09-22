@@ -202,7 +202,7 @@ Note that, to avoid generating npz files every iteration during training, please
 ```
 cp -r data/preprocessed_datasets data/cache
 ```
-Also, rememeber to use the *_cache.py config during training.
+Also, remember to use the *_cache.py config during training.
 
 For SPIN training, the following datasets are required:
   - [COCO](#coco)
