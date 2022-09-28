@@ -59,7 +59,7 @@ mmhuman3d
 以下是一些参数的释义:
 
 - 如果指定`--output` 和 `--show_path`, 演示脚本会将结果储存在`human_data`中，并且渲染得到的人体mesh。
-- 如果指定`--smooth_type`, 演示脚本会使用特定的方法进行平滑。目前可以选择的平滑方法包括`guas1d`、`oneeuro`和 `savgol`。
+- 如果指定`--smooth_type`, 演示脚本会使用特定的方法进行平滑。目前可以选择的平滑方法包括`gaus1d`、`oneeuro`和 `savgol`。
 - 如果指定`--speed_up_type`, 演示脚本会使用特定的方法进行加速处理。目前支持基于学习的方法`deciwatch`, 更多的信息请参考[DeciWatch](../configs/_base_/post_processing/README.md)。
 
 ### 单人
