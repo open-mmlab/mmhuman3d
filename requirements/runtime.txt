@@ -4,7 +4,6 @@ chumpy
 colormap
 easydev
 h5py
-importlib-metadata>=1.1.0,<5
 matplotlib
 numpy
 opencv-python
