@@ -66,20 +66,20 @@ def parse_args():
     parser.add_argument(
         '--root_path',
         type=str,
-        required=True,
+        # required=True,
         help='the root path of original data')
 
     parser.add_argument(
         '--output_path',
         type=str,
-        required=True,
+        # required=True,
         help='the path to store the preprocessed npz files')
 
     parser.add_argument(
         '--datasets',
         type=str,
         nargs='+',
-        required=True,
+        # required=True,
         default=[],
         help=f'Supported datasets: {list(DATASET_CONFIGS.keys())}')
 
@@ -90,7 +90,9 @@ def parse_args():
 
 def main():
     args = parse_args()
-
+    args.datasets = ['h36m_hybrik']
+    args.root_path = 'data/datasets'
+    args.output_path = 'data/preprocessed_datasets/hybrik'
     datasets = (
         DATASET_CONFIGS.keys() if args.datasets == ['all'] else args.datasets)
 

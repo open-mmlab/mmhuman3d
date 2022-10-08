@@ -63,6 +63,20 @@ _HumanData_SUPPORTED_KEYS = {
         'slice_key': 'betas',
         'dim': 0
     },
+    # 'frame_range':{
+    #     'type': np.ndarray,
+    #     'shape': (-1, 2),
+    #     'dim': None
+    # },
+    # 'video_range':{
+    #     'type': np.ndarray,
+    #     'shape': (-1, 2),
+    #     'dim': None
+    # },
+    'optional': {
+        'type': dict,
+        'dim': None
+    },
     'meta': {
         'type': dict,
     },
@@ -116,7 +130,8 @@ class HumanData(dict):
             HumanData: An instance of HumanData.
         """
         ret_human_data = super().__new__(cls, args, kwargs)
-        setattr(ret_human_data, '__data_len__', -1)
+        setattr(ret_human_data, '__npz_len__', -1)
+        setattr(ret_human_data, '__datas_len__', -1)
         setattr(ret_human_data, '__key_strict__', False)
         setattr(ret_human_data, '__keypoints_compressed__', False)
         return ret_human_data
@@ -227,7 +242,8 @@ class HumanData(dict):
                 if value is None:
                     tmp_data_dict.pop(key)
                 elif key == '__key_strict__' or \
-                        key == '__data_len__' or\
+                        key == '__npz_len__' or\
+                        key == '__datas_len__' or\
                         key == '__keypoints_compressed__':
                     self.__setattr__(key, value)
                     # pop the attributes to keep dict clean
@@ -263,7 +279,8 @@ class HumanData(dict):
                 raise FileExistsError
         dict_to_dump = {
             '__key_strict__': self.__key_strict__,
-            '__data_len__': self.__data_len__,
+            '__npz_len__': self.__npz_len__,
+            '__datas_len__': self.__datas_len__,
             '__keypoints_compressed__': self.__keypoints_compressed__,
         }
         dict_to_dump.update(self)
@@ -287,7 +304,7 @@ class HumanData(dict):
         keypoints_info = {}
         non_sliced_data = {}
         sliced_data = {}
-        slice_num = ceil(self.__data_len__ / slice_size)
+        slice_num = ceil(self.__npz_len__ / slice_size)
         for slice_index in range(slice_num):
             sliced_data[str(slice_index)] = {}
         dim_dict = self.__get_slice_dim__()
@@ -312,7 +329,7 @@ class HumanData(dict):
                         for slice_index in range(slice_num):
                             slice_start = slice_index * slice_size
                             slice_end = min((slice_index + 1) * slice_size,
-                                            self.__data_len__)
+                                            self.__npz_len__)
                             slice_range = slice(slice_start, slice_end)
                             sliced_sub_value = \
                                 HumanData.__get_sliced_result__(
@@ -334,7 +351,7 @@ class HumanData(dict):
                     for slice_index in range(slice_num):
                         slice_start = slice_index * slice_size
                         slice_end = min((slice_index + 1) * slice_size,
-                                        self.__data_len__)
+                                        self.__npz_len__)
                         slice_list[dim] = slice(slice_start, slice_end)
                         sliced_value = value[tuple(slice_list)]
                         sliced_data[str(slice_index)][key] = sliced_value
@@ -343,13 +360,13 @@ class HumanData(dict):
                     for slice_index in range(slice_num):
                         slice_start = slice_index * slice_size
                         slice_end = min((slice_index + 1) * slice_size,
-                                        self.__data_len__)
+                                        self.__npz_len__)
                         sliced_value = value[slice(slice_start, slice_end)]
                         sliced_data[str(slice_index)][key] = sliced_value
         writer_args_dict = {
             'slice_size': slice_size,
             'keypoints_info': keypoints_info,
-            'data_len': self.data_len,
+            'npz_len': self.npz_len,
             'non_sliced_data': non_sliced_data,
             'key_strict': self.get_key_strict()
         }
@@ -557,6 +574,7 @@ class HumanData(dict):
             stop = arg_1
         slice_index = slice(start, stop, step)
         dim_dict = self.__get_slice_dim__()
+        frame_range = self.get_raw_value('optional')['frame_range']
         for key, dim in dim_dict.items():
             # keys not expected be sliced
             if dim is None:
@@ -572,14 +590,14 @@ class HumanData(dict):
                         sub_dim = dim[sub_key]
                         sliced_sub_value = \
                             HumanData.__get_sliced_result__(
-                                sub_value, sub_dim, slice_index)
+                                sub_value, sub_dim, slice_index, frame_range)
                         sliced_dict[sub_key] = sliced_sub_value
                 ret_human_data[key] = sliced_dict
             else:
                 value = self[key]
                 sliced_value = \
-                    HumanData.__get_sliced_result__(
-                        value, dim, slice_index)
+                    HumanData.__get_sliced_multi_result__(
+                        value, dim, slice_index, frame_range)
                 ret_human_data[key] = sliced_value
         return ret_human_data
 
@@ -597,19 +615,22 @@ class HumanData(dict):
         supported_keys = self.__class__.SUPPORTED_KEYS
         ret_dict = {}
         for key in self.keys():
-            # keys not expected be sliced
+            # keys not expected be sliced will return None
             if key in supported_keys and \
                     'dim' in supported_keys[key] and \
                     supported_keys[key]['dim'] is None:
                 ret_dict[key] = None
             else:
+                # key not in supported_keys or
+                # `dim` not in supported_keys[key] or
+                # `dim` is not None
                 value = self[key]
                 if isinstance(value, dict) and len(value) > 0:
                     ret_dict[key] = {}
                     for sub_key in value.keys():
                         try:
                             sub_value_len = len(value[sub_key])
-                            if sub_value_len != self.__data_len__:
+                            if sub_value_len != self.__npz_len__:
                                 ret_dict[key][sub_key] = None
                             else:
                                 ret_dict[key][sub_key] = 0
@@ -631,7 +652,7 @@ class HumanData(dict):
                 data_len = value_len if slice_dim == 0 \
                     else value.shape[slice_dim]
                 # dim not for slice
-                if data_len != self.__data_len__:
+                if data_len != self.__npz_len__:
                     ret_dict[key] = None
                     continue
                 else:
@@ -865,24 +886,44 @@ class HumanData(dict):
         return ret_bool
 
     @property
-    def data_len(self) -> int:
+    def datas_len(self) -> int:
         """Get the temporal length of this HumanData instance.
 
         Returns:
             int:
                 Number of frames related to this instance.
         """
-        return self.__data_len__
+        return self.__datas_len__
 
-    @data_len.setter
-    def data_len(self, value: int):
+    @datas_len.setter
+    def datas_len(self, value: int):
         """Set the temporal length of this HumanData instance.
 
         Args:
             value (int):
                 Number of frames related to this instance.
         """
-        self.__data_len__ = value
+        self.__datas_len__ = value
+
+    @property
+    def npz_len(self) -> int:
+        """Get the temporal length of this HumanData instance.
+
+        Returns:
+            int:
+                Number of frames related to this instance.
+        """
+        return self.__npz_len__
+
+    @npz_len.setter
+    def npz_len(self, value: int):
+        """Set the temporal length of this HumanData instance.
+
+        Args:
+            value (int):
+                Number of frames related to this instance.
+        """
+        self.__npz_len__ = value
 
     def __check_value_len__(self, key: Any, val: Any) -> bool:
         """Check whether the temporal length of val matches other values.
@@ -912,18 +953,29 @@ class HumanData(dict):
                     val_data_len = val[slice_key].shape[val_slice_dim]
                 else:
                     val_data_len = val.shape[val_slice_dim]
-                if self.data_len < 0:
-                    # no data_len yet, assign a new one
-                    self.data_len = val_data_len
+                if self.npz_len < 0:
+                    # no npz_len yet, assign a new one
+                    self.npz_len = val_data_len
                 else:
-                    # check if val_data_len matches recorded data_len
-                    if self.data_len != val_data_len:
+                    # check if val_data_len matches recorded npz_len
+                    if self.npz_len != val_data_len:
                         ret_bool = False
+        # check multi_human_data
+        key = 'optional'
+        if key in self and \
+                'frame_range' in self[key]:
+            self.datas_len = len(self[key]['frame_range'])
+        else:
+            self.datas_len = self.npz_len
+
+        # if self.npz_len != self.datas_len:
+        #     ret_bool = False
+
         if not ret_bool:
             err_msg = 'Temporal check Failed:\n'
             err_msg += f'key={str(key)}\n'
-            err_msg += f'val\'s data_len={val_data_len}\n'
-            err_msg += f'expected data_len={self.data_len}\n'
+            err_msg += f'val\'s npz_len={val_data_len}\n'
+            err_msg += f'expected npz_len={self.npz_len}\n'
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
@@ -1074,7 +1126,8 @@ class HumanData(dict):
                 raise FileExistsError
         dict_to_dump = {
             '__key_strict__': self.__key_strict__,
-            '__data_len__': self.__data_len__,
+            '__npz_len__': self.__npz_len__,
+            '__datas_len__': self.__datas_len__,
             '__keypoints_compressed__': self.__keypoints_compressed__,
         }
         dict_to_dump.update(self)
@@ -1097,7 +1150,8 @@ class HumanData(dict):
                 if value is None:
                     tmp_data_dict.pop(key)
                 elif key == '__key_strict__' or \
-                        key == '__data_len__' or\
+                        key == '__npz_len__' or\
+                        key == '__datas_len__' or\
                         key == '__keypoints_compressed__':
                     self.__setattr__(key, value)
                     # pop the attributes to keep dict clean
@@ -1114,7 +1168,7 @@ class HumanData(dict):
         """For older versions of HumanData, call this method to apply missing
         values (also attributes)."""
         supported_keys = self.__class__.SUPPORTED_KEYS
-        if self.__data_len__ == -1:
+        if self.__npz_len__ == -1:
             for key in supported_keys:
                 if key in self and \
                         'dim' in supported_keys[key] and\
@@ -1123,12 +1177,21 @@ class HumanData(dict):
                             supported_keys[key]['type'] == dict:
                         sub_key = supported_keys[key]['slice_key']
                         slice_dim = supported_keys[key]['dim']
-                        self.__data_len__ = \
+                        self.__npz_len__ = \
                             self[key][sub_key].shape[slice_dim]
                     else:
                         slice_dim = supported_keys[key]['dim']
-                        self.__data_len__ = self[key].shape[slice_dim]
+                        self.__npz_len__ = self[key].shape[slice_dim]
                     break
+        if self.__datas_len__ == -1:
+            key = 'optional'
+            if key in self and \
+                    'frame_range' in self[key]:
+                self.__datas_len__ = len(self[key]['frame_range'])
+            else:
+                self[key]['frame_range'] = [[i, i + 1]
+                                            for i in range(self.__npz_len__)]
+                self.__datas_len__ = self.__npz_len__
         for key in list(self.keys()):
             convention_key = f'{key}_convention'
             if key.startswith('keypoints') and \
@@ -1393,3 +1456,23 @@ class HumanData(dict):
             sliced_data = \
                 input_data[slice_range]
         return sliced_data
+
+    @classmethod
+    def __get_sliced_multi_result__(
+            cls, input_data: Union[np.ndarray, list, tuple], slice_dim: int,
+            slice_range: slice, frame_index) -> Union[np.ndarray, list, tuple]:
+        slice_datas = []
+        for frame_range in frame_index[slice_range]:
+            slice_index = slice(frame_range[0], frame_range[-1], 1)
+            slice_data = \
+                cls.__get_sliced_result__(
+                    input_data,
+                    slice_dim,
+                    slice_index)
+            for element in slice_data:
+                slice_datas.append(element)
+        if isinstance(input_data, np.ndarray):
+            slice_datas = np.array(slice_datas)
+        else:
+            slice_datas = type(input_data)(slice_datas)
+        return slice_datas
