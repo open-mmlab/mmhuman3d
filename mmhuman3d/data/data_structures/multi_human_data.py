@@ -85,25 +85,6 @@ class MultiHumanData(HumanData):
         return ret_human_data
 
     # TODO: to support cache
-    @property
-    def data_len(self) -> int:
-        """Get the temporal length of this MultiHumanData instance.
-
-        Returns:
-            int:
-                Number of frames related to this instance.
-        """
-        return self.__data_len__
-
-    @data_len.setter
-    def data_len(self, value: int):
-        """Set the temporal length of this MultiHumanData instance.
-
-        Args:
-            value (int):
-                Number of frames related to this instance.
-        """
-        self.__data_len__ = value
 
     def __check_value_len__(self, key: Any, val: Any) -> bool:
         """Check whether the temporal length of val matches other values.
@@ -122,6 +103,17 @@ class MultiHumanData(HumanData):
         """
         ret_bool = True
         supported_keys = self.__class__.SUPPORTED_KEYS
+
+        # MultiHumanData
+        all_data_len = 0
+        if 'optional' in self and \
+                'frame_range' in self['optional']:
+            for frame_range in self['optional']['frame_range']:
+                # no data_len yet, assign a new one
+                if self.data_len < 0:
+                    self.data_len = len(self['optional']['frame_range'])
+                all_data_len += len(frame_range)
+
         # check definition
         if key in supported_keys:
             # check temporal length
@@ -133,29 +125,25 @@ class MultiHumanData(HumanData):
                     val_data_len = val[slice_key].shape[val_slice_dim]
                 else:
                     val_data_len = val.shape[val_slice_dim]
-                if self.data_len < 0:
-                    # no npz_len yet, assign a new one
+                # all_data_len indicate the human_data type.
+                # if all_data_len>0, it's the multi_human_data.
+                if all_data_len > 0 and \
+                        all_data_len != val_data_len:
+                    ret_bool = False
+                elif all_data_len == 0 and \
+                        self.data_len < 0:
+                    # no data_len yet, assign a new one
                     self.data_len = val_data_len
-                else:
-                    # check if val_data_len matches recorded npz_len
-                    if self.data_len != val_data_len:
-                        ret_bool = False
-        # check multi_human_data
-        key = 'optional'
-        if key in self and \
-                'frame_range' in self[key]:
-            self.datas_len = len(self[key]['frame_range'])
-        else:
-            self.datas_len = self.npz_len
-
-        # if self.npz_len != self.datas_len:
-        #     ret_bool = False
+                elif all_data_len == 0 and \
+                        self.data_len != val_data_len:
+                    all_data_len = val_data_len
+                    ret_bool = False
 
         if not ret_bool:
             err_msg = 'Temporal check Failed:\n'
             err_msg += f'key={str(key)}\n'
-            err_msg += f'val\'s npz_len={val_data_len}\n'
-            err_msg += f'expected npz_len={self.npz_len}\n'
+            err_msg += f'val\'s all_data_len={all_data_len}\n'
+            err_msg += f'expected all_data_len={all_data_len}\n'
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
         return ret_bool
