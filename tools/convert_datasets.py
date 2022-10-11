@@ -90,9 +90,9 @@ def parse_args():
 
 def main():
     args = parse_args()
-    args.datasets = ['h36m_hybrik']
+    args.datasets = ['crowdpose']
     args.root_path = 'data/datasets'
-    args.output_path = 'data/preprocessed_datasets/hybrik'
+    args.output_path = 'data/preprocessed_datasets/'
     datasets = (
         DATASET_CONFIGS.keys() if args.datasets == ['all'] else args.datasets)
 

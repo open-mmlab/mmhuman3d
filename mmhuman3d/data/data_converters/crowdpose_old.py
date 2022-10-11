@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.data.data_structures.multi_human_data import HumanData
+from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -47,10 +47,6 @@ class CrowdposeConverter(BaseModeConverter):
 
         # structs we need
         image_path_, keypoints2d_, bbox_xywh_ = [], [], []
-
-        # optional
-        optional = {}
-        optional['frame_range'] = []
 
         # json annotation file
         json_path = os.path.join(dataset_path,
@@ -96,8 +92,6 @@ class CrowdposeConverter(BaseModeConverter):
             keypoints2d_.append(keypoints2d)
             bbox_xywh_.append(bbox_xywh)
 
-        # frame_range
-
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
@@ -105,15 +99,6 @@ class CrowdposeConverter(BaseModeConverter):
         keypoints2d_, mask = convert_kps(keypoints2d_, 'crowdpose',
                                          'human_data')
 
-        frame_start = 0
-        frame_end = 0
-        for image_path in sorted(set(image_path_), key=image_path_.index):
-            frame_end = frame_start + \
-                image_path_.count(image_path)
-            optional['frame_range'].append([frame_start, frame_end])
-            frame_start = frame_end
-
-        human_data['optional'] = optional
         human_data['image_path'] = image_path_
         human_data['keypoints2d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_

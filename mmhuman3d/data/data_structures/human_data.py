@@ -580,6 +580,9 @@ class HumanData(dict):
                     HumanData.__get_sliced_result__(
                         value, dim, slice_index)
                 ret_human_data[key] = sliced_value
+        # check keypoints compressed
+        if self.check_keypoints_compressed():
+            ret_human_data.compress_keypoints_by_mask()
         return ret_human_data
 
     def __get_slice_dim__(self) -> dict:
@@ -610,6 +613,8 @@ class HumanData(dict):
                             sub_value_len = len(value[sub_key])
                             if sub_value_len != self.__data_len__:
                                 ret_dict[key][sub_key] = None
+                            elif 'dim' in value:
+                                ret_dict[key][sub_key] = value['dim']
                             else:
                                 ret_dict[key][sub_key] = 0
                         except TypeError:
