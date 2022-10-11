@@ -613,7 +613,7 @@ class HumanData(dict):
                             sub_value_len = len(value[sub_key])
                             if 'dim' in value:
                                 ret_dict[key][sub_key] = value['dim']
-                            if sub_value_len != self.__data_len__:
+                            elif sub_value_len != self.__data_len__:
                                 ret_dict[key][sub_key] = None
                             else:
                                 ret_dict[key][sub_key] = 0
