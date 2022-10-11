@@ -611,10 +611,10 @@ class HumanData(dict):
                     for sub_key in value.keys():
                         try:
                             sub_value_len = len(value[sub_key])
+                            if 'dim' in value:
+                                ret_dict[key][sub_key] = value['dim']
                             if sub_value_len != self.__data_len__:
                                 ret_dict[key][sub_key] = None
-                            elif 'dim' in value:
-                                ret_dict[key][sub_key] = value['dim']
                             else:
                                 ret_dict[key][sub_key] = 0
                         except TypeError:
