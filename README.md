@@ -42,7 +42,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   A suite of differentiale visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
 
 ## News
-- 2022-09-30: MMHuman3D [v0.10.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.10.0) is released. Major updates include:
+- 2022-10-12: MMHuman3D [v0.10.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.10.0) is released. Major updates include:
   - Add webcam demo and real-time renderer
   - Update dataloader to speed up training
   - Add [balanced MSE](https://github.com/jiawei-ren/BalancedMSE) loss for imbalanced HMR training

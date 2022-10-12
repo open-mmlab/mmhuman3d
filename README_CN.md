@@ -42,7 +42,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
 ## 最新进展
-- 2022-09-30: MMHuman3D [v0.10.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.10.0) 已经发布. 主要更新包括:
+- 2022-10-12: MMHuman3D [v0.10.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.10.0) 已经发布. 主要更新包括:
   - 支持调用本地摄像头实时渲染
   - 更新数据载入脚本，进而实现训练加速
   - 加入[balanced MSE](https://github.com/jiawei-ren/BalancedMSE) 损失函数，可进一步提升HMR训练精度
