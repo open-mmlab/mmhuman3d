@@ -66,6 +66,12 @@ KEYPOINTS_FACTORY = {
     'face3d': face3d.FACE3D_IND,
     'spin_smplx': spin_smplx.SPIN_SMPLX_KEYPOINTS,
     'mano': mano.MANO_KEYPOINTS,
+    'mano_left': mano.MANO_LEFT_KEYPOINTS,
+    'mano_right': mano.MANO_RIGHT_KEYPOINTS,
+    'mano_hands': mano.MANO_HANDS_KEYPOINTS,
+    'mano_left_reorder': mano.MANO_LEFT_REORDER_KEYPOINTS,
+    'mano_right_reorder': mano.MANO_RIGHT_REORDER_KEYPOINTS,
+    'mano_hands_reorder': mano.MANO_HANDS_REORDER_KEYPOINTS,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
