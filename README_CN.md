@@ -42,6 +42,10 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
 ## 最新进展
+- 2022-10-12: MMHuman3D [v0.10.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.10.0) 已经发布. 主要更新包括:
+  - 支持调用本地摄像头实时渲染
+  - 更新数据载入脚本，进而实现训练加速
+  - 加入[balanced MSE](https://github.com/jiawei-ren/BalancedMSE) 损失函数，可进一步提升HMR训练精度
 - 2022-07-08: MMHuman3D [v0.9.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.9.0) 已经发布. 主要更新包括:
   - 支持 SMPL-X 估计方法 [ExPose](https://expose.is.tue.mpg.de/)，同时重建脸、手、身体
   - 支持新的人体参数化模型 [STAR](https://star.is.tue.mpg.de/)
@@ -51,11 +55,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - 支持 SmoothNet（由论文作者添加）
   - 修复循环引用问题，获得最多2.5倍速度提升
   - 增加中文版文档
-- 2022-04-30: MMHuman3D [v0.7.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.7.0) 已经发布. 主要更新包括:
-  - 支持PARE算法 (优于官方实现）
-  - 支持DeciWatch（由论文作者添加）
-  - 添加GTA-Human的HMR基线（官方开源）
-  - 支持存储推理结果
 
 ## 基准与模型库
 

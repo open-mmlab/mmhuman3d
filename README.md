@@ -42,6 +42,10 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   A suite of differentiale visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
 
 ## News
+- 2022-10-12: MMHuman3D [v0.10.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.10.0) is released. Major updates include:
+  - Add webcam demo and real-time renderer
+  - Update dataloader to speed up training
+  - Add [balanced MSE](https://github.com/jiawei-ren/BalancedMSE) loss for imbalanced HMR training
 - 2022-07-08: MMHuman3D [v0.9.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.9.0) is released. Major updates include:
   - Support SMPL-X estimation with [ExPose](https://expose.is.tue.mpg.de/) for simultaneous recovery of face, hands and body
   - Support new body model [STAR](https://star.is.tue.mpg.de/)
@@ -51,11 +55,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - Support SmoothNet (added by paper authors)
   - Fix circular import and up to 2.5x speed up in module initialization
   - Add documentations in Chinese
-- 2022-04-30: MMHuman3D [v0.7.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.7.0) is released. Major updates include:
-  - Support PARE (better than the official implementation)
-  - Support DeciWatch (added by paper authors)
-  - Add GTA-Human HMR baseline (official release)
-  - Support saving inference results
 
 ## Benchmark and Model Zoo
 
