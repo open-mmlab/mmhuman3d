@@ -25,6 +25,8 @@ MMHuman3D 是一款基于 PyTorch 的人体参数化模型的开源工具箱，�
 
 主分支代码目前支持 **PyTorch 1.7** 以上的版本。
 
+如果您对多视角动作捕捉感兴趣，请参考[XRMoCap](https://github.com/openxrlab/xrmocap)了解更多详情。
+
 https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-b4de-b91c3fbbaa3b.mp4
 
 ### 主要特性
