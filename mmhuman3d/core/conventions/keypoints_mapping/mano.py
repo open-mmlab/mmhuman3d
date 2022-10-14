@@ -24,14 +24,6 @@ MANO_LEFT_REORDER_KEYPOINTS = [
     MANO_LEFT_KEYPOINTS[i] for i in MANO_REORDER_MAP
 ]
 
-MANO_LEFT_REORDER_KEYPOINTS = [
-    'left_wrist', 'left_thumb_1', 'left_thumb_2', 'left_thumb_3', 'left_thumb',
-    'left_index_1', 'left_index_2', 'left_index_3', 'left_index',
-    'left_middle_1', 'left_middle_2', 'left_middle_3', 'left_middle',
-    'left_ring_1', 'left_ring_2', 'left_ring_3', 'left_ring', 'left_pinky_1',
-    'left_pinky_2', 'left_pinky_3', 'left_pinky'
-]
-
 # Deprecated: reserved for backward compatibility
 MANO_KEYPOINTS = MANO_RIGHT_KEYPOINTS
 # Two hands (left + right)
