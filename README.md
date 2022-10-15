@@ -25,6 +25,8 @@ MMHuman3D is an open-source PyTorch-based codebase for the use of 3D human param
 
 The main branch works with **PyTorch 1.7+**.
 
+If you are interested in multi-view motion capture, please refer to [XRMoCap](https://github.com/openxrlab/xrmocap) for more details.
+
 https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-b4de-b91c3fbbaa3b.mp4
 
 ### Major Features

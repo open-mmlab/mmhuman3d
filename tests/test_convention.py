@@ -243,3 +243,31 @@ def test_get_keypoint_num():
     assert get_keypoint_num('smpl_45') == 45
     assert get_keypoint_num('smpl_49') == 49
     assert get_keypoint_num('smpl_54') == 54
+
+
+def test_mano_reorder():
+    # test right hand
+    MANO_RIGHT_REORDER_KEYPOINTS = KEYPOINTS_FACTORY['mano_right_reorder']
+    GT_MANO_RIGHT_REORDER_KEYPOINTS = [
+        'right_wrist', 'right_thumb_1', 'right_thumb_2', 'right_thumb_3',
+        'right_thumb', 'right_index_1', 'right_index_2', 'right_index_3',
+        'right_index', 'right_middle_1', 'right_middle_2', 'right_middle_3',
+        'right_middle', 'right_ring_1', 'right_ring_2', 'right_ring_3',
+        'right_ring', 'right_pinky_1', 'right_pinky_2', 'right_pinky_3',
+        'right_pinky'
+    ]
+    assert GT_MANO_RIGHT_REORDER_KEYPOINTS == MANO_RIGHT_REORDER_KEYPOINTS
+    # test left hand
+    GT_MANO_LEFT_REORDER_KEYPOINTS = [
+        x.replace('right_', 'left_') for x in GT_MANO_RIGHT_REORDER_KEYPOINTS
+    ]
+    MANO_LEFT_REORDER_KEYPOINTS = KEYPOINTS_FACTORY['mano_left_reorder']
+    assert GT_MANO_LEFT_REORDER_KEYPOINTS == MANO_LEFT_REORDER_KEYPOINTS
+
+
+def test_mano_hands():
+    MANO_HANDS_KEYPOINTS = KEYPOINTS_FACTORY['mano_hands']
+    MANO_HANDS_REORDER_KEYPOINTS = KEYPOINTS_FACTORY['mano_hands_reorder']
+    assert len(MANO_HANDS_KEYPOINTS) == 42
+    assert len(MANO_HANDS_REORDER_KEYPOINTS) == 42
+    assert MANO_HANDS_KEYPOINTS != MANO_HANDS_REORDER_KEYPOINTS
