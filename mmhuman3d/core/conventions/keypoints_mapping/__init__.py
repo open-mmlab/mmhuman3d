@@ -29,6 +29,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     smplx,
     spin_smplx,
     star,
+    mediapip,
 )
 
 KEYPOINTS_FACTORY = {
@@ -72,6 +73,9 @@ KEYPOINTS_FACTORY = {
     'mano_left_reorder': mano.MANO_LEFT_REORDER_KEYPOINTS,
     'mano_right_reorder': mano.MANO_RIGHT_REORDER_KEYPOINTS,
     'mano_hands_reorder': mano.MANO_HANDS_REORDER_KEYPOINTS,
+    'mediapipe_whole_body': mediapip.WHOLE_BODY_KEYPOINTS,
+    'mediapipe_body': mediapip.BODY_KEYPOINTS,
+    'mediapipe_mirror_body': mediapip.BODY_MIRROR_KEYPOINTS,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
