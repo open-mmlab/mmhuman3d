@@ -157,7 +157,7 @@ def _plot_kp2d_frame(kp2d_person: np.ndarray,
                     cv2.putText(
                         canvas, str(index), (int(x), int(y)),
                         cv2.FONT_HERSHEY_SIMPLEX, font_size,
-                        np.array([255, 255, 255]).astype(np.int32).tolist(), 1)
+                        np.array([255, 255, 255]).astype(np.int32).tolist(), 2)
     # draw the bboxes
     if bbox is not None:
         bbox = bbox.astype(np.int32)
@@ -573,7 +573,7 @@ def visualize_kp2d(
                 palette=limbs_palette,
                 draw_bbox=draw_bbox,
                 with_number=with_number,
-                font_size=0.2,
+                font_size=0.5,
                 disable_limbs=disable_limbs)
         if with_file_name and frame_list is not None:
             h, w, _ = canvas.shape
