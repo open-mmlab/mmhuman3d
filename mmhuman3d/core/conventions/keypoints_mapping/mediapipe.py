@@ -1,5 +1,7 @@
 from .mano import MANO_HANDS_REORDER_KEYPOINTS
 
+# mediapipe pose convention defined in
+# https://google.github.io/mediapipe/solutions/pose.html
 MP_BODY_KEYPOINTS = [
     'nose',
     'left_eye_4',
@@ -36,6 +38,7 @@ MP_BODY_KEYPOINTS = [
     'right_foot',
 ]
 
+# remove hand keypoints in mediapipe pose
 MP_WHOLE_BODY_KEYPOINTS = [
     'nose',
     'left_eye_4',
@@ -64,4 +67,6 @@ MP_WHOLE_BODY_KEYPOINTS = [
     'right_foot',
 ]
 
-MP_WHOLE_BODY_KEYPOINTS = MP_WHOLE_BODY_KEYPOINTS + MANO_HANDS_REORDER_KEYPOINTS
+# mediapipe keypoint of body and hands
+MP_WHOLE_BODY_KEYPOINTS =\
+            MP_WHOLE_BODY_KEYPOINTS + MANO_HANDS_REORDER_KEYPOINTS
