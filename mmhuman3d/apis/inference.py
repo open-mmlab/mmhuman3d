@@ -3,6 +3,7 @@ import cv2
 import mmcv
 import numpy as np
 import torch
+from mmcv.utils import print_log
 from mmcv.parallel import collate
 from mmcv.runner import load_checkpoint
 
@@ -37,7 +38,10 @@ def init_model(config, checkpoint=None, device='cuda:0'):
 
     model = build_architecture(config.model)
     if checkpoint is None:
-        model.init_weights()
+        try:
+            model.init_weights()
+        except Exception as e:
+            print_log(f'init model weights failed, please check: {e}')
     if checkpoint is not None:
         # load model checkpoint
         load_checkpoint(model, checkpoint, map_location=device)
@@ -409,14 +413,14 @@ def feature_extract(
 
 
 def _indexing_sequence(
-    input: Union[Sequence, Dict[str, Sequence]],
-    index: Union[int, Tuple[int, ...]]) -> Union[Sequence, Dict[str, Sequence]]:
+        input: Union[Sequence, Dict[str, Sequence]],
+        index: Union[int, Tuple[int, ...]]):
     """Get item of the specified index from input
 
     Args:
         input (Union[Sequence, Dict[str, Sequence]]): The input sequence.
         index (Union[int, Tuple[int, ...]]): The Specified index.
-    
+
     Returns:
         Union[Sequence, Dict[str, Sequence]]: The item of specified index.
     """
