@@ -415,7 +415,7 @@ def feature_extract(
 def _indexing_sequence(
         input: Union[Sequence, Dict[str, Sequence]],
         index: Union[int, Tuple[int, ...]]):
-    """Get item of the specified index from input
+    """Get item of the specified index from input.
 
     Args:
         input (Union[Sequence, Dict[str, Sequence]]): The input sequence.
