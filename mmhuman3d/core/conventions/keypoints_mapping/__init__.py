@@ -73,8 +73,8 @@ KEYPOINTS_FACTORY = {
     'mano_left_reorder': mano.MANO_LEFT_REORDER_KEYPOINTS,
     'mano_right_reorder': mano.MANO_RIGHT_REORDER_KEYPOINTS,
     'mano_hands_reorder': mano.MANO_HANDS_REORDER_KEYPOINTS,
-    'mediapipe_whole_body': mediapipe.WHOLE_BODY_KEYPOINTS,
-    'mediapipe_body': mediapipe.BODY_KEYPOINTS,
+    'mediapipe_whole_body': mediapipe.MP_WHOLE_BODY_KEYPOINTS,
+    'mediapipe_body': mediapipe.MP_BODY_KEYPOINTS,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)

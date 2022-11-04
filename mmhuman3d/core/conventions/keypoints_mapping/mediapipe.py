@@ -1,4 +1,6 @@
-BODY_KEYPOINTS = [
+from .mano import MANO_HANDS_REORDER_KEYPOINTS
+
+MP_BODY_KEYPOINTS = [
     'nose',
     'left_eye_4',
     'left_eye',
@@ -34,24 +36,7 @@ BODY_KEYPOINTS = [
     'right_foot',
 ]
 
-
-RIGHT_HAND_KEYPOINTS = [
-    'right_wrist', 'right_thumb_1', 'right_thumb_2', 'right_thumb_3',
-    'right_thumb', 'right_index_1', 'right_index_2', 'right_index_3',
-    'right_index', 'right_middle_1', 'right_middle_2', 'right_middle_3',
-    'right_middle', 'right_ring_1', 'right_ring_2', 'right_ring_3',
-    'right_ring', 'right_pinky_1', 'right_pinky_2', 'right_pinky_3',
-    'right_pinky'
-]
-
-LEFT_HAND_KEYPOINTS = [
-    x.replace('right_', 'left_') for x in RIGHT_HAND_KEYPOINTS
-]
-
-MANO_HANDS_REORDER_KEYPOINTS = \
-        LEFT_HAND_KEYPOINTS + RIGHT_HAND_KEYPOINTS
-
-WHOLE_BODY_KEYPOINTS = [
+MP_WHOLE_BODY_KEYPOINTS = [
     'nose',
     'left_eye_4',
     'left_eye',
@@ -79,4 +64,4 @@ WHOLE_BODY_KEYPOINTS = [
     'right_foot',
 ]
 
-WHOLE_BODY_KEYPOINTS = WHOLE_BODY_KEYPOINTS + MANO_HANDS_REORDER_KEYPOINTS
+MP_WHOLE_BODY_KEYPOINTS = MP_WHOLE_BODY_KEYPOINTS + MANO_HANDS_REORDER_KEYPOINTS
