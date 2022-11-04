@@ -1,11 +1,11 @@
-from typing import Union, Dict, Tuple
 import cv2
 import mmcv
 import numpy as np
 import torch
-from mmcv.utils import print_log
 from mmcv.parallel import collate
 from mmcv.runner import load_checkpoint
+from mmcv.utils import print_log
+from typing import Dict, Tuple, Union
 
 from mmhuman3d.data.datasets.pipelines import Compose
 from mmhuman3d.models.architectures.builder import build_architecture
