@@ -19,6 +19,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     instavariety,
     lsp,
     mano,
+    mediapipe,
     mpi_inf_3dhp,
     mpii,
     openpose,
@@ -29,7 +30,6 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     smplx,
     spin_smplx,
     star,
-    mediapipe,
 )
 
 KEYPOINTS_FACTORY = {
