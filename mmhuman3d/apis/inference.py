@@ -12,7 +12,6 @@ from mmhuman3d.models.architectures.builder import build_architecture
 from mmhuman3d.models.backbones.builder import build_backbone
 from mmhuman3d.utils.demo_utils import box2cs, xywh2xyxy, xyxy2xywh
 
-
 Sequence = Union[np.ndarray, torch.Tensor, list, tuple]
 
 
@@ -204,8 +203,7 @@ def inference_image_based_model(
         mesh_result = det_results[idx].copy()
         mesh_result['bbox'] = bboxes_xyxy[idx]
         for key, value in results.items():
-            mesh_result[key] = _indexing_sequence(
-                value, index=idx)
+            mesh_result[key] = _indexing_sequence(value, index=idx)
         mesh_results.append(mesh_result)
     return mesh_results
 
@@ -412,9 +410,8 @@ def feature_extract(
     return feature_results
 
 
-def _indexing_sequence(
-        input: Union[Sequence, Dict[str, Sequence]],
-        index: Union[int, Tuple[int, ...]]):
+def _indexing_sequence(input: Union[Sequence, Dict[str, Sequence]],
+                       index: Union[int, Tuple[int, ...]]):
     """Get item of the specified index from input.
 
     Args:
