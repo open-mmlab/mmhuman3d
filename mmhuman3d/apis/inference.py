@@ -36,7 +36,8 @@ def init_model(config, checkpoint=None, device='cuda:0'):
     config.data.test.test_mode = True
 
     model = build_architecture(config.model)
-    model.init_weights()
+    if checkpoint is None:
+        model.init_weights()
     if checkpoint is not None:
         # load model checkpoint
         load_checkpoint(model, checkpoint, map_location=device)
