@@ -168,7 +168,7 @@ def visualize_kp3d(
     if value_range is not None:
         # norm pose location to value_range (70% value range)
         mask_index = np.where(np.array(mask) > 0) if mask is not None else None
-        margin_width = abs(value_range[1] - value_range[1]) * 0.15
+        margin_width = abs(value_range[1] - value_range[0]) * 0.15
         pose_np_normed = _norm_pose(kp3d, value_range[0] + margin_width,
                                     value_range[1] - margin_width, mask_index)
         input_pose_np = pose_np_normed
