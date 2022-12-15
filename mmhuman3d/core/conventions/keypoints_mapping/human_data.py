@@ -502,10 +502,10 @@ for k in HUMAN_DATA_LIMBS:
 
 HUMAN_DATA_PALETTE = {
     'left_eye': [[0, 0, 0]],
-    'right_eye': [[0, 0, 0]],
+    'right_eye': [[255, 255, 0]],
     'nose': [[0, 0, 255]],
     'mouth': [[0, 255, 255]],
     'face': [[255, 0, 0]],
-    'left_hand': [[0, 0, 0]],
-    'right_hand': [[0, 0, 0]],
+    'left_hand': [[0, 255, 0]],
+    'right_hand': [[255, 0, 255]],
 }
