@@ -24,7 +24,6 @@ from mmhuman3d.utils.transforms import rotmat_to_aa
 
 try:
     from mmdet.apis import inference_detector, init_detector
-
     has_mmdet = True
 except (ImportError, ModuleNotFoundError):
     has_mmdet = False
@@ -69,19 +68,22 @@ def single_person_with_mmdet(args, frames_iter):
         frames_iter (np.ndarray,): prepared frames
 
     """
-
     mesh_model, extractor = init_model(
         args.mesh_reg_config,
         args.mesh_reg_checkpoint,
         device=args.device.lower())
-
-    global_orient, smpl_poses, smpl_betas = [], [], []
-    right_hand_pose, left_hand_pose = [], []
-    jaw_pose, expression = [], []
+    smplx_results = dict(
+        global_orient=[],
+        body_pose=[],
+        betas=[],
+        left_hand_pose=[],
+        right_hand_pose=[],
+        jaw_pose=[],
+        expression=[])
     pred_cams, bboxes_xyxy = [], []
 
-    frame_id_list, result_list = \
-        get_detection_result(args, frames_iter, mesh_model, extractor)
+    frame_id_list, result_list = get_detection_result(args, frames_iter,
+                                                      mesh_model, extractor)
 
     frame_num = len(frame_id_list)
 
@@ -97,30 +99,16 @@ def single_person_with_mmdet(args, frames_iter):
         else:
             raise Exception(
                 f'{mesh_model.cfg.model.type} is not supported yet')
-
-        smpl_betas.append(mesh_results[0]['param']['betas'].cpu().numpy())
-        smpl_poses.append(mesh_results[0]['param']['body_pose'].cpu().numpy())
-        right_hand_pose.append(
-            mesh_results[0]['param']['right_hand_pose'].cpu().numpy())
-        left_hand_pose.append(
-            mesh_results[0]['param']['left_hand_pose'].cpu().numpy())
-        global_orient.append(
-            mesh_results[0]['param']['global_orient'].cpu().numpy())
-        jaw_pose.append(mesh_results[0]['param']['jaw_pose'].cpu().numpy())
-        expression.append(mesh_results[0]['param']['expression'].cpu().numpy())
+        for key in smplx_results:
+            smplx_results[key].append(
+                mesh_results[0]['param'][key].cpu().numpy())
         pred_cams.append(mesh_results[0]['camera'])
         bboxes_xyxy.append(mesh_results[0]['bbox'])
 
-    smpl_poses = np.array(smpl_poses)
-    smpl_betas = np.array(smpl_betas)
-    right_hand_pose = np.array(right_hand_pose)
-    left_hand_pose = np.array(left_hand_pose)
-    global_orient = np.array(global_orient)
-    jaw_pose = np.array(jaw_pose)
-    expression = np.array(expression)
+    for key in smplx_results:
+        smplx_results[key] = np.array(smplx_results[key])
     pred_cams = np.array(pred_cams)
     bboxes_xyxy = np.array(bboxes_xyxy)
-
     # release GPU memory
     del mesh_model
     del extractor
@@ -128,40 +116,30 @@ def single_person_with_mmdet(args, frames_iter):
 
     # smooth
     if args.smooth_type is not None:
-        smpl_poses = smooth_process(
-            smpl_poses.reshape(frame_num, -1, 21, 9),
-            smooth_type=args.smooth_type).reshape(frame_num, 21, 3, 3)
-        right_hand_pose = smooth_process(
-            right_hand_pose.reshape(frame_num, -1, 15, 9),
-            smooth_type=args.smooth_type).reshape(frame_num, 15, 3, 3)
-        left_hand_pose = smooth_process(
-            left_hand_pose.reshape(frame_num, -1, 15, 9),
-            smooth_type=args.smooth_type).reshape(frame_num, 15, 3, 3)
-        global_orient = smooth_process(
-            global_orient.reshape(frame_num, -1, 1, 9),
-            smooth_type=args.smooth_type).reshape(frame_num, 1, 3, 3)
-        jaw_pose = smooth_process(
-            jaw_pose.reshape(frame_num, -1, 1, 9),
-            smooth_type=args.smooth_type).reshape(frame_num, 1, 3, 3)
+        for key in smplx_results:
+            if key not in ['betas', 'expression']:
+                dim = smplx_results[key].shape[1]
+                smplx_results[key] = smooth_process(
+                    smplx_results[key].reshape(frame_num, -1, dim, 9),
+                    smooth_type=args.smooth_type).reshape(
+                        frame_num, dim, 3, 3)
         pred_cams = smooth_process(
             pred_cams[:, np.newaxis],
             smooth_type=args.smooth_type).reshape(frame_num, 3)
 
-    if smpl_poses.shape[1:] == (21, 3, 3):
-        smpl_poses = rotmat_to_aa(smpl_poses)
-        right_hand_pose = rotmat_to_aa(right_hand_pose)
-        left_hand_pose = rotmat_to_aa(left_hand_pose)
-        global_orient = rotmat_to_aa(global_orient)
-        jaw_pose = rotmat_to_aa(jaw_pose)
+    if smplx_results['body_pose'].shape[1:] == (21, 3, 3):
+        for key in smplx_results:
+            if key not in ['betas', 'expression']:
+                smplx_results[key] = rotmat_to_aa(smplx_results[key])
     else:
         raise Exception('Wrong shape of `smpl_pose`')
     fullpose = np.concatenate((
-        global_orient.reshape(frame_num, 1, 3),
-        smpl_poses.reshape(frame_num, 21, 3),
-        jaw_pose.reshape(frame_num, 1, 3),
-        np.zeros(shape=(frame_num, 2, 3), dtype=global_orient.dtype),
-        left_hand_pose.reshape(frame_num, 15, 3),
-        right_hand_pose.reshape(frame_num, 15, 3),
+        smplx_results['global_orient'].reshape(frame_num, 1, 3),
+        smplx_results['body_pose'].reshape(frame_num, 21, 3),
+        smplx_results['jaw_pose'].reshape(frame_num, 1, 3),
+        np.zeros((frame_num, 2, 3), dtype=smplx_results['jaw_pose'].dtype),
+        smplx_results['left_hand_pose'].reshape(frame_num, 15, 3),
+        smplx_results['right_hand_pose'].reshape(frame_num, 15, 3),
     ),
                               axis=1)
 
@@ -170,7 +148,7 @@ def single_person_with_mmdet(args, frames_iter):
         human_data = HumanData()
         smplx = {}
         smplx['fullpose'] = fullpose
-        smplx['betas'] = np.array(smpl_betas).reshape((-1, 10))
+        smplx['betas'] = np.array(smplx_results['betas']).reshape((-1, 10))
         human_data['smplx'] = smplx
         human_data['pred_cams'] = pred_cams
         human_data.dump(osp.join(args.output, 'inference_result.npz'))
@@ -180,8 +158,8 @@ def single_person_with_mmdet(args, frames_iter):
         os.makedirs(frames_folder, exist_ok=True)
         array_to_images(
             np.array(frames_iter)[frame_id_list], output_folder=frames_folder)
-
-        body_model = dict(
+        # create body model
+        body_model_config = dict(
             type='smplx',
             num_betas=10,
             use_face_contour=True,
@@ -191,6 +169,7 @@ def single_person_with_mmdet(args, frames_iter):
             keypoint_src='smplx',
             keypoint_dst='smplx',
         )
+
         visualize_smpl_hmr(
             poses=fullpose.reshape(-1, 1, 165),
             cam_transl=pred_cams,
@@ -199,7 +178,7 @@ def single_person_with_mmdet(args, frames_iter):
             render_choice=args.render_choice,
             resolution=frames_iter[0].shape[:2],
             origin_frames=frames_folder,
-            body_model_config=body_model,
+            body_model_config=body_model_config,
             overwrite=True)
         shutil.rmtree(frames_folder)
 
@@ -219,22 +198,29 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
     parser.add_argument(
-        'mesh_reg_config',
+        '--mesh_reg_config',
         type=str,
-        default=None,
+        default='configs/expose/expose.py',
         help='Config file for mesh regression')
     parser.add_argument(
-        'mesh_reg_checkpoint',
+        '--mesh_reg_checkpoint',
         type=str,
-        default=None,
+        default='data/pretrained_models/expose-d9d5dbf7_20220708.pth',
         help='Checkpoint file for mesh regression')
     parser.add_argument(
         '--single_person_demo',
         action='store_true',
         help='Single person demo with MMDetection')
-    parser.add_argument('--det_config', help='Config file for detection')
     parser.add_argument(
-        '--det_checkpoint', help='Checkpoint file for detection')
+        '--det_config',
+        default='demo/mmdetection_cfg/faster_rcnn_r50_fpn_coco.py',
+        help='Config file for detection')
+    parser.add_argument(
+        '--det_checkpoint',
+        default='https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/'
+        'faster_rcnn_r50_fpn_1x_coco/'
+        'faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth',
+        help='Checkpoint file for detection')
     parser.add_argument(
         '--det_cat_id',
         type=int,
@@ -247,7 +233,10 @@ if __name__ == '__main__':
         default='data/body_models/',
         help='Body models file path')
     parser.add_argument(
-        '--input_path', type=str, default=None, help='Input path')
+        '--input_path',
+        type=str,
+        default='demo/resources/single_person_demo.mp4',
+        help='Input path')
     parser.add_argument(
         '--output',
         type=str,
@@ -291,5 +280,4 @@ if __name__ == '__main__':
         assert has_mmdet, 'Please install mmdet to run the demo.'
         assert args.det_config is not None
         assert args.det_checkpoint is not None
-
     main(args)
