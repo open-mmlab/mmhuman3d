@@ -70,8 +70,15 @@ data_keys = [
     'has_smpl', 'smpl_body_pose', 'smpl_global_orient', 'smpl_betas',
     'smpl_transl', 'keypoints2d', 'keypoints3d', 'sample_idx'
 ]
+
+file_client_args = dict(
+    backend='petrel',
+    path_mapping=dict({
+        'data/': 's3://mmhuman3d_datasets/'
+    }))
+
 train_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadImageFromFile', file_client_args=file_client_args),
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_54'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
@@ -89,7 +96,7 @@ adv_data_keys = [
 ]
 train_adv_pipeline = [dict(type='Collect', keys=adv_data_keys, meta_keys=[])]
 test_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadImageFromFile', file_client_args=file_client_args),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
     dict(type='MeshAffine', img_res=224),
     dict(type='Normalize', **img_norm_cfg),
@@ -187,13 +194,13 @@ data = dict(
     test=dict(
         type=dataset_type,
         body_model=dict(
-            type='GenderedSMPL',
+            type='SMPL',
             keypoint_src='h36m',
             keypoint_dst='h36m',
             model_path='data/body_models/smpl',
             joints_regressor='data/body_models/J_regressor_h36m.npy'),
-        dataset_name='pw3d',
+        dataset_name='h36m_cv',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='pw3d_test.npz'),
+        ann_file='h36m_valid_protocol1.npz'),
 )

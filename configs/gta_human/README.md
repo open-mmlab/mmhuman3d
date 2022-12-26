@@ -3,8 +3,7 @@
 ## Introduction
 
 We provide the config files for GTA-Human: Playing for 3D Human Recovery.
-[[Homepage]](https://caizhongang.github.io/projects/GTA-Human/)
-[[Preprint]](https://arxiv.org/abs/2110.07588)
+[[Homepage]](https://caizhongang.github.io/projects/GTA-Human/) [[Preprint]](https://arxiv.org/pdf/2110.07588.pdf)
 
 Notes:
 - the pretrained models for HMR, SPIN and PARE baselines are currently available.
@@ -12,16 +11,19 @@ Notes:
 
 ```BibTeX
 @article{GTAHuman,
-  author    = {Cai, Zhongang and
-               Zhang, Mingyuan and
-               Ren, Jiawei and
-               Wei, Chen and
-               Ren, Daxuan and
-               Lin, Zhengyu and
-               Zhao, Haiyu and
-               Yang, Lei and
-               Liu, Ziwei},
-  title     = {Playing for 3D human recovery},
+  author    = {Cai Zhongang and
+               Zhang Mingyuan and
+               Ren Jiawei and
+               Wei Chen and
+               Ren Daxuan and
+               Li Jiatong and
+               Lin Zhengyu and
+               Zhao Haiyu and
+               Yi Shuai and
+               Yang Lei and
+               Chen Change Loy and
+               Liu Ziwei},
+  title     = {Playing for 3D Human Recovery},
   journal   = {arXiv preprint arXiv:2110.07588},
   year      = {2021}
 }
@@ -55,14 +57,12 @@ mmhuman3d
             └── images
 ```
 
-MMHuman3D uses the standardized [`HumanData`](../../docs/human_data.md) to store annotations.  
+However, MMHuman3D uses the standardized [`HumanData`](../../docs/human_data.md).  
 Hence, `gta_human_4x.npz` is used as the training, it may be obtained in two ways:
 1. (Recommended) Directly download from this [link](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/datasets/gta_human_4x.npz?versionId=CAEQRBiBgIDzq.n4jhgiIDJkZDU4OWU5MWEzYzQ5ZjA4ZjJiN2IwNjUzN2FmMTJl)
    as we have already preprocessed it for you.
 2. Decompress the annotation file and run data_converter (use `gta_human` for dataset name).
    See [preprocess_dataset.md](../../docs/preprocess_dataset.md) for details.
-
-Please refer to [getting_started.md](../../docs/getting_started.md) for training and evaluation on MMHuman3D.
 
 ## Notes
 

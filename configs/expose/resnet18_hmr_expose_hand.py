@@ -1,8 +1,6 @@
 _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
-img_res = 224
-
 # evaluate
 evaluation = dict(interval=10, metric=['pa-mpjpe', 'pa-pve'])
 
@@ -104,7 +102,7 @@ train_pipeline = [
         rot_factor=30.0,
         scale_factor=0.2,
         rot_prob=0.6),
-    dict(type='MeshAffine', img_res=img_res),  # hand = 224, body = head = 256
+    dict(type='MeshAffine', img_res=224),  # hand = 224, body = head = 256
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(
         type='SimulateLowRes',
@@ -126,23 +124,13 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=img_res),
+    dict(type='MeshAffine', img_res=224),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),
     dict(
         type='Collect',
         keys=['img', *data_keys],
-        meta_keys=['image_path', 'center', 'scale', 'rotation'])
-]
-inference_pipeline = [
-    dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=img_res),
-    dict(type='Normalize', **img_norm_cfg),
-    dict(type='ImageToTensor', keys=['img']),
-    dict(
-        type='Collect',
-        keys=['img', 'sample_idx'],
         meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 cache_files = {

@@ -71,7 +71,7 @@ data_keys = [
     'smpl_transl', 'keypoints2d', 'keypoints3d', 'sample_idx'
 ]
 train_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadImageFromFile', file_client_args=dict(backend='petrel', prefix='s3')),
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_54'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
@@ -89,7 +89,7 @@ adv_data_keys = [
 ]
 train_adv_pipeline = [dict(type='Collect', keys=adv_data_keys, meta_keys=[])]
 test_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadImageFromFile', file_client_args=dict(backend='petrel', prefix='s3')),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
     dict(type='MeshAffine', img_res=224),
     dict(type='Normalize', **img_norm_cfg),
@@ -117,8 +117,10 @@ cache_files = {
     'lsp': 'data/cache/lsp_train_smpl_54.npz',
     'lspet': 'data/cache/lspet_train_smpl_54.npz',
     'mpii': 'data/cache/mpii_train_smpl_54.npz',
-    'coco': 'data/cache/coco_2014_train_smpl_54.npz'
+    'coco': 'data/cache/coco_2014_train_smpl_54.npz',
+    'synbody': 'data/cache/synbody_smpl_train_filtered_smpl_54.npz'
 }
+
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=8,
@@ -175,8 +177,16 @@ data = dict(
                     convention='smpl_54',
                     cache_data_path=cache_files['coco'],
                     ann_file='coco_2014_train.npz'),
+                dict(
+                    type=dataset_type,
+                    dataset_name='synbody',
+                    data_prefix='data',
+                    pipeline=train_pipeline,
+                    convention='smpl_54',
+                    cache_data_path=cache_files['synbody'],
+                    ann_file='synbody_smpl_train_filtered.npz'),
             ],
-            partition=[0.35, 0.15, 0.1, 0.10, 0.10, 0.2],
+            partition=[0.35, 0.15, 0.1, 0.10, 0.10, 0.2, 1],
         ),
         adv_dataset=dict(
             type='MeshDataset',
@@ -195,5 +205,6 @@ data = dict(
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
+        convention='h36m',
         ann_file='pw3d_test.npz'),
 )

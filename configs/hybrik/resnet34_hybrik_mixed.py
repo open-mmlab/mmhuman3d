@@ -29,7 +29,7 @@ model = dict(
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet34')),
     head=dict(
         type='HybrIKHead',
-        smpl_mean_params='data/body_models/h36m_mean_beta.npy'),
+        smpl_mean_params='data/body_models/smpl_mean_params.npz'),
     body_model=dict(
         type='HybrIKSMPL',
         model_path=  # noqa: E251
@@ -86,8 +86,15 @@ keypoints_maps = [
         keypoints_index=hybrik29_idxs),
 ]
 
+
+file_client_args = dict(
+    backend='petrel',
+    path_mapping=dict({
+        'data/': 's3://mmhuman3d_datasets/'
+    }))
+
 train_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadImageFromFile', file_client_args=file_client_args),
     dict(type='RandomDPG', dpg_prob=0.9),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='RandomOcclusion', occlusion_prob=0.9),
@@ -106,7 +113,7 @@ train_pipeline = [
 ]
 
 test_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadImageFromFile', file_client_args=file_client_args),
     dict(type='NewKeypointsSelection', maps=keypoints_maps),
     dict(type='HybrIKAffine', img_res=256),
     dict(type='GenerateHybrIKTarget', img_res=256, test_mode=True),

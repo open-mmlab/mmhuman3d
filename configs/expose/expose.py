@@ -1,8 +1,6 @@
 _base_ = ['../_base_/default_runtime.py']
 use_adversarial_train = True
 
-img_res = 256
-
 # evaluate
 evaluation = dict(
     interval=10,
@@ -107,7 +105,7 @@ extra_hand_model_cfg = dict(
             checkpoint='data/pretrained_models/resnet18_hmr_expose_hand.pth',
             prefix='head')),
     crop_cfg=dict(
-        img_res=img_res,
+        img_res=256,
         scale_factor=3.0,
         crop_size=224,
         condition_hand_wrist_pose=True,
@@ -152,7 +150,7 @@ extra_face_model_cfg = dict(
             prefix='head'),
     ),
     crop_cfg=dict(
-        img_res=img_res,
+        img_res=256,
         scale_factor=2.0,
         crop_size=256,
         num_betas=10,
@@ -282,7 +280,7 @@ train_pipeline = [
         scale_factor=0.25,
         rot_prob=0.6),
     dict(type='Rotation'),
-    dict(type='MeshAffine', img_res=img_res),  # hand = 224, body = head = 256
+    dict(type='MeshAffine', img_res=256),  # hand = 224, body = head = 256
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(
         type='SimulateLowRes',
@@ -307,7 +305,7 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=img_res),
+    dict(type='MeshAffine', img_res=256),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img', 'ori_img']),
     dict(type='ToTensor', keys=data_keys),
@@ -320,13 +318,15 @@ test_pipeline = [
         ])
 ]
 inference_pipeline = [
+    dict(type='LoadImageFromFile'),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=img_res),
+    dict(type='MeshAffine', img_res=256),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img', 'ori_img']),
+    dict(type='ToTensor', keys=data_keys),
     dict(
         type='Collect',
-        keys=['img', 'sample_idx'],
+        keys=['img', *data_keys],
         meta_keys=[
             'image_path', 'center', 'scale', 'rotation', 'ori_img',
             'crop_transform'

@@ -1,17 +1,18 @@
-_base_ = ['../_base_/default_runtime.py']
+_base_ = ['../../_base_/default_runtime.py']
 use_adversarial_train = True
+dist_params = dict(backend='nccl', port=29484)
 
 # evaluate
 evaluation = dict(metric=['pa-mpjpe', 'mpjpe'])
 # optimizer
 optimizer = dict(
-    backbone=dict(type='Adam', lr=2.5e-4),
-    head=dict(type='Adam', lr=2.5e-4),
-    disc=dict(type='Adam', lr=1e-4))
+    backbone=dict(type='Adam', lr=2.5e-5),
+    head=dict(type='Adam', lr=2.5e-5),
+    disc=dict(type='Adam', lr=1e-5))
 optimizer_config = dict(grad_clip=None)
 # learning policy
-lr_config = dict(policy='step', step=[40])
-runner = dict(type='EpochBasedRunner', max_epochs=50)
+lr_config = dict(policy='Fixed', by_epoch=False)
+runner = dict(type='EpochBasedRunner', max_epochs=10)
 
 log_config = dict(
     interval=50,
@@ -23,13 +24,14 @@ log_config = dict(
 img_res = 224
 
 # model settings
+pretrain_path = 'data/pretrained/resnet50_hmr_pw3d_github.pth'
 model = dict(
     type='ImageBodyModelEstimator',
     backbone=dict(
         type='ResNet',
         depth=50,
         out_indices=[3],
-        norm_eval=False,
+        norm_eval=True,
         norm_cfg=dict(type='BN', requires_grad=True),
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     head=dict(
@@ -61,7 +63,8 @@ model = dict(
         real_label_val=1.0,
         fake_label_val=0.0,
         loss_weight=1),
-    disc=dict(type='SMPLDiscriminator'))
+    disc=dict(type='SMPLDiscriminator'),
+    init_cfg=dict(type='Pretrained', checkpoint=pretrain_path))
 # dataset settings
 dataset_type = 'HumanImageDataset'
 img_norm_cfg = dict(
@@ -71,7 +74,7 @@ data_keys = [
     'smpl_transl', 'keypoints2d', 'keypoints3d', 'sample_idx'
 ]
 train_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadImageFromFile', file_client_args=dict(backend='petrel', prefix='s3')),
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_54'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
@@ -89,7 +92,7 @@ adv_data_keys = [
 ]
 train_adv_pipeline = [dict(type='Collect', keys=adv_data_keys, meta_keys=[])]
 test_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadImageFromFile', file_client_args=dict(backend='petrel', prefix='s3')),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
     dict(type='MeshAffine', img_res=224),
     dict(type='Normalize', **img_norm_cfg),
@@ -117,8 +120,10 @@ cache_files = {
     'lsp': 'data/cache/lsp_train_smpl_54.npz',
     'lspet': 'data/cache/lspet_train_smpl_54.npz',
     'mpii': 'data/cache/mpii_train_smpl_54.npz',
-    'coco': 'data/cache/coco_2014_train_smpl_54.npz'
+    'coco': 'data/cache/coco_2014_train_smpl_54.npz',
+    'gta': 'data/cache/gta_human_4x_smpl_54.npz'
 }
+
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=8,
@@ -175,9 +180,17 @@ data = dict(
                     convention='smpl_54',
                     cache_data_path=cache_files['coco'],
                     ann_file='coco_2014_train.npz'),
+                dict(
+                    type=dataset_type,
+                    dataset_name='gta',
+                    data_prefix='data',
+                    pipeline=train_pipeline,
+                    convention='smpl_54',
+                    cache_data_path=cache_files['gta'],
+                    ann_file='gta_human_4x.npz'),
             ],
-            partition=[0.35, 0.15, 0.1, 0.10, 0.10, 0.2],
-        ),
+            partition=[0.35, 0.15, 0.1, 0.10, 0.10, 0.2, 1],
+            num_data=100000),
         adv_dataset=dict(
             type='MeshDataset',
             dataset_name='cmu_mosh',
@@ -195,5 +208,6 @@ data = dict(
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
+        convention='h36m',
         ann_file='pw3d_test.npz'),
 )
