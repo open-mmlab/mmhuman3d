@@ -186,16 +186,17 @@ def single_person_with_mmdet(args, frames_iter):
                 smplx_results[key] = rotmat_to_aa(smplx_results[key])
     else:
         raise Exception('Wrong shape of `smpl_pose`')
-    fullpose = np.concatenate((
-        smplx_results['global_orient'].reshape(frame_num, 1, 3),
-        smplx_results['body_pose'].reshape(frame_num, 21, 3),
-        smplx_results['jaw_pose'].reshape(frame_num, 1, 3),
-        # Use zero for leye_pose and reye_pose
-        np.zeros((frame_num, 2, 3), dtype=smplx_results['jaw_pose'].dtype),
-        smplx_results['left_hand_pose'].reshape(frame_num, 15, 3),
-        smplx_results['right_hand_pose'].reshape(frame_num, 15, 3),
-    ),
-                              axis=1)
+    fullpose = np.concatenate(
+        (
+            smplx_results['global_orient'].reshape(frame_num, 1, 3),
+            smplx_results['body_pose'].reshape(frame_num, 21, 3),
+            smplx_results['jaw_pose'].reshape(frame_num, 1, 3),
+            # Use zero for leye_pose and reye_pose
+            np.zeros((frame_num, 2, 3), dtype=smplx_results['jaw_pose'].dtype),
+            smplx_results['left_hand_pose'].reshape(frame_num, 15, 3),
+            smplx_results['right_hand_pose'].reshape(frame_num, 15, 3),
+        ),
+        axis=1)
 
     if args.output is not None:
         os.makedirs(args.output, exist_ok=True)
@@ -314,17 +315,18 @@ def multi_person_with_mmtracking(args, frames_iter):
                 smplx_results[key] = rotmat_to_aa(smplx_results[key])
     else:
         raise Exception('Wrong shape of `smpl_pose`')
-    fullpose = np.concatenate((
-        smplx_results['global_orient'],
-        smplx_results['body_pose'],
-        smplx_results['jaw_pose'],
-        # Use zero for leye_pose and reye_pose
-        np.zeros((frame_num, max_track_id + 1, 2, 3),
-                 dtype=smplx_results['jaw_pose'].dtype),
-        smplx_results['left_hand_pose'],
-        smplx_results['right_hand_pose'],
-    ),
-                              axis=2)
+    fullpose = np.concatenate(
+        (
+            smplx_results['global_orient'],
+            smplx_results['body_pose'],
+            smplx_results['jaw_pose'],
+            # Use zero for leye_pose and reye_pose
+            np.zeros((frame_num, max_track_id + 1, 2, 3),
+                     dtype=smplx_results['jaw_pose'].dtype),
+            smplx_results['left_hand_pose'],
+            smplx_results['right_hand_pose'],
+        ),
+        axis=2)
     if args.output is not None:
         os.makedirs(args.output, exist_ok=True)
         human_data = HumanData()
