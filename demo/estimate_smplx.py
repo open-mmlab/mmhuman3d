@@ -190,6 +190,7 @@ def single_person_with_mmdet(args, frames_iter):
         smplx_results['global_orient'].reshape(frame_num, 1, 3),
         smplx_results['body_pose'].reshape(frame_num, 21, 3),
         smplx_results['jaw_pose'].reshape(frame_num, 1, 3),
+        # Use zero for leye_pose and reye_pose
         np.zeros((frame_num, 2, 3), dtype=smplx_results['jaw_pose'].dtype),
         smplx_results['left_hand_pose'].reshape(frame_num, 15, 3),
         smplx_results['right_hand_pose'].reshape(frame_num, 15, 3),
@@ -317,6 +318,7 @@ def multi_person_with_mmtracking(args, frames_iter):
         smplx_results['global_orient'],
         smplx_results['body_pose'],
         smplx_results['jaw_pose'],
+        # Use zero for leye_pose and reye_pose
         np.zeros((frame_num, max_track_id + 1, 2, 3),
                  dtype=smplx_results['jaw_pose'].dtype),
         smplx_results['left_hand_pose'],
@@ -377,6 +379,7 @@ def multi_person_with_mmtracking(args, frames_iter):
             body_model_config=body_model_config,
             overwrite=True,
             read_frames_batch=True)
+        shutil.rmtree(frames_folder)
 
 
 def main(args):
