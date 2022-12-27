@@ -185,7 +185,7 @@ def single_person_with_mmdet(args, frames_iter):
             if key not in ['betas', 'expression']:
                 smplx_results[key] = rotmat_to_aa(smplx_results[key])
     else:
-        raise Exception('Wrong shape of `smpl_pose`')
+        raise Exception('Wrong shape of `body_pose`')
     fullpose = np.concatenate(
         (
             smplx_results['global_orient'].reshape(frame_num, 1, 3),
@@ -203,7 +203,7 @@ def single_person_with_mmdet(args, frames_iter):
         human_data = HumanData()
         smplx = {}
         smplx['fullpose'] = fullpose
-        smplx['betas'] = np.array(smplx_results['betas']).reshape((-1, 10))
+        smplx['betas'] = smplx_results['betas']
         human_data['smplx'] = smplx
         human_data['pred_cams'] = pred_cams
         human_data.dump(osp.join(args.output, 'inference_result.npz'))
@@ -224,9 +224,9 @@ def single_person_with_mmdet(args, frames_iter):
             keypoint_src='smplx',
             keypoint_dst='smplx',
         )
-
         visualize_smpl_hmr(
             poses=fullpose.reshape(-1, 1, 165),
+            betas=smplx_results['betas'],
             cam_transl=pred_cams,
             bbox=bboxes_xyxy,
             output_path=os.path.join(args.show_path, 'smplx.mp4'),
@@ -314,7 +314,7 @@ def multi_person_with_mmtracking(args, frames_iter):
             if key not in ['betas', 'expression']:
                 smplx_results[key] = rotmat_to_aa(smplx_results[key])
     else:
-        raise Exception('Wrong shape of `smpl_pose`')
+        raise Exception('Wrong shape of `body_pose`')
     fullpose = np.concatenate(
         (
             smplx_results['global_orient'],
@@ -481,7 +481,7 @@ if __name__ == '__main__':
         type=str,
         default=None,
         help='Smooth the data through the specified type.'
-        'Select in [oneeuro,gaus1d,savgol].')
+        'Select in [oneeuro,savgol].')
     parser.add_argument(
         '--device',
         choices=['cpu', 'cuda'],

@@ -4,7 +4,7 @@ __face_model_checkpoint__ = 'data/pretrained_models/'
 __hand_model_checkpoint__ = 'data/pretrained_models/'
 'resnet18_hmr_expose_hand.pth'
 __body_model_checkpoint__ = 'data/pretrained_models/hrnet_hmr_expose_body.pth'
-__mean_pose_path__ = 'data/body_models/smplx/all_means.pkl'
+__mean_pose_path__ = 'data/body_models/all_means.pkl'
 __model_path__ = 'data/body_models/smplx'
 __joints_regressor__ = 'data/body_models/smplx/SMPLX_to_J14.npy'
 
