@@ -17,6 +17,7 @@ from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.utils.demo_utils import (
     prepare_frames,
     process_mmdet_results,
+    process_mmtracking_results,
     smooth_process,
 )
 from mmhuman3d.utils.ffmpeg_utils import array_to_images
@@ -27,6 +28,58 @@ try:
     has_mmdet = True
 except (ImportError, ModuleNotFoundError):
     has_mmdet = False
+try:
+    from mmtrack.apis import inference_mot
+    from mmtrack.apis import init_model as init_tracking_model
+    has_mmtrack = True
+except (ImportError, ModuleNotFoundError):
+    has_mmtrack = False
+
+
+def get_tracking_result(args, frames_iter, mesh_model, extractor):
+    tracking_model = init_tracking_model(
+        args.tracking_config, None, device=args.device.lower())
+
+    max_track_id = 0
+    max_instance = 0
+    result_list = []
+    frame_id_list = []
+
+    for i, frame in enumerate(mmcv.track_iter_progress(frames_iter)):
+        mmtracking_results = inference_mot(tracking_model, frame, frame_id=i)
+
+        # keep the person class bounding boxes.
+        result, max_track_id, instance_num = \
+            process_mmtracking_results(
+                mmtracking_results,
+                max_track_id=max_track_id,
+                bbox_thr=args.bbox_thr)
+
+        # extract features from the input video or image sequences
+        if mesh_model.cfg.model.type == 'VideoBodyModelEstimator' \
+                and extractor is not None:
+            result = feature_extract(
+                extractor, frame, result, args.bbox_thr, format='xyxy')
+
+        # drop the frame with no detected results
+        if result == []:
+            continue
+
+        # update max_instance
+        if instance_num > max_instance:
+            max_instance = instance_num
+
+        # vis bboxes
+        if args.draw_bbox:
+            bboxes = [res['bbox'] for res in result]
+            bboxes = np.vstack(bboxes)
+            mmcv.imshow_bboxes(
+                frame, bboxes, top_k=-1, thickness=2, show=False)
+
+        result_list.append(result)
+        frame_id_list.append(i)
+
+    return max_track_id, max_instance, frame_id_list, result_list
 
 
 def get_detection_result(args, frames_iter, mesh_model, extractor):
@@ -183,6 +236,149 @@ def single_person_with_mmdet(args, frames_iter):
         shutil.rmtree(frames_folder)
 
 
+def multi_person_with_mmtracking(args, frames_iter):
+    """Estimate smplx parameters from multi-person
+        images with mmtracking
+    Args:
+        args (object):  object of argparse.Namespace.
+        frames_iter (np.ndarray,): prepared frames
+    """
+    mesh_model, extractor = init_model(
+        args.mesh_reg_config,
+        args.mesh_reg_checkpoint,
+        device=args.device.lower())
+
+    max_track_id, max_instance, frame_id_list, result_list = \
+        get_tracking_result(args, frames_iter, mesh_model, extractor)
+
+    frame_num = len(frame_id_list)
+    smplx_results = dict(
+        global_orient=np.zeros([frame_num, max_track_id + 1, 1, 3, 3]),
+        body_pose=np.zeros([frame_num, max_track_id + 1, 21, 3, 3]),
+        betas=np.zeros([frame_num, max_track_id + 1, 10]),
+        left_hand_pose=np.zeros([frame_num, max_track_id + 1, 15, 3, 3]),
+        right_hand_pose=np.zeros([frame_num, max_track_id + 1, 15, 3, 3]),
+        jaw_pose=np.zeros([frame_num, max_track_id + 1, 1, 3, 3]),
+        expression=np.zeros([frame_num, max_track_id + 1, 10]))
+
+    pred_cams = np.zeros([frame_num, max_track_id + 1, 3])
+    bboxes_xyxy = np.zeros([frame_num, max_track_id + 1, 5])
+
+    track_ids_lists = []
+    for i, result in enumerate(mmcv.track_iter_progress(result_list)):
+        frame_id = frame_id_list[i]
+        if mesh_model.cfg.model.type == 'SMPLXImageBodyModelEstimator':
+            mesh_results = inference_image_based_model(
+                mesh_model,
+                frames_iter[frame_id],
+                result,
+                bbox_thr=args.bbox_thr,
+                format='xyxy')
+        else:
+            raise Exception(
+                f'{mesh_model.cfg.model.type} is not supported yet')
+
+        track_ids = []
+        for mesh_result in mesh_results:
+            instance_id = mesh_result['track_id']
+            bboxes_xyxy[i, instance_id] = mesh_result['bbox']
+            pred_cams[i, instance_id] = mesh_result['camera']
+            for key in smplx_results:
+                smplx_results[key][
+                    i, instance_id] = mesh_result['param'][key].cpu().numpy()
+            track_ids.append(instance_id)
+        track_ids_lists.append(track_ids)
+
+    # release GPU memory
+    del mesh_model
+    del extractor
+    torch.cuda.empty_cache()
+
+    # smooth
+    if args.smooth_type is not None:
+        for key in smplx_results:
+            if key not in ['betas', 'expression']:
+                dim = smplx_results[key].shape[2]
+                smplx_results[key] = smooth_process(
+                    smplx_results[key].reshape(frame_num, -1, dim, 9),
+                    smooth_type=args.smooth_type).reshape(
+                        frame_num, -1, dim, 3, 3)
+        pred_cams = smooth_process(
+            pred_cams[:, np.newaxis],
+            smooth_type=args.smooth_type).reshape(frame_num, -1, 3)
+
+    if smplx_results['body_pose'].shape[2:] == (21, 3, 3):
+        for key in smplx_results:
+            if key not in ['betas', 'expression']:
+                smplx_results[key] = rotmat_to_aa(smplx_results[key])
+    else:
+        raise Exception('Wrong shape of `smpl_pose`')
+    fullpose = np.concatenate((
+        smplx_results['global_orient'],
+        smplx_results['body_pose'],
+        smplx_results['jaw_pose'],
+        np.zeros((frame_num, max_track_id + 1, 2, 3),
+                 dtype=smplx_results['jaw_pose'].dtype),
+        smplx_results['left_hand_pose'],
+        smplx_results['right_hand_pose'],
+    ),
+                              axis=2)
+    if args.output is not None:
+        os.makedirs(args.output, exist_ok=True)
+        human_data = HumanData()
+        smplx = {}
+        smplx['fullpose'] = fullpose
+        smplx['betas'] = smplx_results['betas']
+        human_data['smplx'] = smplx
+        human_data['pred_cams'] = pred_cams
+        human_data.dump(osp.join(args.output, 'inference_result.npz'))
+
+    # To compress vertices array
+    compressed_cams = np.zeros([frame_num, max_instance, 3])
+    compressed_bboxs = np.zeros([frame_num, max_instance, 5])
+    compressed_fullpose = np.zeros([frame_num, max_instance, 55, 3])
+    compressed_betas = np.zeros([frame_num, max_instance, 10])
+
+    for i, track_ids_list in enumerate(track_ids_lists):
+        instance_num = len(track_ids_list)
+        compressed_cams[i, :instance_num] = pred_cams[i, track_ids_list]
+        compressed_bboxs[i, :instance_num] = bboxes_xyxy[i, track_ids_list]
+        compressed_fullpose[i, :instance_num] = fullpose[i, track_ids_list]
+        compressed_betas[i, :instance_num] = smplx_results['betas'][
+            i, track_ids_list]
+
+    assert len(frame_id_list) > 0
+
+    if args.show_path is not None:
+        frames_folder = osp.join(args.show_path, 'images')
+        os.makedirs(frames_folder, exist_ok=True)
+        array_to_images(
+            np.array(frames_iter)[frame_id_list], output_folder=frames_folder)
+        # create body model
+        body_model_config = dict(
+            type='smplx',
+            num_betas=10,
+            use_face_contour=True,
+            use_pca=False,
+            flat_hand_mean=True,
+            model_path=args.body_model_dir,
+            keypoint_src='smplx',
+            keypoint_dst='smplx',
+        )
+        visualize_smpl_hmr(
+            poses=compressed_fullpose.reshape(-1, max_instance, 165),
+            betas=compressed_betas,
+            cam_transl=compressed_cams,
+            bbox=compressed_bboxs,
+            output_path=os.path.join(args.show_path, 'smplx.mp4'),
+            render_choice=args.render_choice,
+            resolution=frames_iter[0].shape[:2],
+            origin_frames=frames_folder,
+            body_model_config=body_model_config,
+            overwrite=True,
+            read_frames_batch=True)
+
+
 def main(args):
 
     # prepare input
@@ -190,8 +386,11 @@ def main(args):
 
     if args.single_person_demo:
         single_person_with_mmdet(args, frames_iter)
+    elif args.multi_person_demo:
+        multi_person_with_mmtracking(args, frames_iter)
     else:
-        raise ValueError('Only supports single_person_demo')
+        raise ValueError(
+            'Only supports single_person_demo or multi_person_demo')
 
 
 if __name__ == '__main__':
@@ -212,6 +411,10 @@ if __name__ == '__main__':
         action='store_true',
         help='Single person demo with MMDetection')
     parser.add_argument(
+        '--multi_person_demo',
+        action='store_true',
+        help='Multi person demo with MMTracking')
+    parser.add_argument(
         '--det_config',
         default='demo/mmdetection_cfg/faster_rcnn_r50_fpn_coco.py',
         help='Config file for detection')
@@ -221,6 +424,11 @@ if __name__ == '__main__':
         'faster_rcnn_r50_fpn_1x_coco/'
         'faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth',
         help='Checkpoint file for detection')
+    parser.add_argument(
+        '--tracking_config',
+        default='demo/mmtracking_cfg/'
+        'deepsort_faster-rcnn_fpn_4e_mot17-private-half.py',
+        help='Config file for tracking')
     parser.add_argument(
         '--det_cat_id',
         type=int,
@@ -280,4 +488,7 @@ if __name__ == '__main__':
         assert has_mmdet, 'Please install mmdet to run the demo.'
         assert args.det_config is not None
         assert args.det_checkpoint is not None
+    if args.multi_person_demo:
+        assert has_mmtrack, 'Please install mmtrack to run the demo.'
+        assert args.tracking_config is not None
     main(args)
