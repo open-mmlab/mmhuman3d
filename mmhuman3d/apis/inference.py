@@ -1,14 +1,19 @@
+from typing import Dict, Tuple, Union
+
 import cv2
 import mmcv
 import numpy as np
 import torch
 from mmcv.parallel import collate
 from mmcv.runner import load_checkpoint
+from mmcv.utils import print_log
 
 from mmhuman3d.data.datasets.pipelines import Compose
 from mmhuman3d.models.architectures.builder import build_architecture
 from mmhuman3d.models.backbones.builder import build_backbone
 from mmhuman3d.utils.demo_utils import box2cs, xywh2xyxy, xyxy2xywh
+
+Sequence = Union[np.ndarray, torch.Tensor, list, tuple]
 
 
 def init_model(config, checkpoint=None, device='cuda:0'):
@@ -32,6 +37,11 @@ def init_model(config, checkpoint=None, device='cuda:0'):
     config.data.test.test_mode = True
 
     model = build_architecture(config.model)
+    if checkpoint is None:
+        try:
+            model.init_weights()
+        except Exception as e:
+            print_log(f'init model weights failed, please check: {e}')
     if checkpoint is not None:
         # load model checkpoint
         load_checkpoint(model, checkpoint, map_location=device)
@@ -193,11 +203,8 @@ def inference_image_based_model(
     for idx in range(len(det_results)):
         mesh_result = det_results[idx].copy()
         mesh_result['bbox'] = bboxes_xyxy[idx]
-        mesh_result['camera'] = results['camera'][idx]
-        mesh_result['smpl_pose'] = results['smpl_pose'][idx]
-        mesh_result['smpl_beta'] = results['smpl_beta'][idx]
-        mesh_result['vertices'] = results['vertices'][idx]
-        mesh_result['keypoints_3d'] = results['keypoints_3d'][idx]
+        for key, value in results.items():
+            mesh_result[key] = _indexing_sequence(value, index=idx)
         mesh_results.append(mesh_result)
     return mesh_results
 
@@ -402,6 +409,28 @@ def feature_extract(
         feature_results.append(feature_result)
 
     return feature_results
+
+
+def _indexing_sequence(input: Union[Sequence, Dict[str, Sequence]],
+                       index: Union[int, Tuple[int, ...]]):
+    """Get item of the specified index from input.
+
+    Args:
+        input (Union[Sequence, Dict[str, Sequence]]): The input sequence.
+        index (Union[int, Tuple[int, ...]]): The Specified index.
+
+    Returns:
+        Union[Sequence, Dict[str, Sequence]]: The item of specified index.
+    """
+    if isinstance(input, dict):
+        result = {}
+        for key, value in input.items():
+            result[key] = _indexing_sequence(value, index)
+        return result
+    elif isinstance(input, (np.ndarray, torch.Tensor, list, tuple)):
+        return input[index]
+    else:
+        return input
 
 
 def _gather_input_features(extracted_results):
