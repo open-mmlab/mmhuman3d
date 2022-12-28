@@ -161,7 +161,7 @@ Each SMC file contains **one** sequence of 4D human data, with multiple data mod
 
 # Tutorial
 
-Please first install MMHuman3D following the [installation](install.md) guide. 
+Please first install MMHuman3D following the [installation](install.md) guide.
 To read a `.smc` file, you may refer to the instructions below:
 
 ```python
@@ -169,7 +169,7 @@ from mmhuman3d.data.data_structures.smc_reader import SMCReader
 
 # Initialize a smc reader
 smc_reader = SMCReader('/path/to/pxxxxxx_axxxxxx.smc')
- 
+
 # Get calibration
 # Kinect IDs: from 0 to 9
 # iPhone ID: 0; vertical: images are transformed from landscape to vertical
