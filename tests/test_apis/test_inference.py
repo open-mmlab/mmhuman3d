@@ -115,3 +115,20 @@ def test_process_mmtracking_results():
         'track_results': [[np.array([1, 0, 0, 100, 100, 0.99])]],
     }
     process_mmtracking_results(person_results, max_track_id=0, bbox_thr=0.9)
+
+
+def test_expose_inference_image_based_model():
+    device_name = 'cpu'
+    config = mmcv.Config.fromfile('configs/expose/expose.py')
+    config.model.backbone.norm_cfg = dict(type='BN', requires_grad=True)
+    mesh_model, _ = init_model(config, None, device=device_name)
+
+    frames_iter = np.ones([224, 224, 3])
+    person_results = [{'track_id': 0, 'bbox': [0, 0, 224, 224, 1]}]
+    mesh_results = inference_image_based_model(mesh_model, frames_iter,
+                                               person_results)
+    pred_cams = mesh_results[0]['camera'][None]
+    verts = mesh_results[0]['vertices'][None]
+    bboxes_xy = mesh_results[0]['bbox'][None]
+    _, _ = convert_verts_to_cam_coord(verts, pred_cams, bboxes_xy)
+    assert mesh_results[0]['param']['right_hand_pose'].shape == (15, 3, 3)
