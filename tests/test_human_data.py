@@ -245,7 +245,7 @@ def test_padding_and_slice(HumanDataCls):
     assert raw_value.shape[0] == target_value.shape[0]
 
 
-@pytest.mark.parametrize('HumanDataCls', (HumanData))
+@pytest.mark.parametrize('HumanDataCls', (HumanData,))
 def test_slice(HumanDataCls):
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
     human_data = HumanDataCls()
@@ -290,7 +290,7 @@ def test_slice(HumanDataCls):
         human_data['misc']['hd_id_plus_1']
 
 
-@pytest.mark.parametrize('HumanDataCls', (MultiHumanData))
+@pytest.mark.parametrize('HumanDataCls', (MultiHumanData,))
 def test_multi_human_data_slice(HumanDataCls):
     human_data_load_path = 'tests/data/human_data/multi_human_data_00.npz'
     human_data = HumanDataCls()
