@@ -86,11 +86,6 @@ class CocoConverter(BaseConverter):
             # store data
             image_path_.append(img_path)
             keypoints2d_.append(keypoints2d)
-            else:
-                # 1. MultiHumanData and keypoints2d_num>=4
-                # 2. HumanData and keypoints2d_num>=12
-                keypoints2d_.append(keypoints2d)
-            image_path_.append(img_path)
             bbox_xywh_.append(bbox_xywh)
 
         if multi_human_data:
@@ -107,7 +102,6 @@ class CocoConverter(BaseConverter):
             optional['frame_range'] = np.array(optional['frame_range'])
             human_data['optional'] = optional
 
-        
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
