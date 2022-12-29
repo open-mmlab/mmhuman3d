@@ -1,5 +1,15 @@
 _base_ = ['../_base_/default_runtime.py']
+__face_model_checkpoint__ = 'data/pretrained_models/'
+'resnet18_hmr_expose_face.pth'
+__hand_model_checkpoint__ = 'data/pretrained_models/'
+'resnet18_hmr_expose_hand.pth'
+__body_model_checkpoint__ = 'data/pretrained_models/hrnet_hmr_expose_body.pth'
+__mean_pose_path__ = 'data/body_models/all_means.pkl'
+__model_path__ = 'data/body_models/smplx'
+__joints_regressor__ = 'data/body_models/smplx/SMPLX_to_J14.npy'
+
 use_adversarial_train = True
+img_res = 256
 
 # evaluate
 evaluation = dict(
@@ -78,12 +88,12 @@ extra_hand_model_cfg = dict(
         depth=18,
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/resnet18_hmr_expose_hand.pth',
+            checkpoint=__hand_model_checkpoint__,
             prefix='backbone')),
     head=dict(
         type='ExPoseHandHead',
         num_betas=10,
-        mean_pose_path='data/body_models/smplx/all_means.pkl',
+        mean_pose_path=__mean_pose_path__,
         pose_param_conf=[
             dict(
                 name='global_orient',
@@ -102,10 +112,10 @@ extra_hand_model_cfg = dict(
         camera_cfg=dict(pos_func='softplus', mean_scale=0.9),
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/resnet18_hmr_expose_hand.pth',
+            checkpoint=__hand_model_checkpoint__,
             prefix='head')),
     crop_cfg=dict(
-        img_res=256,
+        img_res=img_res,
         scale_factor=3.0,
         crop_size=224,
         condition_hand_wrist_pose=True,
@@ -121,13 +131,13 @@ extra_face_model_cfg = dict(
         depth=18,
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/resnet18_hmr_expose_face.pth',
+            checkpoint=__face_model_checkpoint__,
             prefix='backbone')),
     head=dict(
         type='ExPoseFaceHead',
         num_betas=100,
         num_expression_coeffs=50,
-        mean_pose_path='data/body_models/smplx/all_means.pkl',
+        mean_pose_path=__mean_pose_path__,
         pose_param_conf=[
             dict(
                 name='global_orient',
@@ -146,11 +156,11 @@ extra_face_model_cfg = dict(
         camera_cfg=dict(pos_func='softplus', mean_scale=8.0),
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/resnet18_hmr_expose_face.pth',
+            checkpoint=__face_model_checkpoint__,
             prefix='head'),
     ),
     crop_cfg=dict(
-        img_res=256,
+        img_res=img_res,
         scale_factor=2.0,
         crop_size=256,
         num_betas=10,
@@ -171,13 +181,13 @@ model = dict(
         extra=hrnet_extra,
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/hrnet_hmr_expose_body.pth',
+            checkpoint=__body_model_checkpoint__,
             prefix='backbone')),
     head=dict(
         type='ExPoseBodyHead',
         num_betas=10,
         num_expression_coeffs=10,
-        mean_pose_path='data/body_models/smplx/all_means.pkl',
+        mean_pose_path=__mean_pose_path__,
         shape_mean_path='data/body_models/smplx/shape_mean.npy',
         pose_param_conf=[
             dict(
@@ -212,7 +222,7 @@ model = dict(
         camera_cfg=dict(pos_func='softplus', mean_scale=0.9),
         init_cfg=dict(
             type='Pretrained',
-            checkpoint='data/pretrained_models/hrnet_hmr_expose_body.pth',
+            checkpoint=__body_model_checkpoint__,
             prefix='head'),
     ),
     body_model_train=dict(
@@ -222,7 +232,7 @@ model = dict(
         use_face_contour=True,
         use_pca=False,
         flat_hand_mean=True,
-        model_path='data/body_models/smplx',
+        model_path=__model_path__,
         keypoint_src='smplx',
         keypoint_dst='smplx',
     ),
@@ -233,10 +243,10 @@ model = dict(
         use_face_contour=True,
         use_pca=False,
         flat_hand_mean=True,
-        model_path='data/body_models/smplx',
+        model_path=__model_path__,
         keypoint_src='lsp',
         keypoint_dst='lsp',
-        joints_regressor='data/body_models/smplx/SMPLX_to_J14.npy'),
+        joints_regressor=__joints_regressor__),
     loss_keypoints3d=dict(type='L1Loss', reduction='sum', loss_weight=1),
     loss_keypoints2d=dict(type='L1Loss', reduction='sum', loss_weight=1),
     loss_smplx_global_orient=dict(
@@ -280,7 +290,7 @@ train_pipeline = [
         scale_factor=0.25,
         rot_prob=0.6),
     dict(type='Rotation'),
-    dict(type='MeshAffine', img_res=256),  # hand = 224, body = head = 256
+    dict(type='MeshAffine', img_res=img_res),  # hand = 224, body = head = 256
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(
         type='SimulateLowRes',
@@ -305,7 +315,7 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=256),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img', 'ori_img']),
     dict(type='ToTensor', keys=data_keys),
@@ -318,15 +328,13 @@ test_pipeline = [
         ])
 ]
 inference_pipeline = [
-    dict(type='LoadImageFromFile'),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=256),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img', 'ori_img']),
-    dict(type='ToTensor', keys=data_keys),
     dict(
         type='Collect',
-        keys=['img', *data_keys],
+        keys=['img', 'sample_idx'],
         meta_keys=[
             'image_path', 'center', 'scale', 'rotation', 'ori_img',
             'crop_transform'
@@ -357,8 +365,8 @@ data = dict(
             type='smplx',
             keypoint_src='smplx',
             keypoint_dst='smplx',
-            model_path='data/body_models/smplx',
-            joints_regressor='data/body_models/smplx/SMPLX_to_J14.npy'),
+            model_path=__model_path__,
+            joints_regressor=__joints_regressor__),
         dataset_name='EHF',
         data_prefix='data',
         pipeline=test_pipeline,
@@ -372,8 +380,8 @@ data = dict(
             type='smplx',
             keypoint_src='smplx',
             keypoint_dst='smplx',
-            model_path='data/body_models/smplx',
-            joints_regressor='data/body_models/smplx/SMPLX_to_J14.npy'),
+            model_path=__model_path__,
+            joints_regressor=__joints_regressor__),
         dataset_name='EHF',
         data_prefix='data',
         pipeline=test_pipeline,

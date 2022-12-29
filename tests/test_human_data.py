@@ -58,12 +58,6 @@ def test_set(HumanDataCls):
     with pytest.raises(ValueError):
         human_data = HumanDataCls()
         human_data['bbox_xywh'] = np.zeros(shape=[2, 4])
-    # test wrong value with no shape attr
-    with pytest.raises(AttributeError):
-        human_data = HumanDataCls()
-        bbox_np = np.zeros(shape=[2, 4])
-        delattr(bbox_np, 'shape')
-        human_data['bbox_xywh'] = bbox_np
     # test wrong value shape dim
     with pytest.raises(ValueError):
         human_data = HumanDataCls()
