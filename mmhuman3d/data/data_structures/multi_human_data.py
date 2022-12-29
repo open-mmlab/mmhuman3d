@@ -42,13 +42,13 @@ class MultiHumanData(HumanData):
             cls (HumanData): HumanData class.
 
         Returns:
-            HumanData: An instance of HumanData.
+            HumanData: An instance of Hu
         """
         ret_human_data = super().__new__(cls, args, kwargs)
-        setattr(ret_human_data, '__data_len__', -1)
+        # setattr(ret_human_data, '__data_len__', -1)
         setattr(ret_human_data, '__instance_num__', -1)
-        setattr(ret_human_data, '__key_strict__', False)
-        setattr(ret_human_data, '__keypoints_compressed__', False)
+        # setattr(ret_human_data, '__key_strict__', False)
+        # setattr(ret_human_data, '__keypoints_compressed__', False)
         return ret_human_data
 
     def load(self, npz_path: str):
@@ -397,7 +397,7 @@ class MultiHumanData(HumanData):
             err_msg = 'Data length check Failed:\n'
             err_msg += f'key={str(key)}\n'
             if self.data_len != self.instance_num:
-                err_msg += f'val\'s instance_num={self.data_len}\n'
+                err_msg += f'val\'s instance_num={val_data_len}\n'
                 err_msg += f'expected instance_num={self.instance_num}\n'
             print_log(
                 msg=err_msg, logger=self.__class__.logger, level=logging.ERROR)
@@ -414,7 +414,7 @@ class MultiHumanData(HumanData):
             and `data_len` equals frames num.
         """
         supported_keys = self.__class__.SUPPORTED_KEYS
-        if self.instance_num == -1:
+        if 'optional' not in self:
             # the loaded file is not multi_human_data
             for key in supported_keys:
                 if key in self and \
@@ -431,8 +431,10 @@ class MultiHumanData(HumanData):
 
                     # convert HumanData to MultiHumanData
                     self.data_len = self.instance_num
-                    self['optional']['frame_range'] = \
+                    optional = {}
+                    optional['frame_range'] =  \
                         [[i, i + 1] for i in range(self.data_len)]
+                    self['optional'] = optional
                     break
 
         for key in list(self.keys()):
