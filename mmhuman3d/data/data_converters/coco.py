@@ -1,8 +1,8 @@
 import json
 import os
 
-import numpy as np
 import mmcv
+import numpy as np
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
@@ -11,8 +11,11 @@ from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from .base_converter import BaseConverter
 from .builder import DATA_CONVERTERS
 
+
 def sort_json(json):
     return int(json['image_id'])
+
+
 @DATA_CONVERTERS.register_module()
 class CocoConverter(BaseConverter):
     """CocoDataset dataset `Microsoft COCO: Common Objects in Context'
@@ -21,8 +24,6 @@ class CocoConverter(BaseConverter):
     <https://arxiv.org/abs/1405.0312>`__ .
     """
 
-
-    
     def convert(self,
                 dataset_path: str,
                 out_path: str,
@@ -54,10 +55,8 @@ class CocoConverter(BaseConverter):
                                  'person_keypoints_train2014.json')
 
         if file_client_args is not None:
-            json_data = mmcv.load(
-                json_path,
-                file_client_args=file_client_args)
-        else:         
+            json_data = mmcv.load(json_path, file_client_args=file_client_args)
+        else:
             json_data = json.load(open(json_path, 'r'))
 
         imgs = {}

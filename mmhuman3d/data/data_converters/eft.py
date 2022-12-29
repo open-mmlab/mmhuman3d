@@ -2,9 +2,9 @@ import json
 import os
 from typing import List
 
+import mmcv
 import numpy as np
 from tqdm import tqdm
-import mmcv
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
@@ -75,7 +75,7 @@ class EftConverter(BaseModeConverter):
             # use HumanData to store all data
             human_data = HumanData()
 
-        image_path_, bbox_xywh_, keypoints2d_, pred_cam_ = [], [], [], []
+        image_path_, bbox_xywh_, keypoints2d_ = [], [], []
         smpl = {}
         smpl['betas'] = []
         smpl['body_pose'] = []
@@ -89,13 +89,11 @@ class EftConverter(BaseModeConverter):
             raise ValueError('provided dataset is not in eft fittings')
 
         if file_client_args is not None:
-            eft_data = mmcv.load(
-                annot_file,
-                file_client_args=file_client_args)
+            eft_data = mmcv.load(annot_file, file_client_args=file_client_args)
         else:
             with open(annot_file, 'r') as f:
                 eft_data = json.load(f)
-                
+
         eft_data_all = eft_data['data']
 
         for data in tqdm(eft_data_all):

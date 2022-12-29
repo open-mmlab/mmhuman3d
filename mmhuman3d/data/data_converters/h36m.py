@@ -194,8 +194,11 @@ class H36mConverter(BaseModeConverter):
             '60457274': 3,
         }
 
-    def convert_by_mode(self, dataset_path: str, out_path: str,
-                        mode: str, multi_human_data: bool = False) -> dict:
+    def convert_by_mode(self,
+                        dataset_path: str,
+                        out_path: str,
+                        mode: str,
+                        multi_human_data: bool = False) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
@@ -381,9 +384,10 @@ class H36mConverter(BaseModeConverter):
 
         if multi_human_data:
             optional = {}
-            optional['frame_range'] = np.array([[i, i+1] for i in range(len(image_path_))])
+            optional['frame_range'] = np.array(
+                [[i, i + 1] for i in range(len(image_path_))])
             human_data['optional'] = optional
-        
+
         metadata_path = os.path.join(dataset_path, 'metadata.xml')
         if isinstance(metadata_path, str):
             camera = H36mCamera(metadata_path)

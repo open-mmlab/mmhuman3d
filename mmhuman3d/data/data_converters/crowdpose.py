@@ -2,9 +2,9 @@ import json
 import os
 from typing import List
 
+import mmcv
 import numpy as np
 from tqdm import tqdm
-import mmcv
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
@@ -30,8 +30,11 @@ class CrowdposeConverter(BaseModeConverter):
     def __init__(self, modes: List = []) -> None:
         super(CrowdposeConverter, self).__init__(modes)
 
-    def convert_by_mode(self, dataset_path: str, out_path: str,
-                        mode: str, multi_human_data: bool = False,
+    def convert_by_mode(self,
+                        dataset_path: str,
+                        out_path: str,
+                        mode: str,
+                        multi_human_data: bool = False,
                         file_client_args: dict = None) -> dict:
         """
         Args:
@@ -60,9 +63,7 @@ class CrowdposeConverter(BaseModeConverter):
                                  'crowdpose_{}.json'.format(mode))
 
         if file_client_args is not None:
-            json_data = mmcv.load(
-                json_path,
-                file_client_args=file_client_args)
+            json_data = mmcv.load(json_path, file_client_args=file_client_args)
         else:
             json_data = json.load(open(json_path, 'r'))
 

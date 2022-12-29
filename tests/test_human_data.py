@@ -252,7 +252,7 @@ def test_padding_and_slice(HumanDataCls):
 
 
 @pytest.mark.parametrize('HumanDataCls', (HumanData))
-def test_slice():
+def test_slice(HumanDataCls):
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
     human_data = HumanDataCls()
     human_data.load(human_data_load_path)
@@ -596,4 +596,3 @@ def shape_equal(ndarray_0, ndarray_1):
             return True
         else:
             return False
-
