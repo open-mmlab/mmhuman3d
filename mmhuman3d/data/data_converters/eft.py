@@ -4,9 +4,11 @@ from typing import List
 
 import numpy as np
 from tqdm import tqdm
+import mmcv
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from mmhuman3d.utils.transforms import rotmat_to_aa
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
@@ -44,23 +46,36 @@ class EftConverter(BaseModeConverter):
         x, y = center[0] - w / 2, center[1] - h / 2
         return [x, y, w, h]
 
-    def convert_by_mode(self, dataset_path: str, out_path: str,
-                        mode: str) -> dict:
+    def convert_by_mode(self,
+                        dataset_path: str,
+                        out_path: str,
+                        mode: str,
+                        multi_human_data: bool = False,
+                        file_client_args: dict = None) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
             mode (str): Mode in accepted modes
+            multi_human_data (bool): Stored format. If set to True,
+            stored in MultiHumanData() format. Default: False,
+            stored in HumanData() format.
 
         Returns:
             dict:
                 A dict containing keys image_path, bbox_xywh, keypoints2d,
                 keypoints2d_mask, smpl stored in HumanData() format
         """
-        # use HumanData to store all data
-        human_data = HumanData()
-        image_path_, bbox_xywh_, keypoints2d_ = [], [], []
+
+        if multi_human_data:
+            # use MultiHumanData to store all data
+            human_data = MultiHumanData()
+        else:
+            # use HumanData to store all data
+            human_data = HumanData()
+
+        image_path_, bbox_xywh_, keypoints2d_, pred_cam_ = [], [], [], []
         smpl = {}
         smpl['betas'] = []
         smpl['body_pose'] = []
@@ -73,8 +88,14 @@ class EftConverter(BaseModeConverter):
         else:
             raise ValueError('provided dataset is not in eft fittings')
 
-        with open(annot_file, 'r') as f:
-            eft_data = json.load(f)
+        if file_client_args is not None:
+            eft_data = mmcv.load(
+                annot_file,
+                file_client_args=file_client_args)
+        else:
+            with open(annot_file, 'r') as f:
+                eft_data = json.load(f)
+                
         eft_data_all = eft_data['data']
 
         for data in tqdm(eft_data_all):
@@ -100,6 +121,20 @@ class EftConverter(BaseModeConverter):
             image_path_.append(image_prefix + image_name)
             bbox_xywh_.append(bbox_xywh)
             keypoints2d_.append(gt_keypoint_2d)
+
+        if multi_human_data:
+            # optional
+            optional = {}
+            optional['frame_range'] = []
+            frame_start = 0
+            frame_end = 0
+            for image_path in sorted(set(image_path_), key=image_path_.index):
+                frame_end = frame_start + \
+                    image_path_.count(image_path)
+                optional['frame_range'].append([frame_start, frame_end])
+                frame_start = frame_end
+            optional['frame_range'] = np.array(optional['frame_range'])
+            human_data['optional'] = optional
 
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])

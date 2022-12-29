@@ -13,6 +13,7 @@ from tqdm import tqdm
 from mmhuman3d.core.cameras.camera_parameters import CameraParameter
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -194,7 +195,7 @@ class H36mConverter(BaseModeConverter):
         }
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
-                        mode: str) -> dict:
+                        mode: str, multi_human_data: bool = False) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
@@ -208,8 +209,12 @@ class H36mConverter(BaseModeConverter):
                 keypoints2d_mask, keypoints3d, keypoints3d_mask, cam_param
                 stored in HumanData() format
         """
-        # use HumanData to store all data
-        human_data = HumanData()
+        if multi_human_data:
+            # use MultiHumanData to store all data
+            human_data = MultiHumanData()
+        else:
+            # use HumanData to store all data
+            human_data = HumanData()
 
         # pick 17 joints from 32 (repeated) joints
         h36m_idx = [
@@ -374,6 +379,11 @@ class H36mConverter(BaseModeConverter):
             smpl['betas'] = np.array(smpl['betas']).reshape((-1, 10))
             human_data['smpl'] = smpl
 
+        if multi_human_data:
+            optional = {}
+            optional['frame_range'] = np.array([[i, i+1] for i in range(len(image_path_))])
+            human_data['optional'] = optional
+        
         metadata_path = os.path.join(dataset_path, 'metadata.xml')
         if isinstance(metadata_path, str):
             camera = H36mCamera(metadata_path)

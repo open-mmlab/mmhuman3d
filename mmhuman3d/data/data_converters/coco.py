@@ -2,14 +2,17 @@ import json
 import os
 
 import numpy as np
+import mmcv
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from .base_converter import BaseConverter
 from .builder import DATA_CONVERTERS
 
-
+def sort_json(json):
+    return int(json['image_id'])
 @DATA_CONVERTERS.register_module()
 class CocoConverter(BaseConverter):
     """CocoDataset dataset `Microsoft COCO: Common Objects in Context'
@@ -18,7 +21,13 @@ class CocoConverter(BaseConverter):
     <https://arxiv.org/abs/1405.0312>`__ .
     """
 
-    def convert(self, dataset_path: str, out_path: str) -> dict:
+
+    
+    def convert(self,
+                dataset_path: str,
+                out_path: str,
+                multi_human_data: bool = False,
+                file_client_args: dict = None) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
@@ -30,8 +39,12 @@ class CocoConverter(BaseConverter):
                 A dict containing keys image_path, bbox_xywh, keypoints2d,
                 keypoints2d_mask stored in HumanData() format
         """
-        # use HumanData to store all data
-        human_data = HumanData()
+        if multi_human_data:
+            # use MultiHumanData to store all data
+            human_data = MultiHumanData()
+        else:
+            # use HumanData to store all data
+            human_data = HumanData()
 
         # structs we need
         image_path_, keypoints2d_, bbox_xywh_ = [], [], []
@@ -40,12 +53,18 @@ class CocoConverter(BaseConverter):
         json_path = os.path.join(dataset_path, 'annotations',
                                  'person_keypoints_train2014.json')
 
-        json_data = json.load(open(json_path, 'r'))
+        if file_client_args is not None:
+            json_data = mmcv.load(
+                json_path,
+                file_client_args=file_client_args)
+        else:         
+            json_data = json.load(open(json_path, 'r'))
 
         imgs = {}
         for img in json_data['images']:
             imgs[img['id']] = img
 
+        json_data['annotations'].sort(key=sort_json)
         for annot in tqdm(json_data['annotations']):
 
             # keypoints processing
@@ -67,8 +86,28 @@ class CocoConverter(BaseConverter):
             # store data
             image_path_.append(img_path)
             keypoints2d_.append(keypoints2d)
+            else:
+                # 1. MultiHumanData and keypoints2d_num>=4
+                # 2. HumanData and keypoints2d_num>=12
+                keypoints2d_.append(keypoints2d)
+            image_path_.append(img_path)
             bbox_xywh_.append(bbox_xywh)
 
+        if multi_human_data:
+            # optional
+            optional = {}
+            optional['frame_range'] = []
+            frame_start = 0
+            frame_end = 0
+            for image_path in sorted(set(image_path_), key=image_path_.index):
+                frame_end = frame_start + \
+                    image_path_.count(image_path)
+                optional['frame_range'].append([frame_start, frame_end])
+                frame_start = frame_end
+            optional['frame_range'] = np.array(optional['frame_range'])
+            human_data['optional'] = optional
+
+        
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])

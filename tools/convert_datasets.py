@@ -66,22 +66,28 @@ def parse_args():
     parser.add_argument(
         '--root_path',
         type=str,
-        # required=True,
+        required=True,
         help='the root path of original data')
 
     parser.add_argument(
         '--output_path',
         type=str,
-        # required=True,
+        required=True,
         help='the path to store the preprocessed npz files')
 
     parser.add_argument(
         '--datasets',
         type=str,
         nargs='+',
-        # required=True,
+        required=True,
         default=[],
         help=f'Supported datasets: {list(DATASET_CONFIGS.keys())}')
+    
+    parser.add_argument(
+        '--multi_human_data',
+        type=bool,
+        default=False,
+        help='Whether to generate a multi-human data')
 
     args = parser.parse_args()
 
@@ -90,9 +96,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-    args.datasets = ['crowdpose']
-    args.root_path = 'data/datasets'
-    args.output_path = 'data/preprocessed_datasets/'
     datasets = (
         DATASET_CONFIGS.keys() if args.datasets == ['all'] else args.datasets)
 
@@ -102,7 +105,8 @@ def main():
         prefix = cfg.pop('prefix', dataset)
         input_path = os.path.join(args.root_path, prefix)
         data_converter = build_data_converter(cfg)
-        data_converter.convert(input_path, args.output_path)
+        data_converter.convert(input_path, args.output_path,
+                               multi_human_data=args.multi_human_data)
         print(f'[{dataset}] Converting finished!')
 
 
