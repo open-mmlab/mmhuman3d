@@ -207,7 +207,7 @@ dict_of_gpu_tensor = human_data.to(gpu0_device)
 
 ## MultiHumanData
 
-MulitHumanData is designed to support multi-human body mesh recovery, who inherits from HumanData. In HumanData, the data can be accessed directly through the index, because the data and the image are in one-to-one correspondence. However, However, data and image have a many-to-one correspondence in MultiHumanData.
+MulitHumanData is designed to support multi-human body mesh recovery, who inherits from HumanData. In HumanData, the data can be accessed directly through the index, because the data and the image are in one-to-one correspondence. However, data and image have a many-to-one correspondence in MultiHumanData.
 
 Based on HumanData, MultiHumanData adds a new key named `'optional'` as follows:
 
@@ -218,15 +218,13 @@ Based on HumanData, MultiHumanData adds a new key named `'optional'` as follows:
         'dim': 0
     }
 ```
-`optional` is a dict that has an element called `frame_range`. 
+`optional` is a dict that has an element called `frame_range`.
 The `frame_range` and image are in one-to-one correspondence.
 The element of `frame_range` is two pointers that point to a data-block.
 
 Suppose we have an instance of MultiHumanData and we want to access the data corresponding to the i-th image. First, we index the `frame_range` using primary index i, which will return two points. We then use these two pointers to access all data corresponding to the i-th image.
 
 ```
-
-
 image_0  ----> human_0      <--- frame_range[0][0]
          -       .
           -      .
@@ -244,6 +242,3 @@ image_n  ----> human_0     <--- frame_range[n][0]
             -> human_n     <--- frame_range[n][n]
 
 ```
-
-
-

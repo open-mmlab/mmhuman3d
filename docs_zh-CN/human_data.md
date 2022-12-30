@@ -53,7 +53,7 @@ human_data.set_key_strict(not key_strict)
 },
 ```
 
-对于类型为`numpy.ndarray`的`value`, 需要指定`shape`和`temporal_dim`参数:
+对于类型为`numpy.ndarray`的`value`, 需要指定`shape`和`dim`参数:
 
 ```python
 'keypoints3d': {
@@ -61,18 +61,18 @@ human_data.set_key_strict(not key_strict)
     'shape': (-1, -1, 4),
     # value.ndim==3 value.shape[2]==4
     # value.shape[0:2] is arbitrary.
-    'temporal_dim': 0
+    'dim': 0
     # dimension 0 marks time(frame index, or second)
 },
 ```
 
-对于不随时间变化的`value`，指定其`temporal_dim=-1`以跳过时序检查:
+对于不随帧变化的`value`，指定其`dim=-1`以跳过帧检查:
 
 ```python
 'keypoints3d_mask': {
     'type': np.ndarray,
     'shape': (-1, ),
-    'temporal_dim': -1
+    'dim': -1
 },
 ```
 
@@ -181,14 +181,14 @@ padded_keypoints2d = human_data.get_value_in_shape('keypoints2d', shape=[200, 30
 
 ```python
 # 所有支持的`value`都会被切片
-sub_human_data = human_data.get_temporal_slice(10, 21)
+sub_human_data = human_data.get_slice(10, 21)
 ```
 
 也可以进行下采样,下面的例子描述了一种选择其33%数据的方法:
 
 ```python
 # 选择 [0, 3, 6, 9,..., 198]
-sub_human_data = human_data.get_temporal_slice(0, 200, 3)
+sub_human_data = human_data.get_slice(0, 200, 3)
 ```
 
 ### 转换为`torch.Tensor`
@@ -203,4 +203,40 @@ dict_of_tensor = human_data.to()
 # 也可以转换为GPU上的Tensor
 gpu0_device = torch.device('cuda:0')
 dict_of_gpu_tensor = human_data.to(gpu0_device)
+```
+## MultiHumanData
+
+MulitHumanData 被设计来支持多人重建。它继承于HumanData。在HumanData中，因为图片和数据是一一对应的，所以我们可以直接索引数据。然而，在MultiHumanData中数据和图像是多对一的关系。
+
+MultiHumanData在HumanData的基础上添加一个新的key叫做`optional`,它定义如下：
+
+```python
+'optional': {
+        'type': dict,
+        'slice_key': 'frame_range',
+        'dim': 0
+    }
+```
+`optional` 是一个字典，它有一个叫做`frame_range`的成员。
+`frame_range`是和图像一一对应的。 `frame_range`中的元素是两个指针，它们指向一个数据区域。
+
+假设我们有一个MultiHumanData的实例，我们想索引第i张图像对应的数据。 首先我们用主索引索引`frame_range`，它会返回两个指针，用这两个指针我们就可以索引第i张图像对应的所有数据。
+
+```
+image_0  ----> human_0      <--- frame_range[0][0]
+         -       .
+          -      .
+           -     .
+            -> human_n      <--- frame_range[0][n]
+    .
+    .
+    .
+
+
+image_n  ----> human_0     <--- frame_range[n][0]
+         -       .
+          -      .
+           -     .
+            -> human_n     <--- frame_range[n][n]
+
 ```
