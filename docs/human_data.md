@@ -181,14 +181,14 @@ Assume that there are 200 frames in a HumanData instance, only data between 10 a
 
 ```python
 # all supported values will be sliced
-sub_human_data = human_data.get_temporal_slice(10, 21)
+sub_human_data = human_data.get_slice(10, 21)
 ```
 
 Downsample is also supported, for example, select 33%:
 
 ```python
 # select [0, 3, 6, 9,..., 198]
-sub_human_data = human_data.get_temporal_slice(0, 200, 3)
+sub_human_data = human_data.get_slice(0, 200, 3)
 ```
 
 ### To torch.Tensor
