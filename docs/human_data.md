@@ -52,7 +52,7 @@ For each value, an exclusive type must be specified under its key:
 },
 ```
 
-For value as numpy.ndarray, shape and temporal_dim shall be defined:
+For value as numpy.ndarray, shape and dim shall be defined:
 
 ```python
 'keypoints3d': {
@@ -60,18 +60,18 @@ For value as numpy.ndarray, shape and temporal_dim shall be defined:
     'shape': (-1, -1, 4),
     # value.ndim==3, and value.shape[2]==4
     # value.shape[0:2] is arbitrary.
-    'temporal_dim': 0
+    'dim': 0
     # dimension 0 marks time(frame index, or second)
 },
 ```
 
-For value which is constant along time axis, set temporal_dim to -1 to ignore temporal check:
+For value which is constant along frame axis, set dim to -1 to ignore frame check:
 
 ```python
 'keypoints3d_mask': {
     'type': np.ndarray,
     'shape': (-1, ),
-    'temporal_dim': -1
+    'dim': -1
 },
 ```
 
