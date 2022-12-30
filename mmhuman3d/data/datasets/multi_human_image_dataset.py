@@ -8,22 +8,17 @@ from typing import Any, List, Optional, Union
 import mmcv
 import numpy as np
 import torch
-import torch.distributed as dist
-from mmcv.runner import get_dist_info
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_num,
-    get_mapping,
 )
-
 from mmhuman3d.core.evaluation import (
     keypoint_3d_auc,
     keypoint_3d_pck,
     keypoint_mpjpe,
     vertice_pve,
 )
-
 from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from mmhuman3d.models.body_models.builder import build_body_model
 from .base_dataset import BaseDataset
@@ -110,37 +105,6 @@ class MultiHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             self.human_data.__setitem__('keypoints2d_mask', keypoints2d_mask)
         self.human_data.compress_keypoints_by_mask()
 
-    def test_img(image_path, kp2d_49, bbox_xywh):
-        import mmcv
-        from mmhuman3d.utils.demo_utils import xywh2xyxy
-        from mmhuman3d.core.visualization.visualize_keypoints2d import visualize_kp2d
-        file_client_args = dict(
-            backend = 'petrel',
-            path_mapping = dict({
-                'data/datasets/crowdpose/': 'SG:s3://datasets/Crowdpose/', # 's3://Zoetrope/OpenHuman/Crowdpose/',
-                'data/datasets/coco/': 's3://sunqingping/dataset/coco/',
-                'data/datasets/h36m/': 's3://Zoetrope/OpenHuman/human3.6m/',
-            }
-            )
-        )
-        
-        bbox_xyxy = xywh2xyxy(bbox_xywh)
-        path = os.path.join('data/datasets/coco/',image_path)
-        img = mmcv.imread(path, file_client_args =file_client_args).copy()
-        mmcv.imshow_bboxes(img, bbox_xyxy, show=False)
-        
-        for i in kp2d_49:
-            if i[..., -1].sum()>2:
-                img = visualize_kp2d(
-                i[None],
-                './vis',
-                mask=i[:,-1],
-                image_array=np.array([img.squeeze()]),
-                overwrite=True,
-                data_source='smpl_54')      
-        
-        mmcv.imwrite(img,'data/test_img/test.png')
-
     def prepare_raw_data(self, idx: int):
         """Get item from self.human_data."""
         sample_idx = idx
@@ -157,13 +121,13 @@ class MultiHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         info['sample_idx'] = sample_idx
         if 'bbox_xywh' in self.human_data:
             info['bbox_xywh'] = self.human_data['bbox_xywh'][
-                frame_start:frame_end][...,:4]
+                frame_start:frame_end][..., :4]
             center, scale = [], []
             for bbox in info['bbox_xywh']:
                 x, y, w, h = bbox
                 cx = x + w / 2
                 cy = y + h / 2
-                # TODO: verify if we should keep w = h = max(w, h) for multi human data
+                # TODO: w = h = max(w, h)???
                 w = h = max(w, h)
                 center.append([cx, cy])
                 scale.append([w, h])
@@ -177,7 +141,7 @@ class MultiHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         if 'keypoints2d' in self.human_data:
             info['keypoints2d'] = self.human_data['keypoints2d'][
                 frame_start:frame_end]
-            conf = info['keypoints2d'][...,-1].sum(-1)>0
+            conf = info['keypoints2d'][..., -1].sum(-1) > 0
             info['has_keypoints2d'] = np.ones((frame_num, 1)) * conf[..., None]
         else:
             info['keypoints2d'] = np.zeros((frame_num, self.num_keypoints, 3))
@@ -185,7 +149,7 @@ class MultiHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         if 'keypoints3d' in self.human_data:
             info['keypoints3d'] = self.human_data['keypoints3d'][
                 frame_start:frame_end]
-            conf = info['keypoints3d'][...,-1].sum(-1)>0
+            conf = info['keypoints3d'][..., -1].sum(-1) > 0
             info['has_keypoints3d'] = np.ones((frame_num, 1)) * conf[..., None]
         else:
             info['keypoints3d'] = np.zeros((frame_num, self.num_keypoints, 4))
@@ -196,10 +160,10 @@ class MultiHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 info['has_smpl'] = \
                     self.human_data['has_smpl'][frame_start:frame_end]
             else:
-                info['has_smpl'] = np.ones((frame_num,1))
+                info['has_smpl'] = np.ones((frame_num, 1))
             smpl_dict = self.human_data['smpl']
         else:
-            info['has_smpl'] = np.zeros((frame_num,1))
+            info['has_smpl'] = np.zeros((frame_num, 1))
             smpl_dict = {}
 
         if 'body_pose' in smpl_dict:
@@ -247,7 +211,7 @@ class MultiHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         Returns:
             dict:
                 A dict of all evaluation results.
-        """ 
+        """
         metrics = metric if isinstance(metric, list) else [metric]
         for metric in metrics:
             if metric not in self.ALLOWED_METRICS:
@@ -297,8 +261,8 @@ class MultiHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             name_value_tuples.extend(_nv_tuples)
 
         name_value = OrderedDict(name_value_tuples)
-        return name_value      
-        
+        return name_value
+
     @staticmethod
     def _write_keypoint_results(keypoints: Any, res_file: str):
         """Write results into a json file."""
