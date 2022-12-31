@@ -316,11 +316,6 @@ def test_multi_human_data_slice(HumanDataCls):
     assert \
         sliced_human_data.get_raw_value('keypoints2d')[-1, 0, 0] == \
         raw_value[8, 0, 0]
-    # do not slice image_path when it has a wrong length
-    human_data.__data_len__ = 199
-    human_data['image_path'] = ['1.jpg', '2.jpg']
-    sliced_human_data = human_data.get_slice(1)
-    assert len(sliced_human_data['image_path']) == 2
 
 
 @pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
