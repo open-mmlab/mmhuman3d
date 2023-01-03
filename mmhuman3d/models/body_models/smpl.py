@@ -5,7 +5,12 @@ from typing import Optional
 import numpy as np
 import torch
 from smplx import SMPL as _SMPL
-from smplx.lbs import batch_rigid_transform, blend_shapes, vertices2joints
+from smplx.lbs import (
+    batch_rigid_transform,
+    blend_shapes,
+    transform_mat,
+    vertices2joints,
+)
 
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
@@ -81,6 +86,9 @@ class SMPL(_SMPL):
         self.num_verts = self.get_num_verts()
         self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
         self.body_part_segmentation = body_segmentation('smpl')
+        tpose_joints = vertices2joints(self.J_regressor,
+                                       self.v_template.unsqueeze(0))
+        self.register_buffer('tpose_joints', tpose_joints)
 
     def forward(self,
                 *args,
@@ -198,6 +206,88 @@ class SMPL(_SMPL):
         body_pose = smpl_dict['body_pose'].view(-1, 3 * cls.NUM_BODY_JOINTS)
         full_pose = torch.cat([global_orient, body_pose], dim=1)
         return full_pose
+
+    def get_global_rotation(self,
+                            global_orient: Optional[torch.Tensor] = None,
+                            body_pose: Optional[torch.Tensor] = None,
+                            **kwargs):
+        """Forward pass for the SMPLX model.
+
+        Parameters
+        ----------
+        global_orient: torch.tensor, optional, shape Bx3x3
+            If given, ignore the member variable and use it as the global
+            rotation of the body. Useful if someone wishes to predicts this
+            with an external model. It is expected to be in rotation matrix
+            format. (default=None)
+        body_pose: torch.tensor, optional, shape BxJx3x3
+            If given, ignore the member variable `body_pose` and use it
+            instead. For example, it can used if someone predicts the
+            pose of the body joints are predicted from some external model.
+            It should be a tensor that contains joint rotations in
+            rotation matrix format. (default=None)
+        Returns
+        -------
+            output: Global rotation matrix
+        """
+        device, dtype = self.shapedirs.device, self.shapedirs.dtype
+
+        model_vars = [global_orient, body_pose]
+        batch_size = 1
+        for var in model_vars:
+            if var is None:
+                continue
+            batch_size = max(batch_size, len(var))
+
+        if global_orient is None:
+            global_orient = torch.eye(
+                3, device=device,
+                dtype=dtype).view(1, 1, 3, 3).expand(batch_size, -1, -1,
+                                                     -1).contiguous()
+        if body_pose is None:
+            body_pose = torch.eye(
+                3, device=device,
+                dtype=dtype).view(1, 1, 3,
+                                  3).expand(batch_size, self.NUM_BODY_JOINTS,
+                                            -1, -1).contiguous()
+
+        # Concatenate all pose vectors
+        full_pose = torch.cat([
+            global_orient.reshape(-1, 1, 3, 3),
+            body_pose.reshape(-1, self.NUM_BODY_JOINTS, 3, 3)
+        ],
+                              dim=1)
+
+        rot_mats = full_pose.view(batch_size, -1, 3, 3)
+
+        # Get the joints
+        # NxJx3 array
+
+        joints = self.tpose_joints.expand(batch_size, -1, -1).unsqueeze(-1)
+
+        rel_joints = joints.clone()
+        rel_joints[:, 1:] -= joints[:, self.parents[1:]]
+
+        transforms_mat = transform_mat(
+            rot_mats.reshape(-1, 3, 3),
+            rel_joints.reshape(-1, 3, 1)).reshape(-1, joints.shape[1], 4, 4)
+
+        transform_chain = [transforms_mat[:, 0]]
+        for i in range(1, self.parents.shape[0]):
+            # Subtract the joint location at the rest pose
+            # No need for rotation, since it's identity when at rest
+            curr_res = torch.matmul(transform_chain[self.parents[i]],
+                                    transforms_mat[:, i])
+            transform_chain.append(curr_res)
+
+        transforms = torch.stack(transform_chain, dim=1)
+
+        global_rotmat = transforms[:, :, :3, :3]
+
+        # The last column of the transformations contains the posed joints
+        posed_joints = transforms[:, :, :3, 3]
+
+        return global_rotmat, posed_joints
 
 
 class GenderedSMPL(torch.nn.Module):

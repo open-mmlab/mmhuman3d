@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from einops.einops import rearrange
 from torch.nn import functional as F
 
 
@@ -60,16 +61,39 @@ def rot6d_to_rotmat(x):
     Output:
         (B,3,3) Batch of corresponding rotation matrices
     """
-    if isinstance(x, torch.Tensor):
-        x = x.reshape(-1, 3, 2)
-    elif isinstance(x, np.ndarray):
-        x = x.view(-1, 3, 2)
-    a1 = x[:, :, 0]
-    a2 = x[:, :, 1]
-    b1 = F.normalize(a1)
-    b2 = F.normalize(a2 - torch.einsum('bi,bi->b', b1, a2).unsqueeze(-1) * b1)
-    b3 = torch.cross(b1, b2)
-    return torch.stack((b1, b2, b3), dim=-1)
+    if x.shape[-1] == 6:
+        batch_size = x.shape[0]
+        if len(x.shape) == 3:
+            num = x.shape[1]
+            x = rearrange(x, 'b n d -> (b n) d', d=6)
+        else:
+            num = 1
+        x = rearrange(x, 'b (k l) -> b k l', k=3, l=2)
+        # x = x.view(-1,3,2)
+        a1 = x[:, :, 0]
+        a2 = x[:, :, 1]
+        b1 = F.normalize(a1)
+        b2 = F.normalize(a2 -
+                         torch.einsum('bi,bi->b', b1, a2).unsqueeze(-1) * b1)
+        b3 = torch.cross(b1, b2, dim=-1)
+
+        mat = torch.stack((b1, b2, b3), dim=-1)
+        if num > 1:
+            mat = rearrange(
+                mat, '(b n) h w-> b n h w', b=batch_size, n=num, h=3, w=3)
+    else:
+        if isinstance(x, torch.Tensor):
+            x = x.reshape(-1, 3, 2)
+        elif isinstance(x, np.ndarray):
+            x = x.view(-1, 3, 2)
+        a1 = x[:, :, 0]
+        a2 = x[:, :, 1]
+        b1 = F.normalize(a1)
+        b2 = F.normalize(a2 -
+                         torch.einsum('bi,bi->b', b1, a2).unsqueeze(-1) * b1)
+        b3 = torch.cross(b1, b2)
+        mat = torch.stack((b1, b2, b3), dim=-1)
+    return mat
 
 
 def rotation_matrix_to_angle_axis(rotation_matrix):
@@ -173,10 +197,10 @@ def rotation_matrix_to_quaternion(rotation_matrix, eps=1e-6):
         raise ValueError(
             'Input size must be a three dimensional tensor. Got {}'.format(
                 rotation_matrix.shape))
-    if not rotation_matrix.shape[-2:] == (3, 4):
-        raise ValueError(
-            'Input size must be a N x 3 x 4  tensor. Got {}'.format(
-                rotation_matrix.shape))
+    # if not rotation_matrix.shape[-2:] == (3, 4):
+    #     raise ValueError(
+    #         'Input size must be a N x 3 x 4  tensor. Got {}'.format(
+    #             rotation_matrix.shape))
 
     rmat_t = torch.transpose(rotation_matrix, 1, 2)
 
@@ -391,3 +415,142 @@ def weak_perspective_projection(points, scale, translation):
         points[:, :, :2] + translation.view(-1, 1, 2))
 
     return projected_points
+
+
+def projection(pred_joints, pred_camera, iwp_mode=True):
+    """Project 3D points on the image plane based on the given camera info,
+    Identity rotation and Weak Perspective (IWP) camera is used when
+    iwp_mode=True, more about camera settings:
+
+    SPEC: Seeing People in the Wild with an Estimated Camera, ICCV 2021
+    """
+    batch_size = pred_joints.shape[0]
+    if iwp_mode:
+        cam_sxy = pred_camera['cam_sxy']
+        pred_cam_t = torch.stack([
+            cam_sxy[:, 1], cam_sxy[:, 2], 2 * 5000. /
+            (224. * cam_sxy[:, 0] + 1e-9)
+        ],
+                                 dim=-1)
+
+        camera_center = torch.zeros(batch_size, 2)
+        pred_keypoints_2d = perspective_projection(
+            pred_joints,
+            rotation=torch.eye(3).unsqueeze(0).expand(batch_size, -1, -1).to(
+                pred_joints.device),
+            translation=pred_cam_t,
+            focal_length=5000.,
+            camera_center=camera_center)
+
+    else:
+        assert type(pred_camera) is dict
+
+        bbox_scale, bbox_center = pred_camera['bbox_scale'], pred_camera[
+            'bbox_center']
+        img_w, img_h, _ = pred_camera['img_w'], pred_camera[
+            'img_h'], pred_camera['crop_res']
+        cam_sxy, cam_rotmat, cam_intrinsics = pred_camera[
+            'cam_sxy'], pred_camera['cam_rotmat'], pred_camera[
+                'cam_intrinsics']
+        if 'cam_t' in pred_camera:
+            cam_t = pred_camera['cam_t']
+        else:
+            cam_t = convert_to_full_img_cam(
+                pare_cam=cam_sxy,
+                bbox_height=bbox_scale * 200.,
+                bbox_center=bbox_center,
+                img_w=img_w,
+                img_h=img_h,
+                focal_length=cam_intrinsics[:, 0, 0],
+            )
+
+        pred_keypoints_2d = perspective_projection(
+            pred_joints, rotation=cam_rotmat, translation=cam_t)
+    return pred_keypoints_2d
+
+
+def convert_to_full_img_cam(pare_cam, bbox_height, bbox_center, img_w, img_h,
+                            focal_length):
+    # Converts weak perspective camera estimated by PARE in
+    # bbox coords to perspective camera in full image coordinates
+    # from https://arxiv.org/pdf/2009.06549.pdf
+    s, tx, ty = pare_cam[:, 0], pare_cam[:, 1], pare_cam[:, 2]
+    res = 224
+    r = bbox_height / res
+    tz = 2 * focal_length / (r * res * s)
+
+    cx = 2 * (bbox_center[:, 0] - (img_w / 2.)) / (s * bbox_height)
+    cy = 2 * (bbox_center[:, 1] - (img_h / 2.)) / (s * bbox_height)
+
+    if torch.is_tensor(pare_cam):
+        cam_t = torch.stack([tx + cx, ty + cy, tz], dim=-1)
+    else:
+        cam_t = np.stack([tx + cx, ty + cy, tz], axis=-1)
+
+    return cam_t
+
+
+def compute_twist_rotation(rotation_matrix, twist_axis):
+    '''
+    Compute the twist component of given rotation and twist axis
+    https://stackoverflow.com/questions/3684269/component-of-a-quaternion-rotation-around-an-axis
+    Parameters
+    ----------
+    rotation_matrix : Tensor (B, 3, 3,)
+        The rotation to convert
+    twist_axis : Tensor (B, 3,)
+        The twist axis
+    Returns
+    -------
+    Tensor (B, 3, 3)
+        The twist rotation
+    '''
+    quaternion = rotation_matrix_to_quaternion(rotation_matrix)
+
+    twist_axis = twist_axis / (
+        torch.norm(twist_axis, dim=1, keepdim=True) + 1e-9)
+
+    projection = torch.einsum('bi,bi->b', twist_axis,
+                              quaternion[:, 1:]).unsqueeze(-1) * twist_axis
+
+    twist_quaternion = torch.cat([quaternion[:, 0:1], projection], dim=1)
+    twist_quaternion = twist_quaternion / (
+        torch.norm(twist_quaternion, dim=1, keepdim=True) + 1e-9)
+
+    twist_rotation = quaternion_to_rotation_matrix(twist_quaternion)
+    twist_aa = quaternion_to_angle_axis(twist_quaternion)
+
+    twist_angle = torch.sum(
+        twist_aa, dim=1, keepdim=True) / torch.sum(
+            twist_axis, dim=1, keepdim=True)
+
+    return twist_rotation, twist_angle
+
+
+def quaternion_to_rotation_matrix(quat):
+    """Convert quaternion coefficients to rotation matrix.
+
+    Args:
+        quat: size = [B, 4] 4 <===>(w, x, y, z)
+    Returns:
+        Rotation matrix corresponding to the quaternion -- size = [B, 3, 3]
+    """
+    norm_quat = quat
+    norm_quat = norm_quat / norm_quat.norm(p=2, dim=1, keepdim=True)
+    w, x, y, z = norm_quat[:, 0], norm_quat[:, 1], norm_quat[:,
+                                                             2], norm_quat[:,
+                                                                           3]
+
+    B = quat.size(0)
+
+    w2, x2, y2, z2 = w.pow(2), x.pow(2), y.pow(2), z.pow(2)
+    wx, wy, wz = w * x, w * y, w * z
+    xy, xz, yz = x * y, x * z, y * z
+
+    rotMat = torch.stack([
+        w2 + x2 - y2 - z2, 2 * xy - 2 * wz, 2 * wy + 2 * xz, 2 * wz + 2 * xy,
+        w2 - x2 + y2 - z2, 2 * yz - 2 * wx, 2 * xz - 2 * wy, 2 * wx + 2 * yz,
+        w2 - x2 - y2 + z2
+    ],
+                         dim=1).view(B, 3, 3)
+    return rotMat
