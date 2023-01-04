@@ -10,15 +10,16 @@ from smplx.lbs import batch_rodrigues
 from torch.nn import functional as F
 
 from mmhuman3d.models.body_models.smpl import SMPL
+from mmhuman3d.models.body_models.smplx import get_partial_smpl
 from mmhuman3d.utils.camera_utils import homo_vector
 from mmhuman3d.utils.geometry import (
     compute_twist_rotation,
     projection,
     rot6d_to_rotmat,
     rotation_matrix_to_angle_axis,
+    rotmat_to_rot6d,
 )
 from mmhuman3d.utils.img_utils import j2d_processing
-from mmhuman3d.utils.transforms import rotmat_to_rot6d
 from ...core import constants
 from ..bert.modeling_bert import (
     BertConfig,
@@ -400,20 +401,20 @@ class Regressor(nn.Module):
     def __init__(self,
                  mesh_model,
                  bhf_mode,
-                 opt_wrist,
                  use_iwp_cam,
-                 pred_vis_h,
-                 hand_vis_th,
-                 adapt_integr,
                  n_iter,
                  smpl_model_dir,
                  feat_dim,
                  smpl_mean_params,
-                 use_cam_feat=False,
+                 use_cam_feat=True,
                  feat_dim_hand=0,
                  feat_dim_face=0,
                  bhf_names=['body'],
-                 smpl_models={}):
+                 smpl_models={},
+                 hand_vis_th=0.1,
+                 adapt_integr=True,
+                 opt_wrist=True,
+                 pred_vis_h=True):
         super().__init__()
         self.opt_wrist = opt_wrist
         self.use_iwp_cam = use_iwp_cam
@@ -1496,30 +1497,35 @@ class PyMAFXHead(BaseModule):
 
     def __init__(self,
                  maf_on,
+                 n_iter,
                  bhf_mode,
-                 smpl2lhand,
-                 smpl2rhand,
+                 grid_align,
+                 bhf_names,
                  hf_root_idx,
                  mano_ds_len,
-                 grid_align,
                  hf_box_center=True,
                  use_iwp_cam=True,
                  init_cfg=None):
         super(PyMAFXHead, self).__init__(init_cfg=init_cfg)
         self.maf_on = maf_on
         self.bhf_mode = bhf_mode
-        self.smpl2lhand = smpl2lhand
-        self.smpl2rhand = smpl2rhand
         self.use_iwp_cam = use_iwp_cam
         self.hf_root_idx = hf_root_idx
         self.mano_ds_len = mano_ds_len
         self.hf_box_center = hf_box_center
         self.grid_align = grid_align
+        self.bhf_names = bhf_names
         self.opt_wrist = True
         self.mano_sampler = Mesh_Sampler(type='mano', level=1)
         self.mesh_sampler = Mesh_Sampler(type='smpl')
         self.init_mesh_output = None
         self.batch_size = 1
+        self.n_iter = n_iter
+        smpl2limb_vert_faces = get_partial_smpl()
+        self.smpl2lhand = torch.from_numpy(
+            smpl2limb_vert_faces['lhand']['vids']).long()
+        self.smpl2rhand = torch.from_numpy(
+            smpl2limb_vert_faces['rhand']['vids']).long()
 
     def init_mesh(self, regressor, batch_size, J_regressor=None, rw_cam={}):
         """initialize the mesh model with default poses and shapes."""
@@ -1547,22 +1553,21 @@ class PyMAFXHead(BaseModule):
                 regressor,
                 batch_size,
                 limb_gfeat_dict,
-                bhf_names=None,
                 part_names=None,
-                rw_cam={},
-                n_iter=3):
+                rw_cam={}):
         out_dict = {}
         out_dict['mesh_out'] = [self.init_mesh_output]
         out_dict['dp_out'] = []
+        self.maf_extractor = maf_extractor
         if fuse_grid_align:
             att_starts = self.grid_align['att_starts']
         # initial parameters
         mesh_output = self.init_mesh(regressor, batch_size, J_regressor,
                                      rw_cam)
 
-        for rf_i in range(n_iter):
+        for rf_i in range(self.n_iter):
             current_states = {}
-            if 'body' in bhf_names:
+            if 'body' in self.bhf_names:
                 pred_cam = mesh_output['pred_cam'].detach()
                 pred_shape = mesh_output['pred_shape'].detach()
                 pred_pose = mesh_output['pred_pose'].detach()
@@ -1665,7 +1670,7 @@ class PyMAFXHead(BaseModule):
                 }
 
             # extract mesh-aligned features for the hand / face part
-            if 'hand' in bhf_names or 'face' in bhf_names:
+            if 'hand' in self.bhf_names or 'face' in self.bhf_names:
                 limb_rf_i = rf_i
                 hand_face_feat = {}
 
@@ -1682,7 +1687,7 @@ class PyMAFXHead(BaseModule):
                                                                     att_starts)
 
                         if limb_rf_i == 0 or grid_feat:
-                            limb_ref_feat_ctd = maf_extractor[hf_key][
+                            limb_ref_feat_ctd = self.maf_extractor[hf_key][
                                 limb_rf_i].sampling(
                                     grid_points,
                                     im_feat=limb_feat_i,
@@ -1723,7 +1728,7 @@ class PyMAFXHead(BaseModule):
                                     proj_hf_pts_crop_ctd = proj_hf_pts_crop[:,
                                                                             1:]
 
-                            limb_ref_feat_ctd = maf_extractor[hf_key][
+                            limb_ref_feat_ctd = self.maf_extractor[hf_key][
                                 limb_rf_i].sampling(
                                     proj_hf_pts_crop_ctd.detach(),
                                     im_feat=limb_feat_i,
@@ -1732,7 +1737,7 @@ class PyMAFXHead(BaseModule):
                         if fuse_grid_align and \
                            limb_rf_i >= att_starts:
 
-                            limb_grid_feature_ctd = maf_extractor[hf_key][
+                            limb_grid_feature_ctd = self.maf_extractor[hf_key][
                                 limb_rf_i].sampling(
                                     grid_points,
                                     im_feat=limb_feat_i,
@@ -1748,7 +1753,7 @@ class PyMAFXHead(BaseModule):
                             elif self.grid_align['use_fc']:
                                 att_ref_feat_ctd = limb_grid_ref_feat_ctd
 
-                            att_ref_feat_ctd = maf_extractor[hf_key][
+                            att_ref_feat_ctd = self.maf_extractor[hf_key][
                                 limb_rf_i].reduce_dim(
                                     att_ref_feat_ctd.permute(0, 2, 1)).view(
                                         batch_size, -1)
@@ -1764,20 +1769,21 @@ class PyMAFXHead(BaseModule):
                         hand_face_feat[part_name] = limb_gfeat_dict[part_name]
 
             # extract mesh-aligned features for the body part
-            if 'body' in bhf_names:
+            if 'body' in self.bhf_names:
                 if self.maf_on:
                     reduce_dim = (not fuse_grid_align) or (rf_i < att_starts)
                     if rf_i == 0 or grid_feat:
-                        ref_feature = maf_extractor['body'][rf_i].sampling(
-                            grid_points,
-                            im_feat=s_feat_i,
-                            reduce_dim=reduce_dim)
+                        ref_feature = self.maf_extractor['body'][
+                            rf_i].sampling(
+                                grid_points,
+                                im_feat=s_feat_i,
+                                reduce_dim=reduce_dim)
                     else:
                         # TODO: use a more sparse SMPL implementation
                         # (with 431 vertices) for acceleration
                         pred_smpl_verts_ds = self.mesh_sampler.downsample(
                             pred_smpl_verts)  # [B, 431, 3]
-                        ref_feature = maf_extractor['body'][rf_i](
+                        ref_feature = self.maf_extractor['body'][rf_i](
                             pred_smpl_verts_ds,
                             im_feat=s_feat_i,
                             cam={
@@ -1788,7 +1794,7 @@ class PyMAFXHead(BaseModule):
 
                     if fuse_grid_align and rf_i >= att_starts:
                         if rf_i > 0 and not grid_feat:
-                            grid_feature = maf_extractor['body'][
+                            grid_feature = self.maf_extractor['body'][
                                 rf_i].sampling(
                                     grid_points,
                                     im_feat=s_feat_i,
@@ -1805,8 +1811,8 @@ class PyMAFXHead(BaseModule):
                         elif self.grid_align['use_fc']:
                             att_ref_feat = grid_ref_feat
 
-                        att_ref_feat = maf_extractor['body'][rf_i].reduce_dim(
-                            att_ref_feat.permute(0, 2, 1))
+                        att_ref_feat = self.maf_extractor['body'][
+                            rf_i].reduce_dim(att_ref_feat.permute(0, 2, 1))
                         att_ref_feat = att_ref_feat.view(batch_size, -1)
 
                         ref_feature = att_feat_reduce['body'][rf_i -

@@ -554,3 +554,18 @@ def quaternion_to_rotation_matrix(quat):
     ],
                          dim=1).view(B, 3, 3)
     return rotMat
+
+
+def rotmat_to_rot6d(x):
+    """Convert 3x3 rotation matrix to 6D rotation representation.
+
+    Based on "On the Continuity of Rotation Representations in Neural Networks"
+    Input:
+        (B,3,3) Batch of corresponding rotation matrices
+    Output:
+        (B,6) Batch of 6-D rotation representations
+    """
+    batch_size = x.shape[0]
+    x = x[:, :, :2]
+    x = x.reshape(batch_size, 6)
+    return x

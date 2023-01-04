@@ -4,8 +4,7 @@ from abc import ABCMeta
 import torch
 import torch.nn as nn
 
-from mmhuman3d.core.conventions.keypoints_mapping import coco
-from mmhuman3d.models.body_models.smplx import SMPLX_ALL, get_partial_smpl
+from mmhuman3d.models.body_models.smplx import SMPLX_ALL
 from mmhuman3d.models.heads.pymafx_head import (
     IUV_predict_layer,
     MAF_Extractor,
@@ -17,6 +16,9 @@ from ...core import constants
 from ..backbones.builder import build_backbone
 from ..heads.builder import build_head
 from .base_architecture import BaseArchitecture
+
+GRID_SIZE = 21
+GLOBAL_FEAT_DIM = 2048
 
 
 def get_fusion_modules(module_keys, ma_feat_dim, grid_feat_dim, n_iter,
@@ -61,20 +63,12 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                  hf_mlp_dim=[256, 128, 64, 5],
                  loss_uv_regression_weight=0.5,
                  hf_model_cfg=None,
+                 use_iwp_cam=True,
                  device=torch.device('cuda'),
                  init_cfg=None):
         super(PyMAFX, self).__init__(init_cfg)
-        assert bhf_mode in ['body_hand', 'full_body']
-        self.opt_wrist = True
-        self.use_iwp_cam = True
-        self.pred_vis_h = True
-        self.hand_vis_th = 0.1
-        self.adapt_integr = True
-        self.use_cam_feat = True
-
+        self.use_iwp_cam = use_iwp_cam
         self.backbone = backbone
-        self.attention_config = attention_config
-        self.joint_regressor_train_extra = joint_regressor_train_extra
         self.smpl_model_dir = smpl_model_dir
         self.hf_model_cfg = hf_model_cfg
         self.mesh_model = mesh_model
@@ -86,42 +80,26 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         self.n_iter = n_iter
         self.with_uv = loss_uv_regression_weight > 0
         self.mlp_dim = mlp_dim
+        self.hf_mlp_dim = hf_mlp_dim
         self.aux_supv_on = aux_supv_on
         self.hf_aux_supv_on = hf_aux_supv_on
-        self.hf_mlp_dim = hf_mlp_dim
         self.device = device
-        self.global_feat_dim = 2048
-        self.global_mode = not maf_on
         self.maf_on = maf_on
-        self.prepare_body_module()
-        self.encoders = nn.ModuleDict()
-        self.part_module_names = {
-            'body': {},
-            'hand': {},
-            'face': {},
-            'link': {}
-        }
-        self.bhf_ma_feat_dim = {}
-        self.build_encoders()
-        self.grid_feature()
-        self.regressor = nn.ModuleList()
-        self.build_regressor()
-        self.maf_extractor = nn.ModuleDict()
-        self.build_maf_extractor()
-        self.hf_box_center = True
-        head['smpl2lhand'] = self.smpl2lhand
-        head['smpl2rhand'] = self.smpl2rhand
+        self.fuse_grid_align = grid_align['use_att'] or grid_align['use_fc']
+        assert not (grid_align['use_att'] and grid_align['use_fc'])
+        self.grid_feat_dim = GRID_SIZE * GRID_SIZE * self.mlp_dim[-1]
+        self.bhf_att_feat_dim = {}
+        self._prepare_body_module(joint_regressor_train_extra)
+        self._create_encoder()
+        self._create_attention_modules(attention_config)
+        self._create_regressor()
+        self._create_maf_extractor()
         head['hf_root_idx'] = self.hf_root_idx
         head['mano_ds_len'] = self.mano_ds_len
+        head['bhf_names'] = self.bhf_names
         self.head = build_head(head)
 
-    def prepare_body_module(self):
-        self.smpl_mode = (self.mesh_model['name'] == 'smpl')
-        self.smplx_mode = (self.mesh_model['name'] == 'smplx')
-        self.smpl_mean_params = self.mesh_model['smpl_mean_params']
-        self.body_hand_mode = (self.bhf_mode == 'body_hand')
-        self.full_body_mode = (self.bhf_mode == 'full_body')
-
+    def _prepare_body_module(self, joint_regressor_train_extra):
         self.bhf_names = []
         if self.bhf_mode in ['body_hand', 'full_body']:
             self.bhf_names.append('body')
@@ -131,54 +109,35 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
             self.bhf_names.append('face')
 
         # the limb parts need to be handled
-        if self.body_hand_mode:
+        if self.bhf_mode == 'body_hand':
             self.part_names = ['lhand', 'rhand']
-        elif self.full_body_mode:
+        elif self.bhf_mode == 'full_body':
             self.part_names = ['lhand', 'rhand', 'face']
         else:
             self.part_names = []
         # joint index info
-        if not self.smpl_mode:
-            h_root_idx = constants.HAND_NAMES.index('wrist')
-            h_idx = constants.HAND_NAMES.index('middle1')
-            f_idx = constants.FACIAL_LANDMARKS.index('nose_middle')
-            self.hf_center_idx = {
-                'lhand': h_idx,
-                'rhand': h_idx,
-                'face': f_idx
-            }
-            self.hf_root_idx = {
-                'lhand': h_root_idx,
-                'rhand': h_root_idx,
-                'face': f_idx
-            }
-
-            lh_idx_coco = coco.COCO_KEYPOINTS.index('left_wrist')
-            rh_idx_coco = coco.COCO_KEYPOINTS.index('right_wrist')
-            f_idx_coco = coco.COCO_KEYPOINTS.index('nose')
-            self.hf_root_idx_coco = {
-                'lhand': lh_idx_coco,
-                'rhand': rh_idx_coco,
-                'face': f_idx_coco
-            }
-
+        h_root_idx = constants.HAND_NAMES.index('wrist')
+        f_idx = constants.FACIAL_LANDMARKS.index('nose_middle')
+        self.hf_root_idx = {
+            'lhand': h_root_idx,
+            'rhand': h_root_idx,
+            'face': f_idx
+        }
         # create parametric mesh models
         self.smpl_family = {}
         self.smpl_family['body'] = SMPLX_ALL(
             gender=self.mesh_model['gender'],
-            joint_regressor_train_extra=self.joint_regressor_train_extra,
+            joint_regressor_train_extra=joint_regressor_train_extra,
             smpl_model_dir=self.smpl_model_dir)
 
-    def build_encoders(self):
+    def _create_encoder(self):
+        self.encoders = nn.ModuleDict()
+        self.bhf_ma_feat_dim = {}
         # encoder for the body part
         if 'body' in self.bhf_names and self.backbone is not None:
             self.encoders['body'] = build_backbone(self.backbone)
-            self.part_module_names['body'].update(
-                {'encoders.body': self.encoders['body']})
 
             self.mesh_sampler = Mesh_Sampler(type='smpl')
-            self.part_module_names['body'].update(
-                {'mesh_sampler': self.mesh_sampler})
             if not self.grid_feat:
                 self.ma_feat_dim = self.mesh_sampler.Dmap.shape[
                     0] * self.mlp_dim[-1]
@@ -189,8 +148,6 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
             if self.aux_supv_on:
                 assert self.maf_on
                 self.dp_head = IUV_predict_layer(feat_dim=dp_feat_dim)
-                self.part_module_names['body'].update(
-                    {'dp_head': self.dp_head})
         # encoders for the hand / face parts
         if 'hand' in self.bhf_names or 'face' in self.bhf_names and \
            self.hf_model_cfg is not None:
@@ -198,57 +155,27 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 if hf in self.bhf_names:
                     self.encoders[hf] = build_backbone(
                         self.hf_model_cfg['backbone'])
-                    self.part_module_names[hf].update(
-                        {f'encoders.{hf}': self.encoders[hf]})
             if self.hf_aux_supv_on:
                 assert self.maf_on
                 self.dp_head_hf = nn.ModuleDict()
                 if 'hand' in self.bhf_names:
                     self.dp_head_hf['hand'] = IUV_predict_layer(
                         feat_dim=self.hf_sfeat_dim[-1], mode='pncc')
-                    self.part_module_names['hand'].update(
-                        {'dp_head_hf.hand': self.dp_head_hf['hand']})
                 if 'face' in self.bhf_names:
                     self.dp_head_hf['face'] = IUV_predict_layer(
                         feat_dim=self.hf_sfeat_dim[-1], mode='pncc')
-                    self.part_module_names['face'].update(
-                        {'dp_head_hf.face': self.dp_head_hf['face']})
 
-            smpl2limb_vert_faces = get_partial_smpl()
-            self.smpl2lhand = torch.from_numpy(
-                smpl2limb_vert_faces['lhand']['vids']).long()
-            self.smpl2rhand = torch.from_numpy(
-                smpl2limb_vert_faces['rhand']['vids']).long()
-
-    def grid_feature(self):
-        # grid points for grid feature extraction
-        grid_size = 21
-        xv, yv = torch.meshgrid([
-            torch.linspace(-1, 1, grid_size),
-            torch.linspace(-1, 1, grid_size)
-        ])
-        grid_points = torch.stack([xv.reshape(-1),
-                                   yv.reshape(-1)]).unsqueeze(0)
-        self.register_buffer('grid_points', grid_points)
-        self.grid_feat_dim = grid_size * grid_size * self.mlp_dim[-1]
-
+    def _create_attention_modules(self, attention_config):
         # the fusion of grid and mesh-aligned features
-        self.fuse_grid_align = self.grid_align['use_att'] or self.grid_align[
-            'use_fc']
-        assert not (self.grid_align['use_att'] and self.grid_align['use_fc'])
-
         if self.fuse_grid_align:
-            self.att_starts = self.grid_align['att_starts']
-            n_iter_att = self.n_iter - self.att_starts
+            n_iter_att = self.n_iter - self.grid_align['att_starts']
             self.att_feat_dim_idx = -self.grid_align['att_feat_idx']
             num_att_heads = self.grid_align['att_head']
             hidden_feat_dim = self.mlp_dim[self.att_feat_dim_idx]
-            self.bhf_att_feat_dim = {'body': 2048}
+            self.bhf_att_feat_dim.update({'body': 2048})
         if 'hand' in self.bhf_names:
             self.mano_sampler = Mesh_Sampler(type='mano', level=1)
             self.mano_ds_len = self.mano_sampler.Dmap.shape[0]
-            self.part_module_names['hand'].update(
-                {'mano_sampler': self.mano_sampler})
 
             self.bhf_ma_feat_dim.update(
                 {'hand': self.mano_ds_len * self.hf_mlp_dim[-1]})
@@ -277,16 +204,12 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                     hfimg_feat_dim_list['face'] = self.hf_sfeat_dim[
                         -n_iter_att:]
             self.align_attention = get_attention_modules(
-                self.attention_config,
+                attention_config,
                 self.bhf_names,
                 hfimg_feat_dim_list,
                 hidden_feat_dim,
                 n_iter=n_iter_att,
                 num_attention_heads=num_att_heads)
-
-            for part in self.bhf_names:
-                self.part_module_names[part].update(
-                    {f'align_attention.{part}': self.align_attention[part]})
 
         if self.fuse_grid_align:
             self.att_feat_reduce = get_fusion_modules(
@@ -295,17 +218,15 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 self.grid_feat_dim,
                 n_iter=n_iter_att,
                 out_feat_len=self.bhf_att_feat_dim)
-            for part in self.bhf_names:
-                self.part_module_names[part].update(
-                    {f'att_feat_reduce.{part}': self.att_feat_reduce[part]})
 
-    def build_regressor(self):
+    def _create_regressor(self):
+        self.regressor = nn.ModuleList()
         for i in range(self.n_iter):
             ref_infeat_dim = 0
             if 'body' in self.bhf_names:
                 if self.maf_on:
                     if self.fuse_grid_align:
-                        if i >= self.att_starts:
+                        if i >= self.grid_align['att_starts']:
                             ref_infeat_dim = self.bhf_att_feat_dim['body']
                         elif i == 0 or self.grid_feat:
                             ref_infeat_dim = self.grid_feat_dim
@@ -317,103 +238,54 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                         else:
                             ref_infeat_dim = self.ma_feat_dim
                 else:
-                    ref_infeat_dim = self.global_feat_dim
+                    ref_infeat_dim = GLOBAL_FEAT_DIM
 
-            if self.smpl_mode:
-                self.regressor.append(
-                    Regressor(
-                        self.mesh_model,
-                        self.bhf_mode,
-                        self.opt_wrist,
-                        self.use_iwp_cam,
-                        self.pred_vis_h,
-                        self.hand_vis_th,
-                        self.adapt_integr,
-                        self.n_iter,
-                        self.smpl_model_dir,
-                        feat_dim=ref_infeat_dim,
-                        smpl_mean_params=self.smpl_mean_params,
-                        use_cam_feat=self.use_cam_feat,
-                        smpl_models=self.smpl_family))
-            else:
-                if self.maf_on:
-                    if 'hand' in self.bhf_names or 'face' in self.bhf_names:
-                        if i == 0:
-                            feat_dim_hand = self.grid_feat_dim if 'hand' in \
-                                self.bhf_names else None
-                            feat_dim_face = self.grid_feat_dim if 'face' in \
-                                self.bhf_names else None
-                        else:
-                            if self.fuse_grid_align:
-                                feat_dim_hand = self.bhf_att_feat_dim[
-                                    'hand'] if 'hand' in self.bhf_names \
-                                    else None
-                                feat_dim_face = self.bhf_att_feat_dim[
-                                    'face'] if 'face' in self.bhf_names \
-                                    else None
-                            else:
-                                feat_dim_hand = self.bhf_ma_feat_dim[
-                                    'hand'] if 'hand' in self.bhf_names \
-                                    else None
-                                feat_dim_face = self.bhf_ma_feat_dim[
-                                    'face'] if 'face' in self.bhf_names \
-                                    else None
+            if self.maf_on:
+                if 'hand' in self.bhf_names or 'face' in self.bhf_names:
+                    if i == 0:
+                        feat_dim_hand = self.grid_feat_dim if 'hand' in \
+                            self.bhf_names else None
+                        feat_dim_face = self.grid_feat_dim if 'face' in \
+                            self.bhf_names else None
                     else:
-                        feat_dim_hand = ref_infeat_dim
-                        feat_dim_face = ref_infeat_dim
+                        if self.fuse_grid_align:
+                            feat_dim_hand = self.bhf_att_feat_dim[
+                                'hand'] if 'hand' in self.bhf_names \
+                                else None
+                            feat_dim_face = self.bhf_att_feat_dim[
+                                'face'] if 'face' in self.bhf_names \
+                                else None
+                        else:
+                            feat_dim_hand = self.bhf_ma_feat_dim[
+                                'hand'] if 'hand' in self.bhf_names \
+                                else None
+                            feat_dim_face = self.bhf_ma_feat_dim[
+                                'face'] if 'face' in self.bhf_names \
+                                else None
                 else:
-                    ref_infeat_dim = self.global_feat_dim
-                    feat_dim_hand = self.global_feat_dim
-                    feat_dim_face = self.global_feat_dim
+                    feat_dim_hand = ref_infeat_dim
+                    feat_dim_face = ref_infeat_dim
+            else:
+                ref_infeat_dim = GLOBAL_FEAT_DIM
+                feat_dim_hand = GLOBAL_FEAT_DIM
+                feat_dim_face = GLOBAL_FEAT_DIM
 
-                self.regressor.append(
-                    Regressor(
-                        self.mesh_model,
-                        self.bhf_mode,
-                        self.opt_wrist,
-                        self.use_iwp_cam,
-                        self.pred_vis_h,
-                        self.hand_vis_th,
-                        self.adapt_integr,
-                        self.n_iter,
-                        self.smpl_model_dir,
-                        feat_dim=ref_infeat_dim,
-                        smpl_mean_params=self.smpl_mean_params,
-                        use_cam_feat=self.use_cam_feat,
-                        feat_dim_hand=feat_dim_hand,
-                        feat_dim_face=feat_dim_face,
-                        bhf_names=self.bhf_names,
-                        smpl_models=self.smpl_family))
+            self.regressor.append(
+                Regressor(
+                    self.mesh_model,
+                    self.bhf_mode,
+                    self.use_iwp_cam,
+                    self.n_iter,
+                    self.smpl_model_dir,
+                    feat_dim=ref_infeat_dim,
+                    smpl_mean_params=self.mesh_model['smpl_mean_params'],
+                    feat_dim_hand=feat_dim_hand,
+                    feat_dim_face=feat_dim_face,
+                    bhf_names=self.bhf_names,
+                    smpl_models=self.smpl_family))
 
-            # assign sub-regressor to each part
-            for dec_name, dec_module in self.regressor[-1].named_children():
-                if 'hand' in dec_name:
-                    self.part_module_names['hand'].update({
-                        'regressor.{}.{}.'.format(
-                            len(self.regressor) - 1, dec_name):
-                        dec_module
-                    })
-                elif 'face' in dec_name or 'head' in dec_name or \
-                     'exp' in dec_name:
-                    self.part_module_names['face'].update({
-                        'regressor.{}.{}.'.format(
-                            len(self.regressor) - 1, dec_name):
-                        dec_module
-                    })
-                elif 'res' in dec_name or 'vis' in dec_name:
-                    self.part_module_names['link'].update({
-                        'regressor.{}.{}.'.format(
-                            len(self.regressor) - 1, dec_name):
-                        dec_module
-                    })
-                elif 'body' in self.part_module_names:
-                    self.part_module_names['body'].update({
-                        'regressor.{}.{}.'.format(
-                            len(self.regressor) - 1, dec_name):
-                        dec_module
-                    })
-
-    def build_maf_extractor(self):
+    def _create_maf_extractor(self):
+        self.maf_extractor = nn.ModuleDict()
         # mesh-aligned feature extractor
         for part in self.bhf_names:
             self.maf_extractor[part] = nn.ModuleList()
@@ -429,7 +301,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 filter_channels = [sfeat_dim[i]
                                    ] + filter_channels_default[filter_start:]
 
-                if self.grid_align['use_att'] and i >= self.att_starts:
+                if self.grid_align[
+                        'use_att'] and i >= self.grid_align['att_starts']:
                     self.maf_extractor[part].append(
                         MAF_Extractor(
                             filter_channels=filter_channels_default[
@@ -440,25 +313,6 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                         MAF_Extractor(
                             filter_channels=filter_channels,
                             iwp_cam_mode=self.use_iwp_cam))
-            self.part_module_names[part].update(
-                {f'maf_extractor.{part}': self.maf_extractor[part]})
-
-        # check all modules have been added to part_module_names
-        model_dict_all = dict.fromkeys(self.state_dict().keys())
-        for key in self.part_module_names.keys():
-            for name in list(model_dict_all.keys()):
-                for k in self.part_module_names[key].keys():
-                    if name.startswith(k):
-                        del model_dict_all[name]
-                # if name.startswith('regressor.') and '.smpl.' in name:
-                #     del model_dict_all[name]
-                # if name.startswith('regressor.') and '.mano.' in name:
-                #     del model_dict_all[name]
-                if name.startswith('regressor.') and '.init_' in name:
-                    del model_dict_all[name]
-                if name == 'grid_points':
-                    del model_dict_all[name]
-        assert (len(model_dict_all.keys()) == 0)
 
     def forward_train(self, **kwargs):
         """Forward function for general training.
@@ -541,9 +395,16 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 for k in limb_feat_dict.keys():
                     assert len(limb_feat_dict[k]) == self.n_iter
 
+        # grid points for grid feature extraction
+        xv, yv = torch.meshgrid([
+            torch.linspace(-1, 1, GRID_SIZE),
+            torch.linspace(-1, 1, GRID_SIZE)
+        ])
+        grid_points = torch.stack([xv.reshape(-1),
+                                   yv.reshape(-1)]).unsqueeze(0)
         # grid-pattern points
         grid_points = torch.transpose(
-            self.grid_points.expand(batch_size, -1, -1), 1, 2)
+            grid_points.expand(batch_size, -1, -1), 1, 2).to(self.device)
 
         # parameter predictions
         out_dict = self.head(batch, s_feat_body, limb_feat_dict, g_feat,
@@ -551,6 +412,6 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                              self.fuse_grid_align, self.grid_feat,
                              self.align_attention, self.maf_extractor,
                              self.regressor, batch_size, limb_gfeat_dict,
-                             self.bhf_names, self.part_names)
+                             self.part_names)
 
         return out_dict

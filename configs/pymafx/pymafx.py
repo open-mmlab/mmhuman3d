@@ -63,6 +63,7 @@ model = dict(
     head=dict(
         type='PyMAFXHead',
         maf_on=__maf_on__,
+        n_iter=3,
         bhf_mode='full_body',
         grid_align=dict(
             use_att=True,
