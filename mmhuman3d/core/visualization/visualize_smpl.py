@@ -1058,162 +1058,162 @@ def render_smpl(
         return None
 
 
-def visualize_smpl_calibration(
-    K,
-    R,
-    T,
-    resolution,
-    **kwargs,
-) -> None:
-    """Visualize a smpl mesh which has opencv calibration matrix defined in
-    screen."""
-    assert K is not None, '`K` is required.'
-    assert resolution is not None, '`resolution`(h, w) is required.'
-    func = partial(
-        render_smpl,
-        projection='perspective',
-        convention='opencv',
-        orig_cam=None,
-        in_ndc=False)
-    for k in func.keywords.keys():
-        if k in kwargs:
-            kwargs.pop(k)
-    return func(K=K, R=R, T=T, resolution=resolution, **kwargs)
+# def visualize_smpl_calibration(
+#     K,
+#     R,
+#     T,
+#     resolution,
+#     **kwargs,
+# ) -> None:
+#     """Visualize a smpl mesh which has opencv calibration matrix defined in
+#     screen."""
+#     assert K is not None, '`K` is required.'
+#     assert resolution is not None, '`resolution`(h, w) is required.'
+#     func = partial(
+#         render_smpl,
+#         projection='perspective',
+#         convention='opencv',
+#         orig_cam=None,
+#         in_ndc=False)
+#     for k in func.keywords.keys():
+#         if k in kwargs:
+#             kwargs.pop(k)
+#     return func(K=K, R=R, T=T, resolution=resolution, **kwargs)
 
 
-def visualize_smpl_hmr(cam_transl,
-                       bbox=None,
-                       kp2d=None,
-                       focal_length=5000,
-                       det_width=224,
-                       det_height=224,
-                       bbox_format='xyxy',
-                       **kwargs) -> None:
-    """Simplest way to visualize HMR or SPIN or Smplify pred smpl with origin
-    frames and predicted cameras."""
-    if kp2d is not None:
-        bbox = convert_kp2d_to_bbox(kp2d, bbox_format=bbox_format)
-    Ks = convert_bbox_to_intrinsic(bbox, bbox_format=bbox_format)
-    K = torch.Tensor(
-        get_default_hmr_intrinsic(
-            focal_length=focal_length,
-            det_height=det_height,
-            det_width=det_width))
-    func = partial(
-        render_smpl,
-        projection='perspective',
-        convention='opencv',
-        in_ndc=False,
-        K=None,
-        R=None,
-        orig_cam=None,
-    )
-    if isinstance(cam_transl, np.ndarray):
-        cam_transl = torch.Tensor(cam_transl)
-    T = torch.cat([
-        cam_transl[..., [1]], cam_transl[..., [2]], 2 * focal_length /
-        (det_width * cam_transl[..., [0]] + 1e-9)
-    ], -1)
-    for k in func.keywords.keys():
-        if k in kwargs:
-            kwargs.pop(k)
-    return func(Ks=Ks, K=K, T=T, **kwargs)
+# def visualize_smpl_hmr(cam_transl,
+#                        bbox=None,
+#                        kp2d=None,
+#                        focal_length=5000,
+#                        det_width=224,
+#                        det_height=224,
+#                        bbox_format='xyxy',
+#                        **kwargs) -> None:
+#     """Simplest way to visualize HMR or SPIN or Smplify pred smpl with origin
+#     frames and predicted cameras."""
+#     if kp2d is not None:
+#         bbox = convert_kp2d_to_bbox(kp2d, bbox_format=bbox_format)
+#     Ks = convert_bbox_to_intrinsic(bbox, bbox_format=bbox_format)
+#     K = torch.Tensor(
+#         get_default_hmr_intrinsic(
+#             focal_length=focal_length,
+#             det_height=det_height,
+#             det_width=det_width))
+#     func = partial(
+#         render_smpl,
+#         projection='perspective',
+#         convention='opencv',
+#         in_ndc=False,
+#         K=None,
+#         R=None,
+#         orig_cam=None,
+#     )
+#     if isinstance(cam_transl, np.ndarray):
+#         cam_transl = torch.Tensor(cam_transl)
+#     T = torch.cat([
+#         cam_transl[..., [1]], cam_transl[..., [2]], 2 * focal_length /
+#         (det_width * cam_transl[..., [0]] + 1e-9)
+#     ], -1)
+#     for k in func.keywords.keys():
+#         if k in kwargs:
+#             kwargs.pop(k)
+#     return func(Ks=Ks, K=K, T=T, **kwargs)
 
 
-def visualize_smpl_vibe(orig_cam=None,
-                        pred_cam=None,
-                        bbox=None,
-                        output_path='sample.mp4',
-                        resolution=None,
-                        aspect_ratio=1.0,
-                        bbox_scale_factor=1.25,
-                        bbox_format='xyxy',
-                        **kwargs) -> None:
-    """Simplest way to visualize pred smpl with origin frames and predicted
-    cameras."""
-    assert resolution is not None
-    if pred_cam is not None and bbox is not None:
-        orig_cam = torch.Tensor(
-            convert_crop_cam_to_orig_img(pred_cam, bbox, resolution[1],
-                                         resolution[0], aspect_ratio,
-                                         bbox_scale_factor, bbox_format))
-    assert orig_cam is not None, '`orig_cam` is required.'
+# def visualize_smpl_vibe(orig_cam=None,
+#                         pred_cam=None,
+#                         bbox=None,
+#                         output_path='sample.mp4',
+#                         resolution=None,
+#                         aspect_ratio=1.0,
+#                         bbox_scale_factor=1.25,
+#                         bbox_format='xyxy',
+#                         **kwargs) -> None:
+#     """Simplest way to visualize pred smpl with origin frames and predicted
+#     cameras."""
+#     assert resolution is not None
+#     if pred_cam is not None and bbox is not None:
+#         orig_cam = torch.Tensor(
+#             convert_crop_cam_to_orig_img(pred_cam, bbox, resolution[1],
+#                                          resolution[0], aspect_ratio,
+#                                          bbox_scale_factor, bbox_format))
+#     assert orig_cam is not None, '`orig_cam` is required.'
 
-    func = partial(
-        render_smpl,
-        projection='weakperspective',
-        convention='opencv',
-        in_ndc=True,
-    )
-    for k in func.keywords.keys():
-        if k in kwargs:
-            kwargs.pop(k)
-    return func(
-        orig_cam=orig_cam,
-        output_path=output_path,
-        resolution=resolution,
-        **kwargs)
-
-
-def visualize_T_pose(num_frames,
-                     body_model_config=None,
-                     body_model=None,
-                     orbit_speed=1.0,
-                     **kwargs) -> None:
-    """Simplest way to visualize a sequence of T pose."""
-    assert num_frames > 0, '`num_frames` is required.'
-    assert body_model_config is not None or body_model is not None
-    model_type = body_model_config[
-        'type'] if body_model_config is not None else body_model.name(
-        ).replace('-', '').lower()
-    if model_type == 'smpl':
-        poses = torch.zeros(num_frames, 72)
-    else:
-        poses = torch.zeros(num_frames, 165)
-
-    func = partial(
-        render_smpl,
-        betas=None,
-        transl=None,
-        verts=None,
-        convention='pytorch3d',
-        projection='fovperspective',
-        K=None,
-        R=None,
-        T=None,
-        origin_frames=None)
-    for k in func.keywords.keys():
-        if k in kwargs:
-            kwargs.pop(k)
-    return func(
-        poses=poses,
-        body_model_config=body_model_config,
-        body_model=body_model,
-        orbit_speed=orbit_speed,
-        **kwargs)
+#     func = partial(
+#         render_smpl,
+#         projection='weakperspective',
+#         convention='opencv',
+#         in_ndc=True,
+#     )
+#     for k in func.keywords.keys():
+#         if k in kwargs:
+#             kwargs.pop(k)
+#     return func(
+#         orig_cam=orig_cam,
+#         output_path=output_path,
+#         resolution=resolution,
+#         **kwargs)
 
 
-def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
-    """Simplest way to visualize a sequence of smpl pose.
+# def visualize_T_pose(num_frames,
+#                      body_model_config=None,
+#                      body_model=None,
+#                      orbit_speed=1.0,
+#                      **kwargs) -> None:
+#     """Simplest way to visualize a sequence of T pose."""
+#     assert num_frames > 0, '`num_frames` is required.'
+#     assert body_model_config is not None or body_model is not None
+#     model_type = body_model_config[
+#         'type'] if body_model_config is not None else body_model.name(
+#         ).replace('-', '').lower()
+#     if model_type == 'smpl':
+#         poses = torch.zeros(num_frames, 72)
+#     else:
+#         poses = torch.zeros(num_frames, 165)
 
-    Cameras will focus on the center of smpl mesh. `orbit speed` is
-    recommended.
-    """
-    assert (poses
-            is not None) or (verts
-                             is not None), 'Pass either `poses` or `verts`.'
-    func = partial(
-        render_smpl,
-        convention='opencv',
-        projection='fovperspective',
-        K=None,
-        R=None,
-        T=None,
-        in_ndc=True,
-        origin_frames=None,
-        frame_list=None,
-        image_array=None)
-    for k in func.keywords.keys():
-        if k in kwargs:
-            kwargs.pop(k)
-    return func(poses=poses, verts=verts, **kwargs)
+#     func = partial(
+#         render_smpl,
+#         betas=None,
+#         transl=None,
+#         verts=None,
+#         convention='pytorch3d',
+#         projection='fovperspective',
+#         K=None,
+#         R=None,
+#         T=None,
+#         origin_frames=None)
+#     for k in func.keywords.keys():
+#         if k in kwargs:
+#             kwargs.pop(k)
+#     return func(
+#         poses=poses,
+#         body_model_config=body_model_config,
+#         body_model=body_model,
+#         orbit_speed=orbit_speed,
+#         **kwargs)
+
+
+# def visualize_smpl_pose(poses=None, verts=None, **kwargs) -> None:
+#     """Simplest way to visualize a sequence of smpl pose.
+
+#     Cameras will focus on the center of smpl mesh. `orbit speed` is
+#     recommended.
+#     """
+#     assert (poses
+#             is not None) or (verts
+#                              is not None), 'Pass either `poses` or `verts`.'
+#     func = partial(
+#         render_smpl,
+#         convention='opencv',
+#         projection='fovperspective',
+#         K=None,
+#         R=None,
+#         T=None,
+#         in_ndc=True,
+#         origin_frames=None,
+#         frame_list=None,
+#         image_array=None)
+#     for k in func.keywords.keys():
+#         if k in kwargs:
+#             kwargs.pop(k)
+#     return func(poses=poses, verts=verts, **kwargs)
