@@ -53,6 +53,11 @@ __hf_model_cfg__ = dict(
             num_layers=50),
         global_mode=not __maf_on__), )
 
+__mesh_model__ = dict(
+    name='smplx',
+    smpl_mean_params='data/body_models/smpl_mean_params.npz',
+    gender='neutral')
+
 model = dict(
     type='PyMAFX',
     backbone=dict(
@@ -65,6 +70,7 @@ model = dict(
         maf_on=__maf_on__,
         n_iter=3,
         bhf_mode='full_body',
+        grid_feat=False,
         grid_align=dict(
             use_att=True,
             use_fc=False,
@@ -73,13 +79,19 @@ model = dict(
             att_starts=1,
         ),
     ),
+    regressor=dict(
+        type='Regressor',
+        mesh_model=__mesh_model__,
+        bhf_mode='full_body',
+        use_iwp_cam=True,
+        n_iter=3,
+        smpl_model_dir='data/body_models/smpl',
+        smpl_mean_params=__mesh_model__['smpl_mean_params'],
+    ),
     attention_config='configs/pymafx/bert_base_uncased_config.json',
     joint_regressor_train_extra='data/body_models/J_regressor_extra.npy',
     smpl_model_dir='data/body_models/smpl',
-    mesh_model=dict(
-        name='smplx',
-        smpl_mean_params='data/body_models/smpl_mean_params.npz',
-        gender='neutral'),
+    mesh_model=__mesh_model__,
     bhf_mode='full_body',  # full_body or body_hand
     maf_on=__maf_on__,
     body_sfeat_dim=[192, 96, 48],

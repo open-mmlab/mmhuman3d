@@ -1503,6 +1503,7 @@ class PyMAFXHead(BaseModule):
                  bhf_names,
                  hf_root_idx,
                  mano_ds_len,
+                 grid_feat=False,
                  hf_box_center=True,
                  use_iwp_cam=True,
                  init_cfg=None):
@@ -1512,6 +1513,7 @@ class PyMAFXHead(BaseModule):
         self.use_iwp_cam = use_iwp_cam
         self.hf_root_idx = hf_root_idx
         self.mano_ds_len = mano_ds_len
+        self.grid_feat = grid_feat
         self.hf_box_center = hf_box_center
         self.grid_align = grid_align
         self.bhf_names = bhf_names
@@ -1546,8 +1548,6 @@ class PyMAFXHead(BaseModule):
                 grid_points,
                 J_regressor,
                 att_feat_reduce,
-                fuse_grid_align,
-                grid_feat,
                 align_attention,
                 maf_extractor,
                 regressor,
@@ -1559,6 +1559,8 @@ class PyMAFXHead(BaseModule):
         out_dict['mesh_out'] = [self.init_mesh_output]
         out_dict['dp_out'] = []
         self.maf_extractor = maf_extractor
+        fuse_grid_align = self.grid_align['use_att'] or self.grid_align[
+            'use_fc']
         if fuse_grid_align:
             att_starts = self.grid_align['att_starts']
         # initial parameters
@@ -1686,7 +1688,7 @@ class PyMAFXHead(BaseModule):
                         limb_reduce_dim = (not fuse_grid_align) or (rf_i <
                                                                     att_starts)
 
-                        if limb_rf_i == 0 or grid_feat:
+                        if limb_rf_i == 0 or self.grid_feat:
                             limb_ref_feat_ctd = self.maf_extractor[hf_key][
                                 limb_rf_i].sampling(
                                     grid_points,
@@ -1772,7 +1774,7 @@ class PyMAFXHead(BaseModule):
             if 'body' in self.bhf_names:
                 if self.maf_on:
                     reduce_dim = (not fuse_grid_align) or (rf_i < att_starts)
-                    if rf_i == 0 or grid_feat:
+                    if rf_i == 0 or self.grid_feat:
                         ref_feature = self.maf_extractor['body'][
                             rf_i].sampling(
                                 grid_points,
@@ -1793,7 +1795,7 @@ class PyMAFXHead(BaseModule):
                             reduce_dim=reduce_dim)  # [B, 431 * n_feat]
 
                     if fuse_grid_align and rf_i >= att_starts:
-                        if rf_i > 0 and not grid_feat:
+                        if rf_i > 0 and not self.grid_feat:
                             grid_feature = self.maf_extractor['body'][
                                 rf_i].sampling(
                                     grid_points,

@@ -9,7 +9,6 @@ from mmhuman3d.models.heads.pymafx_head import (
     IUV_predict_layer,
     MAF_Extractor,
     Mesh_Sampler,
-    Regressor,
     get_attention_modules,
 )
 from ...core import constants
@@ -46,6 +45,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
     def __init__(self,
                  backbone,
                  head,
+                 regressor,
                  attention_config,
                  joint_regressor_train_extra,
                  smpl_model_dir,
@@ -92,7 +92,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         self._prepare_body_module(joint_regressor_train_extra)
         self._create_encoder()
         self._create_attention_modules(attention_config)
-        self._create_regressor()
+        self._create_regressor(regressor)
         self._create_maf_extractor()
         head['hf_root_idx'] = self.hf_root_idx
         head['mano_ds_len'] = self.mano_ds_len
@@ -108,13 +108,6 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         if self.bhf_mode in ['full_body']:
             self.bhf_names.append('face')
 
-        # the limb parts need to be handled
-        if self.bhf_mode == 'body_hand':
-            self.part_names = ['lhand', 'rhand']
-        elif self.bhf_mode == 'full_body':
-            self.part_names = ['lhand', 'rhand', 'face']
-        else:
-            self.part_names = []
         # joint index info
         h_root_idx = constants.HAND_NAMES.index('wrist')
         f_idx = constants.FACIAL_LANDMARKS.index('nose_middle')
@@ -219,7 +212,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 n_iter=n_iter_att,
                 out_feat_len=self.bhf_att_feat_dim)
 
-    def _create_regressor(self):
+    def _create_regressor(self, regressor):
         self.regressor = nn.ModuleList()
         for i in range(self.n_iter):
             ref_infeat_dim = 0
@@ -269,20 +262,13 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 ref_infeat_dim = GLOBAL_FEAT_DIM
                 feat_dim_hand = GLOBAL_FEAT_DIM
                 feat_dim_face = GLOBAL_FEAT_DIM
+            regressor['feat_dim'] = ref_infeat_dim
+            regressor['feat_dim_hand'] = feat_dim_hand
+            regressor['feat_dim_face'] = feat_dim_face
+            regressor['bhf_names'] = self.bhf_names
+            regressor['smpl_models'] = self.smpl_family
 
-            self.regressor.append(
-                Regressor(
-                    self.mesh_model,
-                    self.bhf_mode,
-                    self.use_iwp_cam,
-                    self.n_iter,
-                    self.smpl_model_dir,
-                    feat_dim=ref_infeat_dim,
-                    smpl_mean_params=self.mesh_model['smpl_mean_params'],
-                    feat_dim_hand=feat_dim_hand,
-                    feat_dim_face=feat_dim_face,
-                    bhf_names=self.bhf_names,
-                    smpl_models=self.smpl_family))
+            self.regressor.append(build_head(regressor))
 
     def _create_maf_extractor(self):
         self.maf_extractor = nn.ModuleDict()
@@ -345,6 +331,13 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         Returns:
             out_dict: the list containing the predicted parameters
         '''
+        # the limb parts need to be handled
+        if self.bhf_mode == 'body_hand':
+            part_names = ['lhand', 'rhand']
+        elif self.bhf_mode == 'full_body':
+            part_names = ['lhand', 'rhand', 'face']
+        else:
+            part_names = []
 
         # extract spatial features or global features
         # run encoder for body
@@ -367,7 +360,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                         img_face)
 
             if 'hand' in self.bhf_names:
-                if 'lhand' in self.part_names:
+                if 'lhand' in part_names:
                     img_rhand = batch['img_rhand']
                     batch_size = img_rhand.shape[0]
                     # flip left hand images
@@ -409,9 +402,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         # parameter predictions
         out_dict = self.head(batch, s_feat_body, limb_feat_dict, g_feat,
                              grid_points, J_regressor, self.att_feat_reduce,
-                             self.fuse_grid_align, self.grid_feat,
                              self.align_attention, self.maf_extractor,
                              self.regressor, batch_size, limb_gfeat_dict,
-                             self.part_names)
+                             part_names)
 
         return out_dict
