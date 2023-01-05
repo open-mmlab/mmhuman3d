@@ -6,7 +6,7 @@ import os
 import os.path as osp
 import pickle as pkl
 
-import joblib
+import cv2
 import mmcv
 import numpy as np
 import torch
@@ -17,11 +17,11 @@ from openpifpaf.stream import Stream
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_pose
+from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_vibe
+from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.data.datasets import build_dataset
 from mmhuman3d.models.architectures.builder import build_architecture
 from mmhuman3d.utils.ffmpeg_utils import video_to_images
-from mmhuman3d.utils.geometry import convert_to_full_img_cam
 from mmhuman3d.utils.transforms import rotmat_to_aa
 
 # yapf: enable
@@ -50,6 +50,7 @@ def convert_crop_cam_to_orig_img(cam, bbox, img_width, img_height):
 
 
 def prepare_data_with_pifpaf_detection(args):
+    max_instance = 0
     if args.image_folder is None:
         video_file = args.vid_file
         if not os.path.isfile(video_file):
@@ -67,7 +68,6 @@ def prepare_data_with_pifpaf_detection(args):
         num_frames = len(os.listdir(image_folder))
         output_path = os.path.join(args.output_folder,
                                    osp.split(image_folder)[-1])
-
     os.makedirs(output_path, exist_ok=True)
     # pifpaf person detection
     pp_det_file_path = os.path.join(output_path, 'pp_det_results.pkl')
@@ -79,9 +79,7 @@ def prepare_data_with_pifpaf_detection(args):
     Predictor.configure(pp_args)
     Stream.configure(pp_args)
 
-    Predictor.batch_size = pp_args.detector_batch_size
-    if pp_args.detector_batch_size > 1:
-        Predictor.long_edge = 1000
+    Predictor.batch_size = 1
     Predictor.loader_workers = 1
     predictor = Predictor()
     if args.vid_file is not None:
@@ -95,11 +93,11 @@ def prepare_data_with_pifpaf_detection(args):
         capture = predictor.images(image_file_names)
 
     tracking_results = {}
-    print('Running openpifpaf for person detection...')
-    for preds, _, meta in tqdm(
-            capture, total=num_frames // args.detector_batch_size):
+    for preds, _, meta in tqdm(capture, total=num_frames):
+        num_person = 0
         for pid, ann in enumerate(preds):
             if ann.score > args.detection_threshold:
+                num_person += 1
                 frame_i = meta['frame_i'] - 1 if 'frame_i' in meta else meta[
                     'dataset_index']
                 file_name = meta[
@@ -116,36 +114,9 @@ def prepare_data_with_pifpaf_detection(args):
                     'joints2d_face':
                     [np.concatenate([det_face_kps[17:], det_face_kps[:17]])],
                 }
+        if num_person > max_instance:
+            max_instance = num_person
     pkl.dump(tracking_results, open(pp_det_file_path, 'wb'))
-    return tracking_results, image_folder, output_path
-
-
-def main(args):
-    device = torch.device(args.device)
-    args.device = device
-    args.pin_memory = True if torch.cuda.is_available() else False
-    pymaf_config = dict(mmcv.Config.fromfile(args.mesh_reg_config))
-    # prepare input
-    tracking_results, image_folder, output_path = \
-        prepare_data_with_pifpaf_detection(args)
-
-    # ========= Define model ========= #
-    model = build_architecture(pymaf_config['model'])
-    model = model.to(device)
-
-    # ========= Load pretrained weights ========= #
-    if args.mesh_reg_checkpoint is not None:
-        print(
-            f'Loading pretrained weights from \"{args.mesh_reg_checkpoint}\"')
-        checkpoint = torch.load(args.mesh_reg_checkpoint)
-        model.load_state_dict(checkpoint['model'], strict=False)
-        print(f'loaded checkpoint: {args.mesh_reg_checkpoint}')
-
-    model.eval()
-
-    # ========= Run pred on each person ========= #
-    print('Running reconstruction on each tracklet...')
-    pred_results = {}
     bboxes = joints2d = []
     frames = []
     if args.tracking_method == 'pose':
@@ -166,6 +137,31 @@ def main(args):
                 tracking_results[person_id]['joints2d_face'])
 
         frames.extend(tracking_results[person_id]['frames'])
+    return bboxes, joints2d, frames, wb_kps, person_id_list,\
+        image_folder, output_path, max_instance
+
+
+def main(args):
+    device = torch.device(args.device)
+    args.device = device
+    args.pin_memory = True if torch.cuda.is_available() else False
+    pymaf_config = dict(mmcv.Config.fromfile(args.mesh_reg_config))
+    # Prepare input
+    bboxes, joints2d, frames, wb_kps, person_id_list, image_folder, \
+        output_path, max_instance = prepare_data_with_pifpaf_detection(args)
+
+    # Define model
+    model = build_architecture(pymaf_config['model'])
+    model = model.to(device)
+
+    # Load pretrained weights
+    if args.mesh_reg_checkpoint is not None:
+        print(
+            f'Loading pretrained weights from \"{args.mesh_reg_checkpoint}\"')
+        checkpoint = torch.load(args.mesh_reg_checkpoint)
+        model.load_state_dict(checkpoint['model'], strict=False)
+
+    model.eval()
     pymaf_config['data']['test']['image_folder'] = image_folder
     pymaf_config['data']['test']['frames'] = frames
     pymaf_config['data']['test']['bboxes'] = bboxes
@@ -175,41 +171,30 @@ def main(args):
     test_dataset = build_dataset(pymaf_config['data']['test'],
                                  dict(test_mode=True))
     bboxes = test_dataset.bboxes
-    scales = test_dataset.scales
-    frames = test_dataset.frames
-
+    frame_ids = test_dataset.frames
     dataloader = DataLoader(
         test_dataset, batch_size=args.model_batch_size, num_workers=0)
 
+    # Run pred on each person
     with torch.no_grad():
-        pred_cam, pred_verts, pred_smplx_verts, pred_pose = [], [], [], []
-        pred_betas, pred_joints3d = [], []
-        orig_height, orig_width = [], []
-        person_ids = []
-        smplx_params = []
+        pred_cam, orig_height, orig_width, person_ids,\
+            smplx_params = [], [], [], [], []
 
         for batch in tqdm(dataloader):
             batch = {
                 k: v.to(device) if isinstance(v, torch.Tensor) else v
                 for k, v in batch.items()
             }
-
             person_ids.extend(batch['person_id'])
             orig_height.append(batch['orig_height'])
             orig_width.append(batch['orig_width'])
-            preds_dict = model.forward_test(batch)
 
+            preds_dict = model.forward_test(batch)
             output = preds_dict['mesh_out'][-1]
 
             pred_cam.append(output['theta'][:, :3])
-            pred_verts.append(output['verts'])
-            pred_smplx_verts.append(output['smplx_verts'])
-            pred_pose.append(output['theta'][:, 13:85])
-            pred_betas.append(output['theta'][:, 3:13])
-            pred_joints3d.append(output['kp_3d'])
-
             smplx_params.append({
-                'shape': output['pred_shape'],
+                'betas': output['pred_shape'],
                 'body_pose': output['rotmat'],
                 'left_hand_pose': output['pred_lhand_rotmat'],
                 'right_hand_pose': output['pred_rhand_rotmat'],
@@ -220,24 +205,11 @@ def main(args):
             })
 
         pred_cam = torch.cat(pred_cam, dim=0)
-        pred_verts = torch.cat(pred_verts, dim=0)
-        pred_smplx_verts = torch.cat(pred_smplx_verts, dim=0)
-        pred_pose = torch.cat(pred_pose, dim=0)
-        pred_betas = torch.cat(pred_betas, dim=0)
-        pred_joints3d = torch.cat(pred_joints3d, dim=0)
-
         orig_height = torch.cat(orig_height, dim=0)
         orig_width = torch.cat(orig_width, dim=0)
-
         del batch
 
-    # ========= Save results to a pickle file ========= #
     pred_cam = pred_cam.cpu().numpy()
-    pred_verts = pred_verts.cpu().numpy()
-    pred_smplx_verts = pred_smplx_verts.cpu().numpy()
-    pred_pose = pred_pose.cpu().numpy()
-    pred_betas = pred_betas.cpu().numpy()
-    pred_joints3d = pred_joints3d.cpu().numpy()
     orig_height = orig_height.cpu().numpy()
     orig_width = orig_width.cpu().numpy()
 
@@ -247,57 +219,58 @@ def main(args):
         img_width=orig_width,
         img_height=orig_height)
 
-    camera_translation = convert_to_full_img_cam(
-        pare_cam=pred_cam,
-        bbox_height=scales * 200.,
-        bbox_center=bboxes[:, :2],
-        img_w=orig_width,
-        img_h=orig_height,
-        focal_length=5000.,
-    )
-
-    pred_results = {
-        'pred_cam': pred_cam,
-        'orig_cam': orig_cam,
-        'orig_cam_t': camera_translation,
-        'verts': pred_verts,
-        'smplx_verts': pred_smplx_verts,
-        'pose': pred_pose,
-        'betas': pred_betas,
-        'joints3d': pred_joints3d,
-        'joints2d': joints2d,
-        'bboxes': bboxes,
-        'frame_ids': frames,
-        'person_ids': person_ids,
-        'smplx_params': smplx_params,
-    }
-
     del model
     fullpose = []
-    for smplx_params in pred_results['smplx_params']:
-        global_orient = rotmat_to_aa(
-            smplx_params['body_pose'].cpu().numpy()[:, :1])
-        body_pose = rotmat_to_aa(smplx_params['body_pose'].cpu().numpy()[:,
-                                                                         1:22])
-        jaw_pose = rotmat_to_aa(smplx_params['jaw_pose'].cpu().numpy())
-        leye_pose = rotmat_to_aa(smplx_params['leye_pose'].cpu().numpy())
-        reye_pose = rotmat_to_aa(smplx_params['reye_pose'].cpu().numpy())
-        left_hand_pose = rotmat_to_aa(
-            smplx_params['left_hand_pose'].cpu().numpy())
-        right_hand_pose = rotmat_to_aa(
-            smplx_params['right_hand_pose'].cpu().numpy())
+    betas = []
+    for data in smplx_params:
+        smplx_results = dict(
+            global_orient=[],
+            body_pose=[],
+            leye_pose=[],
+            reye_pose=[],
+            jaw_pose=[],
+            left_hand_pose=[],
+            right_hand_pose=[],
+            betas=[],
+            expression=[])
+        for key in smplx_results:
+            if key == 'global_orient':
+                smplx_results[key].append(
+                    rotmat_to_aa(data['body_pose'].cpu().numpy()[:, :1]))
+            elif key == 'body_pose':
+                smplx_results[key].append(
+                    rotmat_to_aa(data['body_pose'].cpu().numpy()[:, 1:22]))
+            elif key == 'betas':
+                smplx_results[key].append(data['betas'].cpu().numpy())
+            elif key == 'expression':
+                smplx_results[key].append(data['expression'].cpu().numpy())
+            else:
+                smplx_results[key].append(
+                    rotmat_to_aa(data[key].cpu().numpy()))
+        for key in smplx_results:
+            smplx_results[key] = np.array(smplx_results[key][0])
+
         fullpose.append(
             np.concatenate((
-                global_orient,
-                body_pose,
-                jaw_pose,
-                leye_pose,
-                reye_pose,
-                left_hand_pose,
-                right_hand_pose,
+                smplx_results['global_orient'],
+                smplx_results['body_pose'],
+                smplx_results['jaw_pose'],
+                smplx_results['leye_pose'],
+                smplx_results['reye_pose'],
+                smplx_results['left_hand_pose'],
+                smplx_results['right_hand_pose'],
             ),
                            axis=1))
+        betas.append(smplx_results['betas'])
     fullpose = np.concatenate(fullpose, axis=0)
+    betas = np.concatenate(betas, axis=0)
+    if output_path is not None:
+        human_data = HumanData()
+        smplx = {}
+        smplx['fullpose'] = fullpose
+        smplx['betas'] = betas
+        human_data['smplx'] = smplx
+        human_data.dump(osp.join(output_path, 'inference_result.npz'))
     # create body model
     body_model_config = dict(
         type='smplx',
@@ -309,15 +282,48 @@ def main(args):
         keypoint_src='smplx',
         keypoint_dst='smplx',
     )
-    visualize_smpl_pose(
-        poses=fullpose.reshape(-1, 165),
-        body_model_config=body_model_config,
-        output_path=os.path.join('smplx.mp4'),
-        resolution=(1024, 1024),
-        overwrite=True)
-    joblib.dump(pred_results, os.path.join(output_path, 'output.pkl'))
-
-    print('================= END =================')
+    # To compress vertices array
+    frame_num = len(os.listdir(image_folder))
+    compressed_cams = np.zeros([frame_num, max_instance, 4])
+    compressed_fullpose = np.zeros([frame_num, max_instance, 55, 3])
+    compressed_betas = np.zeros([frame_num, max_instance, 10])
+    for idx, frame_id in enumerate(frame_ids):
+        if idx == 0:
+            saved_frame_id = frame_id
+            n_person = frame_ids.count(frame_id)
+            compressed_fullpose[frame_id, :n_person] = fullpose[idx:idx +
+                                                                n_person]
+            compressed_betas[frame_id, :n_person] = betas[idx:idx + n_person]
+            compressed_cams[frame_id, :n_person] = orig_cam[idx:idx + n_person]
+        else:
+            if saved_frame_id != frame_id:
+                saved_frame_id = frame_id
+                n_person = frame_ids.count(frame_id)
+                compressed_fullpose[frame_id, :n_person] = fullpose[idx:idx +
+                                                                    n_person]
+                compressed_betas[frame_id, :n_person] = betas[idx:idx +
+                                                              n_person]
+                compressed_cams[frame_id, :n_person] = orig_cam[idx:idx +
+                                                                n_person]
+    if args.visualization and args.image_folder is None:
+        image_file_names = sorted([
+            osp.join(image_folder, x) for x in os.listdir(image_folder)
+            if x.endswith('.png') or x.endswith('.jpg')
+        ])
+        image_array = []
+        for path in image_file_names:
+            img = cv2.imread(path)
+            image_array.append(img)
+        visualize_smpl_vibe(
+            poses=compressed_fullpose.reshape(-1, max_instance, 165),
+            betas=compressed_betas,
+            orig_cam=compressed_cams,
+            output_path=os.path.join(output_path, 'smplx.mp4'),
+            image_array=np.array(image_array),
+            body_model_config=body_model_config,
+            resolution=(orig_height[0], orig_width[0]),
+            overwrite=True,
+        )
 
 
 def init_openpifpaf(parser):
@@ -357,11 +363,6 @@ if __name__ == '__main__':
         default='shufflenetv2k30-wholebody',
         help='detector checkpoint for openpifpaf')
     parser.add_argument(
-        '--detector_batch_size',
-        type=int,
-        default=1,
-        help='batch size of person detection')
-    parser.add_argument(
         '--detection_threshold',
         type=float,
         default=0.3,
@@ -375,6 +376,8 @@ if __name__ == '__main__':
         type=str,
         default='output',
         help='output folder to write results')
+    parser.add_argument(
+        '--visualization', action='store_true', help='SMPLX Visualization')
 
     parser.add_argument(
         '--device',

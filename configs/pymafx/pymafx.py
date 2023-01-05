@@ -1,5 +1,13 @@
 _base_ = ['../_base_/default_runtime.py']
 __maf_on__ = True
+__bhf_mode__ = 'full_body'  # full_body or body_hand
+__grid_align__ = dict(
+    use_att=True,
+    use_fc=False,
+    att_feat_idx=2,
+    att_head=1,
+    att_starts=1,
+)
 # model settings
 __hrnet_extra__ = dict(
     pretr_set='coco',  # 'none' 'imagenet' 'coco'
@@ -69,20 +77,14 @@ model = dict(
         type='PyMAFXHead',
         maf_on=__maf_on__,
         n_iter=3,
-        bhf_mode='full_body',
+        bhf_mode=__bhf_mode__,
         grid_feat=False,
-        grid_align=dict(
-            use_att=True,
-            use_fc=False,
-            att_feat_idx=2,
-            att_head=1,
-            att_starts=1,
-        ),
+        grid_align=__grid_align__,
     ),
     regressor=dict(
         type='Regressor',
         mesh_model=__mesh_model__,
-        bhf_mode='full_body',
+        bhf_mode=__bhf_mode__,
         use_iwp_cam=True,
         n_iter=3,
         smpl_model_dir='data/body_models/smpl',
@@ -92,18 +94,12 @@ model = dict(
     joint_regressor_train_extra='data/body_models/J_regressor_extra.npy',
     smpl_model_dir='data/body_models/smpl',
     mesh_model=__mesh_model__,
-    bhf_mode='full_body',  # full_body or body_hand
+    bhf_mode=__bhf_mode__,
     maf_on=__maf_on__,
     body_sfeat_dim=[192, 96, 48],
     hf_sfeat_dim=(256, 256, 256),
     grid_feat=False,
-    grid_align=dict(
-        use_att=True,
-        use_fc=False,
-        att_feat_idx=2,
-        att_head=1,
-        att_starts=1,
-    ),
+    grid_align=__grid_align__,
     mlp_dim=[256, 128, 64, 5],
     hf_mlp_dim=[256, 128, 64, 5],
     loss_uv_regression_weight=0.5,

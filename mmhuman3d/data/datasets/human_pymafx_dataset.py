@@ -62,7 +62,7 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                  crop_size=224,
                  person_id_list=[],
                  wb_kps={},
-                 test_mode: Optional[bool] = False):
+                 test_mode: Optional[bool] = True):
         # super(PyMAFXHumanImageDataset, self).__init__(test_mode=test_mode)
         self.image_file_names = [
             osp.join(image_folder, x) for x in os.listdir(image_folder)
