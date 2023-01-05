@@ -6,6 +6,7 @@ import mmcv
 import numpy as np
 
 from mmhuman3d.core.conventions.keypoints_mapping import get_flip_pairs
+from mmhuman3d.utils.demo_utils import xywh2xyxy
 from ..builder import PIPELINES
 from .compose import Compose
 
@@ -950,4 +951,38 @@ class SimulateLowRes(object):
         img = self._sample_low_res(img)
         results['img'] = img
 
+        return results
+
+
+@PIPELINES.register_module()
+class SampleInstance:
+
+    def __init__(self, sample_ratio):
+        self.sample_ratio = sample_ratio
+
+    def __call__(self, results):
+        assert 'bbox_xywh' in results
+        bbox_xywh = results['bbox_xywh'].copy()
+        crop_person_number = len(bbox_xywh)
+        if random.random() < self.sample_ratio:
+            crop_person_number = np.random.randint(len(bbox_xywh)) + 1
+
+        sample_ids = np.array(
+            random.sample(list(range(len(bbox_xywh))), crop_person_number))
+
+        bbox_xyxy = xywh2xyxy(bbox_xywh)[sample_ids]
+
+        leftTop_ = bbox_xyxy[:, :2]
+        leftTop_ = np.array([np.min(leftTop_[:, 0]), np.min(leftTop_[:, 1])])
+        rightBottom_ = bbox_xyxy[:, 2:4]
+        rightBottom_ = np.array(
+            [np.max(rightBottom_[:, 0]),
+             np.max(rightBottom_[:, 1])])
+        bbox_xyxy = np.concatenate([leftTop_, rightBottom_])
+        results['bbox_xyxy'] = bbox_xyxy
+        center = (rightBottom_ + leftTop_) / 2
+        scale = (rightBottom_ - leftTop_)
+        scale[0] = scale[1] = max(scale)
+        results['center'] = center
+        results['scale'] = scale
         return results

@@ -83,6 +83,12 @@ def parse_args():
         default=[],
         help=f'Supported datasets: {list(DATASET_CONFIGS.keys())}')
 
+    parser.add_argument(
+        '--multi_human_data',
+        type=bool,
+        default=False,
+        help='Whether to generate a multi-human data')
+
     args = parser.parse_args()
 
     return args
@@ -90,7 +96,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-
     datasets = (
         DATASET_CONFIGS.keys() if args.datasets == ['all'] else args.datasets)
 
@@ -100,7 +105,10 @@ def main():
         prefix = cfg.pop('prefix', dataset)
         input_path = os.path.join(args.root_path, prefix)
         data_converter = build_data_converter(cfg)
-        data_converter.convert(input_path, args.output_path)
+        data_converter.convert(
+            input_path,
+            args.output_path,
+            multi_human_data=args.multi_human_data)
         print(f'[{dataset}] Converting finished!')
 
 

@@ -2,11 +2,13 @@ import json
 import os
 from typing import List
 
+import mmcv
 import numpy as np
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -28,8 +30,12 @@ class CrowdposeConverter(BaseModeConverter):
     def __init__(self, modes: List = []) -> None:
         super(CrowdposeConverter, self).__init__(modes)
 
-    def convert_by_mode(self, dataset_path: str, out_path: str,
-                        mode: str) -> dict:
+    def convert_by_mode(self,
+                        dataset_path: str,
+                        out_path: str,
+                        mode: str,
+                        multi_human_data: bool = False,
+                        file_client_args: dict = None) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
@@ -42,8 +48,12 @@ class CrowdposeConverter(BaseModeConverter):
                 A dict containing keys image_path, bbox_xywh, keypoints2d,
                 keypoints2d_mask stored in HumanData() format
         """
-        # use HumanData to store all data
-        human_data = HumanData()
+        if multi_human_data:
+            # use MultiHumanData to store all data
+            human_data = MultiHumanData()
+        else:
+            # use HumanData to store all data
+            human_data = HumanData()
 
         # structs we need
         image_path_, keypoints2d_, bbox_xywh_ = [], [], []
@@ -52,7 +62,10 @@ class CrowdposeConverter(BaseModeConverter):
         json_path = os.path.join(dataset_path,
                                  'crowdpose_{}.json'.format(mode))
 
-        json_data = json.load(open(json_path, 'r'))
+        if file_client_args is not None:
+            json_data = mmcv.load(json_path, file_client_args=file_client_args)
+        else:
+            json_data = json.load(open(json_path, 'r'))
 
         imgs = {}
         for img in json_data['images']:
@@ -92,13 +105,26 @@ class CrowdposeConverter(BaseModeConverter):
             keypoints2d_.append(keypoints2d)
             bbox_xywh_.append(bbox_xywh)
 
+        if multi_human_data:
+            # optional
+            optional = {}
+            optional['frame_range'] = []
+            frame_start = 0
+            frame_end = 0
+            for image_path in sorted(set(image_path_), key=image_path_.index):
+                frame_end = frame_start + \
+                    image_path_.count(image_path)
+                optional['frame_range'].append([frame_start, frame_end])
+                frame_start = frame_end
+            optional['frame_range'] = np.array(optional['frame_range'])
+            human_data['optional'] = optional
+
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 14, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'crowdpose',
                                          'human_data')
-
         human_data['image_path'] = image_path_
         human_data['keypoints2d_mask'] = mask
         human_data['keypoints2d'] = keypoints2d_
