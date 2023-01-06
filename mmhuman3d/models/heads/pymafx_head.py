@@ -421,7 +421,7 @@ class Regressor(nn.Module):
         self.pred_vis_h = pred_vis_h
         self.hand_vis_th = hand_vis_th
         self.adapt_integr = adapt_integr
-        n_iter = n_iter
+        self.n_iter = n_iter
 
         npose = 24 * 6
         shape_dim = 10
@@ -885,8 +885,8 @@ class Regressor(nn.Module):
                                 opt_relbow = torch.bmm(pred_rotmat_body[:, 19],
                                                        relbow_twist)
 
-                                if self.pred_vis_h and global_iter == (n_iter -
-                                                                       1):
+                                if self.pred_vis_h and global_iter == (
+                                        self.n_iter - 1):
                                     opt_lwrist_filtered = [
                                         opt_lwrist[_i] if pred_vis_lhand[_i]
                                         else pred_rotmat_body[_i, 20]
@@ -926,8 +926,8 @@ class Regressor(nn.Module):
                                     pred_rotmat_body[:, 22:]
                                 ], 1)
                             else:
-                                if self.pred_vis_h and global_iter == (n_iter -
-                                                                       1):
+                                if self.pred_vis_h and global_iter == (
+                                        self.n_iter - 1):
                                     opt_lwrist_filtered = [
                                         opt_lwrist[_i] if pred_vis_lhand[_i]
                                         else pred_rotmat_body[_i, 20]
@@ -963,7 +963,7 @@ class Regressor(nn.Module):
             assert pred_rotmat.shape[1] == 24
 
         if self.smplx_mode:
-            if self.pred_vis_h and global_iter == (n_iter - 1):
+            if self.pred_vis_h and global_iter == (self.n_iter - 1):
                 pred_lhand_filtered = [
                     pred_lhand[_i]
                     if pred_vis_lhand[_i] else self.init_rhand[0]
@@ -1071,9 +1071,7 @@ class Regressor(nn.Module):
                 'pred_pose':
                 pred_pose,
             })
-            # if self.full_body_mode:
             if self.smplx_mode:
-                # assert pred_keypoints_2d.shape[1] == 144
                 len_h_kp = len(constants.HAND_NAMES)
                 len_f_kp = len(constants.FACIAL_LANDMARKS)
                 len_feet_kp = 2 * len(constants.FOOT_NAMES)
@@ -1556,8 +1554,6 @@ class PyMAFXHead(BaseModule):
                 part_names=None,
                 rw_cam={}):
         out_dict = {}
-        out_dict['mesh_out'] = [self.init_mesh_output]
-        out_dict['dp_out'] = []
         self.maf_extractor = maf_extractor
         fuse_grid_align = self.grid_align['use_att'] or self.grid_align[
             'use_fc']
@@ -1566,6 +1562,8 @@ class PyMAFXHead(BaseModule):
         # initial parameters
         mesh_output = self.init_mesh(regressor, batch_size, J_regressor,
                                      rw_cam)
+        out_dict['mesh_out'] = [mesh_output]
+        out_dict['dp_out'] = []
 
         for rf_i in range(self.n_iter):
             current_states = {}
@@ -1670,7 +1668,6 @@ class PyMAFXHead(BaseModule):
                     ],
                               dim=1)
                 }
-
             # extract mesh-aligned features for the hand / face part
             if 'hand' in self.bhf_names or 'face' in self.bhf_names:
                 limb_rf_i = rf_i
@@ -1769,7 +1766,6 @@ class PyMAFXHead(BaseModule):
                         hand_face_feat[part_name] = limb_ref_feat_ctd
                     else:
                         hand_face_feat[part_name] = limb_gfeat_dict[part_name]
-
             # extract mesh-aligned features for the body part
             if 'body' in self.bhf_names:
                 if self.maf_on:
@@ -1858,7 +1854,6 @@ class PyMAFXHead(BaseModule):
                             'pred_orient_rh'].detach()
                         current_states['init_cam_rh'] = mesh_output[
                             'pred_cam_rh'].detach()
-
             # update mesh parameters
             mesh_output = regressor[rf_i](
                 ref_feature,

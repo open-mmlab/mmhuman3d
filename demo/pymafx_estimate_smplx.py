@@ -365,7 +365,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--detection_threshold',
         type=float,
-        default=0.3,
+        default=0.4,
         help='pifpaf detection score threshold.')
     parser.add_argument(
         '--vid_file', type=str, default=None, help='input video path')
