@@ -57,6 +57,23 @@ DATASET_CONFIGS = dict(
     gta_human=dict(type='GTAHumanConverter', prefix='gta_human'),
     humman=dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
+    prox=dict(type='ProxConverter', prefix='prox'),
+    oh50k3d=dict(
+        type='OH50k3DConverter', modes=['train', 'test'], prefix='oh50k3d'),
+    muco3dhp=dict(type='Muco3dhpConverter', prefix='muco'),
+    aic=dict(
+        type='AicConverter',
+        modes=['train', 'validation'],
+        prefix='AiChallenge'),
+    mupots3d=dict(type='Mupots3dConverter', prefix='mupots3d'),
+    people3d=dict(type='People3dConverter', prefix='people3d'),
+    instavariety=dict(
+        type='InstaVarietyConverter',
+        modes=['train', 'test'],
+        extract_img=False),
+    vlog=dict(type='VlogConverter', modes=['train'], extract_img=False),
+    ochuman=dict(type='OCHumanConverter', modes=['train', 'val', 'test']),
+    mtp=dict(type='MtpConverter', modes=['train', 'val']),
 )
 
 
