@@ -1,8 +1,8 @@
 import json
 import os
-import cv2
 from typing import List
 
+import cv2
 import numpy as np
 from tqdm import tqdm
 
@@ -15,10 +15,9 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class OH50k3DConverter(BaseModeConverter):
-    """3DOH50K dataset
-    `Object-Occluded Human Shape and Pose Estimation from a Single Color 
-    Image' CVPR'2020
-    More details can be found in the `paper
+    """3DOH50K dataset `Object-Occluded Human Shape and Pose Estimation from a
+    Single Color Image' CVPR'2020 More details can be found in the `paper.
+
     <https://www.yangangwang.com/papers/ZHANG-OOH-2020-03.pdf>`__ .
 
     Args:
@@ -48,7 +47,8 @@ class OH50k3DConverter(BaseModeConverter):
         human_data = HumanData()
 
         # structs we use
-        image_path_, bbox_xywh_, keypoints2d_, keypoints3d_, cam_param_ = [], [], [], [], []
+        image_path_, bbox_xywh_, keypoints2d_, keypoints3d_, cam_param_ \
+            = [], [], [], [], []
 
         smpl = {}
         smpl['body_pose'] = []
@@ -70,11 +70,10 @@ class OH50k3DConverter(BaseModeConverter):
             betas = np.array(annot['betas']).reshape(-1)
             pose = np.array(annot['pose']).reshape(-1)
             trans = np.array(annot['trans']).reshape(-1)
-            scale = np.array(annot['scale'])
-            smpl_joints_2d = np.array(annot['smpl_joints_2d']) # 24x2
-            smpl_joints_3d = np.array(annot['smpl_joints_3d']) # 24x3
-            lsp_joints_2d = np.array(annot['lsp_joints_2d']) # 14x2
-            lsp_joints_3d = np.array(annot['lsp_joints_3d']) # 14x3
+            smpl_joints_2d = np.array(annot['smpl_joints_2d'])  # 24x2
+            smpl_joints_3d = np.array(annot['smpl_joints_3d'])  # 24x3
+            lsp_joints_2d = np.array(annot['lsp_joints_2d'])  # 14x2
+            lsp_joints_3d = np.array(annot['lsp_joints_3d'])  # 14x3
 
             # fix keypoints3d
             smpl_joints_3d = smpl_joints_3d - smpl_joints_3d[0]
@@ -84,7 +83,7 @@ class OH50k3DConverter(BaseModeConverter):
             h, w, _ = cv2.imread(f'{dataset_path}/{img_path}').shape
 
             # scale and center
-            bbox_xyxy = np.array(annot['bbox']).reshape(-1) # 2x2 - check foramt
+            bbox_xyxy = np.array(annot['bbox']).reshape(-1)
             bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
             bbox_xywh = self._xyxy2xywh(bbox_xyxy)
             smpl_joints_2d = np.hstack([smpl_joints_2d, np.ones([24, 1])])
@@ -98,9 +97,9 @@ class OH50k3DConverter(BaseModeConverter):
             camera = CameraParameter(H=h, W=w)
             camera.set_KRT(K, R, T)
             parameter_dict = camera.to_dict()
-            pose[:3] = cv2.Rodrigues(
-                np.dot(R,
-                        cv2.Rodrigues(pose[:3])[0]))[0].T[0]
+            pose[:3] = cv2.Rodrigues(np.dot(R,
+                                            cv2.Rodrigues(
+                                                pose[:3])[0]))[0].T[0]
 
             # store data
             image_path_.append(img_path)
@@ -119,13 +118,11 @@ class OH50k3DConverter(BaseModeConverter):
         smpl['betas'] = np.array(smpl['betas']).reshape((-1, 10))
         smpl['transl'] = np.array(smpl['transl']).reshape((-1, 3))
 
-
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 24, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'smpl',
-                                         'human_data')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'smpl', 'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 24, 4))
         keypoints3d_, _ = convert_kps(keypoints3d_, 'smpl', 'human_data')
 

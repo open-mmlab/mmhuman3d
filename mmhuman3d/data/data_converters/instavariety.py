@@ -1,13 +1,11 @@
-from .base_converter import BaseModeConverter
-from typing import List
-import json
-import os
 import glob
+import os
+from typing import List
 
 import cv2
 import numpy as np
-from tqdm import tqdm
 import tensorflow as tf
+from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
@@ -28,9 +26,7 @@ class InstaVarietyConverter(BaseModeConverter):
     """
     ACCEPTED_MODES = ['train', 'test']
 
-    def __init__(self,
-                 modes: List = [],
-                 extract_img: bool = False) -> None:
+    def __init__(self, modes: List = [], extract_img: bool = False) -> None:
         super(InstaVarietyConverter, self).__init__(modes)
         self.extract_img = extract_img
 
@@ -86,13 +82,13 @@ class InstaVarietyConverter(BaseModeConverter):
 
             toe_pts = np.array(toe_pts).reshape(-1, 3, 6)
 
-            visibles = example.features.feature[
+            vis = example.features.feature[
                 'image/visibilities'].int64_list.value
-            visibles = np.array(visibles).reshape(-1, 1, 14)
+            vis = np.array(vis).reshape(-1, 1, 14)
 
             for i in tqdm(range(N)):
                 image = tf.image.decode_jpeg(images_data[i], channels=3)
-                kp = np.vstack((xys[i], visibles[i]))
+                kp = np.vstack((xys[i], vis[i]))
                 faces = face_pts[i]
 
                 toes = toe_pts[i]
@@ -118,9 +114,8 @@ class InstaVarietyConverter(BaseModeConverter):
                 bbox_xyxy = self._bbox_expand(bbox_xyxy, scale_factor=1.2)
                 bbox_xywh = self._xyxy2xywh(bbox_xyxy)
 
-                image_path = images_name[i].decode(
-                    "utf-8").replace('/data2/Data/instagram_download/frames_raw/', 'images/')
-
+                image_path = images_name[i].decode('utf-8').replace(
+                    '/data2/Data/instagram_download/frames_raw/', 'images/')
 
                 if self.extract_img:
                     image_abs_path = os.path.join(dataset_path, image_path)
@@ -128,11 +123,10 @@ class InstaVarietyConverter(BaseModeConverter):
                     if not os.path.exists(folder):
                         os.makedirs(folder, exist_ok=True)
                     cv2.imwrite(image_abs_path, np.array(image))
-                    
+
                 image_path_.append(image_path)
                 keypoints2d_.append(keypoints2d)
                 bbox_xywh_.append(bbox_xywh)
-
 
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
@@ -152,4 +146,3 @@ class InstaVarietyConverter(BaseModeConverter):
             os.makedirs(out_path)
         out_file = os.path.join(out_path, f'instavariety_{mode}.npz')
         human_data.dump(out_file)
-

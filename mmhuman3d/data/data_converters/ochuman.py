@@ -81,8 +81,7 @@ class OCHumanConverter(BaseModeConverter):
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 19, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'ochuman',
-                                         'human_data')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'ochuman', 'human_data')
 
         human_data['image_path'] = image_path_
         human_data['keypoints2d_mask'] = mask

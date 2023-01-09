@@ -13,10 +13,10 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class AicConverter(BaseModeConverter):
-    """AI Challenger dataset
-    `Ai challenger: A large-scale dataset for going deeper in image 
-    understanding' arXiv'2017
-    More details can be found in the `paper
+    """AI Challenger dataset `Ai challenger: A large-scale dataset for going
+    deeper in image understanding' arXiv'2017 More details can be found in the
+    `paper.
+
     <https://arxiv.org/abs/1711.06475>`__ .
 
     Args:
@@ -88,8 +88,7 @@ class AicConverter(BaseModeConverter):
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 14, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'aic',
-                                         'human_data')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'aic', 'human_data')
 
         human_data['image_path'] = image_path_
         human_data['keypoints2d_mask'] = mask

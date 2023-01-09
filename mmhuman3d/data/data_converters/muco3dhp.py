@@ -15,12 +15,12 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class Muco3dhpConverter(BaseConverter):
-    """MuCo-3DHP dataset `Single-Shot Multi-Person 3D Pose Estimation 
-    From Monocular RGB' 3DV'2018
-    More details can be found in the `paper.
+    """MuCo-3DHP dataset `Single-Shot Multi-Person 3D Pose Estimation From
+    Monocular RGB' 3DV'2018 More details can be found in the `paper.
 
     <https://arxiv.org/abs/1712.03453>`__ .
     """
+
     @staticmethod
     def get_intrinsic_matrix(f: List[float],
                              c: List[float],
@@ -90,8 +90,7 @@ class Muco3dhpConverter(BaseConverter):
                     smpl_param = smpl_params[str(pid)]
                     pose, shape, trans = np.array(
                         smpl_param['pose']), np.array(
-                            smpl_param['shape']), np.array(
-                                smpl_param['trans'])
+                            smpl_param['shape']), np.array(smpl_param['trans'])
                     sum = pose.sum() + shape.sum() + trans.sum()
                     if np.isnan(sum):
                         continue

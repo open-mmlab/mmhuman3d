@@ -1,9 +1,6 @@
-import glob
 import os
 from typing import List, Tuple
 
-import cv2
-import h5py
 import numpy as np
 import scipy.io as sio
 from tqdm import tqdm
@@ -16,32 +13,34 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class Mupots3dConverter(BaseConverter):
-    """MuPoTs-3D dataset `Single-Shot Multi-Person 3D Pose Estimation 
-    From Monocular RGB' 3DV'2018
-    More details can be found in the `paper.
+    """MuPoTs-3D dataset `Single-Shot Multi-Person 3D Pose Estimation From
+    Monocular RGB' 3DV'2018 More details can be found in the `paper.
 
     <https://arxiv.org/abs/1712.03453>`__ .
     """
+
     @staticmethod
     def load_annot(fname):
+
         def parse_pose(dt):
             res = {}
-            annot2 = dt['annot2'][0,0]
-            annot3 = dt['annot3'][0,0]
-            annot3_univ = dt['univ_annot3'][0,0]
-            is_valid = dt['isValidFrame'][0,0][0,0]
+            annot2 = dt['annot2'][0, 0]
+            annot3 = dt['annot3'][0, 0]
+            annot3_univ = dt['univ_annot3'][0, 0]
+            is_valid = dt['isValidFrame'][0, 0][0, 0]
             res['annot2'] = annot2
             res['annot3'] = annot3
             res['annot3_univ'] = annot3_univ
             res['is_valid'] = is_valid
-            return res 
+            return res
+
         data = sio.loadmat(fname)['annotations']
         results = []
         num_frames, num_inst = data.shape[0], data.shape[1]
         for j in range(num_inst):
             buff = []
             for i in range(num_frames):
-                buff.append(parse_pose(data[i,j]))
+                buff.append(parse_pose(data[i, j]))
             results.append(buff)
         return results
 
@@ -94,7 +93,6 @@ class Mupots3dConverter(BaseConverter):
 
         image_path_, bbox_xywh_, keypoints2d_, keypoints3d_ = [], [], [], []
 
-
         # test data
         user_list = range(1, 21)
 
@@ -131,14 +129,13 @@ class Mupots3dConverter(BaseConverter):
                     keypoints3d_.append(keypoints3d)
 
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
-        bbox_xywh_ = np.hstack(
-            [bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
+        bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 17, 3))
         keypoints2d_, mask = convert_kps(keypoints2d_, 'mpi_inf_3dhp_test',
-                                            'human_data')
+                                         'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 17, 4))
         keypoints3d_, _ = convert_kps(keypoints3d_, 'mpi_inf_3dhp_test',
-                                        'human_data')
+                                      'human_data')
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_

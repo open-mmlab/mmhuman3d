@@ -12,8 +12,8 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class People3dConverter(BaseConverter):
-    """3DPeople Dataset 
-    `3DPeople: Modeling the Geometry of Dressed Humans' ICCV'2019 
+    """3DPeople Dataset
+    `3DPeople: Modeling the Geometry of Dressed Humans' ICCV'2019
     More details can be found in the `paper.
 
     <https://arxiv.org/abs/1904.04571>`__ .
@@ -45,7 +45,8 @@ class People3dConverter(BaseConverter):
         for i, imgname in enumerate(tqdm(imgs)):
 
             img_dir = imgname.split('/')[-2]
-            skel_path = imgname.replace('rgb', 'skeleton').replace(f'{img_dir}/', '').replace('.jpg', '.txt')
+            skel_path = imgname.replace('rgb', 'skeleton').replace(
+                f'{img_dir}/', '').replace('.jpg', '.txt')
             keypoints2d = np.loadtxt(skel_path)[..., :2]
             keypoints3d = np.loadtxt(skel_path)[..., :3]
 
@@ -74,7 +75,8 @@ class People3dConverter(BaseConverter):
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
         keypoints2d_ = np.array(keypoints2d_).reshape((-1, 67, 3))
-        keypoints2d_, mask = convert_kps(keypoints2d_, 'people3d', 'human_data')
+        keypoints2d_, mask = convert_kps(keypoints2d_, 'people3d',
+                                         'human_data')
         keypoints3d_ = np.array(keypoints3d_).reshape((-1, 67, 4))
         keypoints3d_, _ = convert_kps(keypoints3d_, 'people3d', 'human_data')
 
