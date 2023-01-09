@@ -1,4 +1,5 @@
 from .agora import AgoraConverter
+from .aic import AicConverter
 from .amass import AmassConverter
 from .builder import build_data_converter
 from .coco import CocoConverter
@@ -17,13 +18,19 @@ from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_smplx import H36mSMPLXConverter
 from .humman import HuMManConverter
 from .insta_vibe import InstaVibeConverter
+from .instavariety import InstaVarietyConverter
 from .lsp import LspConverter
 from .lsp_extended import LspExtendedConverter
 from .mpi_inf_3dhp import MpiInf3dhpConverter
 from .mpi_inf_3dhp_hybrik import MpiInf3dhpHybrIKConverter
 from .mpii import MpiiConverter
+from .mtp import MtpConverter
+from .muco3dhp import Muco3dhpConverter
+from .ochuman import OCHumanConverter
+from .oh50k3d import OH50k3DConverter
 from .penn_action import PennActionConverter
 from .posetrack import PosetrackConverter
+from .prox import ProxConverter
 from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .spin import SpinConverter
@@ -31,6 +38,7 @@ from .stirling import StirlingConverter
 from .surreal import SurrealConverter
 from .up3d import Up3dConverter
 from .vibe import VibeConverter
+from .vlog import VlogConverter
 
 __all__ = [
     'build_data_converter', 'AgoraConverter', 'MpiiConverter', 'H36mConverter',
@@ -43,5 +51,7 @@ __all__ = [
     'SurrealConverter', 'InstaVibeConverter', 'SpinConverter', 'VibeConverter',
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
-    'EHFConverter'
+    'EHFConverter', 'ProxConverter', 'OH50k3DConverter', 'Muco3dhpConverter',
+    'AicConverter', 'InstaVarietyConverter', 'VlogConverter',
+    'OCHumanConverter', 'MtpConverter'
 ]
