@@ -15,7 +15,7 @@ from mmhuman3d.utils.path_utils import (
 _MultiHumanData_SUPPORTED_KEYS = HumanData.SUPPORTED_KEYS.copy()
 _MultiHumanData_SUPPORTED_KEYS.update(
     {'frame_range': {
-        'type': np.array,
+        'type': np.ndarray,
         'shape': (-1, 2),
         'dim': 0
     }})
@@ -304,7 +304,8 @@ class MultiHumanData(HumanData):
                 data_len = value_len if slice_dim == 0 \
                     else value.shape[slice_dim]
                 # dim not for slice
-                if data_len != self.__instance_num__:
+                if data_len != self.__instance_num__ and \
+                        data_len != self.__data_len__:
                     ret_dict[key] = None
                     continue
                 else:
@@ -420,7 +421,7 @@ class MultiHumanData(HumanData):
                     self.data_len = self.instance_num
                     frame_range =  \
                         [[i, i + 1] for i in range(self.data_len)]
-                    self['frame_range'] = frame_range
+                    self['frame_range'] = np.array(frame_range)
                     break
 
         for key in list(self.keys()):
