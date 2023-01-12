@@ -14,9 +14,9 @@ from mmhuman3d.utils.path_utils import (
 
 _MultiHumanData_SUPPORTED_KEYS = HumanData.SUPPORTED_KEYS.copy()
 _MultiHumanData_SUPPORTED_KEYS.update(
-    {'optional': {
-        'type': dict,
-        'slice_key': 'frame_range',
+    {'frame_range': {
+        'type': np.array,
+        'shape': (-1, 2),
         'dim': 0
     }})
 
@@ -216,13 +216,15 @@ class MultiHumanData(HumanData):
             stop = arg_1
         slice_index = slice(start, stop, step)
         dim_dict = self.__get_slice_dim__()
-        # frame_range = self.get_raw_value('optional')['frame_range']
+
         for key, dim in dim_dict.items():
-            # primary index
-            if key == 'optional':
+            if key == 'frame_range':
+                # primary index
                 frame_range = None
             else:
-                frame_range = self.get_raw_value('optional')['frame_range']
+                # index according to frame_range
+                frame_range = self.get_raw_value('frame_range')
+
             # keys not expected be sliced
             if dim is None:
                 ret_human_data[key] = self[key]
@@ -331,9 +333,8 @@ class MultiHumanData(HumanData):
 
         # MultiHumanData
         instance_num = 0
-        if key == 'optional' and \
-                'frame_range' in val:
-            for frame_range in val['frame_range']:
+        if key == 'frame_range':
+            for frame_range in val:
                 instance_num += (frame_range[-1] - frame_range[0])
 
             if self.instance_num == -1:
@@ -342,7 +343,7 @@ class MultiHumanData(HumanData):
             elif self.instance_num != instance_num:
                 ret_bool = False
 
-            data_len = len(val['frame_range'])
+            data_len = len(val)
             if self.data_len == -1:
                 # init data_len
                 self.data_len = data_len
@@ -400,7 +401,7 @@ class MultiHumanData(HumanData):
             and `data_len` equals frames num.
         """
         supported_keys = self.__class__.SUPPORTED_KEYS
-        if 'optional' not in self:
+        if 'frame_range' not in self:
             # the loaded file is not multi_human_data
             for key in supported_keys:
                 if key in self and \
@@ -417,10 +418,9 @@ class MultiHumanData(HumanData):
 
                     # convert HumanData to MultiHumanData
                     self.data_len = self.instance_num
-                    optional = {}
-                    optional['frame_range'] =  \
+                    frame_range =  \
                         [[i, i + 1] for i in range(self.data_len)]
-                    self['optional'] = optional
+                    self['frame_range'] = frame_range
                     break
 
         for key in list(self.keys()):
@@ -441,6 +441,7 @@ class MultiHumanData(HumanData):
 
         if frame_index is not None:
             slice_data = []
+            # primary index
             for frame_range in frame_index[slice_range]:
                 slice_index = slice(frame_range[0], frame_range[-1], 1)
                 slice_result = \
@@ -455,7 +456,6 @@ class MultiHumanData(HumanData):
             else:
                 slice_data = type(input_data)(slice_data)
         else:
-            # primary index
             slice_data = \
                 HumanData.__get_sliced_result__(
                     input_data,

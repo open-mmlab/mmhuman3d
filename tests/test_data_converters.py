@@ -339,7 +339,7 @@ def test_preprocessed_npz():
         'features', 'has_smpl', 'keypoints2d_gta', 'keypoints3d_gta',
         'keypoints2d_gta_mask', 'keypoints3d_gta_mask', 'image_id',
         'keypoints2d_humman', 'keypoints3d_humman', 'keypoints2d_humman_mask',
-        'keypoints3d_humman_mask', 'vertices'
+        'keypoints3d_humman_mask', 'vertices', 'frame_range'
     ]
 
     for npf in os.listdir(npz_folder):
