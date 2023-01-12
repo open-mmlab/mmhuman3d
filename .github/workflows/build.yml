@@ -34,9 +34,11 @@ jobs:
         include:
           - torch: 1.8.0
             torchvision: 0.9.0
+            torchaudio: 0.8.0
             openpifpaf: 0.12.6
           - torch: 1.9.0
             torchvision: 0.10.0
+            torchaudio: 0.9.0
             openpifpaf: 0.13.1
     defaults:
       run:
@@ -67,7 +69,7 @@ jobs:
           ffmpeg -version
       - name: Install PyTorch
         run: |
-          conda install pytorch==${{matrix.torch}} torchvision==${{matrix.torchvision}} cudatoolkit=10.1 -c pytorch
+          conda install pytorch==${{matrix.torch}} torchvision==${{matrix.torchvision}} torchaudio==${{matrix.torchaudio}} cudatoolkit=10.2 -c pytorch
       - name: Install pytorch3d
         run: |
           conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y

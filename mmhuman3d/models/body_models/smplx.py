@@ -398,29 +398,6 @@ class SMPLXLayer(_SMPLXLayer):
             output['full_pose'] = smplx_output.full_pose
         return output
 
-
-@dataclass
-class ModelOutput(SMPLXOutput):
-    smpl_joints: Optional[torch.Tensor] = None
-    joints_J19: Optional[torch.Tensor] = None
-    smplx_vertices: Optional[torch.Tensor] = None
-    flame_vertices: Optional[torch.Tensor] = None
-    lhand_vertices: Optional[torch.Tensor] = None
-    rhand_vertices: Optional[torch.Tensor] = None
-    lhand_joints: Optional[torch.Tensor] = None
-    rhand_joints: Optional[torch.Tensor] = None
-    face_joints: Optional[torch.Tensor] = None
-    lfoot_joints: Optional[torch.Tensor] = None
-    rfoot_joints: Optional[torch.Tensor] = None
-
-
-class SMPLXLayer_PyMAFX(_SMPLXLayer):
-    """Extension of the official SMPLX implementation to support more
-    functions."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def get_global_rotation(self,
                             global_orient: Optional[torch.Tensor] = None,
                             body_pose: Optional[torch.Tensor] = None,
@@ -574,6 +551,21 @@ class SMPLXLayer_PyMAFX(_SMPLXLayer):
         return global_rotmat, posed_joints
 
 
+@dataclass
+class ModelOutput(SMPLXOutput):
+    smpl_joints: Optional[torch.Tensor] = None
+    joints_J19: Optional[torch.Tensor] = None
+    smplx_vertices: Optional[torch.Tensor] = None
+    flame_vertices: Optional[torch.Tensor] = None
+    lhand_vertices: Optional[torch.Tensor] = None
+    rhand_vertices: Optional[torch.Tensor] = None
+    lhand_joints: Optional[torch.Tensor] = None
+    rhand_joints: Optional[torch.Tensor] = None
+    face_joints: Optional[torch.Tensor] = None
+    lfoot_joints: Optional[torch.Tensor] = None
+    rfoot_joints: Optional[torch.Tensor] = None
+
+
 class SMPLX_ALL(nn.Module):
     """Extension of the official SMPLX implementation to support more
     joints."""
@@ -586,7 +578,6 @@ class SMPLX_ALL(nn.Module):
                  smpl_model_dir=None,
                  **kwargs):
         super().__init__()
-        numBetas = 10
         self.use_face_contour = use_face_contour
         if gender == 'all':
             self.genders = ['male', 'female', 'neutral']
@@ -595,15 +586,17 @@ class SMPLX_ALL(nn.Module):
         for gender in self.genders:
             assert gender in ['male', 'female', 'neutral']
         self.model_dict = nn.ModuleDict({
-            gender: SMPLXLayer_PyMAFX(
+            gender: SMPLXLayer(
                 smpl_model_dir,
                 gender=gender,
                 ext='npz',
-                num_betas=numBetas,
+                num_betas=10,
                 use_pca=False,
                 batch_size=batch_size,
                 use_face_contour=use_face_contour,
                 num_pca_comps=45,
+                keypoint_src='smplx',
+                keypoint_dst='smplx',
                 **kwargs)
             for gender in self.genders
         })

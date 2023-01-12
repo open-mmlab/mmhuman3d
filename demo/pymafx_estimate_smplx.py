@@ -117,7 +117,7 @@ def prepare_data_with_pifpaf_detection(args):
         if num_person > max_instance:
             max_instance = num_person
     pkl.dump(tracking_results, open(pp_det_file_path, 'wb'))
-    bboxes = joints2d = []
+    joints2d = []
     frames = []
     if args.tracking_method == 'pose':
         wb_kps = {
@@ -137,7 +137,7 @@ def prepare_data_with_pifpaf_detection(args):
                 tracking_results[person_id]['joints2d_face'])
 
         frames.extend(tracking_results[person_id]['frames'])
-    return bboxes, joints2d, frames, wb_kps, person_id_list,\
+    return joints2d, frames, wb_kps, person_id_list,\
         image_folder, output_path, max_instance
 
 
@@ -153,12 +153,11 @@ def main(args):
     args.pin_memory = True if torch.cuda.is_available() else False
     pymaf_config = dict(mmcv.Config.fromfile(args.mesh_reg_config))
     # Prepare input
-    bboxes, joints2d, frames, wb_kps, person_id_list, image_folder, \
+    joints2d, frames, wb_kps, person_id_list, image_folder, \
         output_path, max_instance = prepare_data_with_pifpaf_detection(args)
 
     pymaf_config['data']['test']['image_folder'] = image_folder
     pymaf_config['data']['test']['frames'] = frames
-    pymaf_config['data']['test']['bboxes'] = bboxes
     pymaf_config['data']['test']['joints2d'] = joints2d
     pymaf_config['data']['test']['person_id_list'] = person_id_list
     pymaf_config['data']['test']['wb_kps'] = wb_kps

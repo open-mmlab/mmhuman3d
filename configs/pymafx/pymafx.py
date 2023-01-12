@@ -8,6 +8,7 @@ __grid_align__ = dict(
     att_head=1,
     att_starts=1,
 )
+__img_res__ = 224
 # model settings
 __hrnet_extra__ = dict(
     pretr_set='coco',  # 'none' 'imagenet' 'coco'
@@ -106,26 +107,20 @@ model = dict(
     hf_model_cfg=__hf_model_cfg__)
 
 # dataset settings
-img_res = 224
 img_norm_cfg = dict(
-    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=True)
+    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], to_rgb=False)
 dataset_type = 'PyMAFXHumanImageDataset'
 inference_pipeline = [
-    dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
-    dict(type='ImageToTensor', keys=['img', 'ori_img']),
-    dict(
-        type='Collect',
-        keys=['img', 'sample_idx'],
-        meta_keys=[
-            'image_path', 'center', 'scale', 'rotation', 'ori_img',
-            'crop_transform'
-        ])
+    dict(type='ImageToTensor', keys=['img']),
 ]
 data = dict(
     samples_per_gpu=48,
     workers_per_gpu=8,
     test=dict(
-        type=dataset_type, data_prefix='data', pipeline=inference_pipeline),
+        type=dataset_type,
+        data_prefix='data',
+        pipeline=inference_pipeline,
+        img_res=__img_res__,
+        hf_img_size=224),
 )

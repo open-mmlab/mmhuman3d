@@ -776,9 +776,13 @@ class PoseHighResolutionNetExpose(PoseHighResolutionNet):
 class PoseHighResolutionNetPyMAFX(BaseModule):
     blocks_dict = {'BASIC': BasicBlock, 'BOTTLENECK': Bottleneck}
 
-    def __init__(self, extra, pretrained=True, global_mode=False):
+    def __init__(self,
+                 extra,
+                 pretrained=True,
+                 global_mode=False,
+                 init_cfg=None):
         self.inplanes = 64
-        super().__init__()
+        super(PoseHighResolutionNetPyMAFX, self).__init__(init_cfg)
 
         # stem net
         self.conv1 = nn.Conv2d(

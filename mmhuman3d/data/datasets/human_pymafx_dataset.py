@@ -8,7 +8,6 @@ import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torchvision.transforms import Normalize
 
 from mmhuman3d.core.conventions.keypoints_mapping.mano import (
     MANO_RIGHT_REORDER_KEYPOINTS,
@@ -24,11 +23,6 @@ from .base_dataset import BaseDataset
 from .builder import DATASETS
 
 # yapf: enable
-HF_IMG_SIZE = 224
-
-IMG_RES = 224
-IMG_NORM_MEAN = [0.485, 0.456, 0.406]
-IMG_NORM_STD = [0.229, 0.224, 0.225]
 
 
 @DATASETS.register_module()
@@ -38,32 +32,32 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     def __init__(self,
                  data_prefix: str,
                  pipeline: list,
+                 img_res: int,
+                 hf_img_size,
                  image_folder,
                  frames,
                  bboxes=None,
                  joints2d=None,
-                 scale=1.0,
+                 scale_factor=1.0,
                  crop_size=224,
                  person_id_list=[],
                  wb_kps={},
                  test_mode: Optional[bool] = True):
         super().__init__(data_prefix, pipeline, test_mode)
+        self.img_res = img_res
+        self.hf_img_size = hf_img_size
         self.image_file_names = [
             osp.join(image_folder, x) for x in os.listdir(image_folder)
             if x.endswith('.png') or x.endswith('.jpg')
         ]
-        self.image_file_names = sorted(self.image_file_names)
-        self.image_file_names = np.array(self.image_file_names)[frames]
+        self.image_file_names = np.array(sorted(self.image_file_names))[frames]
         self.bboxes = bboxes
         self.joints2d = joints2d
-        self.scale_factor = scale
+        self.scale_factor = scale_factor
         self.crop_size = crop_size
         self.frames = frames
         self.has_keypoints = True if joints2d is not None else False
         self.person_id_list = person_id_list
-
-        self.normalize_img = Normalize(mean=IMG_NORM_MEAN, std=IMG_NORM_STD)
-
         self.norm_joints2d = np.zeros_like(self.joints2d)
 
         if self.has_keypoints:
@@ -71,17 +65,19 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             scales = []
             for j2d in self.joints2d:
                 kp2d_valid = j2d[j2d[:, 2] > 0.]
-                bbox = [
+                bbox_xyxy = [
                     min(kp2d_valid[:, 0]),
                     min(kp2d_valid[:, 1]),
                     max(kp2d_valid[:, 0]),
                     max(kp2d_valid[:, 1])
                 ]
-                center = [(bbox[2] + bbox[0]) / 2., (bbox[3] + bbox[1]) / 2.]
-                scale = self.scale_factor * 1.2 * max(bbox[2] - bbox[0],
-                                                      bbox[3] - bbox[1]) / 200.
+                center = [(bbox_xyxy[2] + bbox_xyxy[0]) / 2.,
+                          (bbox_xyxy[3] + bbox_xyxy[1]) / 2.]
+                scale = self.scale_factor * 1.2 * max(
+                    bbox_xyxy[2] - bbox_xyxy[0],
+                    bbox_xyxy[3] - bbox_xyxy[1]) / 200.
 
-                res = [IMG_RES, IMG_RES]
+                res = [self.img_res, self.img_res]
                 ul = np.array(transform([1, 1], center, scale, res,
                                         invert=1)) - 1
                 # Bottom right point
@@ -93,8 +89,8 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 center = [(ul[0] + br[0]) / 2., (ul[1] + br[1]) / 2.]
                 width_height = [br[0] - ul[0], br[1] - ul[1]]
 
-                bbox = np.array(center + width_height)
-                bboxes.append(bbox)
+                bbox_xyxy = np.array(center + width_height)
+                bboxes.append(bbox_xyxy)
                 scales.append(scale)
 
             self.bboxes = np.stack(bboxes)
@@ -119,18 +115,16 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 exit()
 
     def __len__(self):
-        # return len(self.image_file_names)
         return len(self.bboxes)
 
-    def rgb_processing(self, rgb_img, center, scale, res, rot=0., flip=0):
-        """Process rgb image and do augmentation.
-
-        in the rgb image we add pixel noise in a channel-wise manner
-        rgb_img[:,:,0] =     np.minimum(255.0, np.maximum(0.0,
-        rgb_img[:,:,0]*pn[0])) rgb_img[:,:,1] =     np.minimum(255.0,
-        np.maximum(0.0, rgb_img[:,:,1]*pn[1])) rgb_img[:,:,2] =
-        np.minimum(255.0, np.maximum(0.0, rgb_img[:,:,2]*pn[2]))
-        """
+    def rgb_processing(self,
+                       rgb_img,
+                       center,
+                       scale,
+                       res=[224, 224],
+                       rot=0.,
+                       flip=0):
+        """Process rgb image and do augmentation."""
         # crop
         crop_img_resized, crop_img, crop_shape = crop(
             rgb_img, center, scale, res, rot=rot)
@@ -138,12 +132,9 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         if flip:
             crop_img_resized = flip_img(crop_img_resized)
             crop_img = flip_img(crop_img)
-            # rgb_img = flip_img(rgb_img)
-        # (3,224,224),float,[0,1]
-        crop_img_resized = np.transpose(
-            crop_img_resized.astype('float32'), (2, 0, 1)) / 255.0
-        crop_img = np.transpose(crop_img.astype('float32'), (2, 0, 1)) / 255.0
-        # rgb_img = np.transpose(rgb_img.astype('float32'), (2,0,1)) / 255.0
+        # (224, 224, 3), float, [0, 1]
+        crop_img_resized = crop_img_resized.astype('float32') / 255.0
+        crop_img = crop_img.astype('float32') / 255.0
         return crop_img_resized, crop_img, crop_shape
 
     def j2d_processing(self,
@@ -163,7 +154,7 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             new_pt = np.dot(t, new_pt)
             kp[i, 0:2] = new_pt[:2]
         # convert to normalized coordinates
-        kp[:, :-1] = 2. * kp[:, :-1] / IMG_RES - 1.
+        kp[:, :-1] = 2. * kp[:, :-1] / self.img_res - 1.
         # flip the x coordinates
         if f:
             if is_hand:
@@ -195,33 +186,34 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         j2d = self.joints2d[idx]
 
         kp2d_valid = j2d[j2d[:, 2] > 0.]
-        bbox = [
+        bbox_xyxy = [
             min(kp2d_valid[:, 0]),
             min(kp2d_valid[:, 1]),
             max(kp2d_valid[:, 0]),
             max(kp2d_valid[:, 1])
         ]
-        center = [(bbox[2] + bbox[0]) / 2., (bbox[3] + bbox[1]) / 2.]
-        sc = 1.2 * max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 200.
+        center = [(bbox_xyxy[2] + bbox_xyxy[0]) / 2.,
+                  (bbox_xyxy[3] + bbox_xyxy[1]) / 2.]
+        sc = 1.2 * max(bbox_xyxy[2] - bbox_xyxy[0],
+                       bbox_xyxy[3] - bbox_xyxy[1]) / 200.
 
-        img, _, crop_shape = self.rgb_processing(img_orig, center, sc * scale,
-                                                 [IMG_RES, IMG_RES])
+        img, _, _ = self.rgb_processing(img_orig, center, sc * scale,
+                                        [self.img_res, self.img_res])
 
         # crop_img = np.transpose(img.astype('float32'), (1,2,0)) * 255.
         # cv2.imwrite('output/body_img.png', crop_img.astype(np.uint8))
 
         # Store image before normalization to use it in visualization
-        item['img_body'] = self.normalize_img(torch.from_numpy(img).float())
+        item['img_body'] = self.pipeline({'img': img})['img'].float()
         item['orig_height'] = orig_height
         item['orig_width'] = orig_width
-
         item['person_id'] = self.person_id_list[idx]
 
-        img_hr, img_crop, _ = self.rgb_processing(img_orig, center, sc * scale,
-                                                  [IMG_RES * 8, IMG_RES * 8])
+        img_hr, img_crop, _ = self.rgb_processing(
+            img_orig, center, sc * scale, [self.img_res * 8, self.img_res * 8])
 
         kps_transf = get_transform(
-            center, sc * scale, [IMG_RES, IMG_RES], rot=rot)
+            center, sc * scale, [self.img_res, self.img_res], rot=rot)
 
         lhand_kp2d, rhand_kp2d, face_kp2d = self.joints2d_part['lhand'][
             idx], self.joints2d_part['rhand'][idx], self.joints2d_part['face'][
@@ -247,15 +239,16 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             # kp2d_valid = kp2d[kp2d[:, 2]>0.005]
             kp2d_valid = kp2d[kp2d[:, 2] > 0.]
             if len(kp2d_valid) > 0:
-                bbox = [
+                bbox_xyxy = [
                     min(kp2d_valid[:, 0]),
                     min(kp2d_valid[:, 1]),
                     max(kp2d_valid[:, 0]),
                     max(kp2d_valid[:, 1])
                 ]
-                center_part = [(bbox[2] + bbox[0]) / 2.,
-                               (bbox[3] + bbox[1]) / 2.]
-                scale_part = 2. * max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 2
+                center_part = [(bbox_xyxy[2] + bbox_xyxy[0]) / 2.,
+                               (bbox_xyxy[3] + bbox_xyxy[1]) / 2.]
+                scale_part = 2. * max(bbox_xyxy[2] - bbox_xyxy[0],
+                                      bbox_xyxy[3] - bbox_xyxy[1]) / 2
 
             # handle invalid part keypoints
             if len(kp2d_valid) < 1 or scale_part < 0.01:
@@ -269,16 +262,17 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             theta_part[:, 0, 0] = scale_part
             theta_part[:, 1, 1] = scale_part
             theta_part[:, :, -1] = center_part
-            crop_hf_img_size = torch.Size([1, 3, HF_IMG_SIZE, HF_IMG_SIZE])
+            crop_hf_img_size = torch.Size(
+                [1, 3, self.hf_img_size, self.hf_img_size])
             grid = F.affine_grid(
                 theta_part.detach(), crop_hf_img_size, align_corners=False)
             img_part = F.grid_sample(
-                torch.from_numpy(img_crop[None]),
+                torch.from_numpy(img_crop.transpose(2, 0, 1)[None]),
                 grid.cpu(),
                 align_corners=False).squeeze(0)
 
-            item[f'img_{part}'] = self.normalize_img(img_part.float())
-
+            item[f'img_{part}'] = self.pipeline(
+                {'img': img_part.numpy().transpose(1, 2, 0)})['img'].float()
             theta_i_inv = torch.zeros_like(theta_part)
             theta_i_inv[:, 0, 0] = 1. / theta_part[:, 0, 0]
             theta_i_inv[:, 1, 1] = 1. / theta_part[:, 1, 1]
