@@ -1,21 +1,16 @@
 import logging
 import pickle
-from enum import Enum
-from typing import Any, TypeVar, Union
+from typing import Any, Union
 
 import numpy as np
 from mmcv.utils import print_log
 
-from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.human_data import HumanData, _HumanData
 from mmhuman3d.utils.path_utils import (
     Existence,
     check_path_existence,
     check_path_suffix,
 )
-
-# In T = TypeVar('T'), T can be anything.
-# See definition of typing.TypeVar for details.
-_HumanData = TypeVar('_HumanData')
 
 _MultiHumanData_SUPPORTED_KEYS = HumanData.SUPPORTED_KEYS.copy()
 _MultiHumanData_SUPPORTED_KEYS.update(
@@ -26,29 +21,20 @@ _MultiHumanData_SUPPORTED_KEYS.update(
     }})
 
 
-class _KeyCheck(Enum):
-    PASS = 0
-    WARN = 1
-    ERROR = 2
-
-
 class MultiHumanData(HumanData):
     SUPPORTED_KEYS = _MultiHumanData_SUPPORTED_KEYS
 
     def __new__(cls: _HumanData, *args: Any, **kwargs: Any) -> _HumanData:
-        """New an instance of HumanData.
+        """New an instance of MultiHumanData.
 
         Args:
-            cls (HumanData): HumanData class.
+            cls (MultiHumanData): MultiHumanData class.
 
         Returns:
             HumanData: An instance of Hu
         """
         ret_human_data = super().__new__(cls, args, kwargs)
-        # setattr(ret_human_data, '__data_len__', -1)
         setattr(ret_human_data, '__instance_num__', -1)
-        # setattr(ret_human_data, '__key_strict__', False)
-        # setattr(ret_human_data, '__keypoints_compressed__', False)
         return ret_human_data
 
     def load(self, npz_path: str):
@@ -180,7 +166,7 @@ class MultiHumanData(HumanData):
 
     @property
     def instance_num(self) -> int:
-        """Get the human instance num of this MultiHumanData instance. In
+        """Get how many human are there in this MultiHumanData instance. In
         MuliHumanData, an image may have multiple corresponding human
         instances.
 

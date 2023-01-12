@@ -198,13 +198,17 @@ class H36mConverter(BaseModeConverter):
                         dataset_path: str,
                         out_path: str,
                         mode: str,
-                        multi_human_data: bool = False) -> dict:
+                        enable_multi_human_data: bool = False) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
             mode (str): Mode in accepted modes
+            enable_multi_human_data (bool):
+                Whether to generate a multi-human data. If set to True,
+                stored in MultiHumanData() format.
+                Default: False, stored in HumanData() format.
 
         Returns:
             dict:
@@ -212,7 +216,7 @@ class H36mConverter(BaseModeConverter):
                 keypoints2d_mask, keypoints3d, keypoints3d_mask, cam_param
                 stored in HumanData() format
         """
-        if multi_human_data:
+        if enable_multi_human_data:
             # use MultiHumanData to store all data
             human_data = MultiHumanData()
         else:
@@ -382,7 +386,7 @@ class H36mConverter(BaseModeConverter):
             smpl['betas'] = np.array(smpl['betas']).reshape((-1, 10))
             human_data['smpl'] = smpl
 
-        if multi_human_data:
+        if enable_multi_human_data:
             optional = {}
             optional['frame_range'] = np.array(
                 [[i, i + 1] for i in range(len(image_path_))])

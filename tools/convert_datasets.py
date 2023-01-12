@@ -108,7 +108,7 @@ def main():
         data_converter.convert(
             input_path,
             args.output_path,
-            multi_human_data=args.multi_human_data)
+            enable_multi_human_data=args.multi_human_data)
         print(f'[{dataset}] Converting finished!')
 
 

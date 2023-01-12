@@ -2,7 +2,6 @@ import json
 import os
 from typing import List
 
-import mmcv
 import numpy as np
 from tqdm import tqdm
 
@@ -34,21 +33,24 @@ class CrowdposeConverter(BaseModeConverter):
                         dataset_path: str,
                         out_path: str,
                         mode: str,
-                        multi_human_data: bool = False,
-                        file_client_args: dict = None) -> dict:
+                        enable_multi_human_data: bool = False) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
             mode (str): Mode in accepted modes
+            enable_multi_human_data (bool):
+                Whether to generate a multihuman data.If set to True,
+                stored in MultiHumanData() format.
+                Default: False, stored in HumanData() format.
 
         Returns:
             dict:
                 A dict containing keys image_path, bbox_xywh, keypoints2d,
                 keypoints2d_mask stored in HumanData() format
         """
-        if multi_human_data:
+        if enable_multi_human_data:
             # use MultiHumanData to store all data
             human_data = MultiHumanData()
         else:
@@ -62,10 +64,7 @@ class CrowdposeConverter(BaseModeConverter):
         json_path = os.path.join(dataset_path,
                                  'crowdpose_{}.json'.format(mode))
 
-        if file_client_args is not None:
-            json_data = mmcv.load(json_path, file_client_args=file_client_args)
-        else:
-            json_data = json.load(open(json_path, 'r'))
+        json_data = json.load(open(json_path, 'r'))
 
         imgs = {}
         for img in json_data['images']:
@@ -105,7 +104,7 @@ class CrowdposeConverter(BaseModeConverter):
             keypoints2d_.append(keypoints2d)
             bbox_xywh_.append(bbox_xywh)
 
-        if multi_human_data:
+        if enable_multi_human_data:
             # optional
             optional = {}
             optional['frame_range'] = []

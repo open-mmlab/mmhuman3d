@@ -2,7 +2,6 @@ import json
 import os
 from typing import List
 
-import mmcv
 import numpy as np
 from tqdm import tqdm
 
@@ -50,17 +49,17 @@ class EftConverter(BaseModeConverter):
                         dataset_path: str,
                         out_path: str,
                         mode: str,
-                        multi_human_data: bool = False,
-                        file_client_args: dict = None) -> dict:
+                        enable_multi_human_data: bool = False) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
             mode (str): Mode in accepted modes
-            multi_human_data (bool): Stored format. If set to True,
-            stored in MultiHumanData() format. Default: False,
-            stored in HumanData() format.
+            enable_multi_human_data (bool):
+                Whether to generate a multi-human data. If set to True,
+                stored in MultiHumanData() format.
+                Default: False, stored in HumanData() format.
 
         Returns:
             dict:
@@ -68,7 +67,7 @@ class EftConverter(BaseModeConverter):
                 keypoints2d_mask, smpl stored in HumanData() format
         """
 
-        if multi_human_data:
+        if enable_multi_human_data:
             # use MultiHumanData to store all data
             human_data = MultiHumanData()
         else:
@@ -88,11 +87,8 @@ class EftConverter(BaseModeConverter):
         else:
             raise ValueError('provided dataset is not in eft fittings')
 
-        if file_client_args is not None:
-            eft_data = mmcv.load(annot_file, file_client_args=file_client_args)
-        else:
-            with open(annot_file, 'r') as f:
-                eft_data = json.load(f)
+        with open(annot_file, 'r') as f:
+            eft_data = json.load(f)
 
         eft_data_all = eft_data['data']
 
@@ -120,7 +116,7 @@ class EftConverter(BaseModeConverter):
             bbox_xywh_.append(bbox_xywh)
             keypoints2d_.append(gt_keypoint_2d)
 
-        if multi_human_data:
+        if enable_multi_human_data:
             # optional
             optional = {}
             optional['frame_range'] = []
