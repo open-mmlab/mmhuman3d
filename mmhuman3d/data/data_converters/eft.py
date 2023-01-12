@@ -117,18 +117,14 @@ class EftConverter(BaseModeConverter):
             keypoints2d_.append(gt_keypoint_2d)
 
         if enable_multi_human_data:
-            # optional
-            optional = {}
-            optional['frame_range'] = []
-            frame_start = 0
-            frame_end = 0
+            frame_range = []
+            frame_start, frame_end = 0, 0
             for image_path in sorted(set(image_path_), key=image_path_.index):
                 frame_end = frame_start + \
                     image_path_.count(image_path)
-                optional['frame_range'].append([frame_start, frame_end])
+                frame_range.append([frame_start, frame_end])
                 frame_start = frame_end
-            optional['frame_range'] = np.array(optional['frame_range'])
-            human_data['optional'] = optional
+            human_data['frame_range'] = np.array(frame_range)
 
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])

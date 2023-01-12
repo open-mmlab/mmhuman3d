@@ -387,10 +387,9 @@ class H36mConverter(BaseModeConverter):
             human_data['smpl'] = smpl
 
         if enable_multi_human_data:
-            optional = {}
-            optional['frame_range'] = np.array(
-                [[i, i + 1] for i in range(len(image_path_))])
-            human_data['optional'] = optional
+            frame_range = np.array([[i, i + 1]
+                                    for i in range(len(image_path_))])
+            human_data['frame_range'] = frame_range
 
         metadata_path = os.path.join(dataset_path, 'metadata.xml')
         if isinstance(metadata_path, str):
