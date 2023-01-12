@@ -1,3 +1,4 @@
+# yapf: disable
 import os
 import pickle
 from dataclasses import dataclass
@@ -21,7 +22,20 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_num,
 )
+from mmhuman3d.core.conventions.keypoints_mapping.mano import (
+    MANO_LEFT_REORDER_KEYPOINTS,
+    MANO_RIGHT_REORDER_KEYPOINTS,
+)
+from mmhuman3d.core.conventions.keypoints_mapping.openpose import (
+    OPENPOSE_25_KEYPOINTS,
+)
+from mmhuman3d.core.conventions.keypoints_mapping.spin_smplx import (
+    SPIN_SMPLX_KEYPOINTS,
+)
 from mmhuman3d.core.conventions.segmentation import body_segmentation
+
+# yapf: enable
+JOINT_NAMES = OPENPOSE_25_KEYPOINTS + SPIN_SMPLX_KEYPOINTS
 
 
 class SMPLX(_SMPLX):
@@ -594,7 +608,7 @@ class SMPLX_ALL(nn.Module):
             for gender in self.genders
         })
         self.model_neutral = self.model_dict['neutral']
-        joints = [constants.JOINT_MAP[i] for i in constants.JOINT_NAMES]
+        joints = [constants.JOINT_MAP[i] for i in JOINT_NAMES]
         J_regressor_extra = np.load(joint_regressor_train_extra)
         self.register_buffer(
             'J_regressor_extra',
@@ -617,12 +631,12 @@ class SMPLX_ALL(nn.Module):
 
         # left and right hand joint mapping
         smplx2lhand_joints = [
-            constants.SMPLX_JOINT_IDS['left_{}'.format(name)]
-            for name in constants.HAND_NAMES
+            constants.SMPLX_JOINT_IDS[name]
+            for name in MANO_LEFT_REORDER_KEYPOINTS
         ]
         smplx2rhand_joints = [
-            constants.SMPLX_JOINT_IDS['right_{}'.format(name)]
-            for name in constants.HAND_NAMES
+            constants.SMPLX_JOINT_IDS[name]
+            for name in MANO_RIGHT_REORDER_KEYPOINTS
         ]
         self.smplx2lh_joint_map = torch.tensor(
             smplx2lhand_joints, dtype=torch.long)

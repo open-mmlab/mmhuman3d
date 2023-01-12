@@ -1,3 +1,4 @@
+# yapf: disable
 import math
 
 import numpy as np
@@ -9,6 +10,18 @@ from mmcv.runner.base_module import BaseModule
 from smplx.lbs import batch_rodrigues
 from torch.nn import functional as F
 
+from mmhuman3d.core.conventions.keypoints_mapping.flame import (
+    FLAME_73_KEYPOINTS,
+)
+from mmhuman3d.core.conventions.keypoints_mapping.mano import (
+    MANO_RIGHT_REORDER_KEYPOINTS,
+)
+from mmhuman3d.core.conventions.keypoints_mapping.openpose import (
+    OPENPOSE_25_KEYPOINTS,
+)
+from mmhuman3d.core.conventions.keypoints_mapping.spin_smplx import (
+    SPIN_SMPLX_KEYPOINTS,
+)
 from mmhuman3d.models.body_models.smpl import SMPL
 from mmhuman3d.models.body_models.smplx import get_partial_smpl
 from mmhuman3d.utils.camera_utils import homo_vector
@@ -28,6 +41,10 @@ from ..bert.modeling_bert import (
     BertPreTrainedModel,
     BertSelfOutput,
 )
+
+# yapf: enable
+FACIAL_LANDMARKS = FLAME_73_KEYPOINTS[5:]
+JOINT_NAMES = OPENPOSE_25_KEYPOINTS + SPIN_SMPLX_KEYPOINTS
 
 LayerNormClass = torch.nn.LayerNorm
 BertLayerNorm = torch.nn.LayerNorm
@@ -1033,7 +1050,7 @@ class Regressor(nn.Module):
             pred_keypoints_2d = j2d_processing(pred_keypoints_2d,
                                                rw_cam['kps_transf'])
 
-        len_b_kp = len(constants.JOINT_NAMES)
+        len_b_kp = len(JOINT_NAMES)
         output = {}
         H36M_TO_J17 = [
             6, 5, 4, 1, 2, 3, 16, 15, 14, 11, 12, 13, 8, 10, 0, 7, 9
@@ -1072,8 +1089,8 @@ class Regressor(nn.Module):
                 pred_pose,
             })
             if self.smplx_mode:
-                len_h_kp = len(constants.HAND_NAMES)
-                len_f_kp = len(constants.FACIAL_LANDMARKS)
+                len_h_kp = len(MANO_RIGHT_REORDER_KEYPOINTS)
+                len_f_kp = len(FACIAL_LANDMARKS)
                 len_feet_kp = 2 * len(constants.FOOT_NAMES)
                 eval_mode = True
                 output.update({

@@ -1,8 +1,10 @@
 astropy
+boto3
 cdflib<0.4.0
 chumpy
 colormap
 easydev
+einops
 h5py
 matplotlib
 numpy
@@ -10,6 +12,7 @@ opencv-python
 pandas
 pickle5; python_version < '3.8'
 plyfile
+requests
 rtree
 scikit-image
 scipy

@@ -1,4 +1,16 @@
-import smplx.joint_names as smplx_joint_name
+# yapf: disable
+from mmhuman3d.core.conventions.keypoints_mapping.mano import (
+    MANO_RIGHT_REORDER_KEYPOINTS,
+)
+from mmhuman3d.core.conventions.keypoints_mapping.openpose import (
+    OPENPOSE_25_KEYPOINTS,
+)
+from mmhuman3d.core.conventions.keypoints_mapping.smplx import SMPLX_KEYPOINTS
+from mmhuman3d.core.conventions.keypoints_mapping.spin_smplx import (
+    SPIN_SMPLX_KEYPOINTS,
+)
+
+# yapf: enable
 
 # We create a superset of joints containing the OpenPose joints together with
 # the ones that each dataset provides. We keep a superset of 24 joints.
@@ -6,117 +18,62 @@ import smplx.joint_names as smplx_joint_name
 # we simply ignore it.
 # The joints used here are the following:
 
-OP_JOINT_NAMES = [
-    # 25 OpenPose joints (in the order provided by OpenPose)
-    'OP Nose',
-    'OP Neck',
-    'OP RShoulder',
-    'OP RElbow',
-    'OP RWrist',
-    'OP LShoulder',
-    'OP LElbow',
-    'OP LWrist',
-    'OP MidHip',
-    'OP RHip',
-    'OP RKnee',
-    'OP RAnkle',
-    'OP LHip',
-    'OP LKnee',
-    'OP LAnkle',
-    'OP REye',
-    'OP LEye',
-    'OP REar',
-    'OP LEar',
-    'OP LBigToe',
-    'OP LSmallToe',
-    'OP LHeel',
-    'OP RBigToe',
-    'OP RSmallToe',
-    'OP RHeel',
-]
-SPIN_JOINT_NAMES = [
-    # 24 Ground Truth joints (superset of joints from different datasets)
-    'Right Ankle',
-    'Right Knee',
-    'Right Hip',  # 2
-    'Left Hip',
-    'Left Knee',  # 4
-    'Left Ankle',
-    'Right Wrist',  # 6
-    'Right Elbow',
-    'Right Shoulder',  # 8
-    'Left Shoulder',
-    'Left Elbow',  # 10
-    'Left Wrist',
-    'Neck (LSP)',  # 12
-    'Top of Head (LSP)',
-    'Pelvis (MPII)',  # 14
-    'Thorax (MPII)',
-    'Spine (H36M)',  # 16
-    'Jaw (H36M)',
-    'Head (H36M)',  # 18
-    'Nose',
-    'Left Eye',
-    'Right Eye',
-    'Left Ear',
-    'Right Ear'
-]
-JOINT_NAMES = OP_JOINT_NAMES + SPIN_JOINT_NAMES
+JOINT_NAMES = OPENPOSE_25_KEYPOINTS + SPIN_SMPLX_KEYPOINTS
 
 # Dict containing the joints in numerical order
 JOINT_IDS = {JOINT_NAMES[i]: i for i in range(len(JOINT_NAMES))}
 
 # Map joints to SMPL joints
 JOINT_MAP = {
-    'OP Nose': 24,
-    'OP Neck': 12,
-    'OP RShoulder': 17,
-    'OP RElbow': 19,
-    'OP RWrist': 21,
-    'OP LShoulder': 16,
-    'OP LElbow': 18,
-    'OP LWrist': 20,
-    'OP MidHip': 0,
-    'OP RHip': 2,
-    'OP RKnee': 5,
-    'OP RAnkle': 8,
-    'OP LHip': 1,
-    'OP LKnee': 4,
-    'OP LAnkle': 7,
-    'OP REye': 25,
-    'OP LEye': 26,
-    'OP REar': 27,
-    'OP LEar': 28,
-    'OP LBigToe': 29,
-    'OP LSmallToe': 30,
-    'OP LHeel': 31,
-    'OP RBigToe': 32,
-    'OP RSmallToe': 33,
-    'OP RHeel': 34,
-    'Right Ankle': 8,
-    'Right Knee': 5,
-    'Right Hip': 45,
-    'Left Hip': 46,
-    'Left Knee': 4,
-    'Left Ankle': 7,
-    'Right Wrist': 21,
-    'Right Elbow': 19,
-    'Right Shoulder': 17,
-    'Left Shoulder': 16,
-    'Left Elbow': 18,
-    'Left Wrist': 20,
-    'Neck (LSP)': 47,
-    'Top of Head (LSP)': 48,
-    'Pelvis (MPII)': 49,
-    'Thorax (MPII)': 50,
-    'Spine (H36M)': 51,
-    'Jaw (H36M)': 52,
-    'Head (H36M)': 53,
-    'Nose': 24,
-    'Left Eye': 26,
-    'Right Eye': 25,
-    'Left Ear': 28,
-    'Right Ear': 27
+    'nose_openpose': 24,
+    'neck_openpose': 12,
+    'right_shoulder_openpose': 17,
+    'right_elbow_openpose': 19,
+    'right_wrist_openpose': 21,
+    'left_shoulder_openpose': 16,
+    'left_elbow_openpose': 18,
+    'left_wrist_openpose': 20,
+    'pelvis_openpose': 0,
+    'right_hip_openpose': 2,
+    'right_knee_openpose': 5,
+    'right_ankle_openpose': 8,
+    'left_hip_openpose': 1,
+    'left_knee_openpose': 4,
+    'left_ankle_openpose': 7,
+    'right_eye_openpose': 25,
+    'left_eye_openpose': 26,
+    'right_ear_openpose': 27,
+    'left_ear_openpose': 28,
+    'left_bigtoe_openpose': 29,
+    'left_smalltoe_openpose': 30,
+    'left_heel_openpose': 31,
+    'right_bigtoe_openpose': 32,
+    'right_smalltoe_openpose': 33,
+    'right_heel_openpose': 34,
+    'right_ankle': 8,
+    'right_knee': 5,
+    'right_hip': 45,
+    'left_hip': 46,
+    'left_knee': 4,
+    'left_ankle': 7,
+    'right_wrist': 21,
+    'right_elbow': 19,
+    'right_shoulder': 17,
+    'left_shoulder': 16,
+    'left_elbow': 18,
+    'left_wrist': 20,
+    'neck': 47,
+    'head_top': 48,
+    'pelvis': 49,
+    'thorax': 50,
+    'spine': 51,
+    'h36m_jaw': 52,
+    'h36m_head': 53,
+    'nose': 24,
+    'left_eye': 26,
+    'right_eye': 25,
+    'left_ear': 28,
+    'right_ear': 27
 }
 
 # Permutation of SMPL pose parameters when flipping the shape
@@ -147,115 +104,18 @@ SMPL_J49_FLIP_PERM = [
 SMPLX2SMPL_J45 = [i for i in range(22)] + [30, 45
                                            ] + [i for i in range(55, 55 + 21)]
 
-HAND_NAMES = [
-    'wrist',
-    'thumb1',
-    'thumb2',
-    'thumb3',
-    'thumb',
-    'index1',
-    'index2',
-    'index3',
-    'index',
-    'middle1',
-    'middle2',
-    'middle3',
-    'middle',
-    'ring1',
-    'ring2',
-    'ring3',
-    'ring',
-    'pinky1',
-    'pinky2',
-    'pinky3',
-    'pinky',
-]
+SMPLX_JOINT_IDS = {SMPLX_KEYPOINTS[i]: i for i in range(len(SMPLX_KEYPOINTS))}
 
-SMPLX_JOINT_NAMES = smplx_joint_name.JOINT_NAMES
-SMPLX_JOINT_IDS = {
-    SMPLX_JOINT_NAMES[i]: i
-    for i in range(len(SMPLX_JOINT_NAMES))
-}
-
-FOOT_NAMES = ['big_toe', 'small_toe', 'heel']
-
-FACIAL_LANDMARKS = [
-    'right_eye_brow1',
-    'right_eye_brow2',
-    'right_eye_brow3',
-    'right_eye_brow4',
-    'right_eye_brow5',
-    'left_eye_brow5',
-    'left_eye_brow4',
-    'left_eye_brow3',
-    'left_eye_brow2',
-    'left_eye_brow1',
-    'nose1',
-    'nose2',
-    'nose3',
-    'nose4',
-    'right_nose_2',
-    'right_nose_1',
-    'nose_middle',
-    'left_nose_1',
-    'left_nose_2',
-    'right_eye1',
-    'right_eye2',
-    'right_eye3',
-    'right_eye4',
-    'right_eye5',
-    'right_eye6',
-    'left_eye4',
-    'left_eye3',
-    'left_eye2',
-    'left_eye1',
-    'left_eye6',
-    'left_eye5',
-    'right_mouth_1',
-    'right_mouth_2',
-    'right_mouth_3',
-    'mouth_top',
-    'left_mouth_3',
-    'left_mouth_2',
-    'left_mouth_1',
-    'left_mouth_5',  # 59 in OpenPose output
-    'left_mouth_4',  # 58 in OpenPose output
-    'mouth_bottom',
-    'right_mouth_4',
-    'right_mouth_5',
-    'right_lip_1',
-    'right_lip_2',
-    'lip_top',
-    'left_lip_2',
-    'left_lip_1',
-    'left_lip_3',
-    'lip_bottom',
-    'right_lip_3',
-    'right_contour_1',
-    'right_contour_2',
-    'right_contour_3',
-    'right_contour_4',
-    'right_contour_5',
-    'right_contour_6',
-    'right_contour_7',
-    'right_contour_8',
-    'contour_middle',
-    'left_contour_8',
-    'left_contour_7',
-    'left_contour_6',
-    'left_contour_5',
-    'left_contour_4',
-    'left_contour_3',
-    'left_contour_2',
-    'left_contour_1',
-]
+FOOT_NAMES = ['bigtoe', 'smalltoe', 'heel']
 
 # LRHAND_FLIP_PERM = [i for i in range(16, 32)] + [i for i in range(16)]
-LRHAND_FLIP_PERM = [i for i in range(len(HAND_NAMES),
-                                     len(HAND_NAMES) * 2)
-                    ] + [i for i in range(len(HAND_NAMES))]
+LRHAND_FLIP_PERM = [
+    i for i in range(
+        len(MANO_RIGHT_REORDER_KEYPOINTS),
+        len(MANO_RIGHT_REORDER_KEYPOINTS) * 2)
+] + [i for i in range(len(MANO_RIGHT_REORDER_KEYPOINTS))]
 
-SINGLE_HAND_FLIP_PERM = [i for i in range(len(HAND_NAMES))]
+SINGLE_HAND_FLIP_PERM = [i for i in range(len(MANO_RIGHT_REORDER_KEYPOINTS))]
 
 FEEF_FLIP_PERM = [i for i in range(len(FOOT_NAMES),
                                    len(FOOT_NAMES) * 2)

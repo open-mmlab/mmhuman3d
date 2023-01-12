@@ -1,9 +1,15 @@
-# isort: skip_file
+# yapf: disable
 from abc import ABCMeta
 
 import torch
 import torch.nn as nn
 
+from mmhuman3d.core.conventions.keypoints_mapping.flame import (
+    FLAME_73_KEYPOINTS,
+)
+from mmhuman3d.core.conventions.keypoints_mapping.mano import (
+    MANO_RIGHT_REORDER_KEYPOINTS,
+)
 from mmhuman3d.models.body_models.smplx import SMPLX_ALL
 from mmhuman3d.models.heads.pymafx_head import (
     IUV_predict_layer,
@@ -11,13 +17,14 @@ from mmhuman3d.models.heads.pymafx_head import (
     Mesh_Sampler,
     get_attention_modules,
 )
-from ...core import constants
 from ..backbones.builder import build_backbone
 from ..heads.builder import build_head
 from .base_architecture import BaseArchitecture
 
+# yapf: enable
 GRID_SIZE = 21
 GLOBAL_FEAT_DIM = 2048
+FACIAL_LANDMARKS = FLAME_73_KEYPOINTS[5:]
 
 
 def get_fusion_modules(module_keys, ma_feat_dim, grid_feat_dim, n_iter,
@@ -109,8 +116,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
             self.bhf_names.append('face')
 
         # joint index info
-        h_root_idx = constants.HAND_NAMES.index('wrist')
-        f_idx = constants.FACIAL_LANDMARKS.index('nose_middle')
+        h_root_idx = MANO_RIGHT_REORDER_KEYPOINTS.index('right_wrist')
+        f_idx = FACIAL_LANDMARKS.index('nose_middle')
         self.hf_root_idx = {
             'lhand': h_root_idx,
             'rhand': h_root_idx,
@@ -177,10 +184,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 self.bhf_att_feat_dim.update({'hand': 1024})
 
         if 'face' in self.bhf_names:
-            self.bhf_ma_feat_dim.update({
-                'face':
-                len(constants.FACIAL_LANDMARKS) * self.hf_mlp_dim[-1]
-            })
+            self.bhf_ma_feat_dim.update(
+                {'face': len(FACIAL_LANDMARKS) * self.hf_mlp_dim[-1]})
             if self.fuse_grid_align:
                 self.bhf_att_feat_dim.update({'face': 1024})
         # spatial alignment attention

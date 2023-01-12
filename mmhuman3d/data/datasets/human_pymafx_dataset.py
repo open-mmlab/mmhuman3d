@@ -1,3 +1,4 @@
+# yapf: disable
 import os
 import os.path as osp
 from abc import ABCMeta
@@ -9,6 +10,9 @@ import torch
 import torch.nn.functional as F
 from torchvision.transforms import Normalize
 
+from mmhuman3d.core.conventions.keypoints_mapping.mano import (
+    MANO_RIGHT_REORDER_KEYPOINTS,
+)
 from mmhuman3d.utils.img_utils import (
     crop,
     flip_img,
@@ -19,34 +23,12 @@ from mmhuman3d.utils.img_utils import (
 from .base_dataset import BaseDataset
 from .builder import DATASETS
 
+# yapf: enable
 HF_IMG_SIZE = 224
 
 IMG_RES = 224
 IMG_NORM_MEAN = [0.485, 0.456, 0.406]
 IMG_NORM_STD = [0.229, 0.224, 0.225]
-HAND_NAMES = [
-    'wrist',
-    'thumb1',
-    'thumb2',
-    'thumb3',
-    'thumb',
-    'index1',
-    'index2',
-    'index3',
-    'index',
-    'middle1',
-    'middle2',
-    'middle3',
-    'middle',
-    'ring1',
-    'ring2',
-    'ring3',
-    'ring',
-    'pinky1',
-    'pinky2',
-    'pinky3',
-    'pinky',
-]
 
 
 @DATASETS.register_module()
@@ -54,6 +36,8 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
     """Dataset for PyMAFX Inference."""
 
     def __init__(self,
+                 data_prefix: str,
+                 pipeline: list,
                  image_folder,
                  frames,
                  bboxes=None,
@@ -63,7 +47,7 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                  person_id_list=[],
                  wb_kps={},
                  test_mode: Optional[bool] = True):
-        # super(PyMAFXHumanImageDataset, self).__init__(test_mode=test_mode)
+        super().__init__(data_prefix, pipeline, test_mode)
         self.image_file_names = [
             osp.join(image_folder, x) for x in os.listdir(image_folder)
             if x.endswith('.png') or x.endswith('.jpg')
@@ -173,14 +157,11 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         """Process gt 2D keypoints and apply all augmentation transforms."""
         kp = kp.copy()
         nparts = kp.shape[0]
-        # res = [IMG_RES, IMG_RES]
-        # t = get_transform(center, scale, res, rot=rot)
         for i in range(nparts):
             pt = kp[i, 0:2]
             new_pt = np.array([pt[0], pt[1], 1.]).T
             new_pt = np.dot(t, new_pt)
             kp[i, 0:2] = new_pt[:2]
-            # kp[i,0:2] = new_pt[:2].astype(int) + 1
         # convert to normalized coordinates
         kp[:, :-1] = 2. * kp[:, :-1] / IMG_RES - 1.
         # flip the x coordinates
@@ -200,8 +181,8 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         """Load annotations from ``ann_file``"""
         pass
 
-    def __getitem__(self, idx):
-
+    def prepare_data(self, idx: int):
+        """"Prepare raw data for the f'{idx'}-th data."""
         img_orig = cv2.imread(
             self.image_file_names[idx])[:, :, ::-1].copy().astype(np.float32)
         orig_height, orig_width = img_orig.shape[:2]
@@ -254,7 +235,7 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         face_kp2d = self.j2d_processing(
             face_kp2d.copy(), kps_transf, flip, is_face=True)
 
-        n_hand_kp = len(HAND_NAMES)
+        n_hand_kp = len(MANO_RIGHT_REORDER_KEYPOINTS)
         part_kp2d_dict = {
             'lhand': hand_kp2d[:n_hand_kp],
             'rhand': hand_kp2d[n_hand_kp:],
@@ -306,5 +287,6 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                                           -1] / theta_part[:, 0,
                                                            0].unsqueeze(-1)
             item[f'{part}_theta_inv'] = theta_i_inv[0]
+            item['sample_idx'] = idx
 
         return item

@@ -17,10 +17,10 @@ from openpifpaf.stream import Stream
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from mmhuman3d.apis import init_model
 from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_vibe
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.data.datasets import build_dataset
-from mmhuman3d.models.architectures.builder import build_architecture
 from mmhuman3d.utils.ffmpeg_utils import video_to_images
 from mmhuman3d.utils.transforms import rotmat_to_aa
 
@@ -142,6 +142,12 @@ def prepare_data_with_pifpaf_detection(args):
 
 
 def main(args):
+    # Define model
+    mesh_model, _ = init_model(
+        args.mesh_reg_config,
+        args.mesh_reg_checkpoint,
+        device=args.device.lower())
+
     device = torch.device(args.device)
     args.device = device
     args.pin_memory = True if torch.cuda.is_available() else False
@@ -150,18 +156,6 @@ def main(args):
     bboxes, joints2d, frames, wb_kps, person_id_list, image_folder, \
         output_path, max_instance = prepare_data_with_pifpaf_detection(args)
 
-    # Define model
-    model = build_architecture(pymaf_config['model'])
-    model = model.to(device)
-
-    # Load pretrained weights
-    if args.mesh_reg_checkpoint is not None:
-        print(
-            f'Loading pretrained weights from \"{args.mesh_reg_checkpoint}\"')
-        checkpoint = torch.load(args.mesh_reg_checkpoint)
-        model.load_state_dict(checkpoint['model'], strict=False)
-
-    model.eval()
     pymaf_config['data']['test']['image_folder'] = image_folder
     pymaf_config['data']['test']['frames'] = frames
     pymaf_config['data']['test']['bboxes'] = bboxes
@@ -189,7 +183,7 @@ def main(args):
             orig_height.append(batch['orig_height'])
             orig_width.append(batch['orig_width'])
 
-            preds_dict = model.forward_test(batch)
+            preds_dict = mesh_model.forward_test(batch)
             output = preds_dict['mesh_out'][-1]
 
             pred_cam.append(output['theta'][:, :3])
@@ -219,7 +213,7 @@ def main(args):
         img_width=orig_width,
         img_height=orig_height)
 
-    del model
+    del mesh_model
     fullpose = []
     betas = []
     for data in smplx_params:
@@ -333,13 +327,8 @@ def init_openpifpaf(parser):
     Stream.cli(parser)
 
 
-class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
-                      argparse.RawDescriptionHelpFormatter):
-    pass
-
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(formatter_class=CustomFormatter)
+    parser = argparse.ArgumentParser()
     init_openpifpaf(parser)
 
     parser.add_argument(
@@ -350,7 +339,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--mesh_reg_checkpoint',
         type=str,
-        default='data/pretrained_models/PyMAF-X_model_checkpoint.pt',
+        default='data/pretrained_models/PyMAF-X_model_checkpoint.pth',
         help='Checkpoint file for mesh regression')
     parser.add_argument(
         '--tracking_method',
