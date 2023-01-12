@@ -6,7 +6,7 @@ import numpy as np
 from mmhuman3d.data.data_converters import build_data_converter
 
 
-def test_preprocess():
+def test_human_data_preprocess():
     root_path = 'tests/data/dataset_sample'
     output_path = '/tmp/preprocessed_npzs'
     os.makedirs(output_path, exist_ok=True)
@@ -266,6 +266,62 @@ def test_preprocess():
     data_converter = build_data_converter(cfg)
     data_converter.convert(H36M_SMPLX_ROOT, output_path)
     assert osp.exists(osp.join(output_path, 'h36m_smplx_train.npz'))
+
+
+def test_multi_human_data_preprocess():
+    root_path = 'tests/data/dataset_sample'
+    output_path = '/tmp/preprocessed_npzs'
+    os.makedirs(output_path, exist_ok=True)
+
+    H36M_ROOT = osp.join(root_path, 'h36m')
+    cfg = dict(
+        type='H36mConverter',
+        modes=['train', 'valid'],
+        protocol=1,
+        mosh_dir='tests/data/dataset_sample/h36m_mosh')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(
+        H36M_ROOT, output_path, enable_multi_human_data=True)
+    cfg = dict(type='H36mConverter', modes=['valid'], protocol=2)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(
+        H36M_ROOT, output_path, enable_multi_human_data=True)
+    cfg = dict(type='H36mConverter', modes=['train'], protocol=1)
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(
+        H36M_ROOT, output_path, enable_multi_human_data=True)
+    assert osp.exists(osp.join(output_path, 'h36m_train.npz'))
+    assert osp.exists(osp.join(output_path, 'h36m_mosh_train.npz'))
+    assert osp.exists(osp.join(output_path, 'h36m_valid_protocol1.npz'))
+    assert osp.exists(osp.join(output_path, 'h36m_valid_protocol2.npz'))
+
+    COCO_ROOT = osp.join(root_path, 'coco')
+    cfg = dict(type='CocoConverter')
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(
+        COCO_ROOT, output_path, enable_multi_human_data=True)
+    assert osp.exists(osp.join(output_path, 'coco_2014_train.npz'))
+
+    EFT_ROOT = os.path.join(root_path, 'eft')
+    cfg = dict(
+        type='EftConverter', modes=['coco_all', 'coco_part', 'mpii', 'lspet'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(EFT_ROOT, output_path, enable_multi_human_data=True)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'eft_coco_all.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'eft_coco_part.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'eft_mpii.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'eft_lspet.npz')
+
+    CROWDPOSE_ROOT = os.path.join(root_path, 'Crowdpose')
+    cfg = dict(
+        type='CrowdposeConverter', modes=['train', 'val', 'test', 'trainval'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(
+        CROWDPOSE_ROOT, output_path, enable_multi_human_data=True)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_val.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_test.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_trainval.npz')
 
 
 def test_preprocessed_npz():
