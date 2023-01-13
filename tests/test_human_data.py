@@ -585,6 +585,3 @@ def shape_equal(ndarray_0, ndarray_1):
             return True
         else:
             return False
-
-if __name__ == '__main__':
-    test_multi_human_data_slice(MultiHumanData)
