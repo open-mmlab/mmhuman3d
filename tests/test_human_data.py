@@ -292,7 +292,7 @@ def test_slice(HumanDataCls):
 
 @pytest.mark.parametrize('HumanDataCls', (MultiHumanData, ))
 def test_multi_human_data_slice(HumanDataCls):
-    human_data_load_path = 'tests/data/human_data/multi_human_data_00.npz'
+    human_data_load_path = 'tests/data/human_data/multi_human_data_01.npz'
     human_data = HumanDataCls()
     human_data.load(human_data_load_path)
     assert human_data['keypoints2d'].shape[2] == 3
@@ -585,3 +585,6 @@ def shape_equal(ndarray_0, ndarray_1):
             return True
         else:
             return False
+
+if __name__ == '__main__':
+    test_multi_human_data_slice(MultiHumanData)
