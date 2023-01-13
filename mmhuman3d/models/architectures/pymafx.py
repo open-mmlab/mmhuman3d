@@ -1,5 +1,6 @@
 # yapf: disable
 from abc import ABCMeta
+from typing import Optional, Union
 
 import torch
 import torch.nn as nn
@@ -44,35 +45,64 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
     """PyMAFX Architecture.
 
     Args:
-        backbone (dict | None, optional): Backbone config dict. Default: None.
-        init_cfg (dict or list[dict], optional): Initialization config dict.
-            Default: None
+        backbone (Optional[Union[dict, None]]): Backbone config dict.
+        head (Optional[Union[dict, None]]): Head config dict.
+        regressor (Optional[Union[dict, None]]): Regressor config dict.
+        attention_config (str): Attention config path.
+        joint_regressor_train_extra (str): The extra joint regressor path.
+        smpl_model_dir (str): The path of the SMPLX model.
+        mesh_model (dict): Details of the SMPLX model.
+        bhf_mode (str): The type of PyMAFX, ``full_body`` or ``body_hand``.
+        maf_on (bool): Whether to use mesh alignment feedback.
+        body_sfeat_dim (list): Dimension of the body feature.
+        hf_sfeat_dim (list): Dimension of the hands and face feature.
+        grid_align (dict): Details of the attention block.
+        n_iter (int, optional): Number of iterations. Defaults to 3.
+        grid_feat (bool, optional):
+            Whether to use grid feature. Defaults to False.
+        aux_supv_on (bool, optional): Defaults to True.
+        hf_aux_supv_on (bool, optional): Defaults to False.
+        mlp_dim (list, optional):
+            Dimension of MLP for body. Defaults to [256, 128, 64, 5].
+        hf_mlp_dim (list, optional):
+            Dimension of MLP for hands and face. Defaults to [256, 128, 64, 5].
+        loss_uv_regression_weight (float, optional):
+            The loss of the UV regression weight. Defaults to 0.5.
+        hf_model_cfg (Optional[Union[dict, None]], optional):
+            Hands and face model config. Defaults to None.
+        use_iwp_cam (bool, optional):
+            Whether to use dentity rotation and Weak Perspective Camera.
+            Defaults to True.
+        device (str, optional): Defaults to 'cpu'.
+        init_cfg (Optional[Union[list, dict, None]], optional):
+            Initialization config dict. Defaults to None.
     """
 
     def __init__(self,
-                 backbone,
-                 head,
-                 regressor,
-                 attention_config,
-                 joint_regressor_train_extra,
-                 smpl_model_dir,
-                 mesh_model,
-                 bhf_mode,
-                 maf_on,
-                 body_sfeat_dim,
-                 hf_sfeat_dim,
-                 grid_align,
-                 n_iter=3,
-                 grid_feat=False,
-                 aux_supv_on=True,
-                 hf_aux_supv_on=False,
-                 mlp_dim=[256, 128, 64, 5],
-                 hf_mlp_dim=[256, 128, 64, 5],
-                 loss_uv_regression_weight=0.5,
-                 hf_model_cfg=None,
-                 use_iwp_cam=True,
-                 device=torch.device('cuda'),
-                 init_cfg=None):
+                 backbone: Optional[Union[dict, None]],
+                 head: Optional[Union[dict, None]],
+                 regressor: Optional[Union[dict, None]],
+                 attention_config: str,
+                 joint_regressor_train_extra: str,
+                 smpl_model_dir: str,
+                 mesh_model: dict,
+                 bhf_mode: str,
+                 maf_on: bool,
+                 body_sfeat_dim: list,
+                 hf_sfeat_dim: list,
+                 grid_align: dict,
+                 n_iter: int = 3,
+                 grid_feat: bool = False,
+                 aux_supv_on: bool = True,
+                 hf_aux_supv_on: bool = False,
+                 mlp_dim: list = [256, 128, 64, 5],
+                 hf_mlp_dim: list = [256, 128, 64, 5],
+                 loss_uv_regression_weight: float = 0.5,
+                 hf_model_cfg: Optional[Union[dict, None]] = None,
+                 use_iwp_cam: bool = True,
+                 device: str = 'cpu',
+                 init_cfg: Optional[Union[list, dict, None]] = None):
+
         super(PyMAFX, self).__init__(init_cfg)
         self.use_iwp_cam = use_iwp_cam
         self.backbone = backbone
@@ -90,7 +120,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         self.hf_mlp_dim = hf_mlp_dim
         self.aux_supv_on = aux_supv_on
         self.hf_aux_supv_on = hf_aux_supv_on
-        self.device = device
+        self.device = torch.device(device)
         self.maf_on = maf_on
         self.fuse_grid_align = grid_align['use_att'] or grid_align['use_fc']
         assert not (grid_align['use_att'] and grid_align['use_fc'])

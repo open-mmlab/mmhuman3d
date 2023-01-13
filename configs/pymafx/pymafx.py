@@ -11,9 +11,6 @@ __grid_align__ = dict(
 __img_res__ = 224
 # model settings
 __hrnet_extra__ = dict(
-    pretr_set='coco',  # 'none' 'imagenet' 'coco'
-    pretrained_im='data/pretrained_model/hrnet_w48-imgnet-8ef0771d.pth',
-    pretrained_coco='data/pretrained_model/pose_hrnet_w48_256x192.pth',
     stage2=dict(
         num_modules=1,
         num_branches=2,
@@ -104,7 +101,8 @@ model = dict(
     mlp_dim=[256, 128, 64, 5],
     hf_mlp_dim=[256, 128, 64, 5],
     loss_uv_regression_weight=0.5,
-    hf_model_cfg=__hf_model_cfg__)
+    hf_model_cfg=__hf_model_cfg__,
+    device='cuda')
 
 # dataset settings
 img_norm_cfg = dict(

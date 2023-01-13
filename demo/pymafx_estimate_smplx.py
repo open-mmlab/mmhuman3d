@@ -4,7 +4,6 @@ import argparse
 import copy
 import os
 import os.path as osp
-import pickle as pkl
 
 import cv2
 import mmcv
@@ -65,12 +64,15 @@ def prepare_data_with_pifpaf_detection(args):
         num_frames = len(os.listdir(image_folder))
     else:
         image_folder = args.image_folder
-        num_frames = len(os.listdir(image_folder))
+        image_file_names = sorted([
+            osp.join(image_folder, x) for x in os.listdir(image_folder)
+            if x.endswith('.png') or x.endswith('.jpg')
+        ])
+        num_frames = len(image_file_names)
         output_path = os.path.join(args.output_folder,
                                    osp.split(image_folder)[-1])
     os.makedirs(output_path, exist_ok=True)
     # pifpaf person detection
-    pp_det_file_path = os.path.join(output_path, 'pp_det_results.pkl')
     pp_args = copy.deepcopy(args)
     pp_args.force_complete_pose = True
     ppdecoder.configure(pp_args)
@@ -86,10 +88,6 @@ def prepare_data_with_pifpaf_detection(args):
         capture = Stream(args.vid_file, preprocess=predictor.preprocess)
         capture = predictor.dataset(capture)
     elif args.image_folder is not None:
-        image_file_names = sorted([
-            osp.join(image_folder, x) for x in os.listdir(image_folder)
-            if x.endswith('.png') or x.endswith('.jpg')
-        ])
         capture = predictor.images(image_file_names)
 
     tracking_results = {}
@@ -116,7 +114,6 @@ def prepare_data_with_pifpaf_detection(args):
                 }
         if num_person > max_instance:
             max_instance = num_person
-    pkl.dump(tracking_results, open(pp_det_file_path, 'wb'))
     joints2d = []
     frames = []
     if args.tracking_method == 'pose':
@@ -143,15 +140,14 @@ def prepare_data_with_pifpaf_detection(args):
 
 def main(args):
     # Define model
+    pymaf_config = mmcv.Config.fromfile(args.mesh_reg_config)
+    pymaf_config.model['device'] = args.device
     mesh_model, _ = init_model(
-        args.mesh_reg_config,
-        args.mesh_reg_checkpoint,
-        device=args.device.lower())
+        pymaf_config, args.mesh_reg_checkpoint, device=args.device.lower())
 
     device = torch.device(args.device)
     args.device = device
     args.pin_memory = True if torch.cuda.is_available() else False
-    pymaf_config = dict(mmcv.Config.fromfile(args.mesh_reg_config))
     # Prepare input
     joints2d, frames, wb_kps, person_id_list, image_folder, \
         output_path, max_instance = prepare_data_with_pifpaf_detection(args)
@@ -353,7 +349,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--detection_threshold',
         type=float,
-        default=0.4,
+        default=0.35,
         help='pifpaf detection score threshold.')
     parser.add_argument(
         '--vid_file', type=str, default=None, help='input video path')
