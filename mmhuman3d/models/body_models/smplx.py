@@ -11,6 +11,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     get_keypoint_num,
 )
 from mmhuman3d.core.conventions.segmentation import body_segmentation
+from mmhuman3d.utils.transforms import aa_to_rotmat, rotmat_to_aa
 
 
 class SMPLX(_SMPLX):
@@ -315,6 +316,7 @@ class SMPLXLayer(_SMPLXLayer):
         self.num_verts = self.get_num_verts()
         self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
         self.body_part_segmentation = body_segmentation('smplx')
+        self.flat_hand_mean = kwargs['flat_hand_mean']
 
     def forward(self,
                 *args,
@@ -332,6 +334,17 @@ class SMPLXLayer(_SMPLXLayer):
         Returns:
             output: contains output parameters and attributes
         """
+
+        if not self.flat_hand_mean:
+            right_hand_pose = rotmat_to_aa(kwargs['right_hand_pose'])
+            right_hand_pose = right_hand_pose + self.right_hand_mean.reshape(
+                -1, 3)
+            kwargs['right_hand_pose'] = aa_to_rotmat(right_hand_pose)
+
+            left_hand_pose = rotmat_to_aa(kwargs['left_hand_pose'])
+            left_hand_pose = left_hand_pose + self.left_hand_mean.reshape(
+                -1, 3)
+            kwargs['left_hand_pose'] = aa_to_rotmat(left_hand_pose)
 
         kwargs['get_skin'] = True
         smplx_output = super(SMPLXLayer, self).forward(*args, **kwargs)
