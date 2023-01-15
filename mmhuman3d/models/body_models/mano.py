@@ -7,6 +7,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_num,
 )
+from mmhuman3d.utils.transforms import aa_to_rotmat, rotmat_to_aa
 
 
 class MANO(_MANO):
@@ -203,6 +204,7 @@ class MANOLayer(_MANOLayer):
         self.num_verts = self.get_num_verts()
         self.num_faces = self.get_num_faces()
         self.num_joints = get_keypoint_num(convention=self.keypoint_dst)
+        self.flat_hand_mean = kwargs['flat_hand_mean']
 
     def forward(self,
                 *args,
@@ -222,6 +224,12 @@ class MANOLayer(_MANOLayer):
         """
         if 'right_hand_pose' in kwargs:
             kwargs['hand_pose'] = kwargs['right_hand_pose']
+
+        if not self.flat_hand_mean:
+            right_hand_pose = rotmat_to_aa(kwargs['right_hand_pose'])
+            right_hand_pose = right_hand_pose + self.hand_mean.reshape(-1, 3)
+            kwargs['hand_pose'] = aa_to_rotmat(right_hand_pose)
+
         mano_output = super(MANOLayer, self).forward(*args, **kwargs)
         joints = mano_output.joints
 
