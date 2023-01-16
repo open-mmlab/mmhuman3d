@@ -208,17 +208,17 @@ dict_of_gpu_tensor = human_data.to(gpu0_device)
 
 MulitHumanData 被设计来支持多人重建。它继承于HumanData。在HumanData中，因为图片和数据是一一对应的，所以我们可以直接索引数据。然而，在MultiHumanData中数据和图像是多对一的关系。
 
-MultiHumanData在HumanData的基础上添加一个新的key叫做`optional`,它定义如下：
+MultiHumanData在HumanData的基础上添加一个新的key叫做`frame_range`,它定义如下：
 
 ```python
-'optional': {
-        'type': dict,
-        'slice_key': 'frame_range',
+'frame_range': {
+        'type': np.ndarray,
+        'shape': (-1, 2),
         'dim': 0
     }
 ```
-`optional` 是一个字典，它有一个叫做`frame_range`的成员。`frame_range`是一个np.array，它的形状是[image_num, 2]。
-`frame_range`是和图像一一对应的。 `frame_range`中的元素是两个指针，它们指向一个数据区域。
+
+`frame_range`是和图像一一对应的。 `frame_range`中的每个元素是两个指针，它们指向一个数据区域。
 
 假设我们有一个MultiHumanData的实例，我们想索引第i张图像对应的数据。 首先我们用主索引索引`frame_range`，它会返回两个指针，用这两个指针我们就可以索引第i张图像对应的所有数据。
 
@@ -226,7 +226,7 @@ MultiHumanData在HumanData的基础上添加一个新的key叫做`optional`,它�
 image_0  ----> human_0      <--- frame_range[0][0]
          -       .
           -      .
-           -     .
+           --> human_(n-1)  <--- frame_range[0][0] + (n-1)
             -> human_n      <--- frame_range[0][1]
     .
     .
@@ -236,7 +236,7 @@ image_0  ----> human_0      <--- frame_range[0][0]
 image_n  ----> human_0     <--- frame_range[n][0]
          -       .
           -      .
-           -     .
+           --> human_(n-1)  <--- frame_range[n][0] + (n-1)
             -> human_n     <--- frame_range[n][1]
 
 ```
