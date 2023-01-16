@@ -141,6 +141,7 @@ class MLP(nn.Module):
             init_cfg=dict(type='Xavier', gain=gain, distribution='uniform'))
 
     def forward(self, module_input):
+        """Forward function."""
         curr_input = module_input
         for block in self.blocks:
             curr_input = block(curr_input)
@@ -284,13 +285,16 @@ class ExPoseHead(BaseModule):
         return mean_param[idxs].reshape(1, -1).expand(batch_size, -1)
 
     def get_num_betas(self):
+        """Get the number of betas parameter."""
         return self.num_betas
 
     def get_num_expression_coeffs(self):
+        """Get the number of expression parameter."""
         return self.num_expression_coeffs
 
     @abstractmethod
     def forward(self, features):
+        """Forward function."""
         pass
 
 

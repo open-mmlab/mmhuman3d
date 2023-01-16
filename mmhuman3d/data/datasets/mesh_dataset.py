@@ -43,7 +43,7 @@ class MeshDataset(BaseDataset, metaclass=ABCMeta):
         self.ann_file = os.path.join(ann_prefix, self.ann_file)
 
     def load_annotations(self):
-
+        """Load annotations from ``ann_file``"""
         self.get_annotation_file()
         data = np.load(self.ann_file, allow_pickle=True)
 

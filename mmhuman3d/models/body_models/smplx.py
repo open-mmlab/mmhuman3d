@@ -553,6 +553,7 @@ class SMPLXLayer(_SMPLXLayer):
 
 @dataclass
 class ModelOutput(SMPLXOutput):
+    """The name of the model output."""
     smpl_joints: Optional[torch.Tensor] = None
     joints_J19: Optional[torch.Tensor] = None
     smplx_vertices: Optional[torch.Tensor] = None
@@ -607,7 +608,6 @@ class SMPLX_ALL(nn.Module):
             'J_regressor_extra',
             torch.tensor(J_regressor_extra, dtype=torch.float32))
         self.joint_map = torch.tensor(joints, dtype=torch.long)
-        # smplx_to_smpl.pkl, file source: https://smpl-x.is.tue.mpg.de
         smplx_to_smpl = pickle.load(
             open(
                 os.path.join(smpl_model_dir,
@@ -664,6 +664,7 @@ class SMPLX_ALL(nn.Module):
             self.register_buffer(f'{g}_J_dirs', J_dirs)
 
     def forward(self, *args, **kwargs):
+        """Forward function."""
         batch_size = kwargs['body_pose'].shape[0]
         kwargs['get_skin'] = True
         if 'pose2rot' not in kwargs:
@@ -755,6 +756,15 @@ class SMPLX_ALL(nn.Module):
         return output
 
     def get_tpose(self, betas=None, gender=None):
+        """Get tpose joints.
+
+        Args:
+            betas (betas, optional): Defaults to None.
+            gender (str, optional): Defaults to None.
+
+        Returns:
+            smplx_joints (torch.Tensor): smplx joints in shape [1, n_joints, 3]
+        """
         kwargs = {}
         if betas is None:
             betas = torch.zeros(1, 10).to(self.J_regressor_extra.device)
@@ -794,11 +804,18 @@ class SMPLX_ALL(nn.Module):
         idx_rearrange = torch.tensor(idx_rearrange).long().to(device)
 
         smplx_joints = torch.cat(smplx_joints)[idx_rearrange]
-
         return smplx_joints
 
 
 def get_partial_smpl(body_model='smpl'):
+    """Get partial mesh of SMPL.
+
+    Args:
+        body_model (str, optional): Defaults to 'smpl'.
+
+    Returns:
+        part_vert_faces
+    """
     if body_model != 'smpl':
         raise NotImplementedError()
     part_vert_faces = {}

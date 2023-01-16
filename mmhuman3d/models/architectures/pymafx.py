@@ -136,7 +136,12 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         head['bhf_names'] = self.bhf_names
         self.head = build_head(head)
 
-    def _prepare_body_module(self, joint_regressor_train_extra):
+    def _prepare_body_module(self, joint_regressor_train_extra: str):
+        """Prepare parametric mesh models.
+
+        Args:
+            joint_regressor_train_extra (str): The extra joint regressor path.
+        """
         self.bhf_names = []
         if self.bhf_mode in ['body_hand', 'full_body']:
             self.bhf_names.append('body')
@@ -161,6 +166,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
             smpl_model_dir=self.smpl_model_dir)
 
     def _create_encoder(self):
+        """Create encoder for body, hands and head image."""
         self.encoders = nn.ModuleDict()
         self.bhf_ma_feat_dim = {}
         # encoder for the body part
@@ -196,6 +202,11 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                         feat_dim=self.hf_sfeat_dim[-1], mode='pncc')
 
     def _create_attention_modules(self, attention_config):
+        """Create attention modules.
+
+        Args:
+            attention_config (str): Attention config path.
+        """
         # the fusion of grid and mesh-aligned features
         if self.fuse_grid_align:
             n_iter_att = self.n_iter - self.grid_align['att_starts']
@@ -247,7 +258,11 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 n_iter=n_iter_att,
                 out_feat_len=self.bhf_att_feat_dim)
 
-    def _create_regressor(self, regressor):
+    def _create_regressor(self, regressor: Optional[Union[dict, None]]):
+        """
+        Args:
+            regressor (Optional[Union[dict, None]]): Regressor config dict.
+        """
         self.regressor = nn.ModuleList()
         for i in range(self.n_iter):
             ref_infeat_dim = 0
@@ -306,8 +321,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
             self.regressor.append(build_head(regressor))
 
     def _create_maf_extractor(self):
+        """mesh-aligned feature extractor."""
         self.maf_extractor = nn.ModuleDict()
-        # mesh-aligned feature extractor
         for part in self.bhf_names:
             self.maf_extractor[part] = nn.ModuleList()
             filter_channels_default = self.mlp_dim if part == 'body' \
@@ -344,28 +359,22 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                                   'current training schedule. Please use '
                                   '`train_step` for training.')
 
-    def to(self, *args, **kwargs):
-        super().to(*args, **kwargs)
-        for m in ['body', 'hand', 'face']:
-            if m in self.smpl_family:
-                self.smpl_family[m].to(*args, **kwargs)
-        return self
-
     def forward_test(self, batch={}, J_regressor=None, rw_cam={}, **kwargs):
-        '''
+        """Test step function.
+
         Args:
-            batch:
-                images: 'img_{part}', for part in body, hand, and face
-                inversed affine transformation for cropped of hand/face img:
-                '{part}_theta_inv' for part in lhand, rhand, and face
-            J_regressor:
-                joint regression matrix
-            rw_cam:
+            batch (dict, optional):
+                'img_{part}': for part images in body, hand and face.
+                '{part}_theta_inv': inversed affine transformation for cropped
+                    of hand/face images, for part in lhand, rhand, and face.
+            J_regressor (optional): Joint regression matrix. Defaults to None.
+            rw_cam (dict, optional):
                 real-world camera information, applied when
-                use_iwp_cam is False
+                use_iwp_cam is False.
+
         Returns:
-            out_dict: the list containing the predicted parameters
-        '''
+            out_dict: the list containing the predicted parameters.
+        """
         # the limb parts need to be handled
         if self.bhf_mode == 'body_hand':
             part_names = ['lhand', 'rhand']

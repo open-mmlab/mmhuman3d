@@ -24,21 +24,14 @@ from io import open
 import torch
 from torch import nn
 
-from .file_utils import cached_path
-
 logger = logging.getLogger(__name__)
-
-CONFIG_NAME = 'config.json'
-WEIGHTS_NAME = 'pytorch_model.bin'
-TF_WEIGHTS_NAME = 'model.ckpt'
 
 try:
     from torch.nn import Identity
 except ImportError:
     # Older PyTorch compatibility
     class Identity(nn.Module):
-        r"""A placeholder identity operator that is argument-insensitive.
-        """
+        """A placeholder identity operator that is argument-insensitive."""
 
         def __init__(self, *args, **kwargs):
             super(Identity, self).__init__()
@@ -68,7 +61,7 @@ class PretrainedConfig(object):
         assert os.path.isdir(
             save_directory), 'Saving path should be a directory'
 
-        output_config_file = os.path.join(save_directory, CONFIG_NAME)
+        output_config_file = os.path.join(save_directory, 'config.json')
 
         self.to_json_file(output_config_file)
 
@@ -105,7 +98,7 @@ class PretrainedConfig(object):
                 `return_unused_kwargs` keyword parameter.
 
         """
-        cache_dir = kwargs.pop('cache_dir', None)
+        # cache_dir = kwargs.pop('cache_dir', None)
         return_unused_kwargs = kwargs.pop('return_unused_kwargs', False)
 
         if pretrained_model_name_or_path in cls.pretrained_config_archive_map:
@@ -113,35 +106,11 @@ class PretrainedConfig(object):
                 pretrained_model_name_or_path]
         elif os.path.isdir(pretrained_model_name_or_path):
             config_file = os.path.join(pretrained_model_name_or_path,
-                                       CONFIG_NAME)
+                                       'config.json')
         else:
             config_file = pretrained_model_name_or_path
-        # redirect to the cache, if necessary
-        try:
-            resolved_config_file = cached_path(
-                config_file, cache_dir=cache_dir)
-        except EnvironmentError:
-            if pretrained_model_name_or_path in \
-               cls.pretrained_config_archive_map:
-                logger.error(f"Couldn't reach server at {config_file}")
-            else:
-                logger.error(
-                    'Model name {} was not found in model name list ({}). '
-                    "We assumed '{}' was a path or url but couldn't find file"
-                    'associated to this path or url.'.format(
-                        pretrained_model_name_or_path,
-                        ', '.join(cls.pretrained_config_archive_map.keys()),
-                        config_file))
-            return None
-        if resolved_config_file == config_file:
-            pass
-        else:
-            logger.info(
-                'loading configuration file {} from cache at {}'.format(
-                    config_file, resolved_config_file))
-
         # Load config
-        config = cls.from_json_file(resolved_config_file)
+        config = cls.from_json_file(config_file)
 
         # Update config with kwargs if needed
         to_remove = []
@@ -318,7 +287,7 @@ class PreTrainedModel(nn.Module):
         # Save configuration file
         model_to_save.config.save_pretrained(save_directory)
 
-        output_model_file = os.path.join(save_directory, WEIGHTS_NAME)
+        output_model_file = os.path.join(save_directory, 'pytorch_model.bin')
 
         torch.save(model_to_save.state_dict(), output_model_file)
 
@@ -410,46 +379,22 @@ class PreTrainedModel(nn.Module):
             if from_tf:
                 # Directly load from a TensorFlow checkpoint
                 archive_file = os.path.join(pretrained_model_name_or_path,
-                                            TF_WEIGHTS_NAME + '.index')
+                                            'model.ckpt' + '.index')
             else:
                 archive_file = os.path.join(pretrained_model_name_or_path,
-                                            WEIGHTS_NAME)
+                                            'pytorch_model.bin')
         else:
             if from_tf:
                 # Directly load from a TensorFlow checkpoint
                 archive_file = pretrained_model_name_or_path + '.index'
             else:
                 archive_file = pretrained_model_name_or_path
-        # redirect to the cache, if necessary
-        try:
-            resolved_archive_file = cached_path(
-                archive_file, cache_dir=cache_dir)
-        except EnvironmentError:
-            if pretrained_model_name_or_path in \
-               cls.pretrained_model_archive_map:
-                logger.error(
-                    "Couldn't reach server at '{}' to download weights.".
-                    format(archive_file))
-            else:
-                logger.error(
-                    "Model name '{}' was not found in model name list ({}). "
-                    "We assumed '{}' was a path or url but couldn't find file "
-                    'associated to this path or url.'.format(
-                        pretrained_model_name_or_path,
-                        ', '.join(cls.pretrained_model_archive_map.keys()),
-                        archive_file))
-            return None
-        if resolved_archive_file == archive_file:
-            logger.info('loading weights file {}'.format(archive_file))
-        else:
-            logger.info('loading weights file {} from cache at {}'.format(
-                archive_file, resolved_archive_file))
 
         # Instantiate model.
         model = cls(config, *model_args, **model_kwargs)
 
         if state_dict is None and not from_tf:
-            state_dict = torch.load(resolved_archive_file, map_location='cpu')
+            state_dict = torch.load(archive_file, map_location='cpu')
         if from_tf:
             return None
 

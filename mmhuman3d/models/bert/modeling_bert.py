@@ -16,7 +16,6 @@
 """PyTorch BERT model."""
 
 import json
-import logging
 import math
 import sys
 from io import open
@@ -30,8 +29,6 @@ from .modeling_utils import (
     PreTrainedModel,
     prune_linear_layer,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def gelu(x):
@@ -494,8 +491,6 @@ class BertPreTrainedModel(PreTrainedModel):
     """An abstract class to handle weights initialization and a simple
     interface for downloading and loading pretrained models."""
     config_class = BertConfig
-    # pretrained_model_archive_map = BERT_PRETRAINED_MODEL_ARCHIVE_MAP
-    # load_tf_weights = load_tf_weights_in_bert
     base_model_prefix = 'bert'
 
     def __init__(self, *inputs, **kwargs):
@@ -639,13 +634,11 @@ class BertModel(BertPreTrainedModel):
 
 class BertForMaskedLM(BertPreTrainedModel):
     r"""
-        masked_lm_labels:
-            (optional) torch.LongTensor of shape (batch_size, sequence_length):
-            Labels for computing the masked language modeling loss.
-            Indices should be in [-1, 0, ..., config.vocab_size]
-            Tokens with indices set to -1 are ignored (masked), the loss is
-            only computed for the tokens with labels
-            in [0, ..., config.vocab_size]
+    masked_lm_labels: torch.LongTensor of shape (batch_size, sequence_length):
+        Labels for computing the masked language modeling loss.
+        Indices should be in [-1, 0, ..., config.vocab_size]
+        Tokens with indices set to -1 are ignored (masked), the loss is
+        only computed for the tokens with labels in [0, ..., config.vocab_size]
 
     Outputs: Tuple comprising various elements:
         loss: optional, returned when masked_lm_labels is provided

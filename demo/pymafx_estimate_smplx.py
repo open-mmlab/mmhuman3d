@@ -26,16 +26,16 @@ from mmhuman3d.utils.transforms import rotmat_to_aa
 # yapf: enable
 
 
-def convert_crop_cam_to_orig_img(cam, bbox, img_width, img_height):
+def convert_crop_cam_to_orig_img(cam: np.arange, bbox: np.arange,
+                                 img_width: int, img_height: int):
     """Convert predicted camera from cropped image coordinates to original
     image coordinates.
 
     Args:
-        cam (ndarray, shape=(3,)):
-            weak perspective camera in cropped img coordinates.
-        bbox (ndarray, shape=(4,)): bbox coordinates (c_x, c_y, h).
-        img_width (int): original image width.
-        img_height (int): original image height.
+        cam (np.arange): Weak perspective camera in cropped img coordinates.
+        bbox (np.arange): Bbox coordinates (c_x, c_y, h).
+        img_width (int): Original image width.
+        img_height (int): Original image height.
     """
 
     cx, cy, h = bbox[:, 0], bbox[:, 1], bbox[:, 2]

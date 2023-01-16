@@ -50,34 +50,6 @@ LayerNormClass = torch.nn.LayerNorm
 BertLayerNorm = torch.nn.LayerNorm
 
 
-def prune_linear_layer(layer, index, dim=0):
-    """Prune a linear layer (a model parameters) to keep only entries in index.
-
-    Return the pruned layer as a new layer with requires_grad=True. Used to
-    remove heads.
-    """
-    index = index.to(layer.weight.device)
-    W = layer.weight.index_select(dim, index).clone().detach()
-    if layer.bias is not None:
-        if dim == 1:
-            b = layer.bias.clone().detach()
-        else:
-            b = layer.bias[index].clone().detach()
-    new_size = list(layer.weight.size())
-    new_size[dim] = len(index)
-    new_layer = nn.Linear(
-        new_size[1], new_size[0], bias=layer.bias
-        is not None).to(layer.weight.device)
-    new_layer.weight.requires_grad = False
-    new_layer.weight.copy_(W.contiguous())
-    new_layer.weight.requires_grad = True
-    if layer.bias is not None:
-        new_layer.bias.requires_grad = False
-        new_layer.bias.copy_(b.contiguous())
-        new_layer.bias.requires_grad = True
-    return new_layer
-
-
 class Mesh_Sampler(nn.Module):
     """Mesh Up/Down-sampling."""
 
@@ -140,12 +112,23 @@ class Mesh_Sampler(nn.Module):
         self.register_buffer('Umap', Umap)
 
     def downsample(self, x):
+        """downsample function."""
         return torch.matmul(self.Dmap.unsqueeze(0), x)  # [B, 431, 3]
 
     def upsample(self, x):
+        """upsample function."""
         return torch.matmul(self.Umap.unsqueeze(0), x)  # [B, 6890, 3]
 
-    def forward(self, x, mode='downsample'):
+    def forward(self, x: torch.Tensor, mode='downsample'):
+        """Forward function.
+
+        Args:
+            x (torch.Tensor): Original point.
+            mode (str, optional):Defaults to 'downsample'.
+
+        Returns:
+            torch.Tensor: The sampled point.
+        """
         if mode == 'downsample':
             return self.downsample(x)
         elif mode == 'upsample':
@@ -250,18 +233,22 @@ class MAF_Extractor(nn.Module):
         return y
 
     def sampling(self,
-                 points,
-                 im_feat=None,
-                 z_feat=None,
-                 add_att=False,
-                 reduce_dim=True):
+                 points: torch.Tensor,
+                 im_feat: torch.Tensor = None,
+                 add_att: bool = False,
+                 reduce_dim: bool = True):
         """Given 2D points, sample the point-wise features for each point, the
         dimension of point-wise features will be reduced from C_s to C_p by
         MLP. Image features should be pre-computed before this call.
 
-        param points: [B, N, 2] image coordinates of points
-        im_feat: [B, C_s, H_s, W_s] spatial feature maps
-        return: [B, C_p x N] concatantion of point-wise features after
+        Args:
+            points (torch.Tensor): [B, N, 2] image coordinates of points
+            im_feat (torch.Tensor, optional):
+                [B, C_s, H_s, W_s] spatial feature maps
+            reduce_dim (bool, optional): _description_. Defaults to True.
+
+        Returns:
+            point_feat: [B, C_p x N] concatantion of point-wise features after
             dimension reduction
         """
 
@@ -275,20 +262,24 @@ class MAF_Extractor(nn.Module):
             return point_feat
 
     def forward(self,
-                p,
-                im_feat,
-                cam=None,
+                p: torch.Tensor,
+                im_feat: torch.Tensor,
+                cam: torch.Tensor = None,
                 add_att=False,
                 reduce_dim=True,
                 **kwargs):
         """Returns mesh-aligned features for the 3D mesh points.
 
         Args:
-            p (tensor): [B, N_m, 3] mesh vertices
-            im_feat (tensor): [B, C_s, H_s, W_s] spatial feature maps
-            cam (tensor): [B, 3] camera
-        Return:
-            mesh_align_feat (tensor): [B, C_p x N_m] mesh-aligned features
+            p (torch.Tensor): [B, N_m, 3] mesh vertices.
+            im_feat (torch.Tensor): [B, C_s, H_s, W_s] spatial feature maps.
+            cam (torch.Tensor, optional): [B, 3] camera. Defaults to None.
+            add_att (bool, optional): Defaults to False.
+            reduce_dim (bool, optional): Defaults to True.
+
+        Returns:
+            mesh_align_feat (torch.Tensor):
+            [B, C_p x N_m] mesh-aligned features.
         """
         p_proj_2d = projection(p, cam, iwp_mode=self.iwp_cam_mode)
         if self.iwp_cam_mode:
@@ -388,6 +379,7 @@ class IUV_predict_layer(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        """Forward function."""
         return_dict = {}
 
         if self.mode in ['iuv', 'seg']:
@@ -414,6 +406,7 @@ class IUV_predict_layer(nn.Module):
 
 
 class Regressor(nn.Module):
+    """Regressor for mesh model."""
 
     def __init__(self,
                  mesh_model,
@@ -594,13 +587,26 @@ class Regressor(nn.Module):
             self.register_buffer('init_exp', init_exp)
 
     def forward(self,
-                x=None,
-                n_iter=1,
+                x: torch.Tensor = None,
+                n_iter: int = 1,
                 J_regressor=None,
                 rw_cam={},
                 init_mode=False,
                 global_iter=-1,
                 **kwargs):
+        """Forward function.
+
+        Args:
+            x (torch.Tensor, optional): Defaults to None.
+            n_iter (int, optional): Defaults to 1.
+            J_regressor (optional): Joint regression matrix. Defaults to None.
+            rw_cam (dict, optional): real-world camera information.
+            init_mode (bool, optional): Defaults to False.
+            global_iter (int, optional): Defaults to -1.
+
+        Returns:
+            dict: The parameters of mesh model.
+        """
         if x is not None:
             batch_size = x.shape[0]
         else:
@@ -1151,6 +1157,7 @@ class Regressor(nn.Module):
 
 
 class BertSelfAttention(nn.Module):
+    """Bert self-attention block."""
 
     def __init__(self, config):
         super(BertSelfAttention, self).__init__()
@@ -1179,16 +1186,17 @@ class BertSelfAttention(nn.Module):
         return x.permute(0, 2, 1, 3)
 
     def forward(self,
-                hidden_states,
-                attention_mask,
+                hidden_states: torch.Tensor,
+                attention_mask: torch.Tensor,
                 head_mask=None,
                 history_state=None):
+        """Forward function."""
         if history_state is not None:
-            raise
-            x_states = torch.cat([history_state, hidden_states], dim=1)
-            mixed_query_layer = self.query(hidden_states)
-            mixed_key_layer = self.key(x_states)
-            mixed_value_layer = self.value(x_states)
+            raise NotImplementedError
+            # x_states = torch.cat([history_state, hidden_states], dim=1)
+            # mixed_query_layer = self.query(hidden_states)
+            # mixed_key_layer = self.key(x_states)
+            # mixed_value_layer = self.value(x_states)
         else:
             mixed_query_layer = self.query(hidden_states)
             mixed_key_layer = self.key(hidden_states)
@@ -1234,6 +1242,7 @@ class BertSelfAttention(nn.Module):
 
 
 class BertAttention(nn.Module):
+    """Bert attention."""
 
     def __init__(self, config):
         super(BertAttention, self).__init__()
@@ -1245,6 +1254,7 @@ class BertAttention(nn.Module):
                 attention_mask,
                 head_mask=None,
                 history_state=None):
+        """Forward function."""
         self_outputs = self.self(input_tensor, attention_mask, head_mask,
                                  history_state)
         attention_output = self.output(self_outputs[0], input_tensor)
@@ -1254,6 +1264,7 @@ class BertAttention(nn.Module):
 
 
 class AttLayer(nn.Module):
+    """Build attention Layer."""
 
     def __init__(self, config):
         super(AttLayer, self).__init__()
@@ -1281,11 +1292,13 @@ class AttLayer(nn.Module):
                 attention_mask,
                 head_mask=None,
                 history_state=None):
+        """Forward function."""
         return self.MHA(hidden_states, attention_mask, head_mask,
                         history_state)
 
 
 class AttEncoder(nn.Module):
+    """Build attention encoder."""
 
     def __init__(self, config):
         super(AttEncoder, self).__init__()
@@ -1299,6 +1312,7 @@ class AttEncoder(nn.Module):
                 attention_mask,
                 head_mask=None,
                 encoder_history_states=None):
+        """Forward function."""
         all_hidden_states = ()
         all_attentions = ()
         for i, layer_module in enumerate(self.layer):
@@ -1328,6 +1342,7 @@ class AttEncoder(nn.Module):
 
 
 class EncoderBlock(BertPreTrainedModel):
+    """Build encoder block."""
 
     def __init__(self, config):
         super(EncoderBlock, self).__init__(config)
@@ -1351,13 +1366,13 @@ class EncoderBlock(BertPreTrainedModel):
         self.apply(self.init_weights)
 
     def forward(self,
-                img_feats,
+                img_feats: torch.Tensor,
                 input_ids=None,
                 token_type_ids=None,
                 attention_mask=None,
                 position_ids=None,
                 head_mask=None):
-
+        """Forward function."""
         batch_size = len(img_feats)
         seq_length = len(img_feats[0])
         input_ids = torch.zeros([batch_size, seq_length],
@@ -1436,6 +1451,7 @@ def get_att_block(config_path: str,
                   hidden_feat_dim=1024,
                   num_attention_heads=4,
                   num_hidden_layers=1):
+    """Get attention block."""
 
     config_class = BertConfig
     config = config_class.from_pretrained(config_path)
@@ -1457,13 +1473,25 @@ def get_att_block(config_path: str,
     return att_model
 
 
-def get_attention_modules(config_path,
-                          module_keys,
-                          img_feature_dim_list,
-                          hidden_feat_dim,
-                          n_iter,
-                          num_attention_heads=1):
+def get_attention_modules(config_path: str,
+                          module_keys: list,
+                          img_feature_dim: dict,
+                          hidden_feat_dim: int,
+                          n_iter: int,
+                          num_attention_heads: int = 1):
+    """Get attention modules.
 
+    Args:
+        config_path (str): Attention config path.
+        module_keys (list): Model name.
+        img_feature_dim (dict): Image feature dimension.
+        hidden_feat_dim (int): Attention feature dimension.
+        n_iter (int): Number of iterations.
+        num_attention_heads (int, optional): Defaults to 1.
+
+    Returns:
+        Attention modules
+    """
     align_attention = nn.ModuleDict()
     for k in module_keys:
         align_attention[k] = nn.ModuleList()
@@ -1471,7 +1499,7 @@ def get_attention_modules(config_path,
             align_attention[k].append(
                 get_att_block(
                     config_path,
-                    img_feature_dim=img_feature_dim_list[k][i],
+                    img_feature_dim=img_feature_dim[k][i],
                     hidden_feat_dim=hidden_feat_dim,
                     num_attention_heads=num_attention_heads))
 
@@ -1479,6 +1507,7 @@ def get_attention_modules(config_path,
 
 
 class PyMAFXHead(BaseModule):
+    """PyMAF-X parameters regressor head."""
 
     def __init__(self,
                  maf_on,
@@ -1526,11 +1555,11 @@ class PyMAFXHead(BaseModule):
         return self.init_mesh_output
 
     def forward(self,
-                batch,
-                s_feat_body,
-                limb_feat_dict,
+                batch: dict,
+                s_feat_body: list,
+                limb_feat_dict: dict,
                 g_feat,
-                grid_points,
+                grid_points: torch.Tensor,
                 J_regressor,
                 att_feat_reduce,
                 align_attention,
@@ -1540,6 +1569,28 @@ class PyMAFXHead(BaseModule):
                 limb_gfeat_dict,
                 part_names=None,
                 rw_cam={}):
+        """Forward function of PyMAF-X Head.
+
+        Args:
+            batch (dict, optional):
+                'img_{part}': for part images in body, hand and face.
+                '{part}_theta_inv': inversed affine transformation for cropped
+                    of hand/face images, for part in lhand, rhand, and face.
+            s_feat_body (list): Image feature for body.
+            limb_feat_dict (dict): Cropped image feature for part.
+            grid_points (torch.Tensor): Grid-pattern points.
+            J_regressor: Joint regression matrix. Defaults to None.
+            att_feat_reduce: Fusion_modules.
+            align_attention: Attention_modules
+            maf_extractor: Mesh-aligned feature extractor.
+            regressor: Regressor for mesh model.
+            batch_size (int): The batch size
+            part_names (list, optional): The name of part. Defaults to None.
+            rw_cam (dict, optional): real-world camera information.
+
+        Returns:
+            out_dict (dict): Dict containing model predictions.
+        """
         out_dict = {}
         self.maf_extractor = maf_extractor
         fuse_grid_align = self.grid_align['use_att'] or self.grid_align[

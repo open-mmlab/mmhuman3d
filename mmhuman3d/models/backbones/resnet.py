@@ -672,6 +672,7 @@ def conv1x1(in_planes, out_planes, stride=1):
 
 
 class PoseResNet(BaseModule):
+    """PoseResNet for PyMAF-X."""
     resnet_spec = {
         18: (BasicBlock, [2, 2, 2, 2]),
         34: (BasicBlock, [3, 4, 6, 3]),
@@ -713,6 +714,7 @@ class PoseResNet(BaseModule):
         self.final_layer = None
 
     def _make_layer(self, block, planes, blocks, stride=1):
+        """make layer."""
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -735,6 +737,7 @@ class PoseResNet(BaseModule):
         return nn.Sequential(*layers)
 
     def _get_deconv_cfg(self, deconv_kernel, index):
+        """Get deconvolution cfg."""
         if deconv_kernel == 4:
             padding = 1
             output_padding = 0
@@ -748,6 +751,7 @@ class PoseResNet(BaseModule):
         return deconv_kernel, padding, output_padding
 
     def _make_deconv_layer(self, num_layers, num_filters, num_kernels):
+        """Make deconvolution layer."""
         assert num_layers == len(num_filters), \
             'ERROR: num_deconv_layers is different len(num_deconv_filters)'
         assert num_layers == len(num_kernels), \
@@ -775,6 +779,7 @@ class PoseResNet(BaseModule):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        """Forward Function."""
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)

@@ -774,6 +774,7 @@ class PoseHighResolutionNetExpose(PoseHighResolutionNet):
 
 
 class PoseHighResolutionNetPyMAFX(BaseModule):
+    """HRNet backbone for pymaf-x."""
     blocks_dict = {'BASIC': BasicBlock, 'BOTTLENECK': Bottleneck}
 
     def __init__(self,
@@ -838,6 +839,7 @@ class PoseHighResolutionNetPyMAFX(BaseModule):
         self.pretrained_layers = extra['pretrained_layers']
 
     def _make_head(self, pre_stage_channels):
+        """make head."""
         head_block = Bottleneck
         head_channels = [32, 64, 128, 256]
 
@@ -882,6 +884,7 @@ class PoseHighResolutionNetPyMAFX(BaseModule):
 
     def _make_transition_layer(self, num_channels_pre_layer,
                                num_channels_cur_layer):
+        """make transition layer."""
         num_branches_cur = len(num_channels_cur_layer)
         num_branches_pre = len(num_channels_pre_layer)
 
@@ -919,6 +922,7 @@ class PoseHighResolutionNetPyMAFX(BaseModule):
         return nn.ModuleList(transition_layers)
 
     def _make_layer(self, block, inplanes, planes, blocks, stride=1):
+        """make layer."""
         downsample = None
         if stride != 1 or inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -943,6 +947,7 @@ class PoseHighResolutionNetPyMAFX(BaseModule):
                     layer_config,
                     num_inchannels,
                     multi_scale_output=True):
+        """make stage."""
         num_modules = layer_config['num_modules']
         num_branches = layer_config['num_branches']
         num_blocks = layer_config['num_blocks']
@@ -966,6 +971,7 @@ class PoseHighResolutionNetPyMAFX(BaseModule):
         return nn.Sequential(*modules), num_inchannels
 
     def forward(self, x):
+        """Forward function."""
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
