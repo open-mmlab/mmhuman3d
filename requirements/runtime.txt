@@ -9,7 +9,7 @@ matplotlib
 numpy
 opencv-python
 pandas
-pickle5; python_version < '3.8'
+pickle5
 plyfile
 rtree
 scikit-image
