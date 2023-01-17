@@ -88,7 +88,7 @@ model = dict(
         smpl_model_dir='data/body_models/smpl',
         smpl_mean_params=__mesh_model__['smpl_mean_params'],
     ),
-    attention_config='configs/pymafx/bert_base_uncased_config.json',
+    attention_config='configs/pymafx/bert_base_uncased_config.py',
     joint_regressor_train_extra='data/body_models/J_regressor_extra.npy',
     smplx_model_dir='data/body_models/smplx',
     mesh_model=__mesh_model__,

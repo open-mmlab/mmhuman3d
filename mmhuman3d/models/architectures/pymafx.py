@@ -355,9 +355,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
 
         For mesh estimation, we do not use this interface.
         """
-        raise NotImplementedError('This interface should not be used in '
-                                  'current training schedule. Please use '
-                                  '`train_step` for training.')
+        pass
 
     def forward_test(self, batch={}, J_regressor=None, rw_cam={}, **kwargs):
         """Test step function.
@@ -378,10 +376,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         # the limb parts need to be handled
         if self.bhf_mode == 'body_hand':
             part_names = ['lhand', 'rhand']
-        elif self.bhf_mode == 'full_body':
+        if self.bhf_mode == 'full_body':
             part_names = ['lhand', 'rhand', 'face']
-        else:
-            part_names = []
 
         # extract spatial features or global features
         # run encoder for body
