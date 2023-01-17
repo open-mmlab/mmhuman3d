@@ -84,7 +84,7 @@ def parse_args():
         help=f'Supported datasets: {list(DATASET_CONFIGS.keys())}')
 
     parser.add_argument(
-        '--multi_human_data',
+        '--enable_multi_human_data',
         type=bool,
         default=False,
         help='Whether to generate a multi-human data')
@@ -108,7 +108,7 @@ def main():
         data_converter.convert(
             input_path,
             args.output_path,
-            enable_multi_human_data=args.multi_human_data)
+            enable_multi_human_data=args.enable_multi_human_data)
         print(f'[{dataset}] Converting finished!')
 
 
