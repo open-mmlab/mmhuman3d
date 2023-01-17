@@ -32,7 +32,8 @@ def _setup_parser():
     parser.add_argument(
         '--mesh_reg_checkpoint',
         type=str,
-        default='data/pretrained_models/PyMAF-X_model_checkpoint.pth',
+        default='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
+        'mmhuman3d/models/pymaf_x/PyMAF-X_model_checkpoint.pth',
         help='Checkpoint file for mesh regression')
     parser.add_argument(
         '--tracking_method',
