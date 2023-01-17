@@ -50,7 +50,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         regressor (Optional[Union[dict, None]]): Regressor config dict.
         attention_config (str): Attention config path.
         joint_regressor_train_extra (str): The extra joint regressor path.
-        smpl_model_dir (str): The path of the SMPLX model.
+        smplx_model_dir (str): The path of the SMPLX model.
         mesh_model (dict): Details of the SMPLX model.
         bhf_mode (str): The type of PyMAFX, ``full_body`` or ``body_hand``.
         maf_on (bool): Whether to use mesh alignment feedback.
@@ -84,7 +84,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                  regressor: Optional[Union[dict, None]],
                  attention_config: str,
                  joint_regressor_train_extra: str,
-                 smpl_model_dir: str,
+                 smplx_model_dir: str,
                  mesh_model: dict,
                  bhf_mode: str,
                  maf_on: bool,
@@ -106,7 +106,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         super(PyMAFX, self).__init__(init_cfg)
         self.use_iwp_cam = use_iwp_cam
         self.backbone = backbone
-        self.smpl_model_dir = smpl_model_dir
+        self.smplx_model_dir = smplx_model_dir
         self.hf_model_cfg = hf_model_cfg
         self.mesh_model = mesh_model
         self.body_sfeat_dim = body_sfeat_dim
@@ -163,7 +163,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         self.smpl_family['body'] = SMPLX_ALL(
             gender=self.mesh_model['gender'],
             joint_regressor_train_extra=joint_regressor_train_extra,
-            smpl_model_dir=self.smpl_model_dir)
+            smplx_model_dir=self.smplx_model_dir)
 
     def _create_encoder(self):
         """Create encoder for body, hands and head image."""

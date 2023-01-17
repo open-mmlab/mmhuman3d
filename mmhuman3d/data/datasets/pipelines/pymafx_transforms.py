@@ -1,10 +1,6 @@
-"""This file contains functions that are used to perform data augmentation."""
 import numpy as np
 import skimage.transform
-import torch
 from PIL import Image
-
-from mmhuman3d.core import constants
 
 
 def get_transform(center, scale, res, rot=0):
@@ -98,43 +94,3 @@ def flip_img(img):
     """
     img = np.fliplr(img)
     return img
-
-
-def flip_kp(kp, is_smpl=False, type='body'):
-    """Flip keypoints."""
-    assert type in ['body', 'hand', 'face', 'feet']
-    if type == 'body':
-        if len(kp) == 24:
-            if is_smpl:
-                flipped_parts = constants.SMPL_JOINTS_FLIP_PERM
-            else:
-                flipped_parts = constants.J24_FLIP_PERM
-        elif len(kp) == 49:
-            if is_smpl:
-                flipped_parts = constants.SMPL_J49_FLIP_PERM
-            else:
-                flipped_parts = constants.J49_FLIP_PERM
-    elif type == 'hand':
-        if len(kp) == 21:
-            flipped_parts = constants.SINGLE_HAND_FLIP_PERM
-        elif len(kp) == 42:
-            flipped_parts = constants.LRHAND_FLIP_PERM
-    elif type == 'face':
-        flipped_parts = constants.FACE_FLIP_PERM
-    elif type == 'feet':
-        flipped_parts = constants.FEEF_FLIP_PERM
-
-    kp = kp[flipped_parts]
-    kp[:, 0] = -kp[:, 0]
-    return kp
-
-
-def j2d_processing(kp, transf, img_res=224):
-    """Process gt 2D keypoints and apply transforms."""
-    # nparts = kp.shape[1]
-    bs, npart = kp.shape[:2]
-    kp_pad = torch.cat([kp, torch.ones((bs, npart, 1)).to(kp)], dim=-1)
-    kp_new = torch.bmm(transf, kp_pad.transpose(1, 2))
-    kp_new = kp_new.transpose(1, 2)
-    kp_new[:, :, :-1] = 2. * kp_new[:, :, :-1] / img_res - 1.
-    return kp_new[:, :, :2]

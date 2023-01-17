@@ -7,7 +7,6 @@ import torch
 import torch.cuda.comm
 import torch.nn as nn
 from mmcv.runner.base_module import BaseModule
-from smplx.lbs import batch_rodrigues
 from torch.nn import functional as F
 
 from mmhuman3d.core.conventions.keypoints_mapping.flame import (
@@ -30,10 +29,9 @@ from mmhuman3d.utils.geometry import (
     projection,
     rot6d_to_rotmat,
     rotation_matrix_to_angle_axis,
-    rotmat_to_rot6d,
 )
-from mmhuman3d.utils.img_utils import j2d_processing
-from ...core import constants
+from mmhuman3d.utils.keypoint_utils import process_kps2d
+from mmhuman3d.utils.transforms import aa_to_rotmat
 from ..bert.modeling_bert import (
     BertConfig,
     BertIntermediate,
@@ -45,6 +43,7 @@ from ..bert.modeling_bert import (
 # yapf: enable
 FACIAL_LANDMARKS = FLAME_73_KEYPOINTS[5:]
 JOINT_NAMES = OPENPOSE_25_KEYPOINTS + SPIN_SMPLX_KEYPOINTS
+FOOT_NAMES = ['bigtoe', 'smalltoe', 'heel']
 
 LayerNormClass = torch.nn.LayerNorm
 BertLayerNorm = torch.nn.LayerNorm
@@ -286,7 +285,7 @@ class MAF_Extractor(nn.Module):
             # Normalize keypoints to [-1,1]
             p_proj_2d = p_proj_2d / (224. / 2.)
         else:
-            p_proj_2d = j2d_processing(p_proj_2d, cam['kps_transf'])
+            p_proj_2d = process_kps2d(p_proj_2d, cam['kps_transf'])
         mesh_align_feat = self.sampling(
             p_proj_2d, im_feat, add_att=add_att, reduce_dim=reduce_dim)
         return mesh_align_feat
@@ -564,18 +563,20 @@ class Regressor(nn.Module):
         self.flip_vector = self.flip_vector.reshape(1, 3, 3)
 
         if not self.smpl_mode:
-            lhand_mean_rot6d = rotmat_to_rot6d(
-                batch_rodrigues(
-                    self.smpl.model_neutral.left_hand_mean.view(-1, 3)).view(
-                        [-1, 3, 3]))
-            rhand_mean_rot6d = rotmat_to_rot6d(
-                batch_rodrigues(
-                    self.smpl.model_neutral.right_hand_mean.view(-1, 3)).view(
-                        [-1, 3, 3]))
+            lhand_mean_rotmat = aa_to_rotmat(
+                self.smpl.model_neutral.left_hand_mean.view(-1, 3))
+            bs = lhand_mean_rotmat.shape[0]
+            lhand_mean_rot6d = lhand_mean_rotmat[:, :, :2].reshape(bs, 6)
+
+            rhand_mean_rotmat = aa_to_rotmat(
+                self.smpl.model_neutral.right_hand_mean.view(-1, 3))
+            rhand_mean_rot6d = rhand_mean_rotmat[:, :, :2].reshape(bs, 6)
+
             init_lhand = lhand_mean_rot6d.reshape(-1).unsqueeze(0)
             init_rhand = rhand_mean_rot6d.reshape(-1).unsqueeze(0)
-            init_face = rotmat_to_rot6d(torch.stack(
-                [torch.eye(3)] * 3)).reshape(-1).unsqueeze(0)
+            init_face_rotmat = torch.stack([torch.eye(3)] * 3)
+            init_face = init_face_rotmat[:, :, :2].reshape(
+                3, 6).reshape(-1).unsqueeze(0)
             init_exp = torch.zeros(10).unsqueeze(0)
 
         if self.smplx_mode or 'hand' in bhf_names:
@@ -891,10 +892,10 @@ class Regressor(nn.Module):
                                 relbow_twist_angle[relbow_twist_angle <
                                                    min_angle] -= min_angle
 
-                                lelbow_twist = batch_rodrigues(
-                                    lelbow_twist_axis * lelbow_twist_angle)
-                                relbow_twist = batch_rodrigues(
-                                    relbow_twist_axis * relbow_twist_angle)
+                                lelbow_twist = aa_to_rotmat(lelbow_twist_axis *
+                                                            lelbow_twist_angle)
+                                relbow_twist = aa_to_rotmat(relbow_twist_axis *
+                                                            relbow_twist_angle)
 
                                 opt_lwrist = torch.bmm(
                                     lelbow_twist.transpose(1, 2), opt_lwrist)
@@ -1053,8 +1054,8 @@ class Regressor(nn.Module):
             # Normalize keypoints to [-1,1]
             pred_keypoints_2d = pred_keypoints_2d / (224. / 2.)
         else:
-            pred_keypoints_2d = j2d_processing(pred_keypoints_2d,
-                                               rw_cam['kps_transf'])
+            pred_keypoints_2d = process_kps2d(pred_keypoints_2d,
+                                              rw_cam['kps_transf'])
 
         len_b_kp = len(JOINT_NAMES)
         output = {}
@@ -1097,7 +1098,7 @@ class Regressor(nn.Module):
             if self.smplx_mode:
                 len_h_kp = len(MANO_RIGHT_REORDER_KEYPOINTS)
                 len_f_kp = len(FACIAL_LANDMARKS)
-                len_feet_kp = 2 * len(constants.FOOT_NAMES)
+                len_feet_kp = 2 * len(FOOT_NAMES)
                 eval_mode = True
                 output.update({
                     'smplx_verts':
@@ -1634,8 +1635,8 @@ class PyMAFXHead(BaseModule):
                 if self.use_iwp_cam:
                     pred_hand_proj = pred_hand_proj / (224. / 2.)
                 else:
-                    pred_hand_proj = j2d_processing(pred_hand_proj,
-                                                    rw_cam['kps_transf'])
+                    pred_hand_proj = process_kps2d(pred_hand_proj,
+                                                   rw_cam['kps_transf'])
 
                 proj_hf_center = {
                     'lhand':
@@ -1673,8 +1674,8 @@ class PyMAFXHead(BaseModule):
                 if self.use_iwp_cam:
                     pred_hand_proj = pred_hand_proj / (224. / 2.)
                 else:
-                    pred_hand_proj = j2d_processing(pred_hand_proj,
-                                                    rw_cam['kps_transf'])
+                    pred_hand_proj = process_kps2d(pred_hand_proj,
+                                                   rw_cam['kps_transf'])
 
                 proj_hf_center = {
                     'lhand':

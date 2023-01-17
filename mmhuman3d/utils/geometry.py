@@ -83,9 +83,9 @@ def rot6d_to_rotmat(x):
                 mat, '(b n) h w-> b n h w', b=batch_size, n=num, h=3, w=3)
     else:
         if isinstance(x, torch.Tensor):
-            x = x.reshape(-1, 3, 2)
-        elif isinstance(x, np.ndarray):
             x = x.view(-1, 3, 2)
+        elif isinstance(x, np.ndarray):
+            x = x.reshape(-1, 3, 2)
         a1 = x[:, :, 0]
         a2 = x[:, :, 1]
         b1 = F.normalize(a1)
@@ -420,9 +420,7 @@ def weak_perspective_projection(points, scale, translation):
 def projection(pred_joints, pred_camera, iwp_mode=True):
     """Project 3D points on the image plane based on the given camera info,
     Identity rotation and Weak Perspective (IWP) camera is used when
-    iwp_mode=True, more about camera settings:
-
-    SPEC: Seeing People in the Wild with an Estimated Camera, ICCV 2021
+    iwp_mode = True
     """
     batch_size = pred_joints.shape[0]
     if iwp_mode:
@@ -554,18 +552,3 @@ def quaternion_to_rotation_matrix(quat):
     ],
                          dim=1).view(B, 3, 3)
     return rotMat
-
-
-def rotmat_to_rot6d(x):
-    """Convert 3x3 rotation matrix to 6D rotation representation.
-
-    Based on "On the Continuity of Rotation Representations in Neural Networks"
-    Input:
-        (B,3,3) Batch of corresponding rotation matrices
-    Output:
-        (B,6) Batch of 6-D rotation representations
-    """
-    batch_size = x.shape[0]
-    x = x[:, :, :2]
-    x = x.reshape(batch_size, 6)
-    return x

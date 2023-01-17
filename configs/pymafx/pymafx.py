@@ -90,7 +90,7 @@ model = dict(
     ),
     attention_config='configs/pymafx/bert_base_uncased_config.json',
     joint_regressor_train_extra='data/body_models/J_regressor_extra.npy',
-    smpl_model_dir='data/body_models/smpl',
+    smplx_model_dir='data/body_models/smplx',
     mesh_model=__mesh_model__,
     bhf_mode=__bhf_mode__,
     maf_on=__maf_on__,

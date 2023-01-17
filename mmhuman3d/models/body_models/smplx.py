@@ -1,6 +1,5 @@
 # yapf: disable
 import os
-import pickle
 from dataclasses import dataclass
 from typing import Optional
 
@@ -17,7 +16,6 @@ from smplx.lbs import (
     vertices2joints,
 )
 
-from mmhuman3d.core import constants
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_num,
@@ -29,6 +27,7 @@ from mmhuman3d.core.conventions.keypoints_mapping.mano import (
 from mmhuman3d.core.conventions.keypoints_mapping.openpose import (
     OPENPOSE_25_KEYPOINTS,
 )
+from mmhuman3d.core.conventions.keypoints_mapping.smplx import SMPLX_KEYPOINTS
 from mmhuman3d.core.conventions.keypoints_mapping.spin_smplx import (
     SPIN_SMPLX_KEYPOINTS,
 )
@@ -36,6 +35,8 @@ from mmhuman3d.core.conventions.segmentation import body_segmentation
 
 # yapf: enable
 JOINT_NAMES = OPENPOSE_25_KEYPOINTS + SPIN_SMPLX_KEYPOINTS
+FOOT_NAMES = ['bigtoe', 'smalltoe', 'heel']
+SMPLX_JOINT_IDS = {SMPLX_KEYPOINTS[i]: i for i in range(len(SMPLX_KEYPOINTS))}
 
 
 class SMPLX(_SMPLX):
@@ -570,13 +571,66 @@ class ModelOutput(SMPLXOutput):
 class SMPLX_ALL(nn.Module):
     """Extension of the official SMPLX implementation to support more
     joints."""
+    SMPLX2SMPL_J45 = [i for i in range(22)
+                      ] + [30, 45] + [i for i in range(55, 55 + 21)]
+    JOINT_MAP = {
+        'nose_openpose': 24,
+        'neck_openpose': 12,
+        'right_shoulder_openpose': 17,
+        'right_elbow_openpose': 19,
+        'right_wrist_openpose': 21,
+        'left_shoulder_openpose': 16,
+        'left_elbow_openpose': 18,
+        'left_wrist_openpose': 20,
+        'pelvis_openpose': 0,
+        'right_hip_openpose': 2,
+        'right_knee_openpose': 5,
+        'right_ankle_openpose': 8,
+        'left_hip_openpose': 1,
+        'left_knee_openpose': 4,
+        'left_ankle_openpose': 7,
+        'right_eye_openpose': 25,
+        'left_eye_openpose': 26,
+        'right_ear_openpose': 27,
+        'left_ear_openpose': 28,
+        'left_bigtoe_openpose': 29,
+        'left_smalltoe_openpose': 30,
+        'left_heel_openpose': 31,
+        'right_bigtoe_openpose': 32,
+        'right_smalltoe_openpose': 33,
+        'right_heel_openpose': 34,
+        'right_ankle': 8,
+        'right_knee': 5,
+        'right_hip': 45,
+        'left_hip': 46,
+        'left_knee': 4,
+        'left_ankle': 7,
+        'right_wrist': 21,
+        'right_elbow': 19,
+        'right_shoulder': 17,
+        'left_shoulder': 16,
+        'left_elbow': 18,
+        'left_wrist': 20,
+        'neck': 47,
+        'head_top': 48,
+        'pelvis': 49,
+        'thorax': 50,
+        'spine': 51,
+        'h36m_jaw': 52,
+        'h36m_head': 53,
+        'nose': 24,
+        'left_eye': 26,
+        'right_eye': 25,
+        'left_ear': 28,
+        'right_ear': 27
+    }
 
     def __init__(self,
                  batch_size=1,
                  use_face_contour=True,
                  gender='neutral',
                  joint_regressor_train_extra=None,
-                 smpl_model_dir=None,
+                 smplx_model_dir=None,
                  **kwargs):
         super().__init__()
         self.use_face_contour = use_face_contour
@@ -588,7 +642,7 @@ class SMPLX_ALL(nn.Module):
             assert gender in ['male', 'female', 'neutral']
         self.model_dict = nn.ModuleDict({
             gender: SMPLXLayer(
-                smpl_model_dir,
+                smplx_model_dir,
                 gender=gender,
                 ext='npz',
                 num_betas=10,
@@ -602,20 +656,17 @@ class SMPLX_ALL(nn.Module):
             for gender in self.genders
         })
         self.model_neutral = self.model_dict['neutral']
-        joints = [constants.JOINT_MAP[i] for i in JOINT_NAMES]
+        joints = [self.JOINT_MAP[i] for i in JOINT_NAMES]
         J_regressor_extra = np.load(joint_regressor_train_extra)
         self.register_buffer(
             'J_regressor_extra',
             torch.tensor(J_regressor_extra, dtype=torch.float32))
         self.joint_map = torch.tensor(joints, dtype=torch.long)
-        smplx_to_smpl = pickle.load(
-            open(
-                os.path.join(smpl_model_dir,
-                             'model_transfer/smplx_to_smpl.pkl'), 'rb'))
+        smplx_to_smpl = dict(
+            np.load(os.path.join(smplx_model_dir, 'smplx_to_smpl.npz')))
         self.register_buffer(
             'smplx2smpl',
             torch.tensor(smplx_to_smpl['matrix'][None], dtype=torch.float32))
-
         smpl2limb_vert_faces = get_partial_smpl('smpl')
         self.smpl2lhand = torch.from_numpy(
             smpl2limb_vert_faces['lhand']['vids']).long()
@@ -624,12 +675,10 @@ class SMPLX_ALL(nn.Module):
 
         # left and right hand joint mapping
         smplx2lhand_joints = [
-            constants.SMPLX_JOINT_IDS[name]
-            for name in MANO_LEFT_REORDER_KEYPOINTS
+            SMPLX_JOINT_IDS[name] for name in MANO_LEFT_REORDER_KEYPOINTS
         ]
         smplx2rhand_joints = [
-            constants.SMPLX_JOINT_IDS[name]
-            for name in MANO_RIGHT_REORDER_KEYPOINTS
+            SMPLX_JOINT_IDS[name] for name in MANO_RIGHT_REORDER_KEYPOINTS
         ]
         self.smplx2lh_joint_map = torch.tensor(
             smplx2lhand_joints, dtype=torch.long)
@@ -638,12 +687,10 @@ class SMPLX_ALL(nn.Module):
 
         # left and right foot joint mapping
         smplx2lfoot_joints = [
-            constants.SMPLX_JOINT_IDS['left_{}'.format(name)]
-            for name in constants.FOOT_NAMES
+            SMPLX_JOINT_IDS['left_{}'.format(name)] for name in FOOT_NAMES
         ]
         smplx2rfoot_joints = [
-            constants.SMPLX_JOINT_IDS['right_{}'.format(name)]
-            for name in constants.FOOT_NAMES
+            SMPLX_JOINT_IDS['right_{}'.format(name)] for name in FOOT_NAMES
         ]
         self.smplx2lf_joint_map = torch.tensor(
             smplx2lfoot_joints, dtype=torch.long)
@@ -730,7 +777,7 @@ class SMPLX_ALL(nn.Module):
         rhand_vertices = smpl_vertices[:, self.smpl2rhand]
         extra_joints = vertices2joints(self.J_regressor_extra, smpl_vertices)
         # smpl_output.joints: [B, 45, 3]  extra_joints: [B, 9, 3]
-        smplx_j45 = smplx_joints[:, constants.SMPLX2SMPL_J45]
+        smplx_j45 = smplx_joints[:, self.SMPLX2SMPL_J45]
         joints = torch.cat([smplx_j45, extra_joints], dim=1)
         smpl_joints = smplx_j45[:, :24]
         joints = joints[:, self.joint_map, :]  # [B, 49, 3]

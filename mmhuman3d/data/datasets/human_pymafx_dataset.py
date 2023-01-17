@@ -12,10 +12,9 @@ import torch.nn.functional as F
 from mmhuman3d.core.conventions.keypoints_mapping.mano import (
     MANO_RIGHT_REORDER_KEYPOINTS,
 )
-from mmhuman3d.utils.img_utils import (
+from mmhuman3d.data.datasets.pipelines.pymafx_transforms import (
     crop,
     flip_img,
-    flip_kp,
     get_transform,
     transform,
 )
@@ -137,36 +136,19 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         crop_img = crop_img.astype('float32') / 255.0
         return crop_img_resized, crop_img, crop_shape
 
-    def j2d_processing(self,
-                       kp,
-                       t,
-                       f,
-                       is_smpl=False,
-                       is_hand=False,
-                       is_face=False,
-                       is_feet=False):
+    def j2d_processing(self, kps2d, t):
         """Process gt 2D keypoints and apply all augmentation transforms."""
-        kp = kp.copy()
-        nparts = kp.shape[0]
+        kps2d = kps2d.copy()
+        nparts = kps2d.shape[0]
         for i in range(nparts):
-            pt = kp[i, 0:2]
+            pt = kps2d[i, 0:2]
             new_pt = np.array([pt[0], pt[1], 1.]).T
             new_pt = np.dot(t, new_pt)
-            kp[i, 0:2] = new_pt[:2]
+            kps2d[i, 0:2] = new_pt[:2]
         # convert to normalized coordinates
-        kp[:, :-1] = 2. * kp[:, :-1] / self.img_res - 1.
-        # flip the x coordinates
-        if f:
-            if is_hand:
-                kp = flip_kp(kp, type='hand')
-            elif is_face:
-                kp = flip_kp(kp, type='face')
-            elif is_feet:
-                kp = flip_kp(kp, type='feet')
-            else:
-                kp = flip_kp(kp, is_smpl)
-        kp = kp.astype('float32')
-        return kp
+        kps2d[:, :-1] = 2. * kps2d[:, :-1] / self.img_res - 1.
+        kps2d = kps2d.astype('float32')
+        return kps2d
 
     def load_annotations(self):
         """Load annotations from ``ann_file``"""
@@ -181,7 +163,6 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         scale = self.scale_factor
         rot = 0.
-        flip = 0
 
         j2d = self.joints2d[idx]
 
@@ -220,12 +201,8 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 idx]
 
         hand_kp2d = self.j2d_processing(
-            np.concatenate([lhand_kp2d, rhand_kp2d]).copy(),
-            kps_transf,
-            flip,
-            is_hand=True)
-        face_kp2d = self.j2d_processing(
-            face_kp2d.copy(), kps_transf, flip, is_face=True)
+            np.concatenate([lhand_kp2d, rhand_kp2d]).copy(), kps_transf)
+        face_kp2d = self.j2d_processing(face_kp2d.copy(), kps_transf)
 
         n_hand_kp = len(MANO_RIGHT_REORDER_KEYPOINTS)
         part_kp2d_dict = {
