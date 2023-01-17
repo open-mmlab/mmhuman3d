@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 
 from mmhuman3d.apis import init_model
 from mmhuman3d.data.datasets import build_dataset
+from mmhuman3d.utils.keypoint_utils import process_kps2d
 
 
 def _init_openpifpaf(parser):
@@ -63,6 +64,12 @@ def _setup_parser():
     parser.add_argument('tests/test_pymafx_pipeline.py', default=True)
     args = parser.parse_args()
     return args
+
+
+def test_process_kps2d():
+    pred_hand_proj = torch.ones((1, 390, 2))
+    kps2d = process_kps2d(pred_hand_proj, torch.ones((1, 2, 3)))
+    assert kps2d.shape == (1, 390, 2)
 
 
 def test_pymafx_inference():

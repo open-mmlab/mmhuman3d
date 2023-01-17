@@ -14,7 +14,6 @@ from mmhuman3d.core.conventions.keypoints_mapping.mano import (
 )
 from mmhuman3d.data.datasets.pipelines.pymafx_transforms import (
     crop,
-    flip_img,
     get_transform,
     transform,
 )
@@ -110,27 +109,17 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         for part, joints in joints_part.items():
             self.joints2d_part[part] = joints
-            if len(self.joints2d_part[part]) == 0:
-                exit()
+            # if len(self.joints2d_part[part]) == 0:
+            #     exit()
 
     def __len__(self):
         return len(self.bboxes)
 
-    def rgb_processing(self,
-                       rgb_img,
-                       center,
-                       scale,
-                       res=[224, 224],
-                       rot=0.,
-                       flip=0):
+    def rgb_processing(self, rgb_img, center, scale, res=[224, 224]):
         """Process rgb image and do augmentation."""
         # crop
-        crop_img_resized, crop_img, crop_shape = crop(
-            rgb_img, center, scale, res, rot=rot)
-        # flip the image
-        if flip:
-            crop_img_resized = flip_img(crop_img_resized)
-            crop_img = flip_img(crop_img)
+        crop_img_resized, crop_img, crop_shape = crop(rgb_img, center, scale,
+                                                      res)
         # (224, 224, 3), float, [0, 1]
         crop_img_resized = crop_img_resized.astype('float32') / 255.0
         crop_img = crop_img.astype('float32') / 255.0
@@ -162,8 +151,6 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         item = {}
 
         scale = self.scale_factor
-        rot = 0.
-
         j2d = self.joints2d[idx]
 
         kp2d_valid = j2d[j2d[:, 2] > 0.]
@@ -193,8 +180,8 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         img_hr, img_crop, _ = self.rgb_processing(
             img_orig, center, sc * scale, [self.img_res * 8, self.img_res * 8])
 
-        kps_transf = get_transform(
-            center, sc * scale, [self.img_res, self.img_res], rot=rot)
+        kps_transf = get_transform(center, sc * scale,
+                                   [self.img_res, self.img_res])
 
         lhand_kp2d, rhand_kp2d, face_kp2d = self.joints2d_part['lhand'][
             idx], self.joints2d_part['rhand'][idx], self.joints2d_part['face'][
