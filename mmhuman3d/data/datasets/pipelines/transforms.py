@@ -754,6 +754,8 @@ class MeshAffine:
         s = results['scale']
         r = results['rotation']
         trans = get_affine_transform(c, s, r, self.image_size)
+        inv_trans = get_affine_transform(c, s, 0., self.image_size, inv=True)
+        crop_trans = get_affine_transform(c, s, 0., self.image_size)
 
         if 'img' in results:
             img = results['img']
@@ -796,7 +798,9 @@ class MeshAffine:
             global_orient = results['smplx_global_orient'].copy()
             global_orient = _rotate_smpl_pose(global_orient, r)
             results['smplx_global_orient'] = global_orient
-
+        
+        results['crop_trans'] = crop_trans
+        results['inv_trans'] = inv_trans
         return results
 
 
