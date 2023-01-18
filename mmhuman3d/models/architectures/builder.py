@@ -6,7 +6,7 @@ from mmcv.utils import Registry
 from .expressive_mesh_estimator import SMPLXImageBodyModelEstimator
 from .hybrik import HybrIK_trainer
 from .mesh_estimator import ImageBodyModelEstimator, VideoBodyModelEstimator
-
+from .cliff_mesh_estimator import CliffImageBodyModelEstimator
 
 def build_from_cfg(cfg, registry, default_args=None):
     if cfg is None:
@@ -24,6 +24,8 @@ ARCHITECTURES.register_module(
     name='VideoBodyModelEstimator', module=VideoBodyModelEstimator)
 ARCHITECTURES.register_module(
     name='SMPLXImageBodyModelEstimator', module=SMPLXImageBodyModelEstimator)
+ARCHITECTURES.register_module(
+    name='CliffImageBodyModelEstimator', module=CliffImageBodyModelEstimator)
 
 
 def build_architecture(cfg):
