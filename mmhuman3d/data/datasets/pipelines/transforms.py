@@ -746,8 +746,10 @@ class MeshAffine:
     """
 
     def __init__(self, img_res):
-        self.img_res = img_res
-        self.image_size = np.array([img_res, img_res])
+        if isinstance(img_res, tuple):
+            self.image_size = img_res
+        else:
+            self.image_size = np.array([img_res, img_res])
 
     def __call__(self, results):
         c = results['center']

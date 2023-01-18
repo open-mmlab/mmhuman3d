@@ -11,6 +11,7 @@ class CliffHead(BaseModule):
     def __init__(self,
                  feat_dim,
                  smpl_mean_params=None,
+                 img_res=224
                  npose=144,
                  nbeta=10,
                  ncam=3,
@@ -30,6 +31,12 @@ class CliffHead(BaseModule):
         nn.init.xavier_uniform_(self.decshape.weight, gain=0.01)
         nn.init.xavier_uniform_(self.deccam.weight, gain=0.01)
 
+        
+        if isinstance(img_res, tuple):
+            print("img_res is a tuple!",img_res(0))
+            self.avgpool = nn.AvgPool2d((img_res(0), img_res(1)), stride=1)
+        else:
+            self.avgpool = nn.AvgPool2d((1, 1), stride=1)
         if smpl_mean_params is None:
             init_pose = torch.zeros([1, npose])
             init_shape = torch.zeros([1, nbeta])
