@@ -57,7 +57,7 @@ __hf_model_cfg__ = dict(
             num_deconv_filters=(256, 256, 256),
             num_deconv_kernels=(4, 4, 4),
             num_layers=50),
-        global_mode=not maf_on), )
+        global_mode=False), )
 
 __mesh_model__ = dict(
     name='smplx',

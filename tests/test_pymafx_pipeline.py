@@ -76,8 +76,11 @@ def test_pymafx_inference():
     args = _setup_parser()
     config = mmcv.Config.fromfile(args.mesh_reg_config)
     config.model['device'] = args.device
-    for maf_on in [True, False]:
-        config['maf_on'] = maf_on
+    for bhf_mode, global_mode in [('full_body', True), ('body_hand', False)]:
+        config['model']['head']['bhf_mode'] = bhf_mode
+        config['model']['regressor']['bhf_mode'] = bhf_mode
+        config['model']['bhf_mode'] = bhf_mode
+        config['model']['backbone']['global_mode'] = global_mode
         mesh_model, _ = init_model(
             config, args.mesh_reg_checkpoint, device=args.device)
         args.device = torch.device(args.device)

@@ -510,7 +510,7 @@ class SMPLX_ALL(nn.Module):
         self.register_buffer(
             'smplx2smpl',
             torch.tensor(smplx_to_smpl['matrix'][None], dtype=torch.float32))
-        smpl2limb_vert_faces = get_partial_smpl('smpl')
+        smpl2limb_vert_faces = get_partial_smpl()
         self.smpl2lhand = torch.from_numpy(
             smpl2limb_vert_faces['lhand']['vids']).long()
         self.smpl2rhand = torch.from_numpy(
@@ -697,24 +697,19 @@ class SMPLX_ALL(nn.Module):
         return smplx_joints
 
 
-def get_partial_smpl(body_model='smpl'):
+def get_partial_smpl():
     """Get partial mesh of SMPL.
-
-    Args:
-        body_model (str, optional): Defaults to 'smpl'.
 
     Returns:
         part_vert_faces
     """
-    if body_model != 'smpl':
-        raise NotImplementedError()
     part_vert_faces = {}
 
     for part in [
             'lhand', 'rhand', 'face', 'arm', 'forearm', 'larm', 'rarm',
             'lwrist', 'rwrist'
     ]:
-        part_vid_fname = f'data/partial_mesh/{body_model}_{part}_vids.npz'
+        part_vid_fname = f'data/partial_mesh/smpl_{part}_vids.npz'
         if os.path.exists(part_vid_fname):
             part_vids = np.load(part_vid_fname)
             part_vert_faces[part] = {
