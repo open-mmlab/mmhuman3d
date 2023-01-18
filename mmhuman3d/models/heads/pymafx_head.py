@@ -23,6 +23,13 @@ from mmhuman3d.core.conventions.keypoints_mapping.spin_smplx import (
 )
 from mmhuman3d.models.body_models.smpl import SMPL
 from mmhuman3d.models.body_models.smplx import get_partial_smpl
+from mmhuman3d.models.heads.bert.modeling_bert import (
+    BertConfig,
+    BertIntermediate,
+    BertOutput,
+    BertPreTrainedModel,
+    BertSelfOutput,
+)
 from mmhuman3d.utils.camera_utils import homo_vector
 from mmhuman3d.utils.geometry import (
     compute_twist_rotation,
@@ -32,13 +39,6 @@ from mmhuman3d.utils.geometry import (
 )
 from mmhuman3d.utils.keypoint_utils import process_kps2d
 from mmhuman3d.utils.transforms import aa_to_rotmat
-from ..bert.modeling_bert import (
-    BertConfig,
-    BertIntermediate,
-    BertOutput,
-    BertPreTrainedModel,
-    BertSelfOutput,
-)
 
 # yapf: enable
 FACIAL_LANDMARKS = FLAME_73_KEYPOINTS[5:]
@@ -355,27 +355,6 @@ class IUV_predict_layer(nn.Module):
                 padding=1 if final_cov_k == 3 else 0)
 
         self.inplanes = feat_dim
-
-    def _make_layer(self, block, planes, blocks, stride=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(
-                    self.inplanes,
-                    planes * block.expansion,
-                    kernel_size=1,
-                    stride=stride,
-                    bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
-            )
-
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
-        return nn.Sequential(*layers)
 
     def forward(self, x):
         """Forward function."""

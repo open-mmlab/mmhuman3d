@@ -76,47 +76,50 @@ def test_pymafx_inference():
     args = _setup_parser()
     config = mmcv.Config.fromfile(args.mesh_reg_config)
     config.model['device'] = args.device
-    mesh_model, _ = init_model(
-        config, args.mesh_reg_checkpoint, device=args.device)
-    args.device = torch.device(args.device)
-    args.pin_memory = False
-    # Prepare input
-    joints2d, frames, wb_kps, person_id_list, image_folder, \
-        _, _ = prepare_data_with_pifpaf_detection(args)
-    assert len(joints2d) == 1 and joints2d[0].shape == (17, 3)
-    assert wb_kps['joints2d_lhand'][0].shape == (21, 3)
-    assert wb_kps['joints2d_rhand'][0].shape == (21, 3)
-    assert wb_kps['joints2d_face'][0].shape == (68, 3)
+    for maf_on in [True, False]:
+        config['maf_on'] = maf_on
+        mesh_model, _ = init_model(
+            config, args.mesh_reg_checkpoint, device=args.device)
+        args.device = torch.device(args.device)
+        args.pin_memory = False
+        # Prepare input
+        joints2d, frames, wb_kps, person_id_list, image_folder, \
+            _, _ = prepare_data_with_pifpaf_detection(args)
+        assert len(joints2d) == 1 and joints2d[0].shape == (17, 3)
+        assert wb_kps['joints2d_lhand'][0].shape == (21, 3)
+        assert wb_kps['joints2d_rhand'][0].shape == (21, 3)
+        assert wb_kps['joints2d_face'][0].shape == (68, 3)
 
-    config['data']['test']['image_folder'] = image_folder
-    config['data']['test']['frames'] = frames
-    config['data']['test']['joints2d'] = joints2d
-    config['data']['test']['person_id_list'] = person_id_list
-    config['data']['test']['wb_kps'] = wb_kps
-    test_dataset = build_dataset(config['data']['test'], dict(test_mode=True))
+        config['data']['test']['image_folder'] = image_folder
+        config['data']['test']['frames'] = frames
+        config['data']['test']['joints2d'] = joints2d
+        config['data']['test']['person_id_list'] = person_id_list
+        config['data']['test']['wb_kps'] = wb_kps
+        test_dataset = build_dataset(config['data']['test'],
+                                     dict(test_mode=True))
 
-    dataloader = DataLoader(test_dataset, batch_size=1, num_workers=0)
+        dataloader = DataLoader(test_dataset, batch_size=1, num_workers=0)
 
-    # Run pred on each person
-    with torch.no_grad():
-        orig_height, orig_width, person_ids = [], [], []
+        # Run pred on each person
+        with torch.no_grad():
+            orig_height, orig_width, person_ids = [], [], []
 
-        for batch in dataloader:
-            batch = {
-                k: v.to(args.device) if isinstance(v, torch.Tensor) else v
-                for k, v in batch.items()
-            }
-            person_ids.extend(batch['person_id'])
-            orig_height.append(batch['orig_height'])
-            orig_width.append(batch['orig_width'])
+            for batch in dataloader:
+                batch = {
+                    k: v.to(args.device) if isinstance(v, torch.Tensor) else v
+                    for k, v in batch.items()
+                }
+                person_ids.extend(batch['person_id'])
+                orig_height.append(batch['orig_height'])
+                orig_width.append(batch['orig_width'])
 
-            preds_dict = mesh_model.forward_test(batch)
-            output = preds_dict['mesh_out'][-1]
-            assert output['pred_shape'] is not None
-            assert output['rotmat'] is not None
-            assert output['pred_lhand_rotmat'] is not None
-            assert output['pred_rhand_rotmat'] is not None
-            assert output['pred_face_rotmat'][:, 0:1] is not None
-            assert output['pred_face_rotmat'][:, 1:2] is not None
-            assert output['pred_face_rotmat'][:, 2:3] is not None
-            assert output['pred_exp'] is not None
+                preds_dict = mesh_model.forward_test(batch)
+                output = preds_dict['mesh_out'][-1]
+                assert output['pred_shape'] is not None
+                assert output['rotmat'] is not None
+                assert output['pred_lhand_rotmat'] is not None
+                assert output['pred_rhand_rotmat'] is not None
+                assert output['pred_face_rotmat'][:, 0:1] is not None
+                assert output['pred_face_rotmat'][:, 1:2] is not None
+                assert output['pred_face_rotmat'][:, 2:3] is not None
+                assert output['pred_exp'] is not None
