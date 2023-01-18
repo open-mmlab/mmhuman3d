@@ -57,7 +57,8 @@ DATASET_CONFIGS = dict(
     gta_human=dict(type='GTAHumanConverter', prefix='gta_human'),
     humman=dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
-)
+    cliff=dict(type='CliffConverter', modes=['coco', 'mpii']))
+
 
 
 def parse_args():
