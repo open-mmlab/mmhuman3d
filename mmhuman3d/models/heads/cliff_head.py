@@ -11,7 +11,7 @@ class CliffHead(BaseModule):
     def __init__(self,
                  feat_dim,
                  smpl_mean_params=None,
-                 img_res=224
+                 img_res=224,
                  npose=144,
                  nbeta=10,
                  ncam=3,
