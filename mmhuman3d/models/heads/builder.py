@@ -17,6 +17,7 @@ HEADS.register_module(name='ExPoseHandHead', module=ExPoseHandHead)
 HEADS.register_module(name='ExPoseFaceHead', module=ExPoseFaceHead)
 HEADS.register_module(name='CliffHead', module=CliffHead)
 
+
 def build_head(cfg):
     """Build head."""
     if cfg is None:

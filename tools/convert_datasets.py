@@ -60,7 +60,6 @@ DATASET_CONFIGS = dict(
     cliff=dict(type='CliffConverter', modes=['coco', 'mpii']))
 
 
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Convert datasets')
 

@@ -205,7 +205,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                 dictionary. Default: 10.0.
             focal_length (tuple(int) | int, optional): camera focal_length
             img_res (int, optional): image resolution
-        
+
         Returns:
             targets: contains additional SMPL parameters
         """
@@ -534,7 +534,6 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         pred_keypoints2d = torch.einsum('bij,bkj->bki', trans,
                                         pred_keypoints2d)
 
-
         # The coordinate origin of pred_keypoints_2d and gt_keypoints_2d is
         # the top left corner of the input image.
         pred_keypoints2d = 2 * pred_keypoints2d / (img_res - 1) - 1
@@ -794,7 +793,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
     def forward_train(self, **kwargs):
         """Forward function for general training.
-        
+
         For mesh estimation, we do not use this interface.
         """
         raise NotImplementedError('This interface should not be used in '

@@ -8,6 +8,7 @@ from .hybrik import HybrIK_trainer
 from .mesh_estimator import ImageBodyModelEstimator, VideoBodyModelEstimator
 from .cliff_mesh_estimator import CliffImageBodyModelEstimator
 
+
 def build_from_cfg(cfg, registry, default_args=None):
     if cfg is None:
         return None

@@ -11,7 +11,7 @@ optimizer = dict(
 )
 optimizer_config = dict(grad_clip=2.0)
 # learning policy
-lr_config = dict(policy='step', gamma=0.1, step=[70,150])
+lr_config = dict(policy='step', gamma=0.1, step=[70, 150])
 runner = dict(type='EpochBasedRunner', max_epochs=250)
 
 log_config = dict(
@@ -32,11 +32,12 @@ model = dict(
         out_indices=[3],
         norm_eval=False,
         norm_cfg=dict(type='SyncBN', requires_grad=True),
-        init_cfg=dict(type='Pretrained', checkpoint='data/resnet50/resnet50_a1h2_176-001a1197.pth')),
+        init_cfg=dict(type='Pretrained', checkpoint='data/resnet50/resnet50_a\
+                      1h2_176-001a1197.pth')),
     head=dict(
         type='CliffHead',
         feat_dim=2048,
-        img_res = (192, 256),
+        img_res=(192, 256),
         smpl_mean_params='data/body_models/smpl_mean_params.npz'),
     body_model_train=dict(
         type='SMPL',

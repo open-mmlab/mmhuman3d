@@ -11,7 +11,7 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class CliffConverter(BaseModeConverter):
-    """CLIFF datasets converter `Carrying Location Information in Full Frames 
+    """CLIFF datasets converter `Carrying Location Information in Full Frames
     into Human Pose and Shape Estimation' More details can be found in the
     `paper.
     <https://arxiv.org/pdf/2208.00571.pdf>`__.
@@ -60,7 +60,6 @@ class CliffConverter(BaseModeConverter):
 
         keypoints2d_ = data['part']
         image_path_ = data['imgname']
-
 
         # center scale to bbox
         w = h = data['scale'] * 200

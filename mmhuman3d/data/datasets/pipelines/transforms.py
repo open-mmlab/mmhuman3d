@@ -800,7 +800,7 @@ class MeshAffine:
             global_orient = results['smplx_global_orient'].copy()
             global_orient = _rotate_smpl_pose(global_orient, r)
             results['smplx_global_orient'] = global_orient
-        
+
         results['crop_trans'] = crop_trans
         results['inv_trans'] = inv_trans
         return results
