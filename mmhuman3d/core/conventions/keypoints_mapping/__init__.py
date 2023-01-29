@@ -26,6 +26,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     penn_action,
     posetrack,
     pw3d,
+    pymafx_smplx,
     smpl,
     smplx,
     spin_smplx,
@@ -62,6 +63,8 @@ KEYPOINTS_FACTORY = {
     'openpose_137': openpose.OPENPOSE_137_KEYPOINTS,
     'hybrik_29': hybrik.HYBRIK_29_KEYPOINTS,
     'hybrik_hp3d': mpi_inf_3dhp.HYBRIK_MPI_INF_3DHP_KEYPOINTS,
+    'pymafx_49':
+    openpose.OPENPOSE_25_KEYPOINTS + pymafx_smplx.PYMAFX_SMPLX_KEYPOINTS,
     'gta': gta.GTA_KEYPOINTS,
     'flame': flame.FLAME_73_KEYPOINTS,
     'face3d': face3d.FACE3D_IND,

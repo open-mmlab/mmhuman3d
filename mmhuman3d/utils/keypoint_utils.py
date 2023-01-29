@@ -60,10 +60,10 @@ def search_limbs(
     return limbs_target, limbs_palette
 
 
-def process_kps2d(kps2d: torch.Tensor, transf, img_res=224):
+def transform_kps2d(kps2d: torch.Tensor, transf, img_res=224):
     """Process gt 2D keypoints and apply transforms."""
-    bs, npart = kps2d.shape[:2]
-    kps_pad = torch.cat([kps2d, torch.ones((bs, npart, 1)).to(kps2d)], dim=-1)
+    bs, n_kps = kps2d.shape[:2]
+    kps_pad = torch.cat([kps2d, torch.ones((bs, n_kps, 1)).to(kps2d)], dim=-1)
     kps_new = torch.bmm(transf, kps_pad.transpose(1, 2))
     kps_new = kps_new.transpose(1, 2)
     kps_new[:, :, :-1] = 2. * kps_new[:, :, :-1] / img_res - 1.

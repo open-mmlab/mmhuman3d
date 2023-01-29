@@ -109,8 +109,6 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         for part, joints in joints_part.items():
             self.joints2d_part[part] = joints
-            # if len(self.joints2d_part[part]) == 0:
-            #     exit()
 
     def __len__(self):
         return len(self.bboxes)
@@ -167,9 +165,6 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
 
         img, _, _ = self.rgb_processing(img_orig, center, sc * scale,
                                         [self.img_res, self.img_res])
-
-        # crop_img = np.transpose(img.astype('float32'), (1,2,0)) * 255.
-        # cv2.imwrite('output/body_img.png', crop_img.astype(np.uint8))
 
         # Store image before normalization to use it in visualization
         item['img_body'] = self.pipeline({'img': img})['img'].float()

@@ -11,8 +11,8 @@ from mmhuman3d.core.conventions.keypoints_mapping.flame import (
 from mmhuman3d.core.conventions.keypoints_mapping.mano import (
     MANO_RIGHT_REORDER_KEYPOINTS,
 )
-from mmhuman3d.models.body_models.smplx import SMPLX_ALL
 from mmhuman3d.models.heads.pymafx_head import (
+    SMPLX_ALL,
     IUV_predict_layer,
     MAF_Extractor,
     Mesh_Sampler,
@@ -357,7 +357,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         """
         pass
 
-    def forward_test(self, batch={}, J_regressor=None, rw_cam={}, **kwargs):
+    def forward_test(self, batch={}, rw_cam={}, **kwargs):
         """Test step function.
 
         Args:
@@ -365,7 +365,6 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                 'img_{part}': for part images in body, hand and face.
                 '{part}_theta_inv': inversed affine transformation for cropped
                     of hand/face images, for part in lhand, rhand, and face.
-            J_regressor (optional): Joint regression matrix. Defaults to None.
             rw_cam (dict, optional):
                 real-world camera information, applied when
                 use_iwp_cam is False.
@@ -441,7 +440,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
 
         # parameter predictions
         out_dict = self.head(batch, s_feat_body, limb_feat_dict, g_feat,
-                             grid_points, J_regressor, self.att_feat_reduce,
+                             grid_points, self.att_feat_reduce,
                              self.align_attention, self.maf_extractor,
                              self.regressor, batch_size, limb_gfeat_dict,
                              part_names)

@@ -1,5 +1,6 @@
 # yapf: disable
 import math
+import os
 
 import numpy as np
 import scipy
@@ -7,22 +8,26 @@ import torch
 import torch.cuda.comm
 import torch.nn as nn
 from mmcv.runner.base_module import BaseModule
+from smplx.lbs import blend_shapes, vertices2joints
 from torch.nn import functional as F
 
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.conventions.keypoints_mapping.flame import (
     FLAME_73_KEYPOINTS,
 )
 from mmhuman3d.core.conventions.keypoints_mapping.mano import (
+    MANO_LEFT_REORDER_KEYPOINTS,
     MANO_RIGHT_REORDER_KEYPOINTS,
 )
 from mmhuman3d.core.conventions.keypoints_mapping.openpose import (
     OPENPOSE_25_KEYPOINTS,
 )
+from mmhuman3d.core.conventions.keypoints_mapping.smplx import SMPLX_KEYPOINTS
 from mmhuman3d.core.conventions.keypoints_mapping.spin_smplx import (
     SPIN_SMPLX_KEYPOINTS,
 )
 from mmhuman3d.models.body_models.smpl import SMPL
-from mmhuman3d.models.body_models.smplx import get_partial_smpl
+from mmhuman3d.models.body_models.smplx import SMPLXLayer
 from mmhuman3d.models.heads.bert.modeling_bert import (
     BertConfig,
     BertIntermediate,
@@ -37,13 +42,14 @@ from mmhuman3d.utils.geometry import (
     rot6d_to_rotmat,
     rotation_matrix_to_angle_axis,
 )
-from mmhuman3d.utils.keypoint_utils import process_kps2d
+from mmhuman3d.utils.keypoint_utils import transform_kps2d
 from mmhuman3d.utils.transforms import aa_to_rotmat
 
 # yapf: enable
 FACIAL_LANDMARKS = FLAME_73_KEYPOINTS[5:]
 JOINT_NAMES = OPENPOSE_25_KEYPOINTS + SPIN_SMPLX_KEYPOINTS
 FOOT_NAMES = ['bigtoe', 'smalltoe', 'heel']
+SMPLX_JOINT_IDS = {SMPLX_KEYPOINTS[i]: i for i in range(len(SMPLX_KEYPOINTS))}
 
 LayerNormClass = torch.nn.LayerNorm
 BertLayerNorm = torch.nn.LayerNorm
@@ -285,7 +291,7 @@ class MAF_Extractor(nn.Module):
             # Normalize keypoints to [-1,1]
             p_proj_2d = p_proj_2d / (224. / 2.)
         else:
-            p_proj_2d = process_kps2d(p_proj_2d, cam['kps_transf'])
+            p_proj_2d = transform_kps2d(p_proj_2d, cam['kps_transf'])
         mesh_align_feat = self.sampling(
             p_proj_2d, im_feat, add_att=add_att, reduce_dim=reduce_dim)
         return mesh_align_feat
@@ -381,6 +387,213 @@ class IUV_predict_layer(nn.Module):
             return_dict['predict_pncc'] = predict_pncc
 
         return return_dict
+
+
+class SMPLX_ALL(nn.Module):
+    """Extension of the official SMPLX implementation to support more
+    joints."""
+
+    def __init__(self,
+                 batch_size=1,
+                 use_face_contour=True,
+                 gender='neutral',
+                 joint_regressor_train_extra=None,
+                 smplx_model_dir=None,
+                 keypoint_dst='pymafx_49',
+                 **kwargs):
+        super().__init__()
+        self.use_face_contour = use_face_contour
+        if gender == 'all':
+            self.genders = ['male', 'female', 'neutral']
+        else:
+            self.genders = [gender]
+        self.keypoint_dst = keypoint_dst
+        self.model_dict = nn.ModuleDict({
+            gender: SMPLXLayer(
+                smplx_model_dir,
+                gender=gender,
+                ext='npz',
+                num_betas=10,
+                use_pca=False,
+                batch_size=batch_size,
+                use_face_contour=use_face_contour,
+                num_pca_comps=45,
+                keypoint_src='smplx',
+                keypoint_dst='smplx',
+                **kwargs)
+            for gender in self.genders
+        })
+        self.model_neutral = self.model_dict['neutral']
+        J_regressor_extra = np.load(joint_regressor_train_extra)
+        self.register_buffer(
+            'J_regressor_extra',
+            torch.tensor(J_regressor_extra, dtype=torch.float32))
+        smplx_to_smpl = dict(
+            np.load(os.path.join(smplx_model_dir, 'smplx_to_smpl.npz')))
+        self.register_buffer(
+            'smplx2smpl',
+            torch.tensor(smplx_to_smpl['matrix'][None], dtype=torch.float32))
+        smpl2limb_vert_faces = get_partial_smpl()
+        self.smpl2lhand = torch.from_numpy(
+            smpl2limb_vert_faces['lhand']['vids']).long()
+        self.smpl2rhand = torch.from_numpy(
+            smpl2limb_vert_faces['rhand']['vids']).long()
+
+        # left and right hand joint mapping
+        smplx2lhand_joints = [
+            SMPLX_JOINT_IDS[name] for name in MANO_LEFT_REORDER_KEYPOINTS
+        ]
+        smplx2rhand_joints = [
+            SMPLX_JOINT_IDS[name] for name in MANO_RIGHT_REORDER_KEYPOINTS
+        ]
+        self.smplx2lh_joint_map = torch.tensor(
+            smplx2lhand_joints, dtype=torch.long)
+        self.smplx2rh_joint_map = torch.tensor(
+            smplx2rhand_joints, dtype=torch.long)
+
+        # left and right foot joint mapping
+        smplx2lfoot_joints = [
+            SMPLX_JOINT_IDS[f'left_{name}'] for name in FOOT_NAMES
+        ]
+        smplx2rfoot_joints = [
+            SMPLX_JOINT_IDS[f'right_{name}'] for name in FOOT_NAMES
+        ]
+        self.smplx2lf_joint_map = torch.tensor(
+            smplx2lfoot_joints, dtype=torch.long)
+        self.smplx2rf_joint_map = torch.tensor(
+            smplx2rfoot_joints, dtype=torch.long)
+
+        for g in self.genders:
+            J_template = torch.einsum('ji,ik->jk', [
+                self.model_dict[g].J_regressor[:24],
+                self.model_dict[g].v_template
+            ])
+            J_dirs = torch.einsum('ji,ikl->jkl', [
+                self.model_dict[g].J_regressor[:24],
+                self.model_dict[g].shapedirs
+            ])
+
+            self.register_buffer(f'{g}_J_template', J_template)
+            self.register_buffer(f'{g}_J_dirs', J_dirs)
+
+    def forward(self, *args, **kwargs):
+        """Forward function."""
+        batch_size = kwargs['body_pose'].shape[0]
+        if 'gender' not in kwargs:
+            kwargs['gender'] = 2 * torch.ones(batch_size).to(
+                kwargs['body_pose'].device)
+        # pose for 55 joints: 1, 21, 15, 15, 1, 1, 1
+        pose_keys = [
+            'global_orient', 'body_pose', 'left_hand_pose', 'right_hand_pose',
+            'jaw_pose', 'leye_pose', 'reye_pose'
+        ]
+        param_keys = ['betas'] + pose_keys
+        if kwargs['body_pose'].shape[1] == 23:
+            # remove hand pose in the body_pose
+            kwargs['body_pose'] = kwargs['body_pose'][:, :21]
+        gender_idx_list = []
+        smplx_vertices, smplx_joints = [], []
+        for gi, g in enumerate(['male', 'female', 'neutral']):
+            gender_idx = ((kwargs['gender'] == gi).nonzero(as_tuple=True)[0])
+            if len(gender_idx) == 0:
+                continue
+            gender_idx_list.extend([int(idx) for idx in gender_idx])
+            gender_kwargs = {
+                k: kwargs[k][gender_idx]
+                for k in param_keys if k in kwargs
+            }
+            gender_smplx_output = self.model_dict[g].forward(
+                *args, **gender_kwargs)
+            smplx_vertices.append(gender_smplx_output['vertices'])
+            smplx_joints.append(gender_smplx_output['joints'])
+
+        idx_rearrange = [
+            gender_idx_list.index(i)
+            for i in range(len(list(gender_idx_list)))
+        ]
+        idx_rearrange = torch.tensor(idx_rearrange).long().to(
+            kwargs['body_pose'].device)
+
+        smplx_vertices = torch.cat(smplx_vertices)[idx_rearrange]
+        smplx_joints = torch.cat(smplx_joints)[idx_rearrange]
+
+        lhand_joints = smplx_joints[:, self.smplx2lh_joint_map]
+        rhand_joints = smplx_joints[:, self.smplx2rh_joint_map]
+        face_joints = smplx_joints[:, -68:] if self.use_face_contour \
+            else smplx_joints[:, -51:]
+        lfoot_joints = smplx_joints[:, self.smplx2lf_joint_map]
+        rfoot_joints = smplx_joints[:, self.smplx2rf_joint_map]
+
+        smpl_vertices = torch.bmm(
+            self.smplx2smpl.expand(batch_size, -1, -1), smplx_vertices)
+        extra_joints = vertices2joints(self.J_regressor_extra, smpl_vertices)
+        # smpl_output.joints: [B, 45, 3]  extra_joints: [B, 9, 3]
+        smplx_j45, _ = convert_kps(smplx_joints, src='smplx', dst='smpl_45')
+        smpl_54 = torch.cat([smplx_j45, extra_joints], dim=1)
+        joints, _ = convert_kps(
+            smpl_54, src='smpl_54', dst=self.keypoint_dst, approximate=True)
+
+        output = dict(
+            vertices=smpl_vertices,
+            joints=joints,
+            lhand_joints=lhand_joints,
+            rhand_joints=rhand_joints,
+            lfoot_joints=lfoot_joints,
+            rfoot_joints=rfoot_joints,
+            face_joints=face_joints,
+        )
+        return output
+
+    def get_tpose(self, betas=None, gender=None):
+        """Get tpose joints.
+
+        Args:
+            betas (betas, optional): Defaults to None.
+            gender (str, optional): Defaults to None.
+
+        Returns:
+            smplx_joints (torch.Tensor): smplx joints in shape [1, n_joints, 3]
+        """
+        kwargs = {}
+        if betas is None:
+            betas = torch.zeros(1, 10).to(self.J_regressor_extra.device)
+        kwargs['betas'] = betas
+
+        batch_size = kwargs['betas'].shape[0]
+        device = kwargs['betas'].device
+
+        if gender is None:
+            kwargs['gender'] = 2 * torch.ones(batch_size).to(device)
+        else:
+            kwargs['gender'] = gender
+
+        param_keys = ['betas']
+
+        gender_idx_list = []
+        smplx_joints = []
+        for gi, g in enumerate(['male', 'female', 'neutral']):
+            gender_idx = ((kwargs['gender'] == gi).nonzero(as_tuple=True)[0])
+            if len(gender_idx) == 0:
+                continue
+            gender_idx_list.extend([int(idx) for idx in gender_idx])
+            gender_kwargs = {}
+            gender_kwargs.update(
+                {k: kwargs[k][gender_idx]
+                 for k in param_keys if k in kwargs})
+
+            J = getattr(self, f'{g}_J_template').unsqueeze(0) + blend_shapes(
+                gender_kwargs['betas'], getattr(self, f'{g}_J_dirs'))
+
+            smplx_joints.append(J)
+
+        idx_rearrange = [
+            gender_idx_list.index(i)
+            for i in range(len(list(gender_idx_list)))
+        ]
+        idx_rearrange = torch.tensor(idx_rearrange).long().to(device)
+
+        smplx_joints = torch.cat(smplx_joints)[idx_rearrange]
+        return smplx_joints
 
 
 class Regressor(nn.Module):
@@ -519,10 +732,6 @@ class Regressor(nn.Module):
 
         if 'body' in smpl_models:
             self.smpl = smpl_models['body']
-        if 'hand' in smpl_models:
-            self.mano = smpl_models['hand']
-        if 'face' in smpl_models:
-            self.flame = smpl_models['face']
 
         if self.opt_wrist:
             self.body_model = SMPL(
@@ -569,7 +778,6 @@ class Regressor(nn.Module):
     def forward(self,
                 x: torch.Tensor = None,
                 n_iter: int = 1,
-                J_regressor=None,
                 rw_cam={},
                 init_mode=False,
                 global_iter=-1,
@@ -579,7 +787,6 @@ class Regressor(nn.Module):
         Args:
             x (torch.Tensor, optional): Defaults to None.
             n_iter (int, optional): Defaults to 1.
-            J_regressor (optional): Joint regression matrix. Defaults to None.
             rw_cam (dict, optional): real-world camera information.
             init_mode (bool, optional): Defaults to False.
             global_iter (int, optional): Defaults to -1.
@@ -995,7 +1202,6 @@ class Regressor(nn.Module):
             pred_face_rotmat = pred_hfrotmat[:, 30:]
 
         smplx_kwargs = {}
-        # if self.full_body_mode:
         if self.smplx_mode:
             smplx_kwargs['left_hand_pose'] = pred_lhand_rotmat
             smplx_kwargs['right_hand_pose'] = pred_rhand_rotmat
@@ -1008,18 +1214,17 @@ class Regressor(nn.Module):
             betas=pred_shape,
             body_pose=pred_rotmat[:, 1:],
             global_orient=pred_rotmat[:, 0].unsqueeze(1),
-            pose2rot=False,
             **smplx_kwargs,
         )
 
-        pred_vertices = pred_output.vertices
-        pred_joints = pred_output.joints
+        pred_vertices = pred_output['vertices']
+        pred_joints = pred_output['joints']
 
         if self.smplx_mode:
             pred_joints_full = torch.cat([
-                pred_joints, pred_output.lhand_joints,
-                pred_output.rhand_joints, pred_output.face_joints,
-                pred_output.lfoot_joints, pred_output.rfoot_joints
+                pred_joints, pred_output['lhand_joints'],
+                pred_output['rhand_joints'], pred_output['face_joints'],
+                pred_output['lfoot_joints'], pred_output['rfoot_joints']
             ],
                                          dim=1)
         else:
@@ -1033,23 +1238,12 @@ class Regressor(nn.Module):
             # Normalize keypoints to [-1,1]
             pred_keypoints_2d = pred_keypoints_2d / (224. / 2.)
         else:
-            pred_keypoints_2d = process_kps2d(pred_keypoints_2d,
-                                              rw_cam['kps_transf'])
+            pred_keypoints_2d = transform_kps2d(pred_keypoints_2d,
+                                                rw_cam['kps_transf'])
 
         len_b_kp = len(JOINT_NAMES)
         output = {}
-        H36M_TO_J17 = [
-            6, 5, 4, 1, 2, 3, 16, 15, 14, 11, 12, 13, 8, 10, 0, 7, 9
-        ]
-        H36M_TO_J14 = H36M_TO_J17[:14]
         if self.smpl_mode or self.smplx_mode:
-            if J_regressor is not None:
-                kp_3d = torch.matmul(J_regressor, pred_vertices)
-                pred_pelvis = kp_3d[:, [0], :].clone()
-                kp_3d = kp_3d[:, H36M_TO_J14, :]
-                kp_3d = kp_3d - pred_pelvis
-            else:
-                kp_3d = pred_joints
             pose = rotation_matrix_to_angle_axis(
                 pred_rotmat.reshape(-1, 3, 3)).reshape(-1, 72)
             output.update({
@@ -1057,14 +1251,6 @@ class Regressor(nn.Module):
                 torch.cat([pred_cam, pred_shape, pose], dim=1),
                 'verts':
                 pred_vertices,
-                'kp_2d':
-                pred_keypoints_2d[:, :len_b_kp],
-                'kp_3d':
-                kp_3d,
-                'pred_joints':
-                pred_joints,
-                'smpl_kp_3d':
-                pred_output.smpl_joints,
                 'rotmat':
                 pred_rotmat,
                 'pred_cam':
@@ -1078,10 +1264,7 @@ class Regressor(nn.Module):
                 len_h_kp = len(MANO_RIGHT_REORDER_KEYPOINTS)
                 len_f_kp = len(FACIAL_LANDMARKS)
                 len_feet_kp = 2 * len(FOOT_NAMES)
-                eval_mode = True
                 output.update({
-                    'smplx_verts':
-                    pred_output.smplx_vertices if eval_mode else None,
                     'pred_lhand':
                     pred_lhand,
                     'pred_rhand':
@@ -1090,24 +1273,12 @@ class Regressor(nn.Module):
                     pred_face,
                     'pred_exp':
                     pred_exp,
-                    'verts_lh':
-                    pred_output.lhand_vertices,
-                    'verts_rh':
-                    pred_output.rhand_vertices,
-                    # 'pred_arm_rotmat': pred_arm_rotmat,
-                    # 'pred_hfrotmat': pred_hfrotmat,
                     'pred_lhand_rotmat':
                     pred_lhand_rotmat,
                     'pred_rhand_rotmat':
                     pred_rhand_rotmat,
                     'pred_face_rotmat':
                     pred_face_rotmat,
-                    'pred_lhand_kp3d':
-                    pred_output.lhand_joints,
-                    'pred_rhand_kp3d':
-                    pred_output.rhand_joints,
-                    'pred_face_kp3d':
-                    pred_output.face_joints,
                     'pred_lhand_kp2d':
                     pred_keypoints_2d[:, len_b_kp:len_b_kp + len_h_kp],
                     'pred_rhand_kp2d':
@@ -1173,10 +1344,6 @@ class BertSelfAttention(nn.Module):
         """Forward function."""
         if history_state is not None:
             raise NotImplementedError
-            # x_states = torch.cat([history_state, hidden_states], dim=1)
-            # mixed_query_layer = self.query(hidden_states)
-            # mixed_key_layer = self.key(x_states)
-            # mixed_value_layer = self.value(x_states)
         else:
             mixed_query_layer = self.query(hidden_states)
             mixed_key_layer = self.key(hidden_states)
@@ -1486,6 +1653,30 @@ def get_attention_modules(config_path: str,
     return align_attention
 
 
+def get_partial_smpl():
+    """Get partial mesh of SMPL.
+
+    Returns:
+        part_vert_faces
+    """
+    part_vert_faces = {}
+
+    for part in [
+            'lhand', 'rhand', 'face', 'arm', 'forearm', 'larm', 'rarm',
+            'lwrist', 'rwrist'
+    ]:
+        part_vid_fname = f'data/partial_mesh/smpl_{part}_vids.npz'
+        if os.path.exists(part_vid_fname):
+            part_vids = np.load(part_vid_fname)
+            part_vert_faces[part] = {
+                'vids': part_vids['vids'],
+                'faces': part_vids['faces']
+            }
+        else:
+            raise FileNotFoundError(f'{part_vid_fname} does not exist!')
+    return part_vert_faces
+
+
 class PyMAFXHead(BaseModule):
     """PyMAF-X parameters regressor head."""
 
@@ -1523,14 +1714,11 @@ class PyMAFXHead(BaseModule):
         self.smpl2rhand = torch.from_numpy(
             smpl2limb_vert_faces['rhand']['vids']).long()
 
-    def init_mesh(self, regressor, batch_size, J_regressor=None, rw_cam={}):
+    def init_mesh(self, regressor, batch_size, rw_cam={}):
         """initialize the mesh model with default poses and shapes."""
         if self.init_mesh_output is None or self.batch_size != batch_size:
             self.init_mesh_output = regressor[0](
-                torch.zeros(batch_size),
-                J_regressor=J_regressor,
-                rw_cam=rw_cam,
-                init_mode=True)
+                torch.zeros(batch_size), rw_cam=rw_cam, init_mode=True)
             self.batch_size = batch_size
         return self.init_mesh_output
 
@@ -1540,7 +1728,6 @@ class PyMAFXHead(BaseModule):
                 limb_feat_dict: dict,
                 g_feat,
                 grid_points: torch.Tensor,
-                J_regressor,
                 att_feat_reduce,
                 align_attention,
                 maf_extractor,
@@ -1559,7 +1746,6 @@ class PyMAFXHead(BaseModule):
             s_feat_body (list): Image feature for body.
             limb_feat_dict (dict): Cropped image feature for part.
             grid_points (torch.Tensor): Grid-pattern points.
-            J_regressor: Joint regression matrix. Defaults to None.
             att_feat_reduce: Fusion_modules.
             align_attention: Attention_modules
             maf_extractor: Mesh-aligned feature extractor.
@@ -1578,10 +1764,8 @@ class PyMAFXHead(BaseModule):
         if fuse_grid_align:
             att_starts = self.grid_align['att_starts']
         # initial parameters
-        mesh_output = self.init_mesh(regressor, batch_size, J_regressor,
-                                     rw_cam)
+        mesh_output = self.init_mesh(regressor, batch_size, rw_cam)
         out_dict['mesh_out'] = [mesh_output]
-        out_dict['dp_out'] = []
 
         for rf_i in range(self.n_iter):
             current_states = {}
@@ -1614,8 +1798,8 @@ class PyMAFXHead(BaseModule):
                 if self.use_iwp_cam:
                     pred_hand_proj = pred_hand_proj / (224. / 2.)
                 else:
-                    pred_hand_proj = process_kps2d(pred_hand_proj,
-                                                   rw_cam['kps_transf'])
+                    pred_hand_proj = transform_kps2d(pred_hand_proj,
+                                                     rw_cam['kps_transf'])
 
                 proj_hf_center = {
                     'lhand':
@@ -1653,8 +1837,8 @@ class PyMAFXHead(BaseModule):
                 if self.use_iwp_cam:
                     pred_hand_proj = pred_hand_proj / (224. / 2.)
                 else:
-                    pred_hand_proj = process_kps2d(pred_hand_proj,
-                                                   rw_cam['kps_transf'])
+                    pred_hand_proj = transform_kps2d(pred_hand_proj,
+                                                     rw_cam['kps_transf'])
 
                 proj_hf_center = {
                     'lhand':
@@ -1876,7 +2060,6 @@ class PyMAFXHead(BaseModule):
             mesh_output = regressor[rf_i](
                 ref_feature,
                 n_iter=1,
-                J_regressor=J_regressor,
                 rw_cam=rw_cam,
                 global_iter=rf_i,
                 **current_states)
