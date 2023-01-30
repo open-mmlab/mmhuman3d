@@ -272,7 +272,11 @@ def main(args):
         keypoint_dst='smplx',
     )
     # To compress vertices array
-    frame_num = len(os.listdir(image_folder))
+    image_file_names = sorted([
+        osp.join(image_folder, x) for x in os.listdir(image_folder)
+        if x.endswith('.png') or x.endswith('.jpg')
+    ])
+    frame_num = len(image_file_names)
     compressed_cams = np.zeros([frame_num, max_instance, 4])
     compressed_fullpose = np.zeros([frame_num, max_instance, 55, 3])
     compressed_betas = np.zeros([frame_num, max_instance, 10])
@@ -294,25 +298,38 @@ def main(args):
                                                               n_person]
                 compressed_cams[frame_id, :n_person] = orig_cam[idx:idx +
                                                                 n_person]
-    if args.visualization and args.image_folder is None:
-        image_file_names = sorted([
-            osp.join(image_folder, x) for x in os.listdir(image_folder)
-            if x.endswith('.png') or x.endswith('.jpg')
-        ])
+    if args.visualization:
         image_array = []
         for path in image_file_names:
             img = cv2.imread(path)
             image_array.append(img)
-        visualize_smpl_vibe(
-            poses=compressed_fullpose.reshape(-1, max_instance, 165),
-            betas=compressed_betas,
-            orig_cam=compressed_cams,
-            output_path=os.path.join(output_path, 'smplx.mp4'),
-            image_array=np.array(image_array),
-            body_model_config=body_model_config,
-            resolution=(orig_height[0], orig_width[0]),
-            overwrite=True,
-        )
+        if args.image_folder:
+            for i, image in enumerate(image_array):
+                image_path = os.path.join(
+                    output_path,
+                    image_file_names[i].split('/')[-1].split('.')[0])
+                visualize_smpl_vibe(
+                    poses=compressed_fullpose.reshape(-1, max_instance,
+                                                      165)[i:i + 1],
+                    betas=compressed_betas[i:i + 1],
+                    orig_cam=compressed_cams[i:i + 1],
+                    output_path=image_path,
+                    image_array=image,
+                    body_model_config=body_model_config,
+                    resolution=(image.shape[0], image.shape[1]),
+                    overwrite=True,
+                )
+        else:
+            visualize_smpl_vibe(
+                poses=compressed_fullpose.reshape(-1, max_instance, 165),
+                betas=compressed_betas,
+                orig_cam=compressed_cams,
+                output_path=os.path.join(output_path, 'smplx.mp4'),
+                image_array=np.array(image_array),
+                body_model_config=body_model_config,
+                resolution=(orig_height[0], orig_width[0]),
+                overwrite=True,
+            )
 
 
 def init_openpifpaf(parser):
