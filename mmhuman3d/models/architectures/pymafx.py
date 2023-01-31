@@ -11,8 +11,8 @@ from mmhuman3d.core.conventions.keypoints_mapping.flame import (
 from mmhuman3d.core.conventions.keypoints_mapping.mano import (
     MANO_RIGHT_REORDER_KEYPOINTS,
 )
+from mmhuman3d.models.body_models.smplx import GenderedSMPLXLayer
 from mmhuman3d.models.heads.pymafx_head import (
-    SMPLX_ALL,
     IUV_predict_layer,
     MAF_Extractor,
     Mesh_Sampler,
@@ -49,7 +49,11 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         head (Optional[Union[dict, None]]): Head config dict.
         regressor (Optional[Union[dict, None]]): Regressor config dict.
         attention_config (str): Attention config path.
-        joint_regressor_train_extra (str): The extra joint regressor path.
+        extra_joints_regressor: path to extra joint regressor. Should be
+                a .npy file. If provided, extra joints are regressed and
+                concatenated after the joints regressed with the official
+                J_regressor or joints_regressor.
+        smplx_to_smpl (str): The path of the matrix that turns SMPLX into SMPL.
         smplx_model_dir (str): The path of the SMPLX model.
         mesh_model (dict): Details of the SMPLX model.
         bhf_mode (str): The type of PyMAFX, ``full_body`` or ``body_hand``.
@@ -83,7 +87,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                  head: Optional[Union[dict, None]],
                  regressor: Optional[Union[dict, None]],
                  attention_config: str,
-                 joint_regressor_train_extra: str,
+                 extra_joints_regressor: str,
+                 smplx_to_smpl: str,
                  smplx_model_dir: str,
                  mesh_model: dict,
                  bhf_mode: str,
@@ -107,6 +112,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         self.use_iwp_cam = use_iwp_cam
         self.backbone = backbone
         self.smplx_model_dir = smplx_model_dir
+        self.smplx_to_smpl = smplx_to_smpl
         self.hf_model_cfg = hf_model_cfg
         self.mesh_model = mesh_model
         self.body_sfeat_dim = body_sfeat_dim
@@ -126,7 +132,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         assert not (grid_align['use_att'] and grid_align['use_fc'])
         self.grid_feat_dim = GRID_SIZE * GRID_SIZE * self.mlp_dim[-1]
         self.bhf_att_feat_dim = {}
-        self._prepare_body_module(joint_regressor_train_extra)
+        self._prepare_body_module(extra_joints_regressor)
         self._create_encoder()
         self._create_attention_modules(attention_config)
         self._create_regressor(regressor)
@@ -136,11 +142,14 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         head['bhf_names'] = self.bhf_names
         self.head = build_head(head)
 
-    def _prepare_body_module(self, joint_regressor_train_extra: str):
+    def _prepare_body_module(self, extra_joints_regressor: str):
         """Prepare parametric mesh models.
 
         Args:
-            joint_regressor_train_extra (str): The extra joint regressor path.
+            extra_joints_regressor: path to extra joint regressor. Should be
+                a .npy file. If provided, extra joints are regressed and
+                concatenated after the joints regressed with the official
+                J_regressor or joints_regressor.
         """
         self.bhf_names = []
         if self.bhf_mode in ['body_hand', 'full_body']:
@@ -160,10 +169,11 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         }
         # create parametric mesh models
         self.smpl_family = {}
-        self.smpl_family['body'] = SMPLX_ALL(
+        self.smpl_family['body'] = GenderedSMPLXLayer(
+            smplx_model_dir=self.smplx_model_dir,
             gender=self.mesh_model['gender'],
-            joint_regressor_train_extra=joint_regressor_train_extra,
-            smplx_model_dir=self.smplx_model_dir)
+            extra_joints_regressor=extra_joints_regressor,
+            smplx_to_smpl=self.smplx_to_smpl)
 
     def _create_encoder(self):
         """Create encoder for body, hands and head image."""

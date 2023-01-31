@@ -10,8 +10,6 @@ from torch.nn.modules.batchnorm import _BatchNorm
 
 from .resnet import BasicBlock, Bottleneck
 
-BN_MOMENTUM = 0.1
-
 
 class HRModule(BaseModule):
     """High-Resolution Module for HRNet.
@@ -773,25 +771,43 @@ class PoseHighResolutionNetExpose(PoseHighResolutionNet):
         return xf
 
 
-class PoseHighResolutionNetPyMAFX(BaseModule):
+class PoseHighResolutionNetPyMAFX(PoseHighResolutionNet):
     """HRNet backbone for pymaf-x."""
-    blocks_dict = {'BASIC': BasicBlock, 'BOTTLENECK': Bottleneck}
 
     def __init__(self,
                  extra,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN'),
                  pretrained=True,
                  global_mode=False,
+                 with_cp=False,
                  init_cfg=None):
+        super(PoseHighResolutionNet, self).__init__(init_cfg=init_cfg)
         self.inplanes = 64
-        super(PoseHighResolutionNetPyMAFX, self).__init__(init_cfg)
+        self.conv_cfg = conv_cfg
+        self.norm_cfg = norm_cfg
+        self.pretrained = pretrained
+        self.with_cp = with_cp
 
         # stem net
-        self.conv1 = nn.Conv2d(
-            3, 64, kernel_size=3, stride=2, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
-        self.conv2 = nn.Conv2d(
-            64, 64, kernel_size=3, stride=2, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
+        self.conv1 = build_conv_layer(
+            self.conv_cfg,
+            3,
+            64,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            bias=False)
+        self.bn1 = build_norm_layer(self.norm_cfg, 64)[1]
+        self.conv2 = build_conv_layer(
+            self.conv_cfg,
+            64,
+            64,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            bias=False)
+        self.bn2 = build_norm_layer(self.norm_cfg, 64)[1]
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(Bottleneck, self.inplanes, 64, 4)
 
@@ -828,7 +844,7 @@ class PoseHighResolutionNetPyMAFX(BaseModule):
         self.transition3 = self._make_transition_layer(pre_stage_channels,
                                                        num_channels)
         self.stage4, pre_stage_channels = self._make_stage(
-            self.stage4_cfg, num_channels, multi_scale_output=True)
+            self.stage4_cfg, num_channels, multiscale_output=True)
 
         # Classification Head
         self.global_mode = global_mode
@@ -859,116 +875,32 @@ class PoseHighResolutionNetPyMAFX(BaseModule):
             out_channels = head_channels[i + 1] * head_block.expansion
 
             downsamp_module = nn.Sequential(
-                nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
+                build_conv_layer(
+                    self.conv_cfg,
+                    in_channels,
+                    out_channels,
                     kernel_size=3,
                     stride=2,
-                    padding=1),
-                nn.BatchNorm2d(out_channels, momentum=BN_MOMENTUM),
+                    padding=1,
+                    bias=False),
+                build_norm_layer(self.norm_cfg, out_channels)[1],
                 nn.ReLU(inplace=True))
 
             downsamp_modules.append(downsamp_module)
         downsamp_modules = nn.ModuleList(downsamp_modules)
 
         final_layer = nn.Sequential(
-            nn.Conv2d(
-                in_channels=head_channels[3] * head_block.expansion,
-                out_channels=2048,
+            build_conv_layer(
+                self.conv_cfg,
+                head_channels[3] * head_block.expansion,
+                2048,
                 kernel_size=1,
                 stride=1,
-                padding=0), nn.BatchNorm2d(2048, momentum=BN_MOMENTUM),
-            nn.ReLU(inplace=True))
+                padding=0,
+                bias=False),
+            build_norm_layer(self.norm_cfg, 2048)[1], nn.ReLU(inplace=True))
 
         return incre_modules, downsamp_modules, final_layer
-
-    def _make_transition_layer(self, num_channels_pre_layer,
-                               num_channels_cur_layer):
-        """make transition layer."""
-        num_branches_cur = len(num_channels_cur_layer)
-        num_branches_pre = len(num_channels_pre_layer)
-
-        transition_layers = []
-        for i in range(num_branches_cur):
-            if i < num_branches_pre:
-                if num_channels_cur_layer[i] != num_channels_pre_layer[i]:
-                    transition_layers.append(
-                        nn.Sequential(
-                            nn.Conv2d(
-                                num_channels_pre_layer[i],
-                                num_channels_cur_layer[i],
-                                3,
-                                1,
-                                1,
-                                bias=False),
-                            nn.BatchNorm2d(num_channels_cur_layer[i]),
-                            nn.ReLU(inplace=True)))
-                else:
-                    transition_layers.append(None)
-            else:
-                conv3x3s = []
-                for j in range(i + 1 - num_branches_pre):
-                    inchannels = num_channels_pre_layer[-1]
-                    outchannels = num_channels_cur_layer[i] \
-                        if j == i-num_branches_pre else inchannels
-                    conv3x3s.append(
-                        nn.Sequential(
-                            nn.Conv2d(
-                                inchannels, outchannels, 3, 2, 1, bias=False),
-                            nn.BatchNorm2d(outchannels),
-                            nn.ReLU(inplace=True)))
-                transition_layers.append(nn.Sequential(*conv3x3s))
-
-        return nn.ModuleList(transition_layers)
-
-    def _make_layer(self, block, inplanes, planes, blocks, stride=1):
-        """make layer."""
-        downsample = None
-        if stride != 1 or inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(
-                    inplanes,
-                    planes * block.expansion,
-                    kernel_size=1,
-                    stride=stride,
-                    bias=False),
-                nn.BatchNorm2d(planes * block.expansion, momentum=BN_MOMENTUM),
-            )
-
-        layers = []
-        layers.append(block(inplanes, planes, stride, downsample=downsample))
-        inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(inplanes, planes))
-
-        return nn.Sequential(*layers)
-
-    def _make_stage(self,
-                    layer_config,
-                    num_inchannels,
-                    multi_scale_output=True):
-        """make stage."""
-        num_modules = layer_config['num_modules']
-        num_branches = layer_config['num_branches']
-        num_blocks = layer_config['num_blocks']
-        num_channels = layer_config['num_channels']
-        block = self.blocks_dict[layer_config['block']]
-        fuse_method = layer_config['fuse_method']
-
-        modules = []
-        for i in range(num_modules):
-            # multi_scale_output is only used last module
-            if not multi_scale_output and i == num_modules - 1:
-                reset_multi_scale_output = False
-            else:
-                reset_multi_scale_output = True
-
-            modules.append(
-                HRModule(num_branches, block, num_blocks, num_inchannels,
-                         num_channels, fuse_method, reset_multi_scale_output))
-            num_inchannels = modules[-1].get_num_inchannels()
-
-        return nn.Sequential(*modules), num_inchannels
 
     def forward(self, x):
         """Forward function."""

@@ -1,6 +1,5 @@
 # yapf: disable
 import math
-import os
 
 import numpy as np
 import scipy
@@ -8,26 +7,21 @@ import torch
 import torch.cuda.comm
 import torch.nn as nn
 from mmcv.runner.base_module import BaseModule
-from smplx.lbs import blend_shapes, vertices2joints
 from torch.nn import functional as F
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.core.conventions.keypoints_mapping.flame import (
     FLAME_73_KEYPOINTS,
 )
 from mmhuman3d.core.conventions.keypoints_mapping.mano import (
-    MANO_LEFT_REORDER_KEYPOINTS,
     MANO_RIGHT_REORDER_KEYPOINTS,
 )
 from mmhuman3d.core.conventions.keypoints_mapping.openpose import (
     OPENPOSE_25_KEYPOINTS,
 )
-from mmhuman3d.core.conventions.keypoints_mapping.smplx import SMPLX_KEYPOINTS
 from mmhuman3d.core.conventions.keypoints_mapping.spin_smplx import (
     SPIN_SMPLX_KEYPOINTS,
 )
 from mmhuman3d.models.body_models.smpl import SMPL
-from mmhuman3d.models.body_models.smplx import SMPLXLayer
 from mmhuman3d.models.heads.bert.modeling_bert import (
     BertConfig,
     BertIntermediate,
@@ -35,6 +29,7 @@ from mmhuman3d.models.heads.bert.modeling_bert import (
     BertPreTrainedModel,
     BertSelfOutput,
 )
+from mmhuman3d.models.utils.SMPLX import get_partial_smpl
 from mmhuman3d.utils.camera_utils import homo_vector
 from mmhuman3d.utils.geometry import (
     compute_twist_rotation,
@@ -48,8 +43,6 @@ from mmhuman3d.utils.transforms import aa_to_rotmat
 # yapf: enable
 FACIAL_LANDMARKS = FLAME_73_KEYPOINTS[5:]
 JOINT_NAMES = OPENPOSE_25_KEYPOINTS + SPIN_SMPLX_KEYPOINTS
-FOOT_NAMES = ['bigtoe', 'smalltoe', 'heel']
-SMPLX_JOINT_IDS = {SMPLX_KEYPOINTS[i]: i for i in range(len(SMPLX_KEYPOINTS))}
 
 LayerNormClass = torch.nn.LayerNorm
 BertLayerNorm = torch.nn.LayerNorm
@@ -389,213 +382,6 @@ class IUV_predict_layer(nn.Module):
         return return_dict
 
 
-class SMPLX_ALL(nn.Module):
-    """Extension of the official SMPLX implementation to support more
-    joints."""
-
-    def __init__(self,
-                 batch_size=1,
-                 use_face_contour=True,
-                 gender='neutral',
-                 joint_regressor_train_extra=None,
-                 smplx_model_dir=None,
-                 keypoint_dst='pymafx_49',
-                 **kwargs):
-        super().__init__()
-        self.use_face_contour = use_face_contour
-        if gender == 'all':
-            self.genders = ['male', 'female', 'neutral']
-        else:
-            self.genders = [gender]
-        self.keypoint_dst = keypoint_dst
-        self.model_dict = nn.ModuleDict({
-            gender: SMPLXLayer(
-                smplx_model_dir,
-                gender=gender,
-                ext='npz',
-                num_betas=10,
-                use_pca=False,
-                batch_size=batch_size,
-                use_face_contour=use_face_contour,
-                num_pca_comps=45,
-                keypoint_src='smplx',
-                keypoint_dst='smplx',
-                **kwargs)
-            for gender in self.genders
-        })
-        self.model_neutral = self.model_dict['neutral']
-        J_regressor_extra = np.load(joint_regressor_train_extra)
-        self.register_buffer(
-            'J_regressor_extra',
-            torch.tensor(J_regressor_extra, dtype=torch.float32))
-        smplx_to_smpl = dict(
-            np.load(os.path.join(smplx_model_dir, 'smplx_to_smpl.npz')))
-        self.register_buffer(
-            'smplx2smpl',
-            torch.tensor(smplx_to_smpl['matrix'][None], dtype=torch.float32))
-        smpl2limb_vert_faces = get_partial_smpl()
-        self.smpl2lhand = torch.from_numpy(
-            smpl2limb_vert_faces['lhand']['vids']).long()
-        self.smpl2rhand = torch.from_numpy(
-            smpl2limb_vert_faces['rhand']['vids']).long()
-
-        # left and right hand joint mapping
-        smplx2lhand_joints = [
-            SMPLX_JOINT_IDS[name] for name in MANO_LEFT_REORDER_KEYPOINTS
-        ]
-        smplx2rhand_joints = [
-            SMPLX_JOINT_IDS[name] for name in MANO_RIGHT_REORDER_KEYPOINTS
-        ]
-        self.smplx2lh_joint_map = torch.tensor(
-            smplx2lhand_joints, dtype=torch.long)
-        self.smplx2rh_joint_map = torch.tensor(
-            smplx2rhand_joints, dtype=torch.long)
-
-        # left and right foot joint mapping
-        smplx2lfoot_joints = [
-            SMPLX_JOINT_IDS[f'left_{name}'] for name in FOOT_NAMES
-        ]
-        smplx2rfoot_joints = [
-            SMPLX_JOINT_IDS[f'right_{name}'] for name in FOOT_NAMES
-        ]
-        self.smplx2lf_joint_map = torch.tensor(
-            smplx2lfoot_joints, dtype=torch.long)
-        self.smplx2rf_joint_map = torch.tensor(
-            smplx2rfoot_joints, dtype=torch.long)
-
-        for g in self.genders:
-            J_template = torch.einsum('ji,ik->jk', [
-                self.model_dict[g].J_regressor[:24],
-                self.model_dict[g].v_template
-            ])
-            J_dirs = torch.einsum('ji,ikl->jkl', [
-                self.model_dict[g].J_regressor[:24],
-                self.model_dict[g].shapedirs
-            ])
-
-            self.register_buffer(f'{g}_J_template', J_template)
-            self.register_buffer(f'{g}_J_dirs', J_dirs)
-
-    def forward(self, *args, **kwargs):
-        """Forward function."""
-        batch_size = kwargs['body_pose'].shape[0]
-        if 'gender' not in kwargs:
-            kwargs['gender'] = 2 * torch.ones(batch_size).to(
-                kwargs['body_pose'].device)
-        # pose for 55 joints: 1, 21, 15, 15, 1, 1, 1
-        pose_keys = [
-            'global_orient', 'body_pose', 'left_hand_pose', 'right_hand_pose',
-            'jaw_pose', 'leye_pose', 'reye_pose'
-        ]
-        param_keys = ['betas'] + pose_keys
-        if kwargs['body_pose'].shape[1] == 23:
-            # remove hand pose in the body_pose
-            kwargs['body_pose'] = kwargs['body_pose'][:, :21]
-        gender_idx_list = []
-        smplx_vertices, smplx_joints = [], []
-        for gi, g in enumerate(['male', 'female', 'neutral']):
-            gender_idx = ((kwargs['gender'] == gi).nonzero(as_tuple=True)[0])
-            if len(gender_idx) == 0:
-                continue
-            gender_idx_list.extend([int(idx) for idx in gender_idx])
-            gender_kwargs = {
-                k: kwargs[k][gender_idx]
-                for k in param_keys if k in kwargs
-            }
-            gender_smplx_output = self.model_dict[g].forward(
-                *args, **gender_kwargs)
-            smplx_vertices.append(gender_smplx_output['vertices'])
-            smplx_joints.append(gender_smplx_output['joints'])
-
-        idx_rearrange = [
-            gender_idx_list.index(i)
-            for i in range(len(list(gender_idx_list)))
-        ]
-        idx_rearrange = torch.tensor(idx_rearrange).long().to(
-            kwargs['body_pose'].device)
-
-        smplx_vertices = torch.cat(smplx_vertices)[idx_rearrange]
-        smplx_joints = torch.cat(smplx_joints)[idx_rearrange]
-
-        lhand_joints = smplx_joints[:, self.smplx2lh_joint_map]
-        rhand_joints = smplx_joints[:, self.smplx2rh_joint_map]
-        face_joints = smplx_joints[:, -68:] if self.use_face_contour \
-            else smplx_joints[:, -51:]
-        lfoot_joints = smplx_joints[:, self.smplx2lf_joint_map]
-        rfoot_joints = smplx_joints[:, self.smplx2rf_joint_map]
-
-        smpl_vertices = torch.bmm(
-            self.smplx2smpl.expand(batch_size, -1, -1), smplx_vertices)
-        extra_joints = vertices2joints(self.J_regressor_extra, smpl_vertices)
-        # smpl_output.joints: [B, 45, 3]  extra_joints: [B, 9, 3]
-        smplx_j45, _ = convert_kps(smplx_joints, src='smplx', dst='smpl_45')
-        smpl_54 = torch.cat([smplx_j45, extra_joints], dim=1)
-        joints, _ = convert_kps(
-            smpl_54, src='smpl_54', dst=self.keypoint_dst, approximate=True)
-
-        output = dict(
-            vertices=smpl_vertices,
-            joints=joints,
-            lhand_joints=lhand_joints,
-            rhand_joints=rhand_joints,
-            lfoot_joints=lfoot_joints,
-            rfoot_joints=rfoot_joints,
-            face_joints=face_joints,
-        )
-        return output
-
-    def get_tpose(self, betas=None, gender=None):
-        """Get tpose joints.
-
-        Args:
-            betas (betas, optional): Defaults to None.
-            gender (str, optional): Defaults to None.
-
-        Returns:
-            smplx_joints (torch.Tensor): smplx joints in shape [1, n_joints, 3]
-        """
-        kwargs = {}
-        if betas is None:
-            betas = torch.zeros(1, 10).to(self.J_regressor_extra.device)
-        kwargs['betas'] = betas
-
-        batch_size = kwargs['betas'].shape[0]
-        device = kwargs['betas'].device
-
-        if gender is None:
-            kwargs['gender'] = 2 * torch.ones(batch_size).to(device)
-        else:
-            kwargs['gender'] = gender
-
-        param_keys = ['betas']
-
-        gender_idx_list = []
-        smplx_joints = []
-        for gi, g in enumerate(['male', 'female', 'neutral']):
-            gender_idx = ((kwargs['gender'] == gi).nonzero(as_tuple=True)[0])
-            if len(gender_idx) == 0:
-                continue
-            gender_idx_list.extend([int(idx) for idx in gender_idx])
-            gender_kwargs = {}
-            gender_kwargs.update(
-                {k: kwargs[k][gender_idx]
-                 for k in param_keys if k in kwargs})
-
-            J = getattr(self, f'{g}_J_template').unsqueeze(0) + blend_shapes(
-                gender_kwargs['betas'], getattr(self, f'{g}_J_dirs'))
-
-            smplx_joints.append(J)
-
-        idx_rearrange = [
-            gender_idx_list.index(i)
-            for i in range(len(list(gender_idx_list)))
-        ]
-        idx_rearrange = torch.tensor(idx_rearrange).long().to(device)
-
-        smplx_joints = torch.cat(smplx_joints)[idx_rearrange]
-        return smplx_joints
-
-
 class Regressor(nn.Module):
     """Regressor for mesh model."""
 
@@ -794,6 +580,7 @@ class Regressor(nn.Module):
         Returns:
             dict: The parameters of mesh model.
         """
+        FOOT_NAMES = ['bigtoe', 'smalltoe', 'heel']
         if x is not None:
             batch_size = x.shape[0]
         else:
@@ -1651,30 +1438,6 @@ def get_attention_modules(config_path: str,
                     num_attention_heads=num_attention_heads))
 
     return align_attention
-
-
-def get_partial_smpl():
-    """Get partial mesh of SMPL.
-
-    Returns:
-        part_vert_faces
-    """
-    part_vert_faces = {}
-
-    for part in [
-            'lhand', 'rhand', 'face', 'arm', 'forearm', 'larm', 'rarm',
-            'lwrist', 'rwrist'
-    ]:
-        part_vid_fname = f'data/partial_mesh/smpl_{part}_vids.npz'
-        if os.path.exists(part_vid_fname):
-            part_vids = np.load(part_vid_fname)
-            part_vert_faces[part] = {
-                'vids': part_vids['vids'],
-                'faces': part_vids['faces']
-            }
-        else:
-            raise FileNotFoundError(f'{part_vid_fname} does not exist!')
-    return part_vert_faces
 
 
 class PyMAFXHead(BaseModule):

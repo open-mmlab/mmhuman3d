@@ -8,8 +8,6 @@ from torch.nn.modules.batchnorm import _BatchNorm
 
 from ..utils import ResLayer
 
-BN_MOMENTUM = 0.1
-
 
 class BasicBlock(BaseModule):
     expansion = 1
@@ -662,18 +660,33 @@ class PoseResNet(BaseModule):
         152: (Bottleneck, [3, 8, 36, 3])
     }
 
-    def __init__(self, extra, global_mode=False, init_cfg=None, **kwargs):
-        super(PoseResNet, self).__init__(init_cfg)
+    def __init__(self,
+                 extra,
+                 global_mode=False,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN'),
+                 init_cfg=None,
+                 **kwargs):
+        super(PoseResNet, self).__init__(init_cfg=init_cfg)
         self.inplanes = 64
         self.extra = extra
         self.deconv_with_bias = self.extra['deconv_with_bias']
         num_layers = self.extra['num_layers']
         block, layers = self.resnet_spec[num_layers]
+        self.conv_cfg = conv_cfg
+        self.norm_cfg = norm_cfg
 
         super(PoseResNet, self).__init__()
-        self.conv1 = nn.Conv2d(
-            3, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
+        self.conv1 = build_conv_layer(
+            cfg=self.conv_cfg,
+            in_channels=3,
+            out_channels=64,
+            kernel_size=7,
+            stride=2,
+            padding=3,
+            bias=False,
+        )
+        self.bn1 = build_norm_layer(self.norm_cfg, 64)[1]
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
@@ -699,14 +712,15 @@ class PoseResNet(BaseModule):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(
+                build_conv_layer(
+                    self.conv_cfg,
                     self.inplanes,
                     planes * block.expansion,
                     kernel_size=1,
                     stride=stride,
+                    padding=0,
                     bias=False),
-                nn.BatchNorm2d(planes * block.expansion, momentum=BN_MOMENTUM),
-            )
+                build_norm_layer(self.norm_cfg, planes * block.expansion)[1])
 
         layers = []
         layers.append(
@@ -753,7 +767,7 @@ class PoseResNet(BaseModule):
                     padding=padding,
                     output_padding=output_padding,
                     bias=self.deconv_with_bias))
-            layers.append(nn.BatchNorm2d(planes, momentum=BN_MOMENTUM))
+            layers.append(build_norm_layer(self.norm_cfg, planes)[1])
             layers.append(nn.ReLU(inplace=True))
             self.inplanes = planes
 
