@@ -472,7 +472,7 @@ def compute_twist_rotation(rotation_matrix, twist_axis):
     twist_quaternion = twist_quaternion / (
         torch.norm(twist_quaternion, dim=1, keepdim=True) + 1e-9)
 
-    twist_rotation = quaternion_to_rotation_matrix(twist_quaternion)
+    twist_rotation = quat_to_rotmat(twist_quaternion)
     twist_aa = quaternion_to_angle_axis(twist_quaternion)
 
     twist_angle = torch.sum(
@@ -480,32 +480,3 @@ def compute_twist_rotation(rotation_matrix, twist_axis):
             twist_axis, dim=1, keepdim=True)
 
     return twist_rotation, twist_angle
-
-
-def quaternion_to_rotation_matrix(quat):
-    """Convert quaternion coefficients to rotation matrix.
-
-    Args:
-        quat: size = [B, 4] 4 <===>(w, x, y, z)
-    Returns:
-        Rotation matrix corresponding to the quaternion -- size = [B, 3, 3]
-    """
-    norm_quat = quat
-    norm_quat = norm_quat / norm_quat.norm(p=2, dim=1, keepdim=True)
-    w, x, y, z = norm_quat[:, 0], norm_quat[:, 1], norm_quat[:,
-                                                             2], norm_quat[:,
-                                                                           3]
-
-    B = quat.size(0)
-
-    w2, x2, y2, z2 = w.pow(2), x.pow(2), y.pow(2), z.pow(2)
-    wx, wy, wz = w * x, w * y, w * z
-    xy, xz, yz = x * y, x * z, y * z
-
-    rotMat = torch.stack([
-        w2 + x2 - y2 - z2, 2 * xy - 2 * wz, 2 * wy + 2 * xz, 2 * wz + 2 * xy,
-        w2 - x2 + y2 - z2, 2 * yz - 2 * wx, 2 * xz - 2 * wy, 2 * wx + 2 * yz,
-        w2 - x2 - y2 + z2
-    ],
-                         dim=1).view(B, 3, 3)
-    return rotMat
