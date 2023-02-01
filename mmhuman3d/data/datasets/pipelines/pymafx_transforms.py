@@ -51,4 +51,4 @@ def crop(img, center, scale, res):
 
     new_img_resized = np.array(
         Image.fromarray(new_img.astype(np.uint8)).resize(res))
-    return new_img_resized, new_img, new_shape
+    return new_img_resized, new_img

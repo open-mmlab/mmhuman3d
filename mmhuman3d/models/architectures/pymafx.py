@@ -11,7 +11,7 @@ from mmhuman3d.core.conventions.keypoints_mapping.flame import (
 from mmhuman3d.core.conventions.keypoints_mapping.mano import (
     MANO_RIGHT_REORDER_KEYPOINTS,
 )
-from mmhuman3d.models.body_models.smplx import GenderedSMPLXLayer
+from mmhuman3d.models.body_models.smplx import GenderedSMPLX
 from mmhuman3d.models.heads.pymafx_head import (
     IUV_predict_layer,
     MAF_Extractor,
@@ -169,7 +169,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         }
         # create parametric mesh models
         self.smpl_family = {}
-        self.smpl_family['body'] = GenderedSMPLXLayer(
+        self.smpl_family['body'] = GenderedSMPLX(
             smplx_model_dir=self.smplx_model_dir,
             gender=self.mesh_model['gender'],
             extra_joints_regressor=extra_joints_regressor,

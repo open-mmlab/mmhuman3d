@@ -384,7 +384,7 @@ class SMPLXLayer(_SMPLXLayer):
         return output
 
 
-class GenderedSMPLXLayer(nn.Module):
+class GenderedSMPLX(nn.Module):
     """A wrapper of SMPL-X implementation to handle gendered inputs, and
     support more joints.."""
 
@@ -431,7 +431,7 @@ class GenderedSMPLXLayer(nn.Module):
             batch_size (int, optional): Defaults to 1.
             use_face_contour (bool, optional): Defaults to True.
         """
-        super(GenderedSMPLXLayer, self).__init__()
+        super(GenderedSMPLX, self).__init__()
 
         if gender == 'all':
             self.genders = ['male', 'female', 'neutral']

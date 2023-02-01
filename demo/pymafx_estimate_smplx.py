@@ -20,32 +20,11 @@ from mmhuman3d.apis import init_model
 from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_vibe
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.data.datasets import build_dataset
+from mmhuman3d.utils.demo_utils import convert_crop_cam_to_orig_img
 from mmhuman3d.utils.ffmpeg_utils import video_to_images
 from mmhuman3d.utils.transforms import rotmat_to_aa
 
 # yapf: enable
-
-
-def convert_crop_cam_to_orig_img(cam: np.arange, bbox: np.arange,
-                                 img_width: int, img_height: int):
-    """Convert predicted camera from cropped image coordinates to original
-    image coordinates.
-
-    Args:
-        cam (np.arange): Weak perspective camera in cropped img coordinates.
-        bbox (np.arange): Bbox coordinates (c_x, c_y, h).
-        img_width (int): Original image width.
-        img_height (int): Original image height.
-    """
-
-    cx, cy, h = bbox[:, 0], bbox[:, 1], bbox[:, 2]
-    hw, hh = img_width / 2., img_height / 2.
-    sx = cam[:, 0] * (1. / (img_width / h))
-    sy = cam[:, 0] * (1. / (img_height / h))
-    tx = ((cx - hw) / hw / sx) + cam[:, 1]
-    ty = ((cy - hh) / hh / sy) + cam[:, 2]
-    orig_cam = np.stack([sx, sy, tx, ty]).T
-    return orig_cam
 
 
 def prepare_data_with_pifpaf_detection(args):
@@ -134,8 +113,7 @@ def prepare_data_with_pifpaf_detection(args):
                 tracking_results[person_id]['joints2d_face'])
 
         frames.extend(tracking_results[person_id]['frames'])
-    return joints2d, frames, wb_kps, person_id_list,\
-        image_folder, output_path, max_instance
+    return joints2d, frames, wb_kps, image_folder, output_path, max_instance
 
 
 def main(args):
@@ -149,32 +127,29 @@ def main(args):
     args.device = device
     args.pin_memory = True if torch.cuda.is_available() else False
     # Prepare input
-    joints2d, frames, wb_kps, person_id_list, image_folder, \
+    joints2d, frames, wb_kps, image_folder, \
         output_path, max_instance = prepare_data_with_pifpaf_detection(args)
 
     pymaf_config['data']['test']['image_folder'] = image_folder
     pymaf_config['data']['test']['frames'] = frames
     pymaf_config['data']['test']['joints2d'] = joints2d
-    pymaf_config['data']['test']['person_id_list'] = person_id_list
     pymaf_config['data']['test']['wb_kps'] = wb_kps
     test_dataset = build_dataset(pymaf_config['data']['test'],
                                  dict(test_mode=True))
-    bboxes = test_dataset.bboxes
+    bboxes_cs = test_dataset.bboxes
     frame_ids = test_dataset.frames
     dataloader = DataLoader(
         test_dataset, batch_size=args.model_batch_size, num_workers=0)
 
     # Run pred on each person
     with torch.no_grad():
-        pred_cam, orig_height, orig_width, person_ids,\
-            smplx_params = [], [], [], [], []
+        pred_cam, orig_height, orig_width, smplx_params = [], [], [], []
 
         for batch in tqdm(dataloader):
             batch = {
                 k: v.to(device) if isinstance(v, torch.Tensor) else v
                 for k, v in batch.items()
             }
-            person_ids.extend(batch['person_id'])
             orig_height.append(batch['orig_height'])
             orig_width.append(batch['orig_width'])
 
@@ -204,9 +179,10 @@ def main(args):
 
     orig_cam = convert_crop_cam_to_orig_img(
         cam=pred_cam,
-        bbox=bboxes,
+        bbox=bboxes_cs,
         img_width=orig_width,
-        img_height=orig_height)
+        img_height=orig_height,
+        bbox_format='cs')
 
     del mesh_model
     fullpose = []

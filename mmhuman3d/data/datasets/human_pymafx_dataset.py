@@ -2,7 +2,7 @@
 import os
 import os.path as osp
 from abc import ABCMeta
-from typing import Optional
+from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -25,21 +25,37 @@ from .builder import DATASETS
 
 @DATASETS.register_module()
 class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
-    """Dataset for PyMAFX Inference."""
+    """Dataset for PyMAFX Inference.
+
+    Args:
+
+        data_prefix (str):
+            Path to a directory where preprocessed datasets are held.
+        pipeline (list[dict | callable]): A sequence of data transforms.
+        img_res (int): The body image resolution.
+        hf_img_size (int): The hand and head image resolution.
+        image_folder (str): Path to images.
+        frames (List[int]): The index of the frame.
+        bboxes (List[np.ndarray], optional): Defaults to None.
+        joints2d (List[np.ndarray], optional): The 2d joints. Defaults to None.
+        scale_factor (float, optional): Defaults to 1.0.
+        wb_kps (dict, optional):
+            2d keypoints on the hands and face. Defaults to {}.
+        test_mode (bool): Store True when building test dataset.
+            Default to False.
+    """
 
     def __init__(self,
                  data_prefix: str,
                  pipeline: list,
                  img_res: int,
-                 hf_img_size,
-                 image_folder,
-                 frames,
-                 bboxes=None,
-                 joints2d=None,
-                 scale_factor=1.0,
-                 crop_size=224,
-                 person_id_list=[],
-                 wb_kps={},
+                 hf_img_size: int,
+                 image_folder: str,
+                 frames: List[int],
+                 bboxes: List[np.ndarray] = None,
+                 joints2d: List[np.ndarray] = None,
+                 scale_factor: float = 1.0,
+                 wb_kps: dict = {},
                  test_mode: Optional[bool] = True):
         super().__init__(data_prefix, pipeline, test_mode)
         self.img_res = img_res
@@ -52,10 +68,8 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         self.bboxes = bboxes
         self.joints2d = joints2d
         self.scale_factor = scale_factor
-        self.crop_size = crop_size
         self.frames = frames
         self.has_keypoints = True if joints2d is not None else False
-        self.person_id_list = person_id_list
         self.norm_joints2d = np.zeros_like(self.joints2d)
 
         if self.has_keypoints:
@@ -87,8 +101,7 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
                 center = [(ul[0] + br[0]) / 2., (ul[1] + br[1]) / 2.]
                 width_height = [br[0] - ul[0], br[1] - ul[1]]
 
-                bbox_xyxy = np.array(center + width_height)
-                bboxes.append(bbox_xyxy)
+                bboxes.append(np.array(center + width_height))
                 scales.append(scale)
 
             self.bboxes = np.stack(bboxes)
@@ -98,40 +111,33 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         joints2d_lhand = wb_kps['joints2d_lhand']
         joints2d_rhand = wb_kps['joints2d_rhand']
 
-        joints_part = {
+        self.joints2d_part = {
             'lhand': joints2d_lhand,
             'rhand': joints2d_rhand,
             'face': joints2d_face
         }
 
-        self.bboxes_part = {}
-        self.joints2d_part = {}
-
-        for part, joints in joints_part.items():
-            self.joints2d_part[part] = joints
-
     def __len__(self):
         return len(self.bboxes)
 
-    def rgb_processing(self, rgb_img, center, scale, res=[224, 224]):
+    def process_rgb(self, rgb_img, center, scale, res=[224, 224]):
         """Process rgb image and do augmentation."""
         # crop
-        crop_img_resized, crop_img, crop_shape = crop(rgb_img, center, scale,
-                                                      res)
+        crop_img_resized, crop_img = crop(rgb_img, center, scale, res)
         # (224, 224, 3), float, [0, 1]
         crop_img_resized = crop_img_resized.astype('float32') / 255.0
         crop_img = crop_img.astype('float32') / 255.0
-        return crop_img_resized, crop_img, crop_shape
+        return crop_img_resized, crop_img
 
-    def j2d_processing(self, kps2d, t):
+    def process_kps2d(self, kps2d, t):
         """Process gt 2D keypoints and apply all augmentation transforms."""
         kps2d = kps2d.copy()
-        nparts = kps2d.shape[0]
-        for i in range(nparts):
-            pt = kps2d[i, 0:2]
-            new_pt = np.array([pt[0], pt[1], 1.]).T
-            new_pt = np.dot(t, new_pt)
-            kps2d[i, 0:2] = new_pt[:2]
+        n_kps2d = kps2d.shape[0]
+        for i in range(n_kps2d):
+            kp = kps2d[i, 0:2]
+            new_kp = np.array([kp[0], kp[1], 1.]).T
+            new_kp = np.dot(t, new_kp)
+            kps2d[i, 0:2] = new_kp[:2]
         # convert to normalized coordinates
         kps2d[:, :-1] = 2. * kps2d[:, :-1] / self.img_res - 1.
         kps2d = kps2d.astype('float32')
@@ -163,16 +169,15 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
         sc = 1.2 * max(bbox_xyxy[2] - bbox_xyxy[0],
                        bbox_xyxy[3] - bbox_xyxy[1]) / 200.
 
-        img, _, _ = self.rgb_processing(img_orig, center, sc * scale,
-                                        [self.img_res, self.img_res])
+        img, _ = self.process_rgb(img_orig, center, sc * scale,
+                                  [self.img_res, self.img_res])
 
         # Store image before normalization to use it in visualization
         item['img_body'] = self.pipeline({'img': img})['img'].float()
         item['orig_height'] = orig_height
         item['orig_width'] = orig_width
-        item['person_id'] = self.person_id_list[idx]
 
-        img_hr, img_crop, _ = self.rgb_processing(
+        img_hr, img_crop = self.process_rgb(
             img_orig, center, sc * scale, [self.img_res * 8, self.img_res * 8])
 
         kps_transf = get_transform(center, sc * scale,
@@ -182,9 +187,9 @@ class PyMAFXHumanImageDataset(BaseDataset, metaclass=ABCMeta):
             idx], self.joints2d_part['rhand'][idx], self.joints2d_part['face'][
                 idx]
 
-        hand_kp2d = self.j2d_processing(
+        hand_kp2d = self.process_kps2d(
             np.concatenate([lhand_kp2d, rhand_kp2d]).copy(), kps_transf)
-        face_kp2d = self.j2d_processing(face_kp2d.copy(), kps_transf)
+        face_kp2d = self.process_kps2d(face_kp2d.copy(), kps_transf)
 
         n_hand_kp = len(MANO_RIGHT_REORDER_KEYPOINTS)
         part_kp2d_dict = {

@@ -211,7 +211,7 @@ class SMPL(_SMPL):
                             global_orient: Optional[torch.Tensor] = None,
                             body_pose: Optional[torch.Tensor] = None,
                             **kwargs):
-        """Forward pass for the SMPLX model.
+        """Forward pass for the SMPL model.
 
         Parameters
         ----------
