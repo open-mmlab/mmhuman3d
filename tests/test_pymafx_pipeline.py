@@ -86,7 +86,7 @@ def test_pymafx_inference():
         args.device = torch.device(args.device)
         args.pin_memory = False
         # Prepare input
-        joints2d, frames, wb_kps, person_id_list, image_folder, \
+        joints2d, frames, wb_kps, image_folder, \
             _, _ = prepare_data_with_pifpaf_detection(args)
         assert len(joints2d) == 1 and joints2d[0].shape == (17, 3)
         assert wb_kps['joints2d_lhand'][0].shape == (21, 3)
@@ -96,7 +96,6 @@ def test_pymafx_inference():
         config['data']['test']['image_folder'] = image_folder
         config['data']['test']['frames'] = frames
         config['data']['test']['joints2d'] = joints2d
-        config['data']['test']['person_id_list'] = person_id_list
         config['data']['test']['wb_kps'] = wb_kps
         test_dataset = build_dataset(config['data']['test'],
                                      dict(test_mode=True))
@@ -105,14 +104,13 @@ def test_pymafx_inference():
 
         # Run pred on each person
         with torch.no_grad():
-            orig_height, orig_width, person_ids = [], [], []
+            orig_height, orig_width = [], []
 
             for batch in dataloader:
                 batch = {
                     k: v.to(args.device) if isinstance(v, torch.Tensor) else v
                     for k, v in batch.items()
                 }
-                person_ids.extend(batch['person_id'])
                 orig_height.append(batch['orig_height'])
                 orig_width.append(batch['orig_width'])
 
