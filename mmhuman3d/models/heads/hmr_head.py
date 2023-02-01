@@ -7,6 +7,7 @@ from mmhuman3d.utils.geometry import rot6d_to_rotmat
 
 
 class HMRHead(BaseModule):
+    """HMR head."""
 
     def __init__(self,
                  feat_dim,
@@ -49,7 +50,7 @@ class HMRHead(BaseModule):
                 init_shape=None,
                 init_cam=None,
                 n_iter=3):
-
+        """Forward function."""
         # hmr head only support one layer feature
         if isinstance(x, list) or isinstance(x, tuple):
             x = x[-1]

@@ -1,5 +1,7 @@
+import os
 from typing import List
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from smplx.utils import find_joint_kin_chain
@@ -675,3 +677,28 @@ class SMPLXFaceCropFunc():
             face_inv_crop_transforms=face_inv_crop_transforms,
             face_crop_transform=face_crop_transform)
         return all_face_imgs, face_mean, crop_info
+
+
+def get_partial_smpl(partial_mesh_path: str = 'data/partial_mesh/'):
+    """Get partial mesh of SMPL.
+
+    Returns:
+        part_vert_faces
+    """
+    part_vert_faces = {}
+
+    for part in [
+            'lhand', 'rhand', 'face', 'arm', 'forearm', 'larm', 'rarm',
+            'lwrist', 'rwrist'
+    ]:
+        part_vid_fname = os.path.join(partial_mesh_path,
+                                      f'smpl_{part}_vids.npz')
+        if os.path.exists(part_vid_fname):
+            part_vids = np.load(part_vid_fname)
+            part_vert_faces[part] = {
+                'vids': part_vids['vids'],
+                'faces': part_vids['faces']
+            }
+        else:
+            raise FileNotFoundError(f'{part_vid_fname} does not exist!')
+    return part_vert_faces
