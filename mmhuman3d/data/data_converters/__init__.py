@@ -1,6 +1,7 @@
 from .agora import AgoraConverter
 from .amass import AmassConverter
 from .builder import build_data_converter
+from .cliff import CliffConverter
 from .coco import CocoConverter
 from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
@@ -31,7 +32,7 @@ from .stirling import StirlingConverter
 from .surreal import SurrealConverter
 from .up3d import Up3dConverter
 from .vibe import VibeConverter
-from .cliff import CliffConverter
+
 __all__ = [
     'build_data_converter', 'AgoraConverter', 'MpiiConverter', 'H36mConverter',
     'AmassConverter', 'CocoConverter', 'CocoWholebodyConverter',

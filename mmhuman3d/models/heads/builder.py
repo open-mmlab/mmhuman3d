@@ -2,11 +2,12 @@
 
 from mmcv.utils import Registry
 
+from .cliff_head import CliffHead
 from .expose_head import ExPoseBodyHead, ExPoseFaceHead, ExPoseHandHead
 from .hmr_head import HMRHead
 from .hybrik_head import HybrIKHead
 from .pare_head import PareHead
-from .cliff_head import CliffHead
+
 HEADS = Registry('heads')
 
 HEADS.register_module(name='HybrIKHead', module=HybrIKHead)
