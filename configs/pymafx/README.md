@@ -73,11 +73,11 @@ mmhuman3d
 
 ```
 
-## demo
+## Demo
 
 Run demo with video file.
 
-```python
+```bash
 python demo/pymafx_estimate_smplx.py --vid_file demo/resources/multi_person_demo.mp4  --visualization
 ```
 
