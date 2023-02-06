@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from mmhuman3d.utils.transforms import rotmat_to_aa
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
@@ -44,22 +45,35 @@ class EftConverter(BaseModeConverter):
         x, y = center[0] - w / 2, center[1] - h / 2
         return [x, y, w, h]
 
-    def convert_by_mode(self, dataset_path: str, out_path: str,
-                        mode: str) -> dict:
+    def convert_by_mode(self,
+                        dataset_path: str,
+                        out_path: str,
+                        mode: str,
+                        enable_multi_human_data: bool = False) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
             mode (str): Mode in accepted modes
+            enable_multi_human_data (bool):
+                Whether to generate a multi-human data. If set to True,
+                stored in MultiHumanData() format.
+                Default: False, stored in HumanData() format.
 
         Returns:
             dict:
                 A dict containing keys image_path, bbox_xywh, keypoints2d,
                 keypoints2d_mask, smpl stored in HumanData() format
         """
-        # use HumanData to store all data
-        human_data = HumanData()
+
+        if enable_multi_human_data:
+            # use MultiHumanData to store all data
+            human_data = MultiHumanData()
+        else:
+            # use HumanData to store all data
+            human_data = HumanData()
+
         image_path_, bbox_xywh_, keypoints2d_ = [], [], []
         smpl = {}
         smpl['betas'] = []
@@ -75,6 +89,7 @@ class EftConverter(BaseModeConverter):
 
         with open(annot_file, 'r') as f:
             eft_data = json.load(f)
+
         eft_data_all = eft_data['data']
 
         for data in tqdm(eft_data_all):
@@ -100,6 +115,16 @@ class EftConverter(BaseModeConverter):
             image_path_.append(image_prefix + image_name)
             bbox_xywh_.append(bbox_xywh)
             keypoints2d_.append(gt_keypoint_2d)
+
+        if enable_multi_human_data:
+            frame_range = []
+            frame_start, frame_end = 0, 0
+            for image_path in sorted(set(image_path_), key=image_path_.index):
+                frame_end = frame_start + \
+                    image_path_.count(image_path)
+                frame_range.append([frame_start, frame_end])
+                frame_start = frame_end
+            human_data['frame_range'] = np.array(frame_range)
 
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
