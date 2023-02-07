@@ -1,12 +1,8 @@
-# yapf: disable
 import argparse
 
 import mmcv
 import torch
-from demo.pymafx_estimate_smplx import (
-    prepare_data_with_mmpose_detection,
-    prepare_data_with_pifpaf_detection,
-)
+from demo.pymafx_estimate_smplx import prepare_data_with_pifpaf_detection
 from openpifpaf import decoder as ppdecoder
 from openpifpaf import network as ppnetwork
 from openpifpaf.predictor import Predictor
@@ -19,7 +15,6 @@ from mmhuman3d.utils.demo_utils import prepare_frames
 from mmhuman3d.utils.keypoint_utils import transform_kps2d
 
 
-# yapf: enable
 def _init_openpifpaf(parser):
     ppnetwork.Factory.cli(parser)
     ppdecoder.cli(parser)
@@ -56,34 +51,6 @@ def _setup_parser():
     parser.add_argument(
         '--use_openpifpaf', action='store_true', help='pifpaf detection')
 
-    # mmpose
-    parser.add_argument(
-        '--mmpose_bbox_thr',
-        type=float,
-        default=0.8,
-        help='Bounding box score threshold')
-    parser.add_argument(
-        '--det_config',
-        default='demo/mmdetection_cfg/faster_rcnn_r50_fpn_coco.py',
-        help='Config file for detection')
-    parser.add_argument(
-        '--det_checkpoint',
-        default='https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/'
-        'faster_rcnn_r50_fpn_1x_coco/'
-        'faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth',
-        help='Checkpoint file for detection')
-    parser.add_argument(
-        '--pose_config',
-        default='demo/mmpose_cfg/'
-        'hrnet_w48_coco_wholebody_384x288_dark_plus.py',
-        help='Config file for pose')
-    parser.add_argument(
-        '--pose_checkpoint',
-        default='https://download.openmmlab.com/mmpose/top_down/hrnet/'
-        'hrnet_w48_coco_wholebody_384x288_dark-f5726563_20200918.pth',
-        help='Checkpoint file for pose')
-    parser.add_argument(
-        '--use_mmpose', action='store_true', help='mmpose detection')
     parser.add_argument('--input_path', type=str, default=None)
     parser.add_argument(
         '--output_path',
@@ -103,69 +70,58 @@ def test_process_kps2d():
     assert kps2d.shape == (1, 390, 2)
 
 
-def test_pymafx_inference():
+def test_pymafx_inference_with_openpifpaf():
     args = _setup_parser()
-    for use_openpifpaf, use_mmpose in [(True, False), (False, True)]:
-        args.use_openpifpaf = use_openpifpaf
-        args.use_mmpose = use_mmpose
-        args.input_path = 'demo/resources'
-        config = mmcv.Config.fromfile(args.mesh_reg_config)
-        config.model['device'] = args.device
-        for bhf_mode, global_mode in [('full_body', True),
-                                      ('body_hand', False)]:
-            config['model']['head']['bhf_mode'] = bhf_mode
-            config['model']['regressor']['bhf_mode'] = bhf_mode
-            config['model']['bhf_mode'] = bhf_mode
-            config['model']['backbone']['global_mode'] = global_mode
-            mesh_model, _ = init_model(
-                config, args.mesh_reg_checkpoint, device=args.device)
-            # Prepare input
-            frames_iter = prepare_frames(args.input_path)
-            if use_openpifpaf:
-                args.device = torch.device(args.device)
-                args.pin_memory = False
-                joints2d, frames, wb_kps, image_folder, _ = \
-                    prepare_data_with_pifpaf_detection(args, frames_iter)
-            else:
-                args.device = 'cpu'
-                joints2d, frames, wb_kps, image_folder, _ = \
-                    prepare_data_with_mmpose_detection(args, frames_iter)
-            assert len(joints2d) == 1
-            assert joints2d[0].shape == (17, 3) or joints2d[0].shape == (133,
-                                                                         3)
-            assert wb_kps['joints2d_lhand'][0].shape == (21, 3)
-            assert wb_kps['joints2d_rhand'][0].shape == (21, 3)
-            assert wb_kps['joints2d_face'][0].shape == (68, 3)
+    args.use_openpifpaf = True
+    args.input_path = 'demo/resources'
+    config = mmcv.Config.fromfile(args.mesh_reg_config)
+    config.model['device'] = args.device
+    for bhf_mode, global_mode in [('full_body', True), ('body_hand', False)]:
+        config['model']['head']['bhf_mode'] = bhf_mode
+        config['model']['regressor']['bhf_mode'] = bhf_mode
+        config['model']['bhf_mode'] = bhf_mode
+        config['model']['backbone']['global_mode'] = global_mode
+        mesh_model, _ = init_model(
+            config, args.mesh_reg_checkpoint, device=args.device)
+        args.device = torch.device(args.device)
+        args.pin_memory = False
+        # Prepare input
+        frames_iter = prepare_frames(args.input_path)
+        joints2d, frames, wb_kps, image_folder, \
+            _ = prepare_data_with_pifpaf_detection(args, frames_iter)
+        assert len(joints2d) == 1 and joints2d[0].shape == (17, 3)
+        assert wb_kps['joints2d_lhand'][0].shape == (21, 3)
+        assert wb_kps['joints2d_rhand'][0].shape == (21, 3)
+        assert wb_kps['joints2d_face'][0].shape == (68, 3)
 
-            config['data']['test']['image_folder'] = image_folder
-            config['data']['test']['frames'] = frames
-            config['data']['test']['joints2d'] = joints2d
-            config['data']['test']['wb_kps'] = wb_kps
-            test_dataset = build_dataset(config['data']['test'],
-                                         dict(test_mode=True))
+        config['data']['test']['image_folder'] = image_folder
+        config['data']['test']['frames'] = frames
+        config['data']['test']['joints2d'] = joints2d
+        config['data']['test']['wb_kps'] = wb_kps
+        test_dataset = build_dataset(config['data']['test'],
+                                     dict(test_mode=True))
 
-            dataloader = DataLoader(test_dataset, batch_size=1, num_workers=0)
+        dataloader = DataLoader(test_dataset, batch_size=1, num_workers=0)
 
-            # Run pred on each person
-            with torch.no_grad():
-                orig_height, orig_width = [], []
+        # Run pred on each person
+        with torch.no_grad():
+            orig_height, orig_width = [], []
 
-                for batch in dataloader:
-                    batch = {
-                        k:
-                        v.to(args.device) if isinstance(v, torch.Tensor) else v
-                        for k, v in batch.items()
-                    }
-                    orig_height.append(batch['orig_height'])
-                    orig_width.append(batch['orig_width'])
+            for batch in dataloader:
+                batch = {
+                    k: v.to(args.device) if isinstance(v, torch.Tensor) else v
+                    for k, v in batch.items()
+                }
+                orig_height.append(batch['orig_height'])
+                orig_width.append(batch['orig_width'])
 
-                    preds_dict = mesh_model.forward_test(batch)
-                    output = preds_dict['mesh_out'][-1]
-                    assert output['pred_shape'] is not None
-                    assert output['rotmat'] is not None
-                    assert output['pred_lhand_rotmat'] is not None
-                    assert output['pred_rhand_rotmat'] is not None
-                    assert output['pred_face_rotmat'][:, 0:1] is not None
-                    assert output['pred_face_rotmat'][:, 1:2] is not None
-                    assert output['pred_face_rotmat'][:, 2:3] is not None
-                    assert output['pred_exp'] is not None
+                preds_dict = mesh_model.forward_test(batch)
+                output = preds_dict['mesh_out'][-1]
+                assert output['pred_shape'] is not None
+                assert output['rotmat'] is not None
+                assert output['pred_lhand_rotmat'] is not None
+                assert output['pred_rhand_rotmat'] is not None
+                assert output['pred_face_rotmat'][:, 0:1] is not None
+                assert output['pred_face_rotmat'][:, 1:2] is not None
+                assert output['pred_face_rotmat'][:, 2:3] is not None
+                assert output['pred_exp'] is not None
