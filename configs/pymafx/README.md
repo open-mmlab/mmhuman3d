@@ -75,10 +75,23 @@ mmhuman3d
 
 ## Demo
 
-Run demo with video file.
+Run demo with openpifpaf.
 
 ```bash
-python demo/pymafx_estimate_smplx.py --vid_file demo/resources/multi_person_demo.mp4  --visualization
+python demo/pymafx_estimate_smplx.py \
+    --input_path demo/resources/multi_person_demo.mp4 \
+    --output_path output \
+    --visualization \
+    --use_openpifpaf
+```
+If you don't want to install openpifpaf, you can use mmpose to detect 2d keypoints.
+
+```bash
+python demo/pymafx_estimate_smplx.py \
+    --input_path demo/resources/multi_person_demo.mp4 \
+    --output_path output \
+    --visualization \
+    --use_mmpose
 ```
 
 You can find results in `output`.

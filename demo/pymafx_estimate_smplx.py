@@ -463,8 +463,8 @@ if __name__ == '__main__':
         help='Config file for pose')
     parser.add_argument(
         '--pose_checkpoint',
-        default='data/pretrained_models/'
-        'hrnet_w48_wholebody_384x288_dark_plus-8701e1ce_20210426.pth',
+        default='https://download.openmmlab.com/mmpose/top_down/hrnet/'
+        'hrnet_w48_coco_wholebody_384x288_dark-f5726563_20200918.pth',
         help='Checkpoint file for pose')
     parser.add_argument(
         '--use_mmpose', action='store_true', help='mmpose detection')

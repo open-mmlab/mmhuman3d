@@ -1,10 +1,5 @@
-log_level = 'INFO'
-load_from = None
-resume_from = None
-dist_params = dict(backend='nccl')
-workflow = [('train', 1)]
-checkpoint_config = dict(interval=10)
-evaluation = dict(interval=10, metric='mAP', key_indicator='AP')
+load_from = 'https://download.openmmlab.com/mmpose/top_down/hrnet/hrnet_w48_coco_384x288_dark-741844ba_20200812.pth'  # noqa: E501
+evaluation = dict(interval=10, metric='mAP', save_best='AP')
 
 optimizer = dict(
     type='Adam',
@@ -19,13 +14,6 @@ lr_config = dict(
     warmup_ratio=0.001,
     step=[170, 200])
 total_epochs = 210
-log_config = dict(
-    interval=50,
-    hooks=[
-        dict(type='TextLoggerHook'),
-        # dict(type='TensorboardLoggerHook')
-    ])
-
 channel_cfg = dict(
     num_output_channels=133,
     dataset_joints=133,
@@ -37,8 +25,7 @@ channel_cfg = dict(
 # model settings
 model = dict(
     type='TopDown',
-    pretrained='https://download.openmmlab.com/mmpose/top_down/'
-    'hrnet/hrnet_w48_coco_384x288_dark-741844ba_20200812.pth',
+    pretrained=None,
     backbone=dict(
         type='HRNet',
         in_channels=3,
@@ -69,7 +56,7 @@ model = dict(
                 num_channels=(48, 96, 192, 384))),
     ),
     keypoint_head=dict(
-        type='TopDownSimpleHead',
+        type='TopdownHeatmapSimpleHead',
         in_channels=48,
         out_channels=channel_cfg['num_output_channels'],
         num_deconv_layers=0,
@@ -101,6 +88,8 @@ data_cfg = dict(
 
 train_pipeline = [
     dict(type='LoadImageFromFile'),
+    dict(type='TopDownGetBboxCenterScale', padding=1.25),
+    dict(type='TopDownRandomShiftBboxCenter', shift_factor=0.16, prob=0.3),
     dict(type='TopDownRandomFlip', flip_prob=0.5),
     dict(
         type='TopDownHalfBodyTransform',
@@ -126,6 +115,7 @@ train_pipeline = [
 
 val_pipeline = [
     dict(type='LoadImageFromFile'),
+    dict(type='TopDownGetBboxCenterScale', padding=1.25),
     dict(type='TopDownAffine'),
     dict(type='ToTensor'),
     dict(
@@ -147,6 +137,8 @@ data_root = 'data/coco'
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=2,
+    val_dataloader=dict(samples_per_gpu=32),
+    test_dataloader=dict(samples_per_gpu=32),
     train=dict(
         type='TopDownCocoWholeBodyDataset',
         ann_file=f'{data_root}/annotations/coco_wholebody_train_v1.0.json',
@@ -164,5 +156,5 @@ data = dict(
         ann_file=f'{data_root}/annotations/coco_wholebody_val_v1.0.json',
         img_prefix=f'{data_root}/val2017/',
         data_cfg=data_cfg,
-        pipeline=val_pipeline),
+        pipeline=test_pipeline),
 )
