@@ -75,7 +75,16 @@ mmhuman3d
 
 ## Demo
 
-Run demo with openpifpaf.
+By default, we use mmpose to detect 2d keypoints, and you can get the SMPL-X parameters as follow:
+
+```bash
+python demo/pymafx_estimate_smplx.py \
+    --input_path demo/resources/multi_person_demo.mp4 \
+    --output_path output \
+    --visualization
+```
+If you want to reproduce the original repos, please install openpifpaf,
+then you will get the SMPL-X parameters as follow:
 
 ```bash
 python demo/pymafx_estimate_smplx.py \
@@ -83,15 +92,6 @@ python demo/pymafx_estimate_smplx.py \
     --output_path output \
     --visualization \
     --use_openpifpaf
-```
-If you don't want to install openpifpaf, you can use mmpose to detect 2d keypoints.
-
-```bash
-python demo/pymafx_estimate_smplx.py \
-    --input_path demo/resources/multi_person_demo.mp4 \
-    --output_path output \
-    --visualization \
-    --use_mmpose
 ```
 
 You can find results in `output`.

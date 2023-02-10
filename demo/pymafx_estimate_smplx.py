@@ -151,7 +151,7 @@ def prepare_data_with_pifpaf_detection(args, frames_iter):
     Predictor.loader_workers = 1
     predictor = Predictor()
     if Path(args.input_path).is_file():
-        image_folder = os.path.join(args.output_path, 'images')
+        image_folder = osp.join(args.output_path, 'images')
         os.makedirs(image_folder, exist_ok=True)
         video_to_images(args.input_path, image_folder)
         capture = Stream(args.input_path, preprocess=predictor.preprocess)
@@ -379,7 +379,7 @@ def main(args):
             image_array.append(img)
         if Path(args.input_path).is_dir():
             for i, image in enumerate(image_array):
-                image_path = os.path.join(
+                image_path = osp.join(
                     args.output_path,
                     image_file_names[i].split('/')[-1].split('.')[0])
                 visualize_smpl_vibe(
@@ -398,7 +398,7 @@ def main(args):
                 poses=compressed_fullpose.reshape(-1, max_instance, 165),
                 betas=compressed_betas,
                 orig_cam=compressed_cams,
-                output_path=os.path.join(args.output_path, 'smplx.mp4'),
+                output_path=osp.join(args.output_path, 'smplx.mp4'),
                 image_array=np.array(image_array),
                 body_model_config=body_model_config,
                 resolution=(orig_height[0], orig_width[0]),
@@ -466,8 +466,6 @@ if __name__ == '__main__':
         default='https://download.openmmlab.com/mmpose/top_down/hrnet/'
         'hrnet_w48_coco_wholebody_384x288_dark-f5726563_20200918.pth',
         help='Checkpoint file for pose')
-    parser.add_argument(
-        '--use_mmpose', action='store_true', help='mmpose detection')
 
     parser.add_argument(
         '--input_path', type=str, default=None, help='input folder')
@@ -489,14 +487,14 @@ if __name__ == '__main__':
         type=int,
         default=8,
         help='batch size for SMPL prediction')
-    if has_openpifpaf:
-        init_openpifpaf(parser)
     args = parser.parse_args()
     if args.use_openpifpaf:
+        init_openpifpaf(parser)
+        args = parser.parse_args()
         assert has_openpifpaf, 'Please install openpifpaf to run the demo.'
         assert args.det_config is not None
         assert args.det_checkpoint is not None
-    if args.use_mmpose:
+    else:
         assert has_mmdet, 'Please install mmdet to run the demo.'
         assert has_mmpose, 'Please install mmpose to run the demo.'
         assert args.det_config is not None
