@@ -1,13 +1,3 @@
-evaluation = dict(interval=10, metric='mAP', save_best='AP')
-
-# learning policy
-lr_config = dict(
-    policy='step',
-    warmup='linear',
-    warmup_iters=500,
-    warmup_ratio=0.001,
-    step=[170, 200])
-total_epochs = 210
 channel_cfg = dict(
     num_output_channels=133,
     dataset_joints=133,
@@ -80,7 +70,7 @@ data_cfg = dict(
     'COCO_val2017_detections_AP_H_56_person.json',
 )
 
-val_pipeline = [
+test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='TopDownGetBboxCenterScale', padding=1.25),
     dict(type='TopDownAffine'),
@@ -98,20 +88,12 @@ val_pipeline = [
         ]),
 ]
 
-test_pipeline = val_pipeline
-
 data_root = 'data/coco'
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=2,
     val_dataloader=dict(samples_per_gpu=32),
     test_dataloader=dict(samples_per_gpu=32),
-    val=dict(
-        type='TopDownCocoWholeBodyDataset',
-        ann_file=f'{data_root}/annotations/coco_wholebody_val_v1.0.json',
-        img_prefix=f'{data_root}/val2017/',
-        data_cfg=data_cfg,
-        pipeline=val_pipeline),
     test=dict(
         type='TopDownCocoWholeBodyDataset',
         ann_file=f'{data_root}/annotations/coco_wholebody_val_v1.0.json',
