@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 
 from mmhuman3d.apis import init_model
 from mmhuman3d.data.datasets import build_dataset
+from mmhuman3d.utils.demo_utils import prepare_frames
 from mmhuman3d.utils.keypoint_utils import transform_kps2d
 
 
@@ -36,26 +37,23 @@ def _setup_parser():
         default='https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/'
         'mmhuman3d/models/pymaf_x/PyMAF-X_model_checkpoint.pth',
         help='Checkpoint file for mesh regression')
+    # openpifpaf
     parser.add_argument(
-        '--tracking_method',
-        type=str,
-        default='pose',
-        help='tracking method to calculate the tracklet of a subject')
-    parser.add_argument(
-        '--detector_checkpoint',
+        '--openpifpaf_checkpoint',
         type=str,
         default='shufflenetv2k30-wholebody',
         help='detector checkpoint for openpifpaf')
     parser.add_argument(
-        '--detection_threshold',
+        '--openpifpaf_threshold',
         type=float,
         default=0.35,
         help='pifpaf detection score threshold.')
     parser.add_argument(
-        '--vid_file', type=str, default=None, help='input video path')
-    parser.add_argument('--image_folder', type=str, default='demo/resources')
+        '--use_openpifpaf', action='store_true', help='pifpaf detection')
+
+    parser.add_argument('--input_path', type=str, default=None)
     parser.add_argument(
-        '--output_folder',
+        '--output_path',
         type=str,
         default='output',
         help='output folder to write results')
@@ -72,8 +70,10 @@ def test_process_kps2d():
     assert kps2d.shape == (1, 390, 2)
 
 
-def test_pymafx_inference():
+def test_pymafx_inference_with_openpifpaf():
     args = _setup_parser()
+    args.use_openpifpaf = True
+    args.input_path = 'demo/resources'
     config = mmcv.Config.fromfile(args.mesh_reg_config)
     config.model['device'] = args.device
     for bhf_mode, global_mode in [('full_body', True), ('body_hand', False)]:
@@ -86,8 +86,9 @@ def test_pymafx_inference():
         args.device = torch.device(args.device)
         args.pin_memory = False
         # Prepare input
+        frames_iter = prepare_frames(args.input_path)
         joints2d, frames, wb_kps, image_folder, \
-            _, _ = prepare_data_with_pifpaf_detection(args)
+            _ = prepare_data_with_pifpaf_detection(args, frames_iter)
         assert len(joints2d) == 1 and joints2d[0].shape == (17, 3)
         assert wb_kps['joints2d_lhand'][0].shape == (21, 3)
         assert wb_kps['joints2d_rhand'][0].shape == (21, 3)

@@ -4,15 +4,13 @@ import argparse
 import copy
 import os
 import os.path as osp
+import shutil
+from pathlib import Path
 
 import cv2
 import mmcv
 import numpy as np
 import torch
-from openpifpaf import decoder as ppdecoder
-from openpifpaf import network as ppnetwork
-from openpifpaf.predictor import Predictor
-from openpifpaf.stream import Stream
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -20,60 +18,157 @@ from mmhuman3d.apis import init_model
 from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_vibe
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.data.datasets import build_dataset
-from mmhuman3d.utils.demo_utils import convert_crop_cam_to_orig_img
+from mmhuman3d.utils.demo_utils import (
+    convert_crop_cam_to_orig_img,
+    prepare_frames,
+    process_mmdet_results,
+)
 from mmhuman3d.utils.ffmpeg_utils import video_to_images
 from mmhuman3d.utils.transforms import rotmat_to_aa
+
+try:
+    from openpifpaf import decoder as ppdecoder
+    from openpifpaf import network as ppnetwork
+    from openpifpaf.predictor import Predictor
+    from openpifpaf.stream import Stream
+    has_openpifpaf = True
+except (ImportError, ModuleNotFoundError):
+    has_openpifpaf = False
+
+try:
+    from mmdet.apis import inference_detector, init_detector
+    has_mmdet = True
+except (ImportError, ModuleNotFoundError):
+    has_mmdet = False
+
+try:
+    from mmpose.apis import (
+        get_track_id,
+        inference_top_down_pose_model,
+        init_pose_model,
+    )
+    has_mmpose = True
+except (ImportError, ModuleNotFoundError):
+    has_mmpose = False
 
 # yapf: enable
 
 
-def prepare_data_with_pifpaf_detection(args):
+def process_tracking_results(tracking_results_all_frames):
+    """Process mmtracking results."""
+    tracklet = []
+    final_results = []
     max_instance = 0
-    if args.image_folder is None:
-        video_file = args.vid_file
-        if not os.path.isfile(video_file):
-            exit(f'Input video \"{video_file}\" does not exist!')
 
-        output_path = os.path.join(
-            args.output_folder,
-            os.path.basename(video_file).replace('.mp4', ''))
-        image_folder = osp.join(output_path, 'images')
+    for frame_id, tracking_results in enumerate(tracking_results_all_frames):
+        num_person = len(tracking_results)
+        if num_person > max_instance:
+            max_instance = num_person
+        for result in tracking_results:
+            tracklet.append(frame_id)
+            final_results.append([result])
+
+    return tracklet, final_results, max_instance
+
+
+def prepare_data_with_mmpose_detection(args, frames_iter):
+    det_model = init_detector(
+        args.det_config, args.det_checkpoint, device=args.device.lower())
+    pose_model = init_pose_model(
+        args.pose_config, args.pose_checkpoint, device=args.device.lower())
+
+    dataset = pose_model.cfg.data['test']['type']
+
+    # optional
+    return_heatmap = False
+
+    # e.g. use ('backbone', ) to return backbone feature
+    output_layer_names = None
+
+    next_id = 0
+    pose_results = []
+    all_results = []
+    for frame_id, img in tqdm(
+            enumerate(mmcv.track_iter_progress(frames_iter))):
+        pose_results_last = pose_results
+        mmdet_results = inference_detector(det_model, img)
+
+        # keep the person class bounding boxes.
+        person_results = process_mmdet_results(mmdet_results)
+
+        pose_results, returned_outputs = inference_top_down_pose_model(
+            pose_model,
+            img,
+            person_results,
+            bbox_thr=args.mmpose_bbox_thr,
+            format='xyxy',
+            dataset=dataset,
+            return_heatmap=return_heatmap,
+            outputs=output_layer_names)
+
+        # get track id for each person instance
+        pose_results, next_id = get_track_id(pose_results, pose_results_last,
+                                             next_id)
+        all_results.append(pose_results.copy())
+    joints2d = []
+    person_id_list = []
+    wb_kps = {
+        'joints2d_lhand': [],
+        'joints2d_rhand': [],
+        'joints2d_face': [],
+    }
+    frames_idx, final_results, max_instance = process_tracking_results(
+        all_results)
+    for results in final_results:
+        joints2d.append(results[0]['keypoints'])
+        person_id_list.append(results[0]['track_id'])
+        wb_kps['joints2d_lhand'].append(results[0]['keypoints'][91:112])
+        wb_kps['joints2d_rhand'].append(results[0]['keypoints'][112:133])
+        wb_kps['joints2d_face'].append(results[0]['keypoints'][23:91])
+    if Path(args.input_path).is_file():
+        image_folder = osp.join(args.output_path, 'images')
         os.makedirs(image_folder, exist_ok=True)
-        video_to_images(video_file, image_folder)
-        num_frames = len(os.listdir(image_folder))
-    else:
-        image_folder = args.image_folder
-        image_file_names = sorted([
-            osp.join(image_folder, x) for x in os.listdir(image_folder)
-            if x.endswith('.png') or x.endswith('.jpg')
-        ])
-        num_frames = len(image_file_names)
-        output_path = os.path.join(args.output_folder,
-                                   osp.split(image_folder)[-1])
-    os.makedirs(output_path, exist_ok=True)
+        video_to_images(args.input_path, image_folder)
+    elif Path(args.input_path).is_dir():
+        image_folder = args.input_path
+    return joints2d, frames_idx, wb_kps, image_folder, max_instance
+
+
+def prepare_data_with_pifpaf_detection(args, frames_iter):
+    max_instance = 0
+    num_frames = len(frames_iter)
+
     # pifpaf person detection
     pp_args = copy.deepcopy(args)
     pp_args.force_complete_pose = True
     ppdecoder.configure(pp_args)
     ppnetwork.Factory.configure(pp_args)
-    ppnetwork.Factory.checkpoint = pp_args.detector_checkpoint
+    ppnetwork.Factory.checkpoint = pp_args.openpifpaf_checkpoint
     Predictor.configure(pp_args)
     Stream.configure(pp_args)
 
     Predictor.batch_size = 1
     Predictor.loader_workers = 1
     predictor = Predictor()
-    if args.vid_file is not None:
-        capture = Stream(args.vid_file, preprocess=predictor.preprocess)
+    if Path(args.input_path).is_file():
+        image_folder = osp.join(args.output_path, 'images')
+        os.makedirs(image_folder, exist_ok=True)
+        video_to_images(args.input_path, image_folder)
+        capture = Stream(args.input_path, preprocess=predictor.preprocess)
         capture = predictor.dataset(capture)
-    elif args.image_folder is not None:
+    elif Path(args.input_path).is_dir():
+        image_folder = args.input_path
+        image_file_names = sorted([
+            osp.join(args.input_path, x) for x in os.listdir(args.input_path)
+            if x.endswith('.png') or x.endswith('.jpg')
+        ])
         capture = predictor.images(image_file_names)
 
     tracking_results = {}
     for preds, _, meta in tqdm(capture, total=num_frames):
         num_person = 0
         for pid, ann in enumerate(preds):
-            if ann.score > args.detection_threshold:
+            if ann.score > args.openpifpaf_threshold:
                 num_person += 1
                 frame_i = meta['frame_i'] - 1 if 'frame_i' in meta else meta[
                     'dataset_index']
@@ -95,46 +190,50 @@ def prepare_data_with_pifpaf_detection(args):
             max_instance = num_person
     joints2d = []
     frames = []
-    if args.tracking_method == 'pose':
-        wb_kps = {
-            'joints2d_lhand': [],
-            'joints2d_rhand': [],
-            'joints2d_face': [],
-        }
+    wb_kps = {
+        'joints2d_lhand': [],
+        'joints2d_rhand': [],
+        'joints2d_face': [],
+    }
     person_id_list = list(tracking_results.keys())
     for person_id in person_id_list:
-        if args.tracking_method == 'pose':
-            joints2d.extend(tracking_results[person_id]['joints2d'])
-            wb_kps['joints2d_lhand'].extend(
-                tracking_results[person_id]['joints2d_lhand'])
-            wb_kps['joints2d_rhand'].extend(
-                tracking_results[person_id]['joints2d_rhand'])
-            wb_kps['joints2d_face'].extend(
-                tracking_results[person_id]['joints2d_face'])
+        joints2d.extend(tracking_results[person_id]['joints2d'])
+        wb_kps['joints2d_lhand'].extend(
+            tracking_results[person_id]['joints2d_lhand'])
+        wb_kps['joints2d_rhand'].extend(
+            tracking_results[person_id]['joints2d_rhand'])
+        wb_kps['joints2d_face'].extend(
+            tracking_results[person_id]['joints2d_face'])
 
         frames.extend(tracking_results[person_id]['frames'])
-    return joints2d, frames, wb_kps, image_folder, output_path, max_instance
+    return joints2d, frames, wb_kps, image_folder, max_instance
 
 
 def main(args):
     # Define model
-    pymaf_config = mmcv.Config.fromfile(args.mesh_reg_config)
-    pymaf_config.model['device'] = args.device
+    pymafx_config = mmcv.Config.fromfile(args.mesh_reg_config)
+    pymafx_config.model['device'] = args.device
     mesh_model, _ = init_model(
-        pymaf_config, args.mesh_reg_checkpoint, device=args.device.lower())
-
+        pymafx_config, args.mesh_reg_checkpoint, device=args.device.lower())
+    frames_iter = prepare_frames(args.input_path)
+    os.makedirs(args.output_path, exist_ok=True)
     device = torch.device(args.device)
-    args.device = device
-    args.pin_memory = True if torch.cuda.is_available() else False
-    # Prepare input
-    joints2d, frames, wb_kps, image_folder, \
-        output_path, max_instance = prepare_data_with_pifpaf_detection(args)
 
-    pymaf_config['data']['test']['image_folder'] = image_folder
-    pymaf_config['data']['test']['frames'] = frames
-    pymaf_config['data']['test']['joints2d'] = joints2d
-    pymaf_config['data']['test']['wb_kps'] = wb_kps
-    test_dataset = build_dataset(pymaf_config['data']['test'],
+    if args.use_openpifpaf:
+        args.device = device
+        args.pin_memory = True if torch.cuda.is_available() else False
+        # Prepare input
+        joints2d, frames, wb_kps, image_folder, max_instance = \
+            prepare_data_with_pifpaf_detection(args, frames_iter)
+    else:
+        joints2d, frames, wb_kps, image_folder, max_instance = \
+            prepare_data_with_mmpose_detection(args, frames_iter)
+
+    pymafx_config['data']['test']['image_folder'] = image_folder
+    pymafx_config['data']['test']['frames'] = frames
+    pymafx_config['data']['test']['joints2d'] = joints2d
+    pymafx_config['data']['test']['wb_kps'] = wb_kps
+    test_dataset = build_dataset(pymafx_config['data']['test'],
                                  dict(test_mode=True))
     bboxes_cs = test_dataset.bboxes
     frame_ids = test_dataset.frames
@@ -229,13 +328,12 @@ def main(args):
         betas.append(smplx_results['betas'])
     fullpose = np.concatenate(fullpose, axis=0)
     betas = np.concatenate(betas, axis=0)
-    if output_path is not None:
-        human_data = HumanData()
-        smplx = {}
-        smplx['fullpose'] = fullpose
-        smplx['betas'] = betas
-        human_data['smplx'] = smplx
-        human_data.dump(osp.join(output_path, 'inference_result.npz'))
+    human_data = HumanData()
+    smplx = {}
+    smplx['fullpose'] = fullpose
+    smplx['betas'] = betas
+    human_data['smplx'] = smplx
+    human_data.dump(osp.join(args.output_path, 'inference_result.npz'))
     # create body model
     body_model_config = dict(
         type='smplx',
@@ -279,10 +377,10 @@ def main(args):
         for path in image_file_names:
             img = cv2.imread(path)
             image_array.append(img)
-        if args.image_folder:
+        if Path(args.input_path).is_dir():
             for i, image in enumerate(image_array):
-                image_path = os.path.join(
-                    output_path,
+                image_path = osp.join(
+                    args.output_path,
                     image_file_names[i].split('/')[-1].split('.')[0])
                 visualize_smpl_vibe(
                     poses=compressed_fullpose.reshape(-1, max_instance,
@@ -295,17 +393,18 @@ def main(args):
                     resolution=(image.shape[0], image.shape[1]),
                     overwrite=True,
                 )
-        else:
+        elif Path(args.input_path).is_file():
             visualize_smpl_vibe(
                 poses=compressed_fullpose.reshape(-1, max_instance, 165),
                 betas=compressed_betas,
                 orig_cam=compressed_cams,
-                output_path=os.path.join(output_path, 'smplx.mp4'),
+                output_path=osp.join(args.output_path, 'smplx.mp4'),
                 image_array=np.array(image_array),
                 body_model_config=body_model_config,
                 resolution=(orig_height[0], orig_width[0]),
                 overwrite=True,
             )
+            shutil.rmtree(image_folder)
 
 
 def init_openpifpaf(parser):
@@ -317,7 +416,6 @@ def init_openpifpaf(parser):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    init_openpifpaf(parser)
 
     parser.add_argument(
         '--mesh_reg_config',
@@ -329,27 +427,50 @@ if __name__ == '__main__':
         type=str,
         default='data/pretrained_models/PyMAF-X_model_checkpoint.pth',
         help='Checkpoint file for mesh regression')
+    # openpifpaf
     parser.add_argument(
-        '--tracking_method',
-        type=str,
-        default='pose',
-        help='tracking method to calculate the tracklet of a subject')
-    parser.add_argument(
-        '--detector_checkpoint',
+        '--openpifpaf_checkpoint',
         type=str,
         default='shufflenetv2k30-wholebody',
         help='detector checkpoint for openpifpaf')
     parser.add_argument(
-        '--detection_threshold',
+        '--openpifpaf_threshold',
         type=float,
         default=0.35,
         help='pifpaf detection score threshold.')
     parser.add_argument(
-        '--vid_file', type=str, default=None, help='input video path')
+        '--use_openpifpaf', action='store_true', help='pifpaf detection')
+    # mmpose
     parser.add_argument(
-        '--image_folder', type=str, default=None, help='input image folder')
+        '--mmpose_bbox_thr',
+        type=float,
+        default=0.8,
+        help='Bounding box score threshold')
     parser.add_argument(
-        '--output_folder',
+        '--det_config',
+        default='demo/mmdetection_cfg/faster_rcnn_r50_fpn_coco.py',
+        help='Config file for detection')
+    parser.add_argument(
+        '--det_checkpoint',
+        default='https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/'
+        'faster_rcnn_r50_fpn_1x_coco/'
+        'faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth',
+        help='Checkpoint file for detection')
+    parser.add_argument(
+        '--pose_config',
+        default='demo/mmpose_cfg/'
+        'hrnet_w48_coco_wholebody_384x288_dark_plus.py',
+        help='Config file for pose')
+    parser.add_argument(
+        '--pose_checkpoint',
+        default='https://download.openmmlab.com/mmpose/top_down/hrnet/'
+        'hrnet_w48_coco_wholebody_384x288_dark-f5726563_20200918.pth',
+        help='Checkpoint file for pose')
+
+    parser.add_argument(
+        '--input_path', type=str, default=None, help='input folder')
+    parser.add_argument(
+        '--output_path',
         type=str,
         default='output',
         help='output folder to write results')
@@ -367,4 +488,15 @@ if __name__ == '__main__':
         default=8,
         help='batch size for SMPL prediction')
     args = parser.parse_args()
+    if args.use_openpifpaf:
+        init_openpifpaf(parser)
+        args = parser.parse_args()
+        assert has_openpifpaf, 'Please install openpifpaf to run the demo.'
+        assert args.det_config is not None
+        assert args.det_checkpoint is not None
+    else:
+        assert has_mmdet, 'Please install mmdet to run the demo.'
+        assert has_mmpose, 'Please install mmpose to run the demo.'
+        assert args.det_config is not None
+        assert args.pose_config is not None
     main(args)
