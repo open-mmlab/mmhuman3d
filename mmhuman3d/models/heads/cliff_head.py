@@ -32,7 +32,7 @@ class CliffHead(BaseModule):
         nn.init.xavier_uniform_(self.deccam.weight, gain=0.01)
 
         if isinstance(img_res, tuple):
-            self.avgpool = nn.AvgPool2d((img_res(0), img_res(1)), stride=1)
+            self.avgpool = nn.AvgPool2d((img_res[0], img_res[1]), stride=1)
         else:
             self.avgpool = nn.AvgPool2d((1, 1), stride=1)
         if smpl_mean_params is None:
@@ -65,7 +65,9 @@ class CliffHead(BaseModule):
         if len(x.shape) == 4:
             # use feature from the last layer of the backbone
             # apply global average pooling on the feature map
-            x = x.mean(dim=-1).mean(dim=-1)
+            x = self.avgpool(x)
+            x = x.view(batch_size, -1)
+
         elif len(x.shape) == 3:
             # temporal feature
             output_seq = True
