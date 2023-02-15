@@ -3,11 +3,11 @@ import torch
 
 from mmhuman3d.models.heads.builder import CliffHead
 
+
 def test_cliff_head():
     # initialize models
     model = CliffHead(
         feat_dim=2048,
-        img_res=(192, 256),
         smpl_mean_params='data/body_models/smpl_mean_params.npz')
 
     # image feature from backbone
@@ -30,7 +30,6 @@ def test_cliff_head():
     assert y1['pred_cam'].shape == (batch_size, 3)
 
 
-
 def _demo_head_inputs(input_shape=(1, 3, 64, 64)):
     """Create a superset of inputs needed to run models.
 
@@ -42,4 +41,3 @@ def _demo_head_inputs(input_shape=(1, 3, 64, 64)):
     features = torch.FloatTensor(features)
 
     return features
-
