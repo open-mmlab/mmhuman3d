@@ -10,6 +10,7 @@ from mmhuman3d.core.renderer.mpr_renderer.utils import \
 
 
 class VisualizerMeshSMPL:
+    """The SMPL Visualizer."""
 
     def __init__(self,
                  device=None,

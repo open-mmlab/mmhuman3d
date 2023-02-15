@@ -181,6 +181,9 @@ class HRModule(BaseModule):
 
         return nn.ModuleList(fuse_layers)
 
+    def get_num_inchannels(self):
+        return self.in_channels
+
     def forward(self, x):
         """Forward function."""
         if self.num_branches == 1:
@@ -503,7 +506,7 @@ class PoseHighResolutionNet(BaseModule):
                     type='Constant', val=0, override=dict(name='norm3'))
 
         for i in range(num_modules):
-            # multi_scale_output is only used for the last module
+            # multiscale_output is only used for the last module
             if not multiscale_output and i == num_modules - 1:
                 reset_multiscale_output = False
             else:
@@ -766,3 +769,190 @@ class PoseHighResolutionNetExpose(PoseHighResolutionNet):
         xf = xf.mean(dim=(2, 3))
         xf = xf.view(xf.size(0), -1)
         return xf
+
+
+class PoseHighResolutionNetPyMAFX(PoseHighResolutionNet):
+    """HRNet backbone for pymaf-x."""
+
+    def __init__(self,
+                 extra,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN'),
+                 pretrained=True,
+                 global_mode=False,
+                 with_cp=False,
+                 init_cfg=None):
+        super(PoseHighResolutionNet, self).__init__(init_cfg=init_cfg)
+        self.inplanes = 64
+        self.conv_cfg = conv_cfg
+        self.norm_cfg = norm_cfg
+        self.pretrained = pretrained
+        self.with_cp = with_cp
+
+        # stem net
+        self.conv1 = build_conv_layer(
+            self.conv_cfg,
+            3,
+            64,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            bias=False)
+        self.bn1 = build_norm_layer(self.norm_cfg, 64)[1]
+        self.conv2 = build_conv_layer(
+            self.conv_cfg,
+            64,
+            64,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            bias=False)
+        self.bn2 = build_norm_layer(self.norm_cfg, 64)[1]
+        self.relu = nn.ReLU(inplace=True)
+        self.layer1 = self._make_layer(Bottleneck, self.inplanes, 64, 4)
+
+        self.stage2_cfg = extra['stage2']
+        num_channels = self.stage2_cfg['num_channels']
+        block = self.blocks_dict[self.stage2_cfg['block']]
+        num_channels = [
+            num_channels[i] * block.expansion
+            for i in range(len(num_channels))
+        ]
+        self.transition1 = self._make_transition_layer([256], num_channels)
+        self.stage2, pre_stage_channels = self._make_stage(
+            self.stage2_cfg, num_channels)
+
+        self.stage3_cfg = extra['stage3']
+        num_channels = self.stage3_cfg['num_channels']
+        block = self.blocks_dict[self.stage3_cfg['block']]
+        num_channels = [
+            num_channels[i] * block.expansion
+            for i in range(len(num_channels))
+        ]
+        self.transition2 = self._make_transition_layer(pre_stage_channels,
+                                                       num_channels)
+        self.stage3, pre_stage_channels = self._make_stage(
+            self.stage3_cfg, num_channels)
+
+        self.stage4_cfg = extra['stage4']
+        num_channels = self.stage4_cfg['num_channels']
+        block = self.blocks_dict[self.stage4_cfg['block']]
+        num_channels = [
+            num_channels[i] * block.expansion
+            for i in range(len(num_channels))
+        ]
+        self.transition3 = self._make_transition_layer(pre_stage_channels,
+                                                       num_channels)
+        self.stage4, pre_stage_channels = self._make_stage(
+            self.stage4_cfg, num_channels, multiscale_output=True)
+
+        # Classification Head
+        self.global_mode = global_mode
+        if self.global_mode:
+            self.incre_modules, self.downsamp_modules, self.final_layer = \
+                self._make_head(pre_stage_channels)
+
+        self.pretrained_layers = extra['pretrained_layers']
+
+    def _make_head(self, pre_stage_channels):
+        """make head."""
+        head_block = Bottleneck
+        head_channels = [32, 64, 128, 256]
+
+        # Increasing the #channels on each resolution
+        # from C, 2C, 4C, 8C to 128, 256, 512, 1024
+        incre_modules = []
+        for i, channels in enumerate(pre_stage_channels):
+            incre_module = self._make_layer(
+                head_block, channels, head_channels[i], 1, stride=1)
+            incre_modules.append(incre_module)
+        incre_modules = nn.ModuleList(incre_modules)
+
+        # downsampling modules
+        downsamp_modules = []
+        for i in range(len(pre_stage_channels) - 1):
+            in_channels = head_channels[i] * head_block.expansion
+            out_channels = head_channels[i + 1] * head_block.expansion
+
+            downsamp_module = nn.Sequential(
+                build_conv_layer(
+                    self.conv_cfg,
+                    in_channels,
+                    out_channels,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    bias=False),
+                build_norm_layer(self.norm_cfg, out_channels)[1],
+                nn.ReLU(inplace=True))
+
+            downsamp_modules.append(downsamp_module)
+        downsamp_modules = nn.ModuleList(downsamp_modules)
+
+        final_layer = nn.Sequential(
+            build_conv_layer(
+                self.conv_cfg,
+                head_channels[3] * head_block.expansion,
+                2048,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=False),
+            build_norm_layer(self.norm_cfg, 2048)[1], nn.ReLU(inplace=True))
+
+        return incre_modules, downsamp_modules, final_layer
+
+    def forward(self, x):
+        """Forward function."""
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+        x = self.layer1(x)
+
+        x_list = []
+        for i in range(self.stage2_cfg['num_branches']):
+            if self.transition1[i] is not None:
+                x_list.append(self.transition1[i](x))
+            else:
+                x_list.append(x)
+        y_list = self.stage2(x_list)
+
+        x_list = []
+        for i in range(self.stage3_cfg['num_branches']):
+            if self.transition2[i] is not None:
+                x_list.append(self.transition2[i](y_list[-1]))
+            else:
+                x_list.append(y_list[i])
+        y_list = self.stage3(x_list)
+
+        x_list = []
+        for i in range(self.stage4_cfg['num_branches']):
+            if self.transition3[i] is not None:
+                x_list.append(self.transition3[i](y_list[-1]))
+            else:
+                x_list.append(y_list[i])
+        y_list = self.stage4(x_list)
+
+        s_feat = [y_list[-2], y_list[-3], y_list[-4]]
+
+        # Classification Head
+        if self.global_mode:
+            y = self.incre_modules[0](y_list[0])
+            for i in range(len(self.downsamp_modules)):
+                y = self.incre_modules[i + 1](y_list[i + 1]) + \
+                    self.downsamp_modules[i](y)
+
+            y = self.final_layer(y)
+
+            if torch._C._get_tracing_state():
+                xf = y.flatten(start_dim=2).mean(dim=2)
+            else:
+                xf = F.avg_pool2d(
+                    y, kernel_size=y.size()[2:]).view(y.size(0), -1)
+        else:
+            xf = None
+
+        return s_feat, xf

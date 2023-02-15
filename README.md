@@ -91,6 +91,7 @@ Supported methods:
 - [x] [SmoothNet](https://ailingzeng.site/smoothnet) (ECCV'2022)
 - [x] [ExPose](https://expose.is.tue.mpg.de) (ECCV'2020)
 - [x] [BalancedMSE](https://sites.google.com/view/balanced-mse/home) (CVPR'2022)
+- [x] [PyMAF-X](https://www.liuyebin.com/pymaf-x/) (arXiv'2022)
 
 </details>
 

@@ -52,7 +52,7 @@ For each value, an exclusive type must be specified under its key:
 },
 ```
 
-For value as numpy.ndarray, shape and temporal_dim shall be defined:
+For value as numpy.ndarray, shape and dim shall be defined:
 
 ```python
 'keypoints3d': {
@@ -60,18 +60,18 @@ For value as numpy.ndarray, shape and temporal_dim shall be defined:
     'shape': (-1, -1, 4),
     # value.ndim==3, and value.shape[2]==4
     # value.shape[0:2] is arbitrary.
-    'temporal_dim': 0
+    'dim': 0
     # dimension 0 marks time(frame index, or second)
 },
 ```
 
-For value which is constant along time axis, set temporal_dim to -1 to ignore temporal check:
+For value which is constant along frame axis, set dim to -1 to ignore frame check:
 
 ```python
 'keypoints3d_mask': {
     'type': np.ndarray,
     'shape': (-1, ),
-    'temporal_dim': -1
+    'dim': -1
 },
 ```
 
@@ -181,14 +181,14 @@ Assume that there are 200 frames in a HumanData instance, only data between 10 a
 
 ```python
 # all supported values will be sliced
-sub_human_data = human_data.get_temporal_slice(10, 21)
+sub_human_data = human_data.get_slice(10, 21)
 ```
 
 Downsample is also supported, for example, select 33%:
 
 ```python
 # select [0, 3, 6, 9,..., 198]
-sub_human_data = human_data.get_temporal_slice(0, 200, 3)
+sub_human_data = human_data.get_slice(0, 200, 3)
 ```
 
 ### To torch.Tensor
@@ -203,4 +203,41 @@ dict_of_tensor = human_data.to()
 # GPU is also supported
 gpu0_device = torch.device('cuda:0')
 dict_of_gpu_tensor = human_data.to(gpu0_device)
+```
+
+## MultiHumanData
+
+MulitHumanData is designed to support multi-human body mesh recovery, who inherits from HumanData. In HumanData, the data can be accessed directly through the index, because the data and the image are in one-to-one correspondence. However, data and image have a many-to-one correspondence in MultiHumanData.
+
+Based on HumanData, MultiHumanData adds a new key named `'frame_range'` as follows:
+
+```python
+'frame_range': {
+        'type': np.ndarray,
+        'shape': (-1, 2),
+        'dim': 0
+    }
+```
+`frame_range` and image are in one-to-one correspondence.
+Each element in `frame_range` has two pointers that point to a data-block.
+
+Suppose we have an instance of MultiHumanData and we want to access the data corresponding to the i-th image. First, we index the `frame_range` using primary index i, which will return two points. We then use these two pointers to access all data corresponding to the i-th image.
+
+```
+image_0  ----> human_0      <--- frame_range[0][0]
+         -       .
+          -      .
+           --> human_(n-1)  <--- frame_range[0][0] + (n-1)
+            -> human_n      <--- frame_range[0][1]
+    .
+    .
+    .
+
+
+image_n  ----> human_0     <--- frame_range[n][0]
+         -       .
+          -      .
+           --> human_(n-1)  <--- frame_range[n][0] + (n-1)
+            -> human_n     <--- frame_range[n][1]
+
 ```

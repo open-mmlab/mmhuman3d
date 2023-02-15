@@ -6,8 +6,13 @@ from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from .base_converter import BaseConverter
 from .builder import DATA_CONVERTERS
+
+
+def sort_json(json):
+    return int(json['image_id'])
 
 
 @DATA_CONVERTERS.register_module()
@@ -18,20 +23,31 @@ class CocoConverter(BaseConverter):
     <https://arxiv.org/abs/1405.0312>`__ .
     """
 
-    def convert(self, dataset_path: str, out_path: str) -> dict:
+    def convert(self,
+                dataset_path: str,
+                out_path: str,
+                enable_multi_human_data: bool = False) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where raw images and
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
+            enable_multi_human_data (bool):
+                Whether to generate a multi-human data. If set to True,
+                stored in MultiHumanData() format.
+                Default: False, stored in HumanData() format.
 
         Returns:
             dict:
                 A dict containing keys image_path, bbox_xywh, keypoints2d,
                 keypoints2d_mask stored in HumanData() format
         """
-        # use HumanData to store all data
-        human_data = HumanData()
+        if enable_multi_human_data:
+            # use MultiHumanData to store all data
+            human_data = MultiHumanData()
+        else:
+            # use HumanData to store all data
+            human_data = HumanData()
 
         # structs we need
         image_path_, keypoints2d_, bbox_xywh_ = [], [], []
@@ -46,6 +62,7 @@ class CocoConverter(BaseConverter):
         for img in json_data['images']:
             imgs[img['id']] = img
 
+        json_data['annotations'].sort(key=sort_json)
         for annot in tqdm(json_data['annotations']):
 
             # keypoints processing
@@ -68,6 +85,16 @@ class CocoConverter(BaseConverter):
             image_path_.append(img_path)
             keypoints2d_.append(keypoints2d)
             bbox_xywh_.append(bbox_xywh)
+
+        if enable_multi_human_data:
+            frame_range = []
+            frame_start, frame_end = 0, 0
+            for image_path in sorted(set(image_path_), key=image_path_.index):
+                frame_end = frame_start + \
+                    image_path_.count(image_path)
+                frame_range.append([frame_start, frame_end])
+                frame_start = frame_end
+            human_data['frame_range'] = np.array(frame_range)
 
         # convert keypoints
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
