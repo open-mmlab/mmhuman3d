@@ -156,11 +156,11 @@ class HybrIKHead(BaseModule):
                 nn.init.constant_(m.bias, 0)
 
     def uvd_to_cam(self,
-                   uvd_jts,
-                   trans_inv,
-                   intrinsic_param,
-                   joint_root,
-                   depth_factor,
+                   uvd_jts: torch.Tensor,
+                   trans_inv: torch.Tensor,
+                   intrinsic_param: torch.Tensor,
+                   joint_root: torch.Tensor,
+                   depth_factor: float,
                    return_relative=True):
         """Project uvd coordinates to camera frame.
 

@@ -2,17 +2,24 @@
 
 from mmcv.utils import Registry
 
-from .hrnet import PoseHighResolutionNet, PoseHighResolutionNetExpose
-from .resnet import ResNet, ResNetV1d
+from .hrnet import (
+    PoseHighResolutionNet,
+    PoseHighResolutionNetExpose,
+    PoseHighResolutionNetPyMAFX,
+)
+from .resnet import PoseResNet, ResNet, ResNetV1d
 
 BACKBONES = Registry('backbones')
 
 BACKBONES.register_module(name='ResNet', module=ResNet)
 BACKBONES.register_module(name='ResNetV1d', module=ResNetV1d)
+BACKBONES.register_module(name='PoseResNet', module=PoseResNet)
 BACKBONES.register_module(
     name='PoseHighResolutionNet', module=PoseHighResolutionNet)
 BACKBONES.register_module(
     name='PoseHighResolutionNetExpose', module=PoseHighResolutionNetExpose)
+BACKBONES.register_module(
+    name='PoseHighResolutionNetPyMAFX', module=PoseHighResolutionNetPyMAFX)
 
 
 def build_backbone(cfg):

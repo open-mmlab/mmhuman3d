@@ -25,3 +25,11 @@ Please refer to [HybrIK](https://github.com/open-mmlab/mmhuman3d/tree/main/confi
 ### PARE
 
 Please refer to [PARE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/pare/) for details.
+
+### ExPose
+
+Please refer to [ExPose](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/expose/) for details.
+
+### PyMAF-X
+
+Please refer to [PyMAF-X](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/pymafx/) for details.

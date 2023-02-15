@@ -1,6 +1,7 @@
 from typing import Optional, Tuple, Union
 
 import numpy as np
+import torch
 
 from mmhuman3d.core.conventions.keypoints_mapping import KEYPOINTS_FACTORY
 from mmhuman3d.core.conventions.keypoints_mapping.human_data import (
@@ -57,3 +58,13 @@ def search_limbs(
             else:
                 limbs_palette[k] = np.array(limbs_palette[k])
     return limbs_target, limbs_palette
+
+
+def transform_kps2d(kps2d: torch.Tensor, transf, img_res=224):
+    """Process gt 2D keypoints and apply transforms."""
+    bs, n_kps = kps2d.shape[:2]
+    kps_pad = torch.cat([kps2d, torch.ones((bs, n_kps, 1)).to(kps2d)], dim=-1)
+    kps_new = torch.bmm(transf, kps_pad.transpose(1, 2))
+    kps_new = kps_new.transpose(1, 2)
+    kps_new[:, :, :-1] = 2. * kps_new[:, :, :-1] / img_res - 1.
+    return kps_new[:, :, :2]

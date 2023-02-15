@@ -210,3 +210,16 @@ def project_points(points3d: Union[np.ndarray, torch.Tensor],
         points2d = cameras.transform_points_screen(
             points3d, image_size=image_size)
     return points2d
+
+
+def homo_vector(vector):
+    """
+    vector: B x N x C
+    h_vector: B x N x (C + 1)
+    """
+
+    batch_size, n_pts = vector.shape[:2]
+
+    h_vector = torch.cat(
+        [vector, torch.ones((batch_size, n_pts, 1)).to(vector)], dim=-1)
+    return h_vector
