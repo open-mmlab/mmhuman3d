@@ -11,7 +11,7 @@ optimizer = dict(
 )
 optimizer_config = dict(grad_clip=2.0)
 # learning policy
-lr_config = dict(policy='step', gamma=0.1, step=[70, 150])
+lr_config = dict(policy='step', gamma=0.1, step=[100])
 runner = dict(type='EpochBasedRunner', max_epochs=250)
 
 log_config = dict(
@@ -21,7 +21,7 @@ log_config = dict(
         # dict(type='TensorboardLoggerHook')
     ])
 
-img_res = (192, 256)
+img_resolution = (192, 256)
 
 # model settings
 model = dict(
@@ -32,12 +32,11 @@ model = dict(
         out_indices=[3],
         norm_eval=False,
         norm_cfg=dict(type='SyncBN', requires_grad=True),
-        init_cfg=dict(type='Pretrained', checkpoint='data/resnet50/resnet50_a\
-                      1h2_176-001a1197.pth')),
+        init_cfg=dict(type='Pretrained',
+                      checkpoint='data/resnet50/resnet50_a1h2_176-001a1197.pth')),
     head=dict(
         type='CliffHead',
         feat_dim=2048,
-        img_res=(192, 256),
         smpl_mean_params='data/body_models/smpl_mean_params.npz'),
     body_model_train=dict(
         type='SMPL',
@@ -94,7 +93,7 @@ train_pipeline = [
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_54'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='GetBboxInfo'),
-    dict(type='MeshAffine', img_res=224),
+    dict(type='MeshAffine', img_res=img_resolution),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),
@@ -111,7 +110,7 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
     dict(type='GetBboxInfo'),
-    dict(type='MeshAffine', img_res=224),
+    dict(type='MeshAffine', img_res=img_resolution),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),
@@ -125,7 +124,7 @@ test_pipeline = [
 ]
 
 inference_pipeline = [
-    dict(type='MeshAffine', img_res=224),
+    dict(type='MeshAffine', img_res=img_resolution),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(
@@ -135,11 +134,11 @@ inference_pipeline = [
 ]
 
 cache_files = {
-    'h36m': 'data/cache2/h36m_mosh_train_smpl_54.npz',
-    'mpi_inf_3dhp': 'data/cache2/mpi_inf_3dhp_train_smpl_54.npz',
-    'cliff_coco': 'data/cache2/cliff_coco_train_smpl_54.npz',
-    'cliff_mpii': 'data/cache2/cliff_mpii_train_smpl_54.npz',
-    'pw3d': 'data/cache2/pw3d_train_smpl_54.npz',
+    'h36m': 'data/cache/h36m_mosh_train_smpl_54.npz',
+    'mpi_inf_3dhp': 'data/cache/mpi_inf_3dhp_train_smpl_54.npz',
+    'cliff_coco': 'data/cache/cliff_coco_train_smpl_54.npz',
+    'cliff_mpii': 'data/cache/cliff_mpii_train_smpl_54.npz',
+    'pw3d': 'data/cache/pw3d_train_smpl_54.npz',
 }
 data = dict(
     samples_per_gpu=64,

@@ -5,14 +5,14 @@ use_adversarial_train = True
 evaluation = dict(metric=['pa-mpjpe', 'mpjpe'])
 # optimizer
 optimizer = dict(
-    backbone=dict(type='Adam', lr=3e-4),
-    head=dict(type='Adam', lr=3e-4),
+    backbone=dict(type='Adam', lr=1e-4),
+    head=dict(type='Adam', lr=1e-4),
     # disc=dict(type='Adam', lr=1e-4)
 )
 optimizer_config = dict(grad_clip=2.0)
 # learning policy
-lr_config = dict(policy='step', gamma=0.1, step=[100])
-runner = dict(type='EpochBasedRunner', max_epochs=160)
+lr_config = dict(policy='Fixed', by_epoch=False)
+runner = dict(type='EpochBasedRunner', max_epochs=800)
 
 log_config = dict(
     interval=50,
@@ -90,9 +90,6 @@ data_keys = [
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='RandomChannelNoise', noise_factor=0.4),
-    dict(
-        type='SyntheticOcclusion',
-        occluders_file='data/occluders/pascal_occluders.npy'),
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_54'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='GetBboxInfo'),
@@ -137,11 +134,7 @@ inference_pipeline = [
 ]
 
 cache_files = {
-    'h36m': 'data/cache/h36m_mosh_train_smpl_54.npz',
-    'muco': 'data/cache/muco3dhp_train.npz',
     'cliff_coco': 'data/cache/cliff_coco_train_smpl_54.npz',
-    'cliff_mpii': 'data/cache/cliff_mpii_train_smpl_54.npz',
-    'pw3d': 'data/cache/pw3d_train_smpl_54.npz',
 }
 data = dict(
     samples_per_gpu=64,
@@ -153,46 +146,14 @@ data = dict(
             configs=[
                 dict(
                     type=dataset_type,
-                    dataset_name='h36m',
-                    data_prefix='data',
-                    pipeline=train_pipeline,
-                    convention='smpl_54',
-                    cache_data_path=cache_files['h36m'],
-                    ann_file='h36m_mosh_train.npz'),
-                dict(
-                    type=dataset_type,
-                    dataset_name='muco',
-                    data_prefix='data',
-                    pipeline=train_pipeline,
-                    convention='smpl_54',
-                    cache_data_path=cache_files['muco'],
-                    ann_file='muco3dhp_train.npz'),
-                dict(
-                    type=dataset_type,
-                    dataset_name='mpii',
-                    data_prefix='data',
-                    pipeline=train_pipeline,
-                    convention='smpl_54',
-                    cache_data_path=cache_files['cliff_mpii'],
-                    ann_file='cliff_mpii_train.npz'),
-                dict(
-                    type=dataset_type,
                     dataset_name='coco',
                     data_prefix='data',
                     pipeline=train_pipeline,
                     convention='smpl_54',
                     cache_data_path=cache_files['cliff_coco'],
                     ann_file='cliff_coco_train.npz'),
-                dict(
-                    type=dataset_type,
-                    dataset_name='pw3d',
-                    data_prefix='data',
-                    pipeline=train_pipeline,
-                    convention='smpl_54',
-                    cache_data_path=cache_files['pw3d'],
-                    ann_file='pw3d_train.npz'),
             ],
-            partition=[0.4, 0.1, 0.1, 0.2, 0.2],
+            partition=[1.0],
         ),
         adv_dataset=dict(
             type='MeshDataset',
