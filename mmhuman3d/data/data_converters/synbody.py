@@ -228,7 +228,7 @@ class SynbodyConverter(BaseModeConverter):
                     except Exception as e:
                         failed.append(v)
                         with open('log_synbody.json', 'w') as f:
-                            json.dump(failed)
+                            json.dump(failed, f)
                         print(v, 'failed because of', e)
         print('total', len(failed), 'failed')
                     # betas = npfile_tmp['smpl'].item()['betas']
