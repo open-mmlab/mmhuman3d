@@ -15,6 +15,8 @@ from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 import mmcv
 from mmhuman3d.models.body_models.builder import build_body_model
+from mmhuman3d.core.conventions.keypoints_mapping import smplx
+from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idxs_by_part
 
 
 @DATA_CONVERTERS.register_module()
@@ -37,10 +39,11 @@ class SynbodyConverter(BaseModeConverter):
 
         # image 1 is T-pose, don't use
         im = []
-        for i in range(1, len(os.listdir(rgb_folder))):
+        for i in range(1, len(glob.glob(os.path.join(rgb_folder, '*.jpeg')))):
             imglist_tmp = os.path.join(imglist, f'{i:04d}.jpeg')
             im.append(imglist_tmp)
-
+        
+        # import pdb; pdb.set_trace()
         return im
 
     
@@ -51,7 +54,7 @@ class SynbodyConverter(BaseModeConverter):
 
         # image 1 is T-pose, don't use
         exr = []
-        for i in range(1, len(os.listdir(rgb_folder))):
+        for i in range(1, len(glob.glob(os.path.join(rgb_folder, '*.jpeg')))):
             masklist_tmp = os.path.join(masklist, f'{i:04d}.exr')
             exr.append(masklist_tmp)
 
@@ -65,7 +68,40 @@ class SynbodyConverter(BaseModeConverter):
             npz.append(npz_tmp)
 
         return npz
-    
+
+    def _keypoints_to_scaled_bbox_fh(self, keypoints, scale=1.0):
+        '''Obtain scaled bbox in xyxy format given keypoints
+        Args:
+            keypoints (np.ndarray): Keypoints
+            scale (float): Bounding Box scale
+
+        Returns:
+            bbox_xyxy (np.ndarray): Bounding box in xyxy format
+        '''
+        bboxs = []
+        for body_part in ['head', 'left_hand', 'right_hand']:
+            kp_id = get_keypoint_idxs_by_part(body_part, convention='smplx')
+                # keypoints_factory=smplx.SMPLX_KEYPOINTS)
+            kps = keypoints[kp_id]
+
+            xmin, ymin = np.amin(kps, axis=0)
+            xmax, ymax = np.amax(kps, axis=0)
+
+            width = (xmax - xmin) * scale
+            height = (ymax - ymin) * scale
+
+            x_center = 0.5 * (xmax + xmin)
+            y_center = 0.5 * (ymax + ymin)
+            xmin = x_center - 0.5 * width
+            xmax = x_center + 0.5 * width
+            ymin = y_center - 0.5 * height
+            ymax = y_center + 0.5 * height
+
+            bbox = np.stack([xmin, ymin, xmax, ymax], axis=0).astype(np.float32)
+
+            bboxs.append(bbox)
+        return bboxs[0], bboxs[1], bboxs[2]
+
 
     def _get_mask_conf(self, root, merged):
         
@@ -76,6 +112,9 @@ class SynbodyConverter(BaseModeConverter):
         conf = []
         for idx, mask_path in enumerate(merged['mask_path']):
             exr_path = os.path.join('/'.join(root.split('/')[:root_folder_id]), mask_path)
+
+            # import pdb; pdb.set_trace()
+
             image = cv2.imread(exr_path, cv2.IMREAD_UNCHANGED)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -109,7 +148,8 @@ class SynbodyConverter(BaseModeConverter):
         # root_path is where the npz files stored. Should ends with 'synbody'
         if not os.path.basename(root_path).endswith('synbody'):
             root_path = os.path.join(root_path, 'synbody')
-        ple = glob.glob(os.path.join(root_path, '*'))
+        batch_paths = glob.glob(os.path.join(root_path, '*'))
+        # ple = [p for p in ple if '.' not in p]
                             
         merged = {}
         for key in ['image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d', 'keypoints3d']:
@@ -123,9 +163,10 @@ class SynbodyConverter(BaseModeConverter):
             merged['smplx'][key] = []
 
         # print(ple)
-        print(f'There are {len(ple)} places')
-        for pl in tqdm(ple, desc='PLACE'):
-            for v in tqdm(glob.glob(pl + '/*'), desc='Video'):
+        print(f'There are {len(batch_paths)} batches:', batch_paths)
+        for batch_path in tqdm(batch_paths, desc='batch'):
+            print(batch_path)
+            for v in tqdm(glob.glob(os.path.join(batch_path, '*/LS*'))):
                 imgname = self._get_imgname(v)
                 exrname = self._get_exrname(v)
                 valid_frame_number = len(imgname)
@@ -144,9 +185,6 @@ class SynbodyConverter(BaseModeConverter):
                     # merged['smpl']['keypoints3d'].append(npfile_tmp['keypoints3d'][1:61])
                     # merged['smpl']['keypoints2d'].append(npfile_tmp['keypoints2d'][1:61])
 
-                    merged['keypoints2d'].append(npfile_tmp['keypoints2d'][1:valid_frame_number+1])
-                    merged['keypoints3d'].append(npfile_tmp['keypoints3d'][1:valid_frame_number+1])
-
                     # import pdb; pdb.set_trace()
                     for _ in range(valid_frame_number):
                         merged['meta'].append(npfile_tmp['meta'])
@@ -161,9 +199,10 @@ class SynbodyConverter(BaseModeConverter):
                             else:
                                 merged['smpl'][key].append(npfile_tmp['smpl'].item()[key][1:valid_frame_number+1])
 
-                for p in sorted(glob.glob(v + '/smplx/*.npz')):
+                for p in sorted(glob.glob(v + '/smplx_withJoints_inCamSpace/*.npz')):
                     npfile_tmp = np.load(p, allow_pickle=True)
-
+                    merged['keypoints2d'].append(npfile_tmp['keypoints2d'][1:valid_frame_number+1])
+                    merged['keypoints3d'].append(npfile_tmp['keypoints3d'][1:valid_frame_number+1])
                     for key in ['betas', 'global_orient', 'transl', 'body_pose', \
                                 'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose', 'expression']:
                         if key == 'betas' and len(npfile_tmp['smplx'].item()['betas']) == 1:
@@ -188,18 +227,23 @@ class SynbodyConverter(BaseModeConverter):
             merged['smpl'][k] = np.vstack(merged['smpl'][k])
         for k in merged['smplx'].keys():
             merged['smplx'][k] = np.vstack(merged['smplx'][k])
+        for k in ['left_hand_pose', 'right_hand_pose']:
+            merged['smplx'][k] = merged['smplx'][k].reshape(-1, 15, 3)
+        merged['smplx']['body_pose'] = merged['smplx']['body_pose'].reshape(-1, 21, 3)
 
         merged['keypoints3d'] = np.vstack(merged['keypoints3d'])
         merged['keypoints2d'] = np.vstack(merged['keypoints2d'])
 
-        merged['conf'] = np.vstack(self._get_mask_conf(root_path, merged)).reshape(-1, 45, 1)
+        import pdb; pdb.set_trace()
+
+        merged['conf'] = np.vstack(self._get_mask_conf(root_path, merged)).reshape(-1, 144, 1)
 
         # import pdb; pdb.set_trace()
 
-        os.makedirs(self.merged_path, exist_ok=True)
-        outpath = os.path.join(self.merged_path, 'synbody_{mode}_merged.npz')
-        np.savez(outpath, **merged)
-        return outpath
+        # os.makedirs(self.merged_path, exist_ok=True)
+        # outpath = os.path.join(self.merged_path, 'synbody_{mode}_merged.npz')
+        # np.savez(outpath, **merged)
+        return merged
     
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
@@ -222,7 +266,7 @@ class SynbodyConverter(BaseModeConverter):
 
         # structs we use
         if self.do_npz_merge:
-            npfile = np.load(self._merge_npz(dataset_path, mode=mode), allow_pickle=True)
+            npfile = self._merge_npz(dataset_path, mode=mode)
         else:
             npfile = np.load(os.path.join(self.merged_path, 'synbody_{mode}_merged.npz'), allow_pickle=True)
         
@@ -248,25 +292,40 @@ class SynbodyConverter(BaseModeConverter):
         valid_id = np.array(valid_id)
         keypoints3d_smpl_merged[:, :, :] -= pelvis[:, None, :]
 
+        bboxs_ = {}
+        for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
+            bboxs_[bbox_name] = []
         for kp in keypoints2d_smpl_merged:
             # since the 2d keypoints are not strictly corrcet, a large scale factor is used
-            bbox = self._keypoints_to_scaled_bbox(kp, 1.2)
-            xmin, ymin, xmax, ymax = bbox
-            bbox = np.array([max(0, xmin), max(0, ymin), min(1280, xmax), min(720, ymax)])
-            bbox_xywh = self._xyxy2xywh(bbox)
-            bbox_.append(bbox_xywh)
+            bbox_tmp_ = {}
+            bbox_tmp_['bbox_xywh'] = self._keypoints_to_scaled_bbox(kp, 1.2)
+            bbox_tmp_['face_bbox_xywh'], bbox_tmp_['lhand_bbox_xywh'], bbox_tmp_['rhand_bbox_xywh'] = self._keypoints_to_scaled_bbox_fh(kp, 1.0)
+            for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
+                bbox = bbox_tmp_[bbox_name]
+                xmin, ymin, xmax, ymax = bbox
+                # import pdb; pdb.set_trace()
+                bbox = np.array([max(0, xmin), max(0, ymin), min(1280, xmax), min(720, ymax)])
+                bbox_xywh = self._xyxy2xywh(bbox)
+                bboxs_[bbox_name].append(bbox_xywh)
 
-        bbox_ = np.array(bbox_).reshape((-1, 4))
-        bbox_ = np.hstack([bbox_, np.ones([bbox_.shape[0], 1])])
+        for key in bboxs_.keys():
+            bbox_ = np.array(bboxs_[key]).reshape((-1, 4))
+            bbox_ = np.hstack([bbox_, np.ones([bbox_.shape[0], 1])])
+            # import pdb; pdb.set_trace()
+            human_data[key] = bbox_[valid_id]
         
+
+
         image_path_ = []
         for imp in npfile['image_path']:
             imp = imp.split('/')
             image_path_.append('/'.join(imp[1:]))
             # import pdb; pdb.set_trace()
-            
         human_data['image_path'] = np.array(image_path_)[valid_id].tolist()
-        human_data['bbox_xywh'] = bbox_[valid_id]
+        # human_data['bbox_xywh'] = bbox_b[valid_id]
+        # human_data['face_bbox_xywh'] = bbox_f[valid_id]
+        # human_data['lhand_bbox_xywh'] = bbox_lh[valid_id]
+        # human_data['rhand_bbox_xywh'] = bbox_rh[valid_id]
 
         keypoints2d_smpl_merged = np.concatenate((keypoints2d_smpl_merged, conf), axis=2)
         keypoints3d_smpl_merged = np.concatenate((keypoints3d_smpl_merged, conf), axis=2)
@@ -276,9 +335,9 @@ class SynbodyConverter(BaseModeConverter):
         # conf[:, remove_kp, :] = 0
         # import IPython; IPython.embed()
         # keypoints2d_, mask = convert_kps(np.concatenate((keypoints2d_merged[valid_id], conf), axis=2), 'smpl_45', 'human_data')
-        keypoints2d_, mask = convert_kps(keypoints2d_smpl_merged[valid_id], 'smpl_45', 'human_data')
+        keypoints2d_, mask = convert_kps(keypoints2d_smpl_merged[valid_id], 'smplx', 'human_data')
         # keypoints3d_, mask = convert_kps(np.concatenate((keypoints3d_merged[valid_id], conf), axis=2), 'smpl_45', 'human_data')
-        keypoints3d_, mask = convert_kps(keypoints3d_smpl_merged[valid_id], 'smpl_45', 'human_data')
+        keypoints3d_, mask = convert_kps(keypoints3d_smpl_merged[valid_id], 'smplx', 'human_data')
 
         # use smpl to generate keypoints3d
         # body_model_config=dict(
@@ -321,12 +380,14 @@ class SynbodyConverter(BaseModeConverter):
         human_data['keypoints2d_mask'] = mask
         human_data['keypoints3d_mask'] = mask
         
-        smpl = {}
-        for k in npfile['smpl'].item().keys():
-            smpl[k] = npfile['smpl'].item()[k][valid_id]
+        smpl, smplx = {}, {}
+        for k in npfile['smpl'].keys():
+            smpl[k] = npfile['smpl'][k][valid_id]
         human_data['smpl'] = smpl
+        for k in npfile['smplx'].keys():
+            smplx[k] = npfile['smplx'][k][valid_id]
+        human_data['smplx'] = smplx
         human_data['config'] = 'synbody_train'
-
         
 
         meta = {}
