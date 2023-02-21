@@ -1,9 +1,7 @@
-import glob
 import os
 from typing import List
 
-import cdflib
-import h5py
+import time
 import numpy as np
 import json
 import cv2
@@ -13,9 +11,9 @@ from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
-import mmcv
-from mmhuman3d.models.body_models.builder import build_body_model
-from mmhuman3d.core.conventions.keypoints_mapping import smplx
+# import mmcv
+# from mmhuman3d.models.body_models.builder import build_body_model
+# from mmhuman3d.core.conventions.keypoints_mapping import smplx
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idxs_by_part
 
 
@@ -39,7 +37,8 @@ class SynbodyConverter(BaseModeConverter):
 
         # image 1 is T-pose, don't use
         im = []
-        for i in range(1, len(glob.glob(os.path.join(rgb_folder, '*.jpeg')))):
+        images = [img for img in os.listdir(rgb_folder) if img.endswith('.jpeg')]
+        for i in range(1, len(images)):
             imglist_tmp = os.path.join(imglist, f'{i:04d}.jpeg')
             im.append(imglist_tmp)
         
@@ -53,8 +52,9 @@ class SynbodyConverter(BaseModeConverter):
         masklist = os.path.join('/'.join(v.split('/')[root_folder_id:]), 'mask')
 
         # image 1 is T-pose, don't use
+        images = [img for img in os.listdir(rgb_folder) if img.endswith('.jpeg')]
         exr = []
-        for i in range(1, len(glob.glob(os.path.join(rgb_folder, '*.jpeg')))):
+        for i in range(1, len(images)):
             masklist_tmp = os.path.join(masklist, f'{i:04d}.exr')
             exr.append(masklist_tmp)
 
@@ -146,9 +146,9 @@ class SynbodyConverter(BaseModeConverter):
     
     def _merge_npz(self, root_path, mode):
         # root_path is where the npz files stored. Should ends with 'synbody'
-        if not os.path.basename(root_path).endswith('synbody'):
-            root_path = os.path.join(root_path, 'synbody')
-        batch_paths = glob.glob(os.path.join(root_path, '*'))
+        # if not os.path.basename(root_path).endswith('synbody'):
+        #     root_path = os.path.join(root_path, 'synbody')
+        batch_paths = [os.path.join(root_path, p) for p in os.listdir(root_path)]
         # ple = [p for p in ple if '.' not in p]
                             
         merged = {}
@@ -166,53 +166,62 @@ class SynbodyConverter(BaseModeConverter):
         print(f'There are {len(batch_paths)} batches:', batch_paths)
         for batch_path in tqdm(batch_paths, desc='batch'):
             print(batch_path)
-            for v in tqdm(glob.glob(os.path.join(batch_path, '*/LS*'))):
-                imgname = self._get_imgname(v)
-                exrname = self._get_exrname(v)
-                valid_frame_number = len(imgname)
-                # for p in tqdm(glob.glob(v + '/smpl_with_joints/*.npz'), desc='person'):
-                for p in sorted(glob.glob(v + '/smpl_withJoints_inCamSpace/*.npz')):
-                    npfile_tmp = np.load(p, allow_pickle=True)
-                    merged['image_path'] += imgname
-                    merged['mask_path'] += exrname
-                    merged['npz_name'] += self._get_npzname(p, valid_frame_number)
-                    # merged['smpl']['transl'].append(npfile_tmp['smpl'].item()['transl'][1:61])
-                    # merged['smpl']['global_orient'].append(npfile_tmp['smpl'].item()['global_orient'][1:61])
-                    # betas = npfile_tmp['smpl'].item()['betas']
-                    # betas = np.repeat(betas, 60, axis=0)
-                    # merged['smpl']['betas'].append(betas)
-                    # merged['smpl']['body_pose'].append(npfile_tmp['smpl'].item()['body_pose'][1:61])
-                    # merged['smpl']['keypoints3d'].append(npfile_tmp['keypoints3d'][1:61])
-                    # merged['smpl']['keypoints2d'].append(npfile_tmp['keypoints2d'][1:61])
+            places = os.listdir(batch_path)
+            for ple in places:
+                if '.' in ple:
+                    continue
+                seqs = [os.path.join(batch_path, ple, seq_name) for seq_name in os.listdir(os.path.join(batch_path, ple))]
+                for v in tqdm(seqs, desc='Place:' + ple):
+                    imgname = self._get_imgname(v)
+                    exrname = self._get_exrname(v)
+                    valid_frame_number = len(imgname)
+                    # for p in tqdm(glob.glob(v + '/smpl_with_joints/*.npz'), desc='person'):
+                    ps = [os.path.join(v, 'smpl_withJoints_inCamSpace', p) for p in \
+                        os.listdir(os.path.join(v, 'smpl_withJoints_inCamSpace')) if p.endswith('.npz')]
+                    for p in sorted(ps):
+                        npfile_tmp = np.load(p, allow_pickle=True)
+                        merged['image_path'] += imgname
+                        merged['mask_path'] += exrname
+                        merged['npz_name'] += self._get_npzname(p, valid_frame_number)
+                        # merged['smpl']['transl'].append(npfile_tmp['smpl'].item()['transl'][1:61])
+                        # merged['smpl']['global_orient'].append(npfile_tmp['smpl'].item()['global_orient'][1:61])
+                        # betas = npfile_tmp['smpl'].item()['betas']
+                        # betas = np.repeat(betas, 60, axis=0)
+                        # merged['smpl']['betas'].append(betas)
+                        # merged['smpl']['body_pose'].append(npfile_tmp['smpl'].item()['body_pose'][1:61])
+                        # merged['smpl']['keypoints3d'].append(npfile_tmp['keypoints3d'][1:61])
+                        # merged['smpl']['keypoints2d'].append(npfile_tmp['keypoints2d'][1:61])
 
-                    # import pdb; pdb.set_trace()
-                    for _ in range(valid_frame_number):
-                        merged['meta'].append(npfile_tmp['meta'])
+                        # import pdb; pdb.set_trace()
+                        for _ in range(valid_frame_number):
+                            merged['meta'].append(npfile_tmp['meta'])
 
-                    for key in ['betas', 'global_orient', 'transl', 'body_pose']:
-                        if key == 'betas' and len(npfile_tmp['smpl'].item()['betas']) == 1:
-                            betas = np.repeat(npfile_tmp['smpl'].item()[key], valid_frame_number, axis=0)
-                            merged['smpl']['betas'].append(betas)
-                        else:
-                            if len(npfile_tmp['smpl'].item()[key]) == valid_frame_number:
-                                merged['smpl'][key].append(npfile_tmp['smpl'].item()[key])
+                        for key in ['betas', 'global_orient', 'transl', 'body_pose']:
+                            if key == 'betas' and len(npfile_tmp['smpl'].item()['betas']) == 1:
+                                betas = np.repeat(npfile_tmp['smpl'].item()[key], valid_frame_number, axis=0)
+                                merged['smpl']['betas'].append(betas)
                             else:
-                                merged['smpl'][key].append(npfile_tmp['smpl'].item()[key][1:valid_frame_number+1])
+                                if len(npfile_tmp['smpl'].item()[key]) == valid_frame_number:
+                                    merged['smpl'][key].append(npfile_tmp['smpl'].item()[key])
+                                else:
+                                    merged['smpl'][key].append(npfile_tmp['smpl'].item()[key][1:valid_frame_number+1])
 
-                for p in sorted(glob.glob(v + '/smplx_withJoints_inCamSpace/*.npz')):
-                    npfile_tmp = np.load(p, allow_pickle=True)
-                    merged['keypoints2d'].append(npfile_tmp['keypoints2d'][1:valid_frame_number+1])
-                    merged['keypoints3d'].append(npfile_tmp['keypoints3d'][1:valid_frame_number+1])
-                    for key in ['betas', 'global_orient', 'transl', 'body_pose', \
-                                'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose', 'expression']:
-                        if key == 'betas' and len(npfile_tmp['smplx'].item()['betas']) == 1:
-                            betas = np.repeat(npfile_tmp['smplx'].item()[key], valid_frame_number, axis=0)
-                            merged['smplx']['betas'].append(betas)
-                        else:
-                            if len(npfile_tmp['smplx'].item()[key]) == valid_frame_number:
-                                merged['smplx'][key].append(npfile_tmp['smplx'].item()[key])
+                    ps =  [os.path.join(v, 'smplx_withJoints_inCamSpace', p) for p in \
+                        os.listdir(os.path.join(v, 'smplx_withJoints_inCamSpace')) if p.endswith('.npz')]
+                    for p in sorted(ps):
+                        npfile_tmp = np.load(p, allow_pickle=True)
+                        merged['keypoints2d'].append(npfile_tmp['keypoints2d'][1:valid_frame_number+1])
+                        merged['keypoints3d'].append(npfile_tmp['keypoints3d'][1:valid_frame_number+1])
+                        for key in ['betas', 'global_orient', 'transl', 'body_pose', \
+                                    'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose', 'expression']:
+                            if key == 'betas' and len(npfile_tmp['smplx'].item()['betas']) == 1:
+                                betas = np.repeat(npfile_tmp['smplx'].item()[key], valid_frame_number, axis=0)
+                                merged['smplx']['betas'].append(betas)
                             else:
-                                merged['smplx'][key].append(npfile_tmp['smplx'].item()[key][1:valid_frame_number+1])
+                                if len(npfile_tmp['smplx'].item()[key]) == valid_frame_number:
+                                    merged['smplx'][key].append(npfile_tmp['smplx'].item()[key])
+                                else:
+                                    merged['smplx'][key].append(npfile_tmp['smplx'].item()[key][1:valid_frame_number+1])
                 
                         
                     # betas = npfile_tmp['smpl'].item()['betas']
@@ -234,9 +243,11 @@ class SynbodyConverter(BaseModeConverter):
         merged['keypoints3d'] = np.vstack(merged['keypoints3d'])
         merged['keypoints2d'] = np.vstack(merged['keypoints2d'])
 
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         merged['conf'] = np.vstack(self._get_mask_conf(root_path, merged)).reshape(-1, 144, 1)
+
+        print('Merge npz finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
         # import pdb; pdb.set_trace()
 
@@ -286,11 +297,13 @@ class SynbodyConverter(BaseModeConverter):
         # conf = keypoints3d_smpl_merged[:, :, -1]
         conf = npfile['conf']
         pelvis = keypoints3d_smpl_merged[:, 0, :]
+        print('')
         for i in range(len(conf)):
             if conf[i][0] > 0:
                 valid_id.append(i)
         valid_id = np.array(valid_id)
         keypoints3d_smpl_merged[:, :, :] -= pelvis[:, None, :]
+        print('Root centered finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
         bboxs_ = {}
         for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
@@ -313,6 +326,7 @@ class SynbodyConverter(BaseModeConverter):
             bbox_ = np.hstack([bbox_, np.ones([bbox_.shape[0], 1])])
             # import pdb; pdb.set_trace()
             human_data[key] = bbox_[valid_id]
+        print('BBox generation finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
         
 
 
@@ -379,6 +393,8 @@ class SynbodyConverter(BaseModeConverter):
         human_data['keypoints3d'] = keypoints3d_
         human_data['keypoints2d_mask'] = mask
         human_data['keypoints3d_mask'] = mask
+
+        print('Keypoints and masks finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
         
         smpl, smplx = {}, {}
         for k in npfile['smpl'].keys():
@@ -388,8 +404,9 @@ class SynbodyConverter(BaseModeConverter):
             smplx[k] = npfile['smplx'][k][valid_id]
         human_data['smplx'] = smplx
         human_data['config'] = 'synbody_train'
-        
 
+        print('Smpl and/or Smplx finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        
         meta = {}
         meta['gender'] = []
         for meta_tmp in npfile['meta']:
@@ -403,7 +420,8 @@ class SynbodyConverter(BaseModeConverter):
                 meta['gender'].append('n')
         meta['gender'] = np.array(meta['gender'])[valid_id].tolist()
         human_data['meta'] = meta
-
+        
+        print('MetaData finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
         # import pdb; pdb.set_trace()
 
         human_data.compress_keypoints_by_mask()
