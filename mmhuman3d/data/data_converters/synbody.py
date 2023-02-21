@@ -162,6 +162,7 @@ class SynbodyConverter(BaseModeConverter):
                     'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose', 'expression']:
             merged['smplx'][key] = []
 
+        failed = []
         # print(ple)
         print(f'There are {len(batch_paths)} batches:', batch_paths)
         for batch_path in tqdm(batch_paths, desc='batch'):
@@ -173,58 +174,63 @@ class SynbodyConverter(BaseModeConverter):
                 seqs = [os.path.join(batch_path, ple, seq_name) for \
                     seq_name in os.listdir(os.path.join(batch_path, ple)) if seq_name.startswith('LS')]
                 for v in tqdm(seqs, desc='Place:' + ple):
-                    imgname = self._get_imgname(v)
-                    exrname = self._get_exrname(v)
-                    valid_frame_number = len(imgname)
-                    # for p in tqdm(glob.glob(v + '/smpl_with_joints/*.npz'), desc='person'):
-                    ps = [os.path.join(v, 'smpl_withJoints_inCamSpace', p) for p in \
-                        os.listdir(os.path.join(v, 'smpl_withJoints_inCamSpace')) if p.endswith('.npz')]
-                    for p in sorted(ps):
-                        npfile_tmp = np.load(p, allow_pickle=True)
-                        merged['image_path'] += imgname
-                        merged['mask_path'] += exrname
-                        merged['npz_name'] += self._get_npzname(p, valid_frame_number)
-                        # merged['smpl']['transl'].append(npfile_tmp['smpl'].item()['transl'][1:61])
-                        # merged['smpl']['global_orient'].append(npfile_tmp['smpl'].item()['global_orient'][1:61])
-                        # betas = npfile_tmp['smpl'].item()['betas']
-                        # betas = np.repeat(betas, 60, axis=0)
-                        # merged['smpl']['betas'].append(betas)
-                        # merged['smpl']['body_pose'].append(npfile_tmp['smpl'].item()['body_pose'][1:61])
-                        # merged['smpl']['keypoints3d'].append(npfile_tmp['keypoints3d'][1:61])
-                        # merged['smpl']['keypoints2d'].append(npfile_tmp['keypoints2d'][1:61])
+                    try:
+                        imgname = self._get_imgname(v)
+                        exrname = self._get_exrname(v)
+                        valid_frame_number = len(imgname)
+                        # for p in tqdm(glob.glob(v + '/smpl_with_joints/*.npz'), desc='person'):
+                        ps = [os.path.join(v, 'smpl_withJoints_inCamSpace', p) for p in \
+                            os.listdir(os.path.join(v, 'smpl_withJoints_inCamSpace')) if p.endswith('.npz')]
+                        for p in sorted(ps):
+                            npfile_tmp = np.load(p, allow_pickle=True)
+                            merged['image_path'] += imgname
+                            merged['mask_path'] += exrname
+                            merged['npz_name'] += self._get_npzname(p, valid_frame_number)
+                            # merged['smpl']['transl'].append(npfile_tmp['smpl'].item()['transl'][1:61])
+                            # merged['smpl']['global_orient'].append(npfile_tmp['smpl'].item()['global_orient'][1:61])
+                            # betas = npfile_tmp['smpl'].item()['betas']
+                            # betas = np.repeat(betas, 60, axis=0)
+                            # merged['smpl']['betas'].append(betas)
+                            # merged['smpl']['body_pose'].append(npfile_tmp['smpl'].item()['body_pose'][1:61])
+                            # merged['smpl']['keypoints3d'].append(npfile_tmp['keypoints3d'][1:61])
+                            # merged['smpl']['keypoints2d'].append(npfile_tmp['keypoints2d'][1:61])
 
-                        # import pdb; pdb.set_trace()
-                        for _ in range(valid_frame_number):
-                            merged['meta'].append(npfile_tmp['meta'])
+                            # import pdb; pdb.set_trace()
+                            for _ in range(valid_frame_number):
+                                merged['meta'].append(npfile_tmp['meta'])
 
-                        for key in ['betas', 'global_orient', 'transl', 'body_pose']:
-                            if key == 'betas' and len(npfile_tmp['smpl'].item()['betas']) == 1:
-                                betas = np.repeat(npfile_tmp['smpl'].item()[key], valid_frame_number, axis=0)
-                                merged['smpl']['betas'].append(betas)
-                            else:
-                                if len(npfile_tmp['smpl'].item()[key]) == valid_frame_number:
-                                    merged['smpl'][key].append(npfile_tmp['smpl'].item()[key])
+                            for key in ['betas', 'global_orient', 'transl', 'body_pose']:
+                                if key == 'betas' and len(npfile_tmp['smpl'].item()['betas']) == 1:
+                                    betas = np.repeat(npfile_tmp['smpl'].item()[key], valid_frame_number, axis=0)
+                                    merged['smpl']['betas'].append(betas)
                                 else:
-                                    merged['smpl'][key].append(npfile_tmp['smpl'].item()[key][1:valid_frame_number+1])
+                                    if len(npfile_tmp['smpl'].item()[key]) == valid_frame_number:
+                                        merged['smpl'][key].append(npfile_tmp['smpl'].item()[key])
+                                    else:
+                                        merged['smpl'][key].append(npfile_tmp['smpl'].item()[key][1:valid_frame_number+1])
 
-                    ps =  [os.path.join(v, 'smplx_withJoints_inCamSpace', p) for p in \
-                        os.listdir(os.path.join(v, 'smplx_withJoints_inCamSpace')) if p.endswith('.npz')]
-                    for p in sorted(ps):
-                        npfile_tmp = np.load(p, allow_pickle=True)
-                        merged['keypoints2d'].append(npfile_tmp['keypoints2d'][1:valid_frame_number+1])
-                        merged['keypoints3d'].append(npfile_tmp['keypoints3d'][1:valid_frame_number+1])
-                        for key in ['betas', 'global_orient', 'transl', 'body_pose', \
-                                    'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose', 'expression']:
-                            if key == 'betas' and len(npfile_tmp['smplx'].item()['betas']) == 1:
-                                betas = np.repeat(npfile_tmp['smplx'].item()[key], valid_frame_number, axis=0)
-                                merged['smplx']['betas'].append(betas)
-                            else:
-                                if len(npfile_tmp['smplx'].item()[key]) == valid_frame_number:
-                                    merged['smplx'][key].append(npfile_tmp['smplx'].item()[key])
+                        ps =  [os.path.join(v, 'smplx_withJoints_inCamSpace', p) for p in \
+                            os.listdir(os.path.join(v, 'smplx_withJoints_inCamSpace')) if p.endswith('.npz')]
+                        for p in sorted(ps):
+                            npfile_tmp = np.load(p, allow_pickle=True)
+                            merged['keypoints2d'].append(npfile_tmp['keypoints2d'][1:valid_frame_number+1])
+                            merged['keypoints3d'].append(npfile_tmp['keypoints3d'][1:valid_frame_number+1])
+                            for key in ['betas', 'global_orient', 'transl', 'body_pose', \
+                                        'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose', 'expression']:
+                                if key == 'betas' and len(npfile_tmp['smplx'].item()['betas']) == 1:
+                                    betas = np.repeat(npfile_tmp['smplx'].item()[key], valid_frame_number, axis=0)
+                                    merged['smplx']['betas'].append(betas)
                                 else:
-                                    merged['smplx'][key].append(npfile_tmp['smplx'].item()[key][1:valid_frame_number+1])
-                
-                        
+                                    if len(npfile_tmp['smplx'].item()[key]) == valid_frame_number:
+                                        merged['smplx'][key].append(npfile_tmp['smplx'].item()[key])
+                                    else:
+                                        merged['smplx'][key].append(npfile_tmp['smplx'].item()[key][1:valid_frame_number+1])
+                    except Exception as e:
+                        failed.append(v)
+                        with open('log_synbody.json', 'w') as f:
+                            json.dump(failed)
+                        print(v, 'failed because of', e)
+        print('total', len(failed), 'failed')
                     # betas = npfile_tmp['smpl'].item()['betas']
                     # betas = np.repeat(betas, 60, axis=0)
                     # merged['smplx']['betas'].append(betas)
