@@ -170,7 +170,8 @@ class SynbodyConverter(BaseModeConverter):
             for ple in places:
                 if '.' in ple:
                     continue
-                seqs = [os.path.join(batch_path, ple, seq_name) for seq_name in os.listdir(os.path.join(batch_path, ple))]
+                seqs = [os.path.join(batch_path, ple, seq_name) for \
+                    seq_name in os.listdir(os.path.join(batch_path, ple)) if seq_name.startswith('LS')]
                 for v in tqdm(seqs, desc='Place:' + ple):
                     imgname = self._get_imgname(v)
                     exrname = self._get_exrname(v)
