@@ -33,7 +33,7 @@ model = dict(
         norm_eval=False,
         norm_cfg=dict(type='SyncBN', requires_grad=True),
         init_cfg=dict(type='Pretrained',
-            checkpoint='data/checkpoints/resnet50_a1h2_176-001a1197.pth')),
+              checkpoint='data/checkpoints/resnet50_a1h2_176-001a1197.pth')),
     head=dict(
         type='CliffHead',
         feat_dim=2048,
