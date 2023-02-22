@@ -10,7 +10,7 @@ def test_cliff_head():
         feat_dim=2048,
         smpl_mean_params='data/body_models/smpl_mean_params.npz')
 
-    bbox_info = [-0.5, 0.2, 1.5]
+    bbox_info = torch.FloatTensor([-0.5, 0.2, 1.5])
     # image feature from backbone
     batch_size = 32
     x0_shape = (batch_size, 2048, 7, 7)
