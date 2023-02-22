@@ -21,10 +21,12 @@ import multiprocessing as mp
 
 
 def process_npz_one(seq):
-    cmd = f'srun -p Zoetrope --gres=gpu:0 --cpu-per-task=1 -N 1' \
-        f'python tools/synbody_prepocess.py --seq {seq}' \
-        f'--output_path {output_path}' \
+    cmd = f'srun -p Zoetrope --gres=gpu:0 --cpus-per-task=4 -x SH-IDC1-10-198-8-[51,56,68,72,78,100,116,123] -N 1 ' \
+        f'python tools/synbody_preprocess.py --seq {seq} ' \
+        f'--output_path {output_path} ' \
         f'--prefix {prefix}'
+
+    os.system(cmd)
 
 
 
@@ -45,7 +47,7 @@ def process_npz_multiprocessing(args):
     # failed = []
 
     with mp.Pool(args.num_proc) as p:
-        r = list(tqdm.tqdm(p.imap(process_npz_one, seqs_targeted), total=len(seqs_targeted), desc='sequences'))
+        r = list(tqdm(p.imap(process_npz_one, seqs_targeted), total=len(seqs_targeted), desc='sequences'))
 
 
 def parse_args():
@@ -73,7 +75,6 @@ def parse_args():
     
     parser.add_argument(
         '--num_proc',
-        type=str,
         required=False,
         type=int,
         default=1,

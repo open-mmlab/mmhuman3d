@@ -20,7 +20,7 @@ import pdb
 
 def _get_imgname(v):
     rgb_folder = os.path.join(v, 'rgb')
-    root_folder_id = v.split('/').index('synbody')
+    root_folder_id = v.split('/').index(prefix)
     imglist = os.path.join('/'.join(v.split('/')[root_folder_id:]), 'rgb')
 
     # image 1 is T-pose, don't use
@@ -36,7 +36,7 @@ def _get_imgname(v):
 
 def _get_exrname(v):
     rgb_folder = os.path.join(v, 'rgb')
-    root_folder_id = v.split('/').index('synbody')
+    root_folder_id = v.split('/').index(prefix)
     masklist = os.path.join('/'.join(v.split('/')[root_folder_id:]), 'mask')
 
     # image 1 is T-pose, don't use
@@ -62,7 +62,7 @@ def _get_mask_conf(root, merged):
     
     os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
 
-    root_folder_id = root.split('/').index('synbody')
+    root_folder_id = root.split('/').index(prefix)
 
     conf = []
     for idx, mask_path in enumerate(merged['mask_path']): # , desc='Frame kps conf'):
@@ -280,7 +280,7 @@ def process_npz(args):
         # pdb.set_trace()
             
     # except Exception as e:
-    except FileNotFoundError as e:
+    except Exception as e:
         # failed.append(seq)
         # with open('log_synbody.json', 'w') as f:
         #     json.dump(failed, f)
@@ -331,5 +331,6 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
+    prefix = args.prefix
     process_npz(args)
 
