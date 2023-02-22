@@ -66,7 +66,7 @@ data_keys = [
 ]
 train_pipeline = [
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=224),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='ToTensor', keys=data_keys),
     dict(type='Collect', keys=[*data_keys])
 ]
@@ -86,7 +86,7 @@ test_pipeline = [
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 extractor_pipeline = [
-    dict(type='MeshAffine', img_res=224),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(

@@ -121,7 +121,7 @@ train_pipeline = [
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_49'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
-    dict(type='MeshAffine', img_res=224),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),
@@ -131,7 +131,7 @@ data_keys.remove('is_flipped')
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
-    dict(type='MeshAffine', img_res=224),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),
@@ -139,7 +139,7 @@ test_pipeline = [
 ]
 
 inference_pipeline = [
-    dict(type='MeshAffine', img_res=224),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(
