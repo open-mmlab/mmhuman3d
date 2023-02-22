@@ -24,7 +24,8 @@ def test_cliff_head():
     x1_1_shape = (batch_size, 1024, 14, 14)
     x1_2_shape = (batch_size, 2048, 7, 7)
     x1 = [_demo_head_inputs(x1_1_shape), _demo_head_inputs(x1_2_shape)]
-    y1 = model(x1)
+    bbox_info = [-0.5, 0.2, 1.5]
+    y1 = model(x1, bbox_info)
     assert y1['pred_pose'].shape == (batch_size, 24, 3, 3)
     assert y1['pred_shape'].shape == (batch_size, 10)
     assert y1['pred_cam'].shape == (batch_size, 3)
