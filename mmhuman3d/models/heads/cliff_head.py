@@ -7,7 +7,6 @@ from mmhuman3d.utils.geometry import rot6d_to_rotmat
 
 
 class CliffHead(BaseModule):
-
     def __init__(self,
                  feat_dim,
                  smpl_mean_params=None,

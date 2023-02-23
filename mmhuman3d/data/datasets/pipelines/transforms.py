@@ -740,9 +740,9 @@ class GetRandomScaleRotation:
 class MeshAffine:
     """Affine transform the image to get input image.
 
-    Affine transform the 2D keypoints, 3D kepoints. Required keys: 'img',
-    'pose', 'img_shape', 'rotation' and 'center'. Modifies key: 'img',
-    ''keypoints2d', 'keypoints3d', 'pose'.
+    Affine transform the 2D keypoints, 3D kepoints. Required keys:
+    'img', 'pose', 'img_shape', 'rotation' and 'center'. Modifies key:
+    'img', ''keypoints2d', 'keypoints3d', 'pose'.
     """
 
     def __init__(self, img_res):
@@ -880,7 +880,6 @@ class Rotation:
 
 @PIPELINES.register_module()
 class BBoxCenterJitter(object):
-
     def __init__(self, factor=0.0, dist='normal'):
         super(BBoxCenterJitter, self).__init__()
         self.factor = factor
@@ -915,7 +914,6 @@ class BBoxCenterJitter(object):
 
 @PIPELINES.register_module()
 class SimulateLowRes(object):
-
     def __init__(self,
                  dist: str = 'categorical',
                  factor: float = 1.0,
@@ -961,9 +959,7 @@ class SimulateLowRes(object):
 
 @PIPELINES.register_module()
 class GetBboxInfo:
-    """Get bbox for cliff.
-
-    """
+    """Get bbox for cliff."""
 
     def estimate_focal_length(self, img_h, img_w):
         return (img_w * img_w + img_h * img_h)**0.5  # fov: 55 degree

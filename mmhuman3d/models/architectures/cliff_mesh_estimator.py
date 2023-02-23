@@ -807,7 +807,6 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
 
 class CliffImageBodyModelEstimator(BodyModelEstimator):
-
     def make_fake_data(self, predictions: dict, requires_grad: bool):
         pred_cam = predictions['pred_cam']
         pred_pose = predictions['pred_pose']
