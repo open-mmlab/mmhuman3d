@@ -5,6 +5,7 @@ from torch.nn import functional as F
 
 def batch_rodrigues(theta):
     """Convert axis-angle representation to rotation matrix.
+
     Args:
         theta: size = [B, 3]
     Returns:
@@ -22,6 +23,7 @@ def batch_rodrigues(theta):
 
 def quat_to_rotmat(quat):
     """Convert quaternion coefficients to rotation matrix.
+
     Args:
         quat: size = [B, 4] 4 <===>(w, x, y, z)
     Returns:
@@ -50,6 +52,7 @@ def quat_to_rotmat(quat):
 
 def rot6d_to_rotmat(x):
     """Convert 6D rotation representation to 3x3 rotation matrix.
+
     Based on Zhou et al., "On the Continuity of Rotation
     Representations in Neural Networks", CVPR 2019
     Input:
@@ -229,6 +232,7 @@ def rotation_matrix_to_quaternion(rotation_matrix, eps=1e-6):
 def perspective_projection(points, rotation, translation, focal_length,
                            camera_center):
     """This function computes the perspective projection of a set of points.
+
     Input:
         points (bs, N, 3): 3D points
         rotation (bs, 3, 3): Camera rotation
@@ -263,6 +267,7 @@ def estimate_translation_np(S,
                             img_size=224):
     """Find camera translation that brings 3D joints S closest to 2D the
     corresponding joints_2d.
+
     Input:
         S: (25, 3) 3D joint locations
         joints: (25, 3) 2D joint locations and confidence
@@ -309,6 +314,7 @@ def estimate_translation_np(S,
 def estimate_translation(S, joints_2d, focal_length=5000., img_size=224.):
     """Find camera translation that brings 3D joints S closest to 2D the
     corresponding joints_2d.
+
     Input:
         S: (B, 49, 3) 3D joint locations
         joints: (B, 49, 3) 2D joint locations and confidence
@@ -340,6 +346,7 @@ def estimate_translation(S, joints_2d, focal_length=5000., img_size=224.):
 def project_points(points_3d, camera, focal_length, img_res):
     """Perform orthographic projection of 3D points using the camera
     parameters, return projected 2D points in image plane.
+
     Notes:
         batch size: B
         point number: N
@@ -374,6 +381,7 @@ def project_points(points_3d, camera, focal_length, img_res):
 def weak_perspective_projection(points, scale, translation):
     """This function computes the weak perspective projection of a set of
     points.
+
     Input:
         points (bs, N, 3): 3D points
         scale (bs,1): scalar
@@ -387,6 +395,7 @@ def weak_perspective_projection(points, scale, translation):
 
 def cam_crop2full(crop_cam, center, scale, full_img_shape, focal_length):
     """convert the camera parameters from the crop camera to the full camera.
+
     :param crop_cam: shape=(N, 3) weak perspective camera in cropped
        img coordinates (s, tx, ty)
     :param center: shape=(N, 2) bbox coordinates (c_x, c_y)
