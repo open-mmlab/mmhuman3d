@@ -14,6 +14,7 @@ class CliffConverter(BaseModeConverter):
     """CLIFF datasets converter `Carrying Location Information in Full Frames
     into Human Pose and Shape Estimation' More details can be found in the
     `paper.
+
     <https://arxiv.org/pdf/2208.00571.pdf>`__.
     Args:
         modes (list):  'coco', 'mpii'
