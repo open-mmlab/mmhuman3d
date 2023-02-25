@@ -961,9 +961,7 @@ class SimulateLowRes(object):
 
 @PIPELINES.register_module()
 class GetBboxInfo:
-    """Get bbox for cliff.
-
-    """
+    """Get bbox for cliff."""
 
     def estimate_focal_length(self, img_h, img_w):
         return (img_w * img_w + img_h * img_h)**0.5  # fov: 55 degree
