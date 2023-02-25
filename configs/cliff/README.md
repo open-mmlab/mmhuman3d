@@ -5,11 +5,12 @@
 We provide the config files for CLIFF: [CLIFF: Carrying Location Information in Full Frames into Human Pose and Shape Estimation](https://arxiv.org/pdf/2208.00571.pdf).
 
 ```BibTeX
+
 @Inproceedings{li2022cliff,
-  author    = {Li, Zhihao and 
-               Liu, Jianzhuang and 
-               Zhang, Zhensong and 
-               Xu, Songcen and 
+  author    = {Li, Zhihao and
+               Liu, Jianzhuang and
+               Zhang, Zhensong and
+               Xu, Songcen and
                Yan, Youliang},
   title     = {CLIFF: Carrying Location Information in Full Frames into Human Pose and Shape Estimation},
   booktitle = {ECCV},
@@ -63,11 +64,10 @@ mmhuman3d
         ├── mpi_inf_3dhp
         ├── mpii
         └── pw3d
-
 ```
 
 Training:
-First use [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) to train. After around 150 epoches, switch to [resume.py](resume.py) by using "--resume-from" optional augument.
+First use [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) to train. After around 150 epoches, switch to [resume.py](resume.py) by using "--resume-from" optional argument.
 
 ## Results and Models
 
@@ -75,4 +75,4 @@ We evaluate HMR on 3DPW. Values are MPJPE/PA-MPJPE.
 
 | Config | 3DPW    | Download |
 |:------:|:-------:|:------:|
-| [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) | 48.65 / 76.49 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/cliff/resnet50_cliff.pth) &#124; 
+| [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) | 48.65 / 76.49 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/cliff/resnet50_cliff.pth) &#124;
