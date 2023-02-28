@@ -2,90 +2,10 @@ import torch
 
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.models.architectures.cliff_mesh_estimator import (
-    ImageBodyModelEstimator,
-    VideoBodyModelEstimator,
+    CliffImageBodyModelEstimator,
 )
 from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils.geometry import project_points
-
-
-def test_image_body_mesh_estimator():
-    backbone = dict(
-        type='ResNet',
-        depth=50,
-        out_indices=[3],
-        norm_eval=False,
-        norm_cfg=dict(type='SyncBN', requires_grad=True),
-        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50'))
-    head = dict(type='HMRHead', feat_dim=2048)
-    body_model_train = dict(
-        type='SMPL',
-        keypoint_src='smpl_45',
-        keypoint_dst='smpl_45',
-        model_path='data/body_models/smpl')
-    body_model_test = dict(
-        type='SMPL',
-        keypoint_src='smpl_45',
-        keypoint_dst='smpl_45',
-        model_path='data/body_models/smpl')
-    convention = 'smpl_45'
-    loss_keypoints3d = dict(type='SmoothL1Loss', loss_weight=100)
-    loss_keypoints2d = dict(type='SmoothL1Loss', loss_weight=10)
-    loss_vertex = dict(type='L1Loss', loss_weight=2)
-    loss_smpl_pose = dict(type='MSELoss', loss_weight=3)
-    loss_smpl_betas = dict(type='MSELoss', loss_weight=0.02)
-    loss_camera = dict(type='CameraPriorLoss', loss_weight=60)
-    loss_adv = dict(
-        type='GANLoss',
-        gan_type='lsgan',
-        real_label_val=1.0,
-        fake_label_val=0.0,
-        loss_weight=1)
-    disc = dict(type='SMPLDiscriminator')
-    model = ImageBodyModelEstimator()
-    assert model.backbone is None
-    assert model.neck is None
-    assert model.head is None
-    assert model.body_model_train is None
-    assert model.body_model_test is None
-    assert model.convention == 'human_data'
-    assert model.loss_keypoints3d is None
-    assert model.loss_keypoints2d is None
-    assert model.loss_vertex is None
-    assert model.loss_smpl_pose is None
-    assert model.loss_smpl_betas is None
-    assert model.loss_camera is None
-    assert model.loss_adv is None
-    assert model.disc is None
-
-    model = ImageBodyModelEstimator(
-        backbone=backbone,
-        head=head,
-        body_model_train=body_model_train,
-        body_model_test=body_model_test,
-        convention=convention,
-        loss_keypoints3d=loss_keypoints3d,
-        loss_keypoints2d=loss_keypoints2d,
-        loss_vertex=loss_vertex,
-        loss_smpl_pose=loss_smpl_pose,
-        loss_smpl_betas=loss_smpl_betas,
-        loss_camera=loss_camera,
-        loss_adv=loss_adv,
-        disc=disc)
-
-    assert model.backbone is not None
-    assert model.head is not None
-    assert model.body_model_train is not None
-    assert model.body_model_test is not None
-    assert model.convention == 'smpl_45'
-    assert model.loss_keypoints3d is not None
-    assert model.loss_keypoints2d is not None
-    assert model.loss_vertex is not None
-    assert model.loss_smpl_pose is not None
-    assert model.loss_smpl_betas is not None
-    assert model.loss_camera is not None
-    assert model.loss_adv is not None
-    assert model.disc is not None
 
 
 def test_cliff_image_body_mesh_estimator():
@@ -125,7 +45,7 @@ def test_cliff_image_body_mesh_estimator():
         real_label_val=1.0,
         fake_label_val=0.0,
         loss_weight=1)
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         backbone=backbone,
         head=head,
         body_model_train=body_model_train,
