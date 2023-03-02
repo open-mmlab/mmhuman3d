@@ -15,7 +15,7 @@
 - CUDA 9.2+
 - GCC 5+
 - PyTorch3D 0.4+
-- [MMCV](https://github.com/open-mmlab/mmcv) (请安装用于GPU的mmcv-full, 要求版本>=1.3.17,<1.6.0)
+- [MMCV](https://github.com/open-mmlab/mmcv) (请安装用于GPU的mmcv-full, 要求版本>=1.3.17,<1.8.0)
 
 Optional:
 - [MMPose](https://github.com/open-mmlab/mmpose) (只用于演示)
@@ -213,7 +213,7 @@ conda install pytorch3d -c pytorch3d -y
 # cd ..
 
 # 安装 mmcv-full
-pip install "mmcv-full>=1.3.17,<1.6.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
+pip install "mmcv-full>=1.3.17,<1.8.0" -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.8.0/index.html
 
 # 可选: 安装 mmdetection，mmpose 及 mmtracking
 pip install "mmdet<=2.25.1"
