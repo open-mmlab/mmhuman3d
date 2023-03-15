@@ -1,7 +1,7 @@
-#ExPose
+# ExPose
 
 ## Introduction
-We provide the config files for ExPose: [Monocular Expressive Body Regression through Body-Driven Attention](https://arxiv.org/abs/2008.09062).
+We provide the config files for [ExPose: Monocular Expressive Body Regression through Body-Driven Attention](https://arxiv.org/abs/2008.09062).
 
 
 ```BibTeX

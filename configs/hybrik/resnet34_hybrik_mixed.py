@@ -93,8 +93,8 @@ train_pipeline = [
     dict(type='RandomOcclusion', occlusion_prob=0.9),
     dict(type='HybrIKRandomFlip', flip_prob=0.5, flip_pairs=flip_pairs),
     dict(type='NewKeypointsSelection', maps=keypoints_maps),
-    dict(type='HybrIKAffine', img_res=256),
-    dict(type='GenerateHybrIKTarget', img_res=256, test_mode=False),
+    dict(type='HybrIKAffine', img_res=img_res),
+    dict(type='GenerateHybrIKTarget', img_res=img_res, test_mode=False),
     dict(type='RandomChannelNoise', noise_factor=0.4),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
@@ -108,8 +108,8 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='NewKeypointsSelection', maps=keypoints_maps),
-    dict(type='HybrIKAffine', img_res=256),
-    dict(type='GenerateHybrIKTarget', img_res=256, test_mode=True),
+    dict(type='HybrIKAffine', img_res=img_res),
+    dict(type='GenerateHybrIKTarget', img_res=img_res, test_mode=True),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(
@@ -130,8 +130,8 @@ hp3d_keypoints_map = [
 test_hp3d_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='NewKeypointsSelection', maps=hp3d_keypoints_map),
-    dict(type='HybrIKAffine', img_res=256),
-    dict(type='GenerateHybrIKTarget', img_res=256, test_mode=True),
+    dict(type='HybrIKAffine', img_res=img_res),
+    dict(type='GenerateHybrIKTarget', img_res=img_res, test_mode=True),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(

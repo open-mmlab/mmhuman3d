@@ -31,7 +31,6 @@ class BasicBlock(BaseModule):
 
         self.norm1_name, norm1 = build_norm_layer(norm_cfg, planes, postfix=1)
         self.norm2_name, norm2 = build_norm_layer(norm_cfg, planes, postfix=2)
-
         self.conv1 = build_conv_layer(
             conv_cfg,
             inplanes,
@@ -651,20 +650,160 @@ class ResNetV1d(ResNet):
             deep_stem=True, avg_down=True, **kwargs)
 
 
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-    """3x3 convolution with padding."""
-    return nn.Conv2d(
-        in_planes,
-        out_planes,
-        kernel_size=3,
-        stride=stride,
-        padding=dilation,
-        groups=groups,
-        bias=False,
-        dilation=dilation)
+class PoseResNet(BaseModule):
+    """PoseResNet for PyMAF-X."""
+    resnet_spec = {
+        18: (BasicBlock, [2, 2, 2, 2]),
+        34: (BasicBlock, [3, 4, 6, 3]),
+        50: (Bottleneck, [3, 4, 6, 3]),
+        101: (Bottleneck, [3, 4, 23, 3]),
+        152: (Bottleneck, [3, 8, 36, 3])
+    }
 
+    def __init__(self,
+                 extra,
+                 global_mode=False,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN'),
+                 init_cfg=None,
+                 **kwargs):
+        super(PoseResNet, self).__init__(init_cfg=init_cfg)
+        self.inplanes = 64
+        self.extra = extra
+        self.deconv_with_bias = self.extra['deconv_with_bias']
+        num_layers = self.extra['num_layers']
+        block, layers = self.resnet_spec[num_layers]
+        self.conv_cfg = conv_cfg
+        self.norm_cfg = norm_cfg
 
-def conv1x1(in_planes, out_planes, stride=1):
-    """1x1 convolution."""
-    return nn.Conv2d(
-        in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+        super(PoseResNet, self).__init__()
+        self.conv1 = build_conv_layer(
+            cfg=self.conv_cfg,
+            in_channels=3,
+            out_channels=64,
+            kernel_size=7,
+            stride=2,
+            padding=3,
+            bias=False,
+        )
+        self.bn1 = build_norm_layer(self.norm_cfg, 64)[1]
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+
+        self.global_mode = global_mode
+        if self.global_mode:
+            self.avgpool = nn.AvgPool2d(7, stride=1)
+            self.deconv_layers = None
+        else:
+            # used for deconv layers
+            self.deconv_layers = self._make_deconv_layer(
+                self.extra['num_deconv_layers'],
+                self.extra['num_deconv_filters'],
+                self.extra['num_deconv_kernels'],
+            )
+        self.final_layer = None
+
+    def _make_layer(self, block, planes, blocks, stride=1):
+        """make layer."""
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                build_conv_layer(
+                    self.conv_cfg,
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    padding=0,
+                    bias=False),
+                build_norm_layer(self.norm_cfg, planes * block.expansion)[1])
+
+        layers = []
+        layers.append(
+            block(self.inplanes, planes, stride, downsample=downsample))
+        self.inplanes = planes * block.expansion
+        for i in range(1, blocks):
+            layers.append(block(self.inplanes, planes))
+
+        return nn.Sequential(*layers)
+
+    def _get_deconv_cfg(self, deconv_kernel, index):
+        """Get deconvolution cfg."""
+        if deconv_kernel == 4:
+            padding = 1
+            output_padding = 0
+        elif deconv_kernel == 3:
+            padding = 1
+            output_padding = 1
+        elif deconv_kernel == 2:
+            padding = 0
+            output_padding = 0
+
+        return deconv_kernel, padding, output_padding
+
+    def _make_deconv_layer(self, num_layers, num_filters, num_kernels):
+        """Make deconvolution layer."""
+        assert num_layers == len(num_filters), \
+            'ERROR: num_deconv_layers is different len(num_deconv_filters)'
+        assert num_layers == len(num_kernels), \
+            'ERROR: num_deconv_layers is different len(num_deconv_filters)'
+
+        layers = []
+        for i in range(num_layers):
+            kernel, padding, output_padding = \
+                self._get_deconv_cfg(num_kernels[i], i)
+
+            planes = num_filters[i]
+            layers.append(
+                nn.ConvTranspose2d(
+                    in_channels=self.inplanes,
+                    out_channels=planes,
+                    kernel_size=kernel,
+                    stride=2,
+                    padding=padding,
+                    output_padding=output_padding,
+                    bias=self.deconv_with_bias))
+            layers.append(build_norm_layer(self.norm_cfg, planes)[1])
+            layers.append(nn.ReLU(inplace=True))
+            self.inplanes = planes
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        """Forward Function."""
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        # x = self.deconv_layers(x)
+        # x = self.final_layer(x)
+
+        if self.global_mode:
+            g_feat = self.avgpool(x)
+            g_feat = g_feat.view(g_feat.size(0), -1)
+            s_feat_list = [g_feat]
+        else:
+            g_feat = None
+            if self.extra['num_deconv_layers'] == 3:
+                deconv_blocks = [
+                    self.deconv_layers[0:3], self.deconv_layers[3:6],
+                    self.deconv_layers[6:9]
+                ]
+
+            s_feat_list = []
+            s_feat = x
+            for i in range(self.extra['num_deconv_layers']):
+                s_feat = deconv_blocks[i](s_feat)
+                s_feat_list.append(s_feat)
+
+        return s_feat_list, g_feat

@@ -56,6 +56,7 @@ class LocallyConnected2d(nn.Module):
         self.stride = _pair(stride)
 
     def forward(self, x):
+        """Forward function."""
         _, c, h, w = x.size()
         kh, kw = self.kernel_size
         dh, dw = self.stride
@@ -105,6 +106,7 @@ class KeypointAttention(nn.Module):
                 in_channels[1], out_channels[1], kernel_size=1)
 
     def forward(self, features, heatmaps):
+        """Forward function."""
         batch_size, num_joints, height, width = heatmaps.shape
 
         if self.use_scale:
@@ -509,6 +511,7 @@ class PareHead(BaseModule):
         return nn.Sequential(*layers)
 
     def forward(self, features):
+        """Forward function."""
         batch_size = features.shape[0]
 
         init_pose = self.init_pose.expand(batch_size, -1)  # N, Jx6

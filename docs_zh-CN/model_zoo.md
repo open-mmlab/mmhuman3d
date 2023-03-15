@@ -24,3 +24,11 @@
 ### PARE
 
 详情请参考[PARE](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/pare/)。
+
+### ExPose
+
+详情请参考[ExPose](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/expose/)。
+
+### PyMAF-X
+
+详情请参考[PyMAF-X](https://github.com/open-mmlab/mmhuman3d/tree/main/configs/pymafx/)。

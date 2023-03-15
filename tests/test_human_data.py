@@ -6,29 +6,32 @@ import pytest
 import torch
 
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from mmhuman3d.utils.path_utils import Existence, check_path_existence
 
 
-def test_new():
-    human_data = HumanData()
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_new(HumanDataCls):
+    human_data = HumanDataCls()
     # no key shall exist in the empty HumanData
     assert len(human_data) == 0
-    human_data = HumanData.new(source_dict=None, key_strict=True)
+    human_data = HumanDataCls.new(source_dict=None, key_strict=True)
     assert len(human_data) == 0
-    human_data = HumanData.new(source_dict=None, key_strict=False)
+    human_data = HumanDataCls.new(source_dict=None, key_strict=False)
     assert len(human_data) == 0
 
 
-def test_set():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_set(HumanDataCls):
     # set item correctly
-    human_data = HumanData()
+    human_data = HumanDataCls()
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
     sample_keypoints2d_mask = np.ones(shape=[144])
     human_data['keypoints2d_mask'] = sample_keypoints2d_mask
     human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = sample_keypoints2d
     # set item without mask
-    human_data = HumanData()
+    human_data = HumanDataCls()
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
     human_data['keypoints2d_convention'] = 'smplx'
     human_data['keypoints2d'] = sample_keypoints2d
@@ -41,7 +44,7 @@ def test_set():
         human_data['keypoints4d_convention'] = 'smplx'
         human_data['keypoints4d'] = np.zeros(shape=[3, 144, 5])
     # strict==False allows unsupported keys
-    human_data = HumanData.new(key_strict=False)
+    human_data = HumanDataCls.new(key_strict=False)
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
@@ -49,27 +52,21 @@ def test_set():
     human_data['keypoints4d'] = np.zeros(shape=[3, 144, 3])
     # test wrong value type
     with pytest.raises(ValueError):
-        human_data = HumanData()
+        human_data = HumanDataCls()
         human_data['image_path'] = 2
     # test wrong value shape
     with pytest.raises(ValueError):
-        human_data = HumanData()
+        human_data = HumanDataCls()
         human_data['bbox_xywh'] = np.zeros(shape=[2, 4])
-    # test wrong value with no shape attr
-    with pytest.raises(AttributeError):
-        human_data = HumanData()
-        bbox_np = np.zeros(shape=[2, 4])
-        delattr(bbox_np, 'shape')
-        human_data['bbox_xywh'] = bbox_np
     # test wrong value shape dim
     with pytest.raises(ValueError):
-        human_data = HumanData()
+        human_data = HumanDataCls()
         bbox_np = np.zeros(shape=[
             2,
         ])
         human_data['bbox_xywh'] = bbox_np
     # test wrong value data len
-    human_data = HumanData()
+    human_data = HumanDataCls()
     human_data['bbox_xywh'] = np.zeros(shape=[2, 5])
     with pytest.raises(ValueError):
         human_data['keypoints2d_mask'] = np.ones(shape=[
@@ -78,7 +75,7 @@ def test_set():
         human_data['keypoints2d_convention'] = 'smplx'
         human_data['keypoints2d'] = np.zeros(shape=[3, 144, 3])
     # test everything is right
-    human_data = HumanData()
+    human_data = HumanDataCls()
     human_data['bbox_xywh'] = np.zeros(shape=[2, 5])
     human_data['keypoints2d_mask'] = np.ones(shape=[
         144,
@@ -87,9 +84,10 @@ def test_set():
     human_data['keypoints2d'] = np.zeros(shape=[2, 144, 3])
 
 
-def test_compression():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_compression(HumanDataCls):
     # set item with mask
-    human_data = HumanData.new(key_strict=False)
+    human_data = HumanDataCls.new(key_strict=False)
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
     sample_keypoints2d_mask = np.zeros(shape=[144], dtype=np.uint8)
     sample_keypoints2d_mask[:5] += 1
@@ -145,9 +143,10 @@ def test_compression():
         human_data.decompress_keypoints()
 
 
-def test_generate_mask_from_keypoints():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_generate_mask_from_keypoints(HumanDataCls):
 
-    human_data = HumanData.new(key_strict=False)
+    human_data = HumanDataCls.new(key_strict=False)
     keypoints2d = np.random.rand(3, 144, 3)
     keypoints3d = np.random.rand(3, 144, 4)
 
@@ -182,9 +181,10 @@ def test_generate_mask_from_keypoints():
     assert human_data.check_keypoints_compressed() is True
 
 
-def test_pop_unsupported_items():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_pop_unsupported_items(HumanDataCls):
     # directly pop them
-    human_data = HumanData.new(key_strict=False)
+    human_data = HumanDataCls.new(key_strict=False)
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
@@ -193,7 +193,7 @@ def test_pop_unsupported_items():
     human_data.pop_unsupported_items()
     assert 'keypoints4d' not in human_data
     # pop when switching strict mode
-    human_data = HumanData.new(key_strict=False)
+    human_data = HumanDataCls.new(key_strict=False)
     human_data['keypoints4d_mask'] = np.ones(shape=[
         144,
     ])
@@ -203,9 +203,10 @@ def test_pop_unsupported_items():
     assert 'keypoints4d' not in human_data
 
 
-def test_padding_and_slice():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_padding_and_slice(HumanDataCls):
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
-    human_data = HumanData()
+    human_data = HumanDataCls()
     human_data.load(human_data_load_path)
     assert human_data['keypoints2d'].shape[2] == 3
     # raw shape: 199, 18, 3
@@ -244,9 +245,10 @@ def test_padding_and_slice():
     assert raw_value.shape[0] == target_value.shape[0]
 
 
-def test_slice():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, ))
+def test_slice(HumanDataCls):
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
-    human_data = HumanData()
+    human_data = HumanDataCls()
     human_data.load(human_data_load_path)
     assert human_data['keypoints2d'].shape[2] == 3
     # raw shape: 199, 18, 3
@@ -288,9 +290,38 @@ def test_slice():
         human_data['misc']['hd_id_plus_1']
 
 
-def test_missing_attr():
+@pytest.mark.parametrize('HumanDataCls', (MultiHumanData, ))
+def test_multi_human_data_slice(HumanDataCls):
+    human_data_load_path = 'tests/data/human_data/multi_human_data_01.npz'
+    human_data = HumanDataCls()
+    human_data.load(human_data_load_path)
+    assert human_data['keypoints2d'].shape[2] == 3
+    # raw shape: 199, 18, 3
+    raw_value = human_data.get_raw_value('keypoints2d')
+    # slice with stop
+    sliced_human_data = human_data.get_slice(2)
+    assert sliced_human_data['keypoints2d'].shape[0] == 3
+    assert \
+        sliced_human_data.get_raw_value('keypoints2d')[2, 0, 0] == \
+        raw_value[2, 0, 0]
+    # slice with start and stop
+    sliced_human_data = human_data.get_slice(1, 4)
+    assert sliced_human_data['keypoints2d'].shape[0] == 5
+    assert \
+        sliced_human_data.get_raw_value('keypoints2d')[-1, 0, 0] == \
+        raw_value[6, 0, 0]
+    # slice with start, stop and step
+    sliced_human_data = human_data.get_slice(0, 5, 2)
+    assert sliced_human_data['keypoints2d'].shape[0] == 5
+    assert \
+        sliced_human_data.get_raw_value('keypoints2d')[-1, 0, 0] == \
+        raw_value[8, 0, 0]
+
+
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_missing_attr(HumanDataCls):
     dump_hd_path = 'tests/data/human_data/human_data_missing_len.npz'
-    human_data = HumanData()
+    human_data = HumanDataCls()
     human_data['smpl'] = {
         'body_pose': np.ones((1, 21, 3)),
         'transl': np.ones((1, 3)),
@@ -299,14 +330,15 @@ def test_missing_attr():
     # human_data.__delattr__('__data_len__')
     human_data.__data_len__ = -1
     human_data.dump(dump_hd_path)
-    human_data = HumanData()
+    human_data = HumanDataCls()
     human_data.load(dump_hd_path)
     assert human_data.data_len == 1
 
 
-def test_load():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_load(HumanDataCls):
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
-    human_data = HumanData()
+    human_data = HumanDataCls()
     human_data.load(human_data_load_path)
     assert human_data['keypoints2d'].shape[2] == 3
     assert isinstance(human_data['misc'], dict)
@@ -314,36 +346,39 @@ def test_load():
     human_data_with_image_path = \
         'tests/data/human_data/human_data_img.npz'
     human_data.dump(human_data_with_image_path)
-    human_data = HumanData.fromfile(human_data_with_image_path)
+    human_data = HumanDataCls.fromfile(human_data_with_image_path)
     assert isinstance(human_data['image_path'], list)
     os.remove(human_data_with_image_path)
 
 
-def test_construct_from_dict():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_construct_from_dict(HumanDataCls):
     # strict==True does not allow unsupported keys
     dict_with_keypoints2d = {'keypoints2d': np.zeros(shape=[3, 144, 3])}
-    human_data = HumanData(dict_with_keypoints2d)
+    human_data = HumanDataCls(dict_with_keypoints2d)
     assert human_data['keypoints2d'].shape[2] == 3
     # strict==True does not allow unsupported keys
-    human_data = HumanData.new(
+    human_data = HumanDataCls.new(
         source_dict=dict_with_keypoints2d, key_strict=False)
     assert human_data['keypoints2d'].shape[2] == 3
     # strict==False allows unsupported keys
     dict_with_keypoints4d = {'keypoints4d': np.zeros(shape=[3, 144, 5])}
-    human_data = HumanData.new(
+    human_data = HumanDataCls.new(
         source_dict=dict_with_keypoints4d, key_strict=False)
     assert human_data['keypoints4d'].shape[2] == 5
 
 
-def test_construct_from_file():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_construct_from_file(HumanDataCls):
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
-    human_data = HumanData.fromfile(human_data_load_path)
+    human_data = HumanDataCls.fromfile(human_data_load_path)
     assert human_data['keypoints2d'].shape[2] == 3
 
 
-def test_dump():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_dump(HumanDataCls):
     # set item with mask
-    human_data = HumanData()
+    human_data = HumanDataCls()
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
     sample_keypoints2d_mask = np.zeros(shape=[144])
     sample_keypoints2d_mask[:4] = 1
@@ -359,7 +394,7 @@ def test_dump():
     human_data.dump(human_data_dump_path, overwrite=True)
     assert check_path_existence(human_data_dump_path, 'file') == \
         Existence.FileExist
-    human_data_load = HumanData()
+    human_data_load = HumanDataCls()
     human_data_load.load(human_data_dump_path)
     # 3 frames after load
     assert human_data_load.data_len == 3
@@ -371,7 +406,7 @@ def test_dump():
     }
     human_data.update(old_version_dict)
     human_data.dump(human_data_dump_path, overwrite=True)
-    human_data_load = HumanData()
+    human_data_load = HumanDataCls()
     human_data_load.load(human_data_dump_path)
     # 3 frames after load
     assert human_data_load['bbox_xywh'].shape[1] == 5
@@ -386,9 +421,10 @@ def test_dump():
         human_data.dump(human_data_dump_path, overwrite=False)
 
 
-def test_dump_by_pickle():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_dump_by_pickle(HumanDataCls):
     # set item with mask
-    human_data = HumanData()
+    human_data = HumanDataCls()
     sample_keypoints2d = np.zeros(shape=[3, 144, 3])
     sample_keypoints2d_mask = np.zeros(shape=[144])
     sample_keypoints2d_mask[:4] = 1
@@ -405,7 +441,7 @@ def test_dump_by_pickle():
     human_data.dump_by_pickle(human_data_dump_path, overwrite=True)
     assert check_path_existence(human_data_dump_path, 'file') == \
         Existence.FileExist
-    human_data_load = HumanData()
+    human_data_load = HumanDataCls()
     human_data_load.load_by_pickle(human_data_dump_path)
     # 3 frames after load
     assert human_data_load.data_len == 3
@@ -417,7 +453,7 @@ def test_dump_by_pickle():
     }
     human_data.update(old_version_dict)
     human_data.dump_by_pickle(human_data_dump_path, overwrite=True)
-    human_data_load = HumanData()
+    human_data_load = HumanDataCls()
     human_data_load.load_by_pickle(human_data_dump_path)
 
     # wrong file extension
@@ -429,23 +465,25 @@ def test_dump_by_pickle():
         human_data.dump_by_pickle(human_data_dump_path, overwrite=False)
 
 
-def test_log():
-    HumanData.set_logger('silent')
-    logger_human_data = HumanData.new(key_strict=False)
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_log(HumanDataCls):
+    HumanDataCls.set_logger('silent')
+    logger_human_data = HumanDataCls.new(key_strict=False)
     logger_human_data['new_key_0'] = 1
     logger = logging.getLogger()
-    HumanData.set_logger(logger)
+    HumanDataCls.set_logger(logger)
     logger_human_data['new_key_1'] = 1
 
 
-def test_to_device():
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_to_device(HumanDataCls):
     if torch.cuda.is_available():
         device_name = 'cuda:0'
     else:
         device_name = 'cpu'
     default_device = torch.device(device_name)
     human_data_load_path = 'tests/data/human_data/human_data_00.npz'
-    human_data = HumanData.fromfile(human_data_load_path)
+    human_data = HumanDataCls.fromfile(human_data_load_path)
     human_data.set_key_strict(False)
     human_data['tensor_value'] = torch.zeros((2, 2))
     tensor_dict = human_data.to(default_device)
@@ -458,19 +496,20 @@ def test_to_device():
     assert tensor_dict['keypoints2d'].is_cuda is False
 
 
-def test_concat():
-    human_data_0 = HumanData()
+@pytest.mark.parametrize('HumanDataCls', (HumanData, MultiHumanData))
+def test_concat(HumanDataCls):
+    human_data_0 = HumanDataCls()
     human_data_0['image_path'] = ['path_0', 'path_1']
     human_data_0['keypoints2d'] = np.zeros(shape=(2, 190, 3))
     human_data_0['keypoints2d_convention'] = 'human_data'
     human_data_0['keypoints2d_mask'] = np.ones(shape=(190))
     # test list and np
-    human_data_1 = HumanData()
+    human_data_1 = HumanDataCls()
     human_data_1['image_path'] = ['path_2']
     human_data_1['keypoints2d'] = np.ones(shape=(1, 190, 3))
     human_data_1['keypoints2d_convention'] = 'human_data'
     human_data_1['keypoints2d_mask'] = np.ones(shape=(190))
-    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    cat_human_data = HumanDataCls.concatenate(human_data_0, human_data_1)
     assert cat_human_data['keypoints2d'].shape[0] == 3
     assert\
         cat_human_data['keypoints2d'].shape[1:] ==\
@@ -480,20 +519,20 @@ def test_concat():
     assert cat_human_data['keypoints2d'][2, 0, 0] == \
         human_data_1['keypoints2d'][0, 0, 0]
     # test different mask
-    human_data_1 = HumanData()
+    human_data_1 = HumanDataCls()
     human_data_1['image_path'] = ['path_2']
     human_data_1['keypoints2d'] = np.ones(shape=(1, 190, 3))
     human_data_1['keypoints2d_convention'] = 'human_data'
     human_data_1['keypoints2d_mask'] = np.ones(shape=(190))
     human_data_1['keypoints2d_mask'][0:10] = 0
-    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    cat_human_data = HumanDataCls.concatenate(human_data_0, human_data_1)
     assert cat_human_data['keypoints2d_mask'][9] == 0
     # test keys only mentioned once
     human_data_0['bbox_xywh'] = np.zeros((2, 5))
     human_data_1['keypoints3d'] = np.ones(shape=(1, 190, 4))
     human_data_1['keypoints3d_convention'] = 'human_data'
     human_data_1['keypoints3d_mask'] = np.ones(shape=(190))
-    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    cat_human_data = HumanDataCls.concatenate(human_data_0, human_data_1)
     assert 'keypoints2d' in cat_human_data
     assert 'keypoints3d' not in cat_human_data
     assert 'keypoints3d_1' in cat_human_data
@@ -503,7 +542,7 @@ def test_concat():
     # test different definition of the same key
     human_data_0['names'] = 'John Cena'
     human_data_1['names'] = 'John_Xina'
-    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    cat_human_data = HumanDataCls.concatenate(human_data_0, human_data_1)
     assert 'names_0' in cat_human_data
     assert cat_human_data['names_1'] == human_data_1['names']
     # test sub-dict by smpl
@@ -512,13 +551,13 @@ def test_concat():
         'transl': np.zeros((2, 3)),
         'betas': np.zeros((2, 10)),
     }
-    human_data_1 = HumanData()
+    human_data_1 = HumanDataCls()
     human_data_1['smpl'] = {
         'body_pose': np.ones((1, 21, 3)),
         'transl': np.ones((1, 3)),
         'betas': np.ones((1, 10)),
     }
-    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    cat_human_data = HumanDataCls.concatenate(human_data_0, human_data_1)
     assert cat_human_data['smpl']['body_pose'][2, 0, 0] == \
         human_data_1['smpl']['body_pose'][0, 0, 0]
     assert cat_human_data['smpl']['transl'][1, 0] == \
@@ -530,7 +569,7 @@ def test_concat():
     human_data_0['smpl'].pop('betas')
     human_data_1['smpl']['expresssion'] = np.ones((1, 10))
     human_data_1['smpl'].pop('transl')
-    cat_human_data = HumanData.concatenate(human_data_0, human_data_1)
+    cat_human_data = HumanDataCls.concatenate(human_data_0, human_data_1)
     assert 'gender' in cat_human_data['smpl']
     assert 'expresssion' in cat_human_data['smpl']
 
