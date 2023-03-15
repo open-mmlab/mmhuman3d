@@ -59,6 +59,7 @@ DATASET_CONFIGS = dict(
     humman=dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
     synbody=dict(type='SynbodyConverter', prefix='synbody', modes=['train']),
+    renbody=dict(type='RenbodyConverter', prefix='renbody', modes=['train']),
 )
 
 
@@ -108,10 +109,13 @@ def main():
         print(f'[{dataset}] Converting ...')
         cfg = DATASET_CONFIGS[dataset]
 
-        if ('modes' in cfg.keys()) and (args.modes is not []):        
+        if ('modes' in cfg.keys()) and (args.modes != []):        
             assert all(x in cfg['modes'] for x in args.modes), \
                 f'Unsupported mode found, supported mode for {cfg["prefix"]} is {cfg["modes"]}'
             cfg['modes'] = args.modes
+        elif ('modes' in cfg.keys()) and (args.modes == []):
+            print(f'For {cfg["prefix"]}, modes: {cfg["modes"]} are avaliable, process all modes as not specified')
+            args.modes = cfg['modes']
 
         prefix = cfg.pop('prefix', dataset)
         input_path = os.path.join(args.root_path, prefix)
