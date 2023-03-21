@@ -73,7 +73,7 @@ def test_cliff_image_body_mesh_estimator():
 
 
 def test_compute_keypoints3d_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=100))
 
@@ -100,7 +100,7 @@ def test_compute_keypoints3d_loss():
 
 
 def test_compute_keypoints2d_loss_cliff():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=10))
 
@@ -138,7 +138,7 @@ def test_compute_keypoints2d_loss_cliff():
 
 
 def test_compute_vertex_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54', loss_vertex=dict(type='L1Loss', loss_weight=2))
 
     pred_vertices = torch.randn((32, 4096, 3))
@@ -156,7 +156,7 @@ def test_compute_vertex_loss():
 
 
 def test_compute_smpl_pose_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_smpl_pose=dict(type='MSELoss', loss_weight=3))
 
@@ -192,7 +192,7 @@ def test_compute_part_segm_loss():
     loss_segm_mask = dict(type='CrossEntropyLoss', loss_weight=60)
 
     gt_keypoints2d = torch.cat([gt_keypoints2d, torch.ones(N, 49, 1)], dim=-1)
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         body_model_train=body_model_train,
         loss_segm_mask=loss_segm_mask,
     )
@@ -211,7 +211,7 @@ def test_compute_part_segm_loss():
 
 
 def test_compute_smpl_betas_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_smpl_betas=dict(type='MSELoss', loss_weight=0.02))
 
@@ -229,7 +229,7 @@ def test_compute_smpl_betas_loss():
 
 
 def test_compute_camera_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_camera=dict(type='CameraPriorLoss', loss_weight=60),
     )
@@ -254,11 +254,11 @@ def test_compute_losses():
     targets['smpl_global_orient'] = torch.randn(N, 3)
     targets['smpl_betas'] = torch.randn(N, 10)
 
-    model = ImageBodyModelEstimator(convention='smpl_54')
+    model = CliffImageBodyModelEstimator(convention='smpl_54')
     loss = model.compute_losses(predictions, targets)
     assert loss == {}
 
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_45',
         body_model_train=dict(
             type='SMPL',
@@ -324,7 +324,7 @@ def test_run_registration():
 
     registration = dict(mode='in_the_loop', registrant=registrant)
 
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         body_model_train=body_model, registration=registration)
     assert model.registrant is not None
     assert model.fits_dict is not None
