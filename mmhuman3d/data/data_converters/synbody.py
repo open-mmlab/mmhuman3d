@@ -332,6 +332,7 @@ class SynbodyConverter(BaseModeConverter):
         for npzf in tqdm(npzs, desc='Npzfiles concating'):
             try:
                 npfile = dict(np.load(npzf, allow_pickle=True))
+                (width, height) = npfile['shape']
 
                 # seq_folder_id = npzf.split('/').index('preprocessed')
                 # synbody_path = '/mnt/lustre/share_data/meihaiyi/shared_data/'
@@ -380,7 +381,7 @@ class SynbodyConverter(BaseModeConverter):
                 bbox_tmp_ = {}
                 bbox_tmp_['bbox_xywh'] = self._keypoints_to_scaled_bbox(kp, 1.2)
                 bbox_tmp_['face_bbox_xywh'], bbox_tmp_['lhand_bbox_xywh'], bbox_tmp_[
-                    'rhand_bbox_xywh'] = self._keypoints_to_scaled_bbox_fh(kp, occ=occ, scale=1.5)
+                    'rhand_bbox_xywh'] = self._keypoints_to_scaled_bbox_fh(kp, occ=occ, scale=1.0)
                 for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
                     bbox = bbox_tmp_[bbox_name]
                     xmin, ymin, xmax, ymax = bbox[:4]
@@ -391,7 +392,7 @@ class SynbodyConverter(BaseModeConverter):
                         # if bbox_conf == 0:
                         #     print(f'{npzf}, {idx},{bbox_name} invalid')
                     # import pdb; pdb.set_trace()
-                    bbox = np.array([max(0, xmin), max(0, ymin), min(1280, xmax), min(720, ymax)])
+                    bbox = np.array([max(0, xmin), max(0, ymin), min(width, xmax), min(height, ymax)])
                     bbox_xywh = self._xyxy2xywh(bbox)
                     bbox_xywh.append(bbox_conf)
 
