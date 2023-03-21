@@ -9,7 +9,9 @@ from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx
 from mmhuman3d.models.utils import FitsDict
 from mmhuman3d.utils.geometry import (
     batch_rodrigues,
+    cam_crop2full,
     estimate_translation,
+    perspective_projection,
     project_points,
     rotation_matrix_to_angle_axis,
 )
@@ -153,8 +155,13 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         if self.neck is not None:
             features = self.neck(features)
-
-        predictions = self.head(features)
+        isCliff = False
+        if data_batch['bbox_info'] is not None:
+            bbox_info = data_batch['bbox_info']
+            predictions = self.head(features, bbox_info)
+            isCliff = True
+        else:
+            predictions = self.head(features)
         targets = self.prepare_targets(data_batch)
 
         # optimize discriminator (if have)
@@ -164,7 +171,7 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         if self.registration is not None:
             targets = self.run_registration(predictions, targets)
 
-        losses = self.compute_losses(predictions, targets)
+        losses = self.compute_losses(predictions, targets, isCliff)
         # optimizer generator part
         if self.disc is not None:
             adv_loss = self.optimize_generator(predictions)
@@ -497,6 +504,69 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
 
         return loss
 
+    def compute_keypoints2d_loss_cliff(
+            self,
+            pred_keypoints3d: torch.Tensor,
+            pred_cam: torch.Tensor,
+            gt_keypoints2d: torch.Tensor,
+            camera_center: torch.Tensor,
+            focal_length: torch.Tensor,
+            trans: torch.Tensor,
+            img_res: Optional[int] = 224,
+            has_keypoints2d: Optional[torch.Tensor] = None):
+        """Compute loss for 2d keypoints."""
+        keypoints2d_conf = gt_keypoints2d[:, :, 2].float().unsqueeze(-1)
+        keypoints2d_conf = keypoints2d_conf.repeat(1, 1, 2)
+        gt_keypoints2d = gt_keypoints2d[:, :, :2].float()
+
+        device = gt_keypoints2d.device
+        batch_size = pred_keypoints3d.shape[0]
+
+        pred_keypoints2d = perspective_projection(
+            pred_keypoints3d,
+            rotation=torch.eye(3, device=device).unsqueeze(0).expand(
+                batch_size, -1, -1),
+            translation=pred_cam,
+            focal_length=focal_length,
+            camera_center=camera_center)
+
+        pred_keypoints2d = torch.cat(
+            (pred_keypoints2d, torch.ones(batch_size, 54, 1).to(device)),
+            dim=2)
+        # trans @ pred_keypoints2d2
+        pred_keypoints2d = torch.einsum('bij,bkj->bki', trans,
+                                        pred_keypoints2d)
+
+        # The coordinate origin of pred_keypoints_2d and gt_keypoints_2d is
+        # the top left corner of the input image.
+        pred_keypoints2d = 2 * pred_keypoints2d / (img_res - 1) - 1
+        gt_keypoints2d = 2 * gt_keypoints2d / (img_res - 1) - 1
+        loss = self.loss_keypoints2d(
+            pred_keypoints2d, gt_keypoints2d, reduction_override='none')
+
+        # If has_keypoints2d is not None, then computes the losses on the
+        # instances that have ground-truth keypoints2d.
+        # But the zero confidence keypoints will be included in mean.
+        # Otherwise, only compute the keypoints2d
+        # which have positive confidence.
+        # has_keypoints2d is None when the key has_keypoints2d
+        # is not in the datasets
+
+        if has_keypoints2d is None:
+            valid_pos = keypoints2d_conf > 0
+            if keypoints2d_conf[valid_pos].numel() == 0:
+                return torch.Tensor([0]).type_as(gt_keypoints2d)
+            loss = torch.sum(loss * keypoints2d_conf)
+            loss /= keypoints2d_conf[valid_pos].numel()
+        else:
+            keypoints2d_conf = keypoints2d_conf[has_keypoints2d == 1]
+            if keypoints2d_conf.shape[0] == 0:
+                return torch.Tensor([0]).type_as(gt_keypoints2d)
+            loss = loss[has_keypoints2d == 1]
+            loss = (loss * keypoints2d_conf).mean()
+
+        return loss
+
     def compute_vertex_loss(self, pred_vertices: torch.Tensor,
                             gt_vertices: torch.Tensor, has_smpl: torch.Tensor):
         """Compute loss for vertices."""
@@ -613,11 +683,21 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
         loss = self.loss_segm_mask(pred_heatmap_valid, gt_sem_mask)
         return loss
 
-    def compute_losses(self, predictions: dict, targets: dict):
+    def compute_losses(self,
+                       predictions: dict,
+                       targets: dict,
+                       isCliff: bool = False):
         """Compute losses."""
         pred_betas = predictions['pred_shape'].view(-1, 10)
         pred_pose = predictions['pred_pose'].view(-1, 24, 3, 3)
         pred_cam = predictions['pred_cam'].view(-1, 3)
+        if isCliff:
+            img_h, img_w = targets['img_h'], targets['img_w']
+            center, scale, focal_length = targets['center'], targets[
+                'scale'][:, 0], targets['focal_length'].squeeze(dim=1)
+            full_img_shape = torch.hstack((img_h, img_w))
+            pred_cam = cam_crop2full(pred_cam, center, scale, full_img_shape,
+                                     focal_length).to(torch.float32)
 
         gt_keypoints3d = targets['keypoints3d']
         gt_keypoints2d = targets['keypoints2d']
@@ -676,11 +756,26 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
                 gt_keypoints3d,
                 has_keypoints3d=has_keypoints3d)
         if self.loss_keypoints2d is not None:
-            losses['keypoints2d_loss'] = self.compute_keypoints2d_loss(
-                pred_keypoints3d,
-                pred_cam,
-                gt_keypoints2d,
-                has_keypoints2d=has_keypoints2d)
+            if isCliff:
+                # NOTE: use crop_trans to contain full -> crop so that
+                # pred keypoints are normalized to bbox
+                camera_center = torch.hstack((img_w, img_h)) / 2
+                trans = targets['crop_trans'].float()
+                temp_loss = self.compute_keypoints2d_loss_cliff(
+                    pred_keypoints3d,
+                    pred_cam,
+                    gt_keypoints2d,
+                    camera_center,
+                    focal_length,
+                    trans,
+                    has_keypoints2d=has_keypoints2d)
+                losses['keypoints2d_loss'] = temp_loss
+            else:
+                losses['keypoints2d_loss'] = self.compute_keypoints2d_loss(
+                    pred_keypoints3d,
+                    pred_cam,
+                    gt_keypoints2d,
+                    has_keypoints2d=has_keypoints2d)
         if self.loss_vertex is not None:
             losses['vertex_loss'] = self.compute_vertex_loss(
                 pred_vertices, gt_vertices, has_smpl)
@@ -860,4 +955,78 @@ class VideoBodyModelEstimator(BodyModelEstimator):
         all_preds['vertices'] = pred_vertices.detach().cpu().numpy()
         all_preds['image_idx'] = \
             kwargs['sample_idx'].detach().cpu().numpy().reshape((-1))
+        return all_preds
+
+
+class CliffImageBodyModelEstimator(BodyModelEstimator):
+
+    def make_fake_data(self, predictions: dict, requires_grad: bool):
+        pred_cam = predictions['pred_cam']
+        pred_pose = predictions['pred_pose']
+        pred_betas = predictions['pred_shape']
+        if requires_grad:
+            fake_data = (pred_cam, pred_pose, pred_betas)
+        else:
+            fake_data = (pred_cam.detach(), pred_pose.detach(),
+                         pred_betas.detach())
+        return fake_data
+
+    def make_real_data(self, data_batch: dict):
+        transl = data_batch['adv_smpl_transl'].float()
+        global_orient = data_batch['adv_smpl_global_orient']
+        body_pose = data_batch['adv_smpl_body_pose']
+        betas = data_batch['adv_smpl_betas'].float()
+        pose = torch.cat((global_orient, body_pose), dim=-1).float()
+        real_data = (transl, pose, betas)
+        return real_data
+
+    def prepare_targets(self, data_batch: dict):
+        # Image Mesh Estimator does not need extra process for ground truth
+        return data_batch
+
+    def forward_test(self, img: torch.Tensor, img_metas: dict, **kwargs):
+        """Defines the computation performed at every call when testing."""
+        if self.backbone is not None:
+            features = self.backbone(img)
+        else:
+            features = kwargs['features']
+
+        if self.neck is not None:
+            features = self.neck(features)
+
+        # NOTE: extras for Cliff inference
+        bbox_info = kwargs['bbox_info']
+        predictions = self.head(features, bbox_info)
+        pred_pose = predictions['pred_pose']
+        pred_betas = predictions['pred_shape']
+        pred_cam_crop = predictions['pred_cam'].view(-1, 3)
+
+        # convert the camera parameters from the crop camera to the full camera
+        img_h, img_w = kwargs['img_h'], kwargs['img_w']
+        center, scale, focal_length = kwargs['center'], kwargs[
+            'scale'][:, 0], kwargs['focal_length'].squeeze(dim=1)
+        full_img_shape = torch.hstack((img_h, img_w))
+
+        pred_cam = cam_crop2full(pred_cam_crop, center, scale, full_img_shape,
+                                 focal_length).to(torch.float32)
+
+        pred_output = self.body_model_test(
+            betas=pred_betas,
+            body_pose=pred_pose[:, 1:],
+            global_orient=pred_pose[:, 0].unsqueeze(1),
+            pose2rot=False)
+
+        pred_vertices = pred_output['vertices']
+        pred_keypoints_3d = pred_output['joints']
+        all_preds = {}
+        all_preds['keypoints_3d'] = pred_keypoints_3d.detach().cpu().numpy()
+        all_preds['smpl_pose'] = pred_pose.detach().cpu().numpy()
+        all_preds['smpl_beta'] = pred_betas.detach().cpu().numpy()
+        all_preds['camera'] = pred_cam.detach().cpu().numpy()
+        all_preds['vertices'] = pred_vertices.detach().cpu().numpy()
+        image_path = []
+        for img_meta in img_metas:
+            image_path.append(img_meta['image_path'])
+        all_preds['image_path'] = image_path
+        all_preds['image_idx'] = kwargs['sample_idx']
         return all_preds
