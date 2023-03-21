@@ -326,8 +326,7 @@ def test_multi_human_data_preprocess():
     CLIFF_ROOT = os.path.join(root_path, 'eft')
     cfg = dict(type='CliffConverter', modes=['coco', 'mpii'])
     data_converter = build_data_converter(cfg)
-    data_converter.convert(
-        CLIFF_ROOT, output_path)
+    data_converter.convert(CLIFF_ROOT, output_path)
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'cliff_coco_train.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'cliff_mpii_train.npz')
 
