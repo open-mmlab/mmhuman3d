@@ -53,6 +53,7 @@ class Mesh_Sampler(nn.Module):
 
     def __init__(self,
                  type='smpl',
+                 data_path='data',
                  level=2,
                  device=torch.device('cuda'),
                  option=None):
@@ -61,7 +62,7 @@ class Mesh_Sampler(nn.Module):
         # downsample SMPL mesh and assign part labels
         if type == 'smpl':
             smpl_mesh_graph = np.load(
-                'data/smpl_downsampling.npz',
+                f'{data_path}/smpl_downsampling.npz',
                 allow_pickle=True,
                 encoding='latin1')
 
@@ -70,7 +71,7 @@ class Mesh_Sampler(nn.Module):
         elif type == 'mano':
             # TODO: replace path
             mano_mesh_graph = np.load(
-                'data/mano_downsampling.npz',
+                f'{data_path}/mano_downsampling.npz',
                 allow_pickle=True,
                 encoding='latin1')
 
@@ -143,6 +144,7 @@ class MAF_Extractor(nn.Module):
 
     def __init__(self,
                  filter_channels,
+                 data_path='data',
                  device=torch.device('cuda'),
                  iwp_cam_mode=True,
                  option=None):
@@ -169,7 +171,7 @@ class MAF_Extractor(nn.Module):
         # downsample SMPL mesh and assign part labels
         # https://github.com/nkolot/GraphCMR/blob/master/data/mesh_downsampling.npz
         smpl_mesh_graph = np.load(
-            'data/smpl_downsampling.npz', allow_pickle=True, encoding='latin1')
+            f'{data_path}/smpl_downsampling.npz', allow_pickle=True, encoding='latin1')
 
         U = smpl_mesh_graph['U']
         D = smpl_mesh_graph['D']  # shape: (2,)
@@ -1451,6 +1453,7 @@ class PyMAFXHead(BaseModule):
                  bhf_names,
                  hf_root_idx,
                  mano_ds_len,
+                 mmhuman3d_data_path=None,
                  grid_feat=False,
                  hf_box_center=True,
                  use_iwp_cam=True,
@@ -1466,12 +1469,14 @@ class PyMAFXHead(BaseModule):
         self.grid_align = grid_align
         self.bhf_names = bhf_names
         self.opt_wrist = True
-        self.mano_sampler = Mesh_Sampler(type='mano', level=1)
-        self.mesh_sampler = Mesh_Sampler(type='smpl')
+        self.mano_sampler = Mesh_Sampler(type='mano', level=1, 
+            data_path=mmhuman3d_data_path)
+        self.mesh_sampler = Mesh_Sampler(type='smpl',
+            data_path=mmhuman3d_data_path)
         self.init_mesh_output = None
         self.batch_size = 1
         self.n_iter = n_iter
-        smpl2limb_vert_faces = get_partial_smpl()
+        smpl2limb_vert_faces = get_partial_smpl(f'{mmhuman3d_data_path}/partial_mesh')
         self.smpl2lhand = torch.from_numpy(
             smpl2limb_vert_faces['lhand']['vids']).long()
         self.smpl2rhand = torch.from_numpy(

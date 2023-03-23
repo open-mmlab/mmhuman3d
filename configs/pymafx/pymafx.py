@@ -1,4 +1,8 @@
-_base_ = ['../_base_/default_runtime.py']
+mmhuman3d_data_path = 'data'
+mmhuman3d_config_path = 'configs'
+
+_base_ = [f'../../{mmhuman3d_config_path}/_base_/default_runtime.py']
+
 maf_on = True
 __bhf_mode__ = 'full_body'  # full_body or body_hand
 __grid_align__ = dict(
@@ -61,7 +65,7 @@ __hf_model_cfg__ = dict(
 
 __mesh_model__ = dict(
     name='smplx',
-    smpl_mean_params='data/body_models/smpl_mean_params.npz',
+    smpl_mean_params=f'{mmhuman3d_data_path}/body_models/smpl_mean_params.npz',
     gender='neutral')
 
 model = dict(
@@ -78,6 +82,7 @@ model = dict(
         bhf_mode=__bhf_mode__,
         grid_feat=False,
         grid_align=__grid_align__,
+        mmhuman3d_data_path=mmhuman3d_data_path,
     ),
     regressor=dict(
         type='Regressor',
@@ -85,13 +90,15 @@ model = dict(
         bhf_mode=__bhf_mode__,
         use_iwp_cam=True,
         n_iter=3,
-        smpl_model_dir='data/body_models/smpl',
+        smpl_model_dir=f'{mmhuman3d_data_path}/body_models/smpl',
         smpl_mean_params=__mesh_model__['smpl_mean_params'],
     ),
-    attention_config='configs/pymafx/bert_base_uncased_config.py',
-    extra_joints_regressor='data/body_models/J_regressor_extra.npy',
-    smplx_to_smpl='data/body_models/smplx/smplx_to_smpl.npz',
-    smplx_model_dir='data/body_models/smplx',
+    mmhuman3d_data_path=mmhuman3d_data_path,
+    attention_config=f'{mmhuman3d_config_path}/pymafx/bert_base_uncased_config.py',
+    extra_joints_regressor=f'{mmhuman3d_data_path}/body_models/J_regressor_extra.npy',
+    smplx_to_smpl=f'{mmhuman3d_data_path}/body_models/smplx/smplx_to_smpl.npz',
+    smplx_model_dir=f'{mmhuman3d_data_path}/body_models/smplx',
+    partial_mesh_path=f'{mmhuman3d_data_path}/partial_mesh',
     mesh_model=__mesh_model__,
     bhf_mode=__bhf_mode__,
     maf_on=maf_on,

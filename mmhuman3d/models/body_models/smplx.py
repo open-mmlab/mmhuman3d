@@ -396,7 +396,7 @@ class GenderedSMPLX(nn.Module):
                  keypoint_approximate: bool = True,
                  extra_joints_regressor: str = None,
                  smplx_to_smpl: str = None,
-                 partial_mesh_path: str = 'data/partial_mesh/',
+                 partial_mesh_path: str = None,
                  batch_size: int = 1,
                  use_face_contour: bool = True,
                  **kwargs) -> None:
@@ -472,6 +472,7 @@ class GenderedSMPLX(nn.Module):
                 torch.tensor(
                     smplx_to_smpl['matrix'][None], dtype=torch.float32))
         if partial_mesh_path is not None:
+            import pdb; pdb.set_trace()
             smpl2limb_vert_faces = get_partial_smpl(partial_mesh_path)
             self.smpl2lhand = torch.from_numpy(
                 smpl2limb_vert_faces['lhand']['vids']).long()
