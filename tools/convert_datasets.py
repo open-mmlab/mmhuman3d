@@ -55,8 +55,11 @@ DATASET_CONFIGS = dict(
         pretrained_ckpt='data/checkpoints/spin.pth',
         prefix='vibe_data'),
     gta_human=dict(type='GTAHumanConverter', prefix='gta_human'),
+    gta_human2=dict(type='GTAHuman2Converter', prefix='gta_human2', modes=['single', 'multiple']),
     humman=dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
+    synbody=dict(type='SynbodyConverter', prefix='synbody', modes=['train']),
+    renbody=dict(type='RenbodyConverter', prefix='renbody', modes=['train']),
 )
 
 
@@ -82,6 +85,14 @@ def parse_args():
         required=True,
         default=[],
         help=f'Supported datasets: {list(DATASET_CONFIGS.keys())}')
+    
+    parser.add_argument(
+        '--modes',
+        type=str,
+        nargs='+',
+        required=False,
+        default=[],
+        help=f'Need to comply with supported modes specified in tools/convert_datasets.py')
 
     parser.add_argument(
         '--enable_multi_human_data',
@@ -102,6 +113,15 @@ def main():
     for dataset in datasets:
         print(f'[{dataset}] Converting ...')
         cfg = DATASET_CONFIGS[dataset]
+
+        if ('modes' in cfg.keys()) and (args.modes != []):        
+            assert all(x in cfg['modes'] for x in args.modes), \
+                f'Unsupported mode found, supported mode for {cfg["prefix"]} is {cfg["modes"]}'
+            cfg['modes'] = args.modes
+        elif ('modes' in cfg.keys()) and (args.modes == []):
+            print(f'For {cfg["prefix"]}, modes: {cfg["modes"]} are avaliable, process all modes as not specified')
+            args.modes = cfg['modes']
+
         prefix = cfg.pop('prefix', dataset)
         input_path = os.path.join(args.root_path, prefix)
         data_converter = build_data_converter(cfg)

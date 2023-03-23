@@ -67,7 +67,7 @@ class BaseConverter(metaclass=ABCMeta):
             bbox_xyxy (np.ndarray): Bounding box in xyxy format
 
         '''
-        xmin, ymin = np.amin(keypoints, axis=0)
+        xmin, ymin, = np.amin(keypoints, axis=0)
         xmax, ymax = np.amax(keypoints, axis=0)
 
         width = (xmax - xmin) * scale

@@ -12,6 +12,7 @@ from .expose_spin_smplx import ExposeSPINSMPLXConverter
 from .ffhq_flame import FFHQFlameConverter
 from .freihand import FreihandConverter
 from .gta_human import GTAHumanConverter
+from .gta_human2 import GTAHuman2Converter
 from .h36m import H36mConverter
 from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_smplx import H36mSMPLXConverter
@@ -29,8 +30,10 @@ from .pw3d_hybrik import Pw3dHybrIKConverter
 from .spin import SpinConverter
 from .stirling import StirlingConverter
 from .surreal import SurrealConverter
+from .synbody import SynbodyConverter
 from .up3d import Up3dConverter
 from .vibe import VibeConverter
+from .renbody import RenbodyConverter
 
 __all__ = [
     'build_data_converter', 'AgoraConverter', 'MpiiConverter', 'H36mConverter',
@@ -38,10 +41,10 @@ __all__ = [
     'H36mConverter', 'LspExtendedConverter', 'LspConverter',
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
-    'GTAHumanConverter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
+    'GTAHumanConverter', 'GTAHuman2Converter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
     'H36mSMPLXConverter', 'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter',
     'SurrealConverter', 'InstaVibeConverter', 'SpinConverter', 'VibeConverter',
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
-    'EHFConverter'
+    'EHFConverter', 'SynbodyConverter', 'RenbodyConverter',
 ]
