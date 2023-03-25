@@ -3,13 +3,11 @@
 from mmcv.cnn import MODELS as MMCV_MODELS
 from mmcv.utils import Registry
 
+from .cliff_mesh_estimator import CliffImageBodyModelEstimator
 from .expressive_mesh_estimator import SMPLXImageBodyModelEstimator
 from .hybrik import HybrIK_trainer
-from .mesh_estimator import (
-    CliffImageBodyModelEstimator,
-    ImageBodyModelEstimator,
-    VideoBodyModelEstimator,
-)
+from .mesh_estimator import ImageBodyModelEstimator, VideoBodyModelEstimator
+from .pymafx import PyMAFX
 
 
 def build_from_cfg(cfg, registry, default_args=None):
@@ -30,6 +28,7 @@ ARCHITECTURES.register_module(
     name='SMPLXImageBodyModelEstimator', module=SMPLXImageBodyModelEstimator)
 ARCHITECTURES.register_module(
     name='CliffImageBodyModelEstimator', module=CliffImageBodyModelEstimator)
+ARCHITECTURES.register_module(name='PyMAFX', module=PyMAFX)
 
 
 def build_architecture(cfg):
