@@ -2,8 +2,7 @@ import torch
 
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.models.architectures.cliff_mesh_estimator import (
-    CliffImageBodyModelEstimator,
-)
+    CliffImageBodyModelEstimator, )
 from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.utils.geometry import project_points
 
@@ -73,7 +72,7 @@ def test_cliff_image_body_mesh_estimator():
 
 
 def test_compute_keypoints3d_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_keypoints3d=dict(type='SmoothL1Loss', loss_weight=100))
 
@@ -100,7 +99,7 @@ def test_compute_keypoints3d_loss():
 
 
 def test_compute_keypoints2d_loss_cliff():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=10))
 
@@ -110,35 +109,46 @@ def test_compute_keypoints2d_loss_cliff():
     camera_center = torch.randn((32, 2))
     trans = torch.randn((32, 3))
     focal_length = 5000
-    loss_empty = model.compute_keypoints2d_loss_cliff(
-        pred_keypoints3d, pred_cam, gt_keypoints2d, camera_center,
-        focal_length, trans)
+    loss_empty = model.compute_keypoints2d_loss_cliff(pred_keypoints3d,
+                                                      pred_cam, gt_keypoints2d,
+                                                      camera_center,
+                                                      focal_length, trans)
     assert loss_empty == 0
 
     pred_keypoints3d = torch.randn((32, 54, 3))
     gt_keypoints2d = torch.randn((32, 54, 3))
     gt_keypoints2d[:, :, 2] = torch.sigmoid(gt_keypoints2d[:, :, 2])
     pred_cam = torch.randn((32, 3))
-    loss = model.compute_keypoints2d_loss_cliff(
-        pred_keypoints3d, pred_cam, gt_keypoints2d, camera_center,
-        focal_length, trans)
+    loss = model.compute_keypoints2d_loss_cliff(pred_keypoints3d, pred_cam,
+                                                gt_keypoints2d, camera_center,
+                                                focal_length, trans)
     assert loss > 0
 
     has_keypoints2d = torch.ones((32))
     loss = model.compute_keypoints2d_loss_cliff(
-        pred_keypoints3d, pred_cam, gt_keypoints2d, camera_center,
-        focal_length, trans, has_keypoints2d=has_keypoints2d)
+        pred_keypoints3d,
+        pred_cam,
+        gt_keypoints2d,
+        camera_center,
+        focal_length,
+        trans,
+        has_keypoints2d=has_keypoints2d)
     assert loss > 0
 
     has_keypoints2d = torch.zeros((32))
     loss = model.compute_keypoints2d_loss_cliff(
-        pred_keypoints3d, pred_cam, gt_keypoints2d, camera_center,
-        focal_length, trans, has_keypoints2d=has_keypoints2d)
+        pred_keypoints3d,
+        pred_cam,
+        gt_keypoints2d,
+        camera_center,
+        focal_length,
+        trans,
+        has_keypoints2d=has_keypoints2d)
     assert loss == 0
 
 
 def test_compute_vertex_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54', loss_vertex=dict(type='L1Loss', loss_weight=2))
 
     pred_vertices = torch.randn((32, 4096, 3))
@@ -156,7 +166,7 @@ def test_compute_vertex_loss():
 
 
 def test_compute_smpl_pose_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_smpl_pose=dict(type='MSELoss', loss_weight=3))
 
@@ -192,7 +202,7 @@ def test_compute_part_segm_loss():
     loss_segm_mask = dict(type='CrossEntropyLoss', loss_weight=60)
 
     gt_keypoints2d = torch.cat([gt_keypoints2d, torch.ones(N, 49, 1)], dim=-1)
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         body_model_train=body_model_train,
         loss_segm_mask=loss_segm_mask,
     )
@@ -211,7 +221,7 @@ def test_compute_part_segm_loss():
 
 
 def test_compute_smpl_betas_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_smpl_betas=dict(type='MSELoss', loss_weight=0.02))
 
@@ -229,7 +239,7 @@ def test_compute_smpl_betas_loss():
 
 
 def test_compute_camera_loss():
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_54',
         loss_camera=dict(type='CameraPriorLoss', loss_weight=60),
     )
@@ -254,11 +264,11 @@ def test_compute_losses():
     targets['smpl_global_orient'] = torch.randn(N, 3)
     targets['smpl_betas'] = torch.randn(N, 10)
 
-    model = ImageBodyModelEstimator(convention='smpl_54')
+    model = CliffImageBodyModelEstimator(convention='smpl_54')
     loss = model.compute_losses(predictions, targets)
     assert loss == {}
 
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         convention='smpl_45',
         body_model_train=dict(
             type='SMPL',
@@ -324,7 +334,7 @@ def test_run_registration():
 
     registration = dict(mode='in_the_loop', registrant=registrant)
 
-    model = ImageBodyModelEstimator(
+    model = CliffImageBodyModelEstimator(
         body_model_train=body_model, registration=registration)
     assert model.registrant is not None
     assert model.fits_dict is not None
