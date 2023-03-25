@@ -5,6 +5,7 @@ import numpy as np
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
+from mmhuman3d.data.data_structures.multi_human_data import MultiHumanData
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -32,14 +33,21 @@ class CliffConverter(BaseModeConverter):
             'mpii': 'mpii_cliffGT.npz',
         }
 
-    def convert_by_mode(self, dataset_path: str, out_path: str,
-                        mode: str) -> dict:
+    def convert_by_mode(self,
+                        dataset_path: str,
+                        out_path: str,
+                        mode: str,
+                        enable_multi_human_data: bool = False) -> dict:
         """
         Args:
             dataset_path (str): Path to directory where spin preprocessed
             npz files are stored
             out_path (str): Path to directory to save preprocessed npz file
             mode (str): Mode in accepted modes
+            enable_multi_human_data (bool):
+                Whether to generate a multi-human data. If set to True,
+                stored in MultiHumanData() format.
+                Default: False, stored in HumanData() format.
 
         Returns:
             dict:
@@ -48,8 +56,12 @@ class CliffConverter(BaseModeConverter):
                 keypoints3d_mask, smpl are added if available.
 
         """
-        # use HumanData to store all data
-        human_data = HumanData()
+        if enable_multi_human_data:
+            # use MultiHumanData to store all data
+            human_data = MultiHumanData()
+        else:
+            # use HumanData to store all data
+            human_data = HumanData()
 
         image_path_, keypoints2d_, bbox_xywh_ = [], [], []
 

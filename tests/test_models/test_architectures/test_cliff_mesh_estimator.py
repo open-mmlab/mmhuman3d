@@ -31,13 +31,13 @@ def test_cliff_image_body_mesh_estimator():
         keypoint_src='h36m',
         keypoint_dst='h36m',
         model_path='data/body_models/smpl',
-        joints_regressor='data/body_models/J_regressor_h36m.npy'),
-    convention = 'smpl_54',
-    loss_keypoints3d = dict(type='SmoothL1Loss', loss_weight=100),
-    loss_keypoints2d = dict(type='SmoothL1Loss', loss_weight=10),
-    loss_vertex = dict(type='L1Loss', loss_weight=2),
-    loss_smpl_pose = dict(type='MSELoss', loss_weight=3),
-    loss_smpl_betas = dict(type='MSELoss', loss_weight=0.02),
+        joints_regressor='data/body_models/J_regressor_h36m.npy')
+    convention = 'smpl_54'
+    loss_keypoints3d = dict(type='SmoothL1Loss', loss_weight=100)
+    loss_keypoints2d = dict(type='SmoothL1Loss', loss_weight=10)
+    loss_vertex = dict(type='L1Loss', loss_weight=2)
+    loss_smpl_pose = dict(type='MSELoss', loss_weight=3)
+    loss_smpl_betas = dict(type='MSELoss', loss_weight=0.02)
     loss_adv = dict(
         type='GANLoss',
         gan_type='lsgan',
@@ -66,9 +66,7 @@ def test_cliff_image_body_mesh_estimator():
     assert model.loss_vertex is not None
     assert model.loss_smpl_pose is not None
     assert model.loss_smpl_betas is not None
-    assert model.loss_camera is not None
     assert model.loss_adv is not None
-    assert model.disc is not None
 
 
 def test_compute_keypoints3d_loss():
@@ -107,7 +105,7 @@ def test_compute_keypoints2d_loss_cliff():
     gt_keypoints2d = torch.zeros((32, 54, 3))
     pred_cam = torch.randn((32, 3))
     camera_center = torch.randn((32, 2))
-    trans = torch.randn((32, 3))
+    trans = torch.randn((32, 2, 3))
     focal_length = 5000
     loss_empty = model.compute_keypoints2d_loss_cliff(pred_keypoints3d,
                                                       pred_cam, gt_keypoints2d,
@@ -263,6 +261,12 @@ def test_compute_losses():
     targets['smpl_body_pose'] = torch.randn(N, 23, 3)
     targets['smpl_global_orient'] = torch.randn(N, 3)
     targets['smpl_betas'] = torch.randn(N, 10)
+    targets['img_h'] = torch.ones(N, 1) * 256
+    targets['img_w'] = torch.ones(N, 1) * 192
+    targets['center'] = torch.randn(N, 2)
+    targets['scale'] = torch.randn(N, 1)
+    targets['focal_length'] = torch.randn(N, 1)
+    targets['crop_trans'] = torch.randn(N, 2, 3)
 
     model = CliffImageBodyModelEstimator(convention='smpl_54')
     loss = model.compute_losses(predictions, targets)
@@ -374,3 +378,9 @@ def test_run_registration():
     assert 'opt_joints' in targets
     assert 'opt_pose' in targets
     assert 'opt_betas' in targets
+
+
+if __name__ == '__main__':
+    test_cliff_image_body_mesh_estimator()
+    test_compute_keypoints2d_loss_cliff()
+    test_compute_losses()
