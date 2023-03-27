@@ -324,7 +324,7 @@ def test_multi_human_data_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_trainval.npz')
 
     CLIFF_ROOT = os.path.join(root_path, 'eft')
-    cfg = dict('CliffConverter', modes=['coco', 'mpii'])
+    cfg = dict(type='CliffConverter', modes=['coco', 'mpii'])
     data_converter = build_data_converter(cfg)
     data_converter.convert(
         CLIFF_ROOT, output_path, enable_multi_human_data=True)
