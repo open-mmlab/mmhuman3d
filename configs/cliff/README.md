@@ -66,13 +66,16 @@ mmhuman3d
         └── pw3d
 ```
 
-Training:
-First use [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) to train. After around 150 epoches, switch to [resume.py](resume.py) by using "--resume-from" optional argument.
+## Training 
+Stage 1: First use [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) to train. 
+
+Stage 2: After around 150 epoches, switch to [resume.py](resume.py) by using "--resume-from" optional argument.
 
 ## Results and Models
 
 We evaluate HMR on 3DPW. Values are MPJPE/PA-MPJPE.
 
-| Config | 3DPW    | Download |
-|:------:|:-------:|:------:|
-| [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) | 48.65 / 76.49 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/cliff/resnet50_cliff.pth) &#124;
+|                          Config                           |     3DPW      | Download |
+|:---------------------------------------------------------:|:-------------:|:------:|
+| Stage 1: [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) | 48.65 / 76.49 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/cliff/resnet50_cliff-8328e2e2_20230327.pth) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/cliff/20220909_142945.log)
+| Stage 2: [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) | 47.38 / 75.08 | [model](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/cliff/resnet50_cliff_new-1e639f1d_20230327.pth) &#124; [log](https://openmmlab-share.oss-cn-hangzhou.aliyuncs.com/mmhuman3d/models/cliff/20230222_092227.log)
