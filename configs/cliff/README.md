@@ -66,8 +66,8 @@ mmhuman3d
         └── pw3d
 ```
 
-## Training 
-Stage 1: First use [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) to train. 
+## Training
+Stage 1: First use [resnet50_pw3d_cache.py](resnet50_pw3d_cache.py) to train.
 
 Stage 2: After around 150 epoches, switch to [resume.py](resume.py) by using "--resume-from" optional argument.
 

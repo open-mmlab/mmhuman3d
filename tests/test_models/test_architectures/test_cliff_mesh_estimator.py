@@ -378,9 +378,3 @@ def test_run_registration():
     assert 'opt_joints' in targets
     assert 'opt_pose' in targets
     assert 'opt_betas' in targets
-
-
-if __name__ == '__main__':
-    test_cliff_image_body_mesh_estimator()
-    test_compute_keypoints2d_loss_cliff()
-    test_compute_losses()

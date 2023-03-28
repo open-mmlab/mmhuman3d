@@ -528,7 +528,8 @@ class BodyModelEstimator(BaseArchitecture, metaclass=ABCMeta):
             camera_center=camera_center)
 
         pred_keypoints2d = torch.cat(
-            (pred_keypoints2d, torch.ones(batch_size, num_keypoints, 1).to(device)),
+            (pred_keypoints2d, torch.ones(batch_size, num_keypoints,
+                                          1).to(device)),
             dim=2)
         # trans @ pred_keypoints2d2
         pred_keypoints2d = torch.einsum('bij,bkj->bki', trans,
