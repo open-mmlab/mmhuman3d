@@ -145,6 +145,43 @@ def test_compute_keypoints2d_loss_cliff():
     assert loss == 0
 
 
+def test_compute_keypoints2d_loss():
+    model = CliffImageBodyModelEstimator(
+        convention='smpl_54',
+        loss_keypoints2d=dict(type='SmoothL1Loss', loss_weight=10))
+
+    pred_keypoints3d = torch.zeros((32, 54, 3))
+    gt_keypoints2d = torch.zeros((32, 54, 3))
+    pred_cam = torch.randn((32, 3))
+    loss_empty = model.compute_keypoints2d_loss(pred_keypoints3d, pred_cam,
+                                                gt_keypoints2d)
+    assert loss_empty == 0
+
+    pred_keypoints3d = torch.randn((32, 54, 3))
+    gt_keypoints2d = torch.randn((32, 54, 3))
+    gt_keypoints2d[:, :, 2] = torch.sigmoid(gt_keypoints2d[:, :, 2])
+    pred_cam = torch.randn((32, 3))
+    loss = model.compute_keypoints2d_loss(pred_keypoints3d, pred_cam,
+                                          gt_keypoints2d)
+    assert loss > 0
+
+    has_keypoints2d = torch.ones((32))
+    loss = model.compute_keypoints2d_loss(
+        pred_keypoints3d,
+        pred_cam,
+        gt_keypoints2d,
+        has_keypoints2d=has_keypoints2d)
+    assert loss > 0
+
+    has_keypoints2d = torch.zeros((32))
+    loss = model.compute_keypoints2d_loss(
+        pred_keypoints3d,
+        pred_cam,
+        gt_keypoints2d,
+        has_keypoints2d=has_keypoints2d)
+    assert loss == 0
+
+
 def test_compute_vertex_loss():
     model = CliffImageBodyModelEstimator(
         convention='smpl_54', loss_vertex=dict(type='L1Loss', loss_weight=2))

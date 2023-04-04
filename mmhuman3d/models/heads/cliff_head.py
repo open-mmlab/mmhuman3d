@@ -63,9 +63,7 @@ class CliffHead(BaseModule):
             x = x.mean(dim=-1).mean(dim=-1)
         elif len(x.shape) == 3:
             # temporal feature
-            output_seq = True
-            B, T, L = x.shape
-            x = x.view(-1, L)
+            raise NotImplementedError
 
         batch_size = x.shape[0]
         if init_pose is None:
@@ -91,9 +89,7 @@ class CliffHead(BaseModule):
         pred_rotmat = rot6d_to_rotmat(pred_pose).view(batch_size, 24, 3, 3)
 
         if output_seq:
-            pred_rotmat = pred_rotmat.view(B, T, 24, 3, 3)
-            pred_shape = pred_shape.view(B, T, 10)
-            pred_cam = pred_cam.view(B, T, 3)
+            raise NotImplementedError
         output = {
             'pred_pose': pred_rotmat,
             'pred_shape': pred_shape,

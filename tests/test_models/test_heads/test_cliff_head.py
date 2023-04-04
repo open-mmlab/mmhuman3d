@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import torch
 
 from mmhuman3d.models.heads.builder import CliffHead
@@ -30,6 +31,19 @@ def test_cliff_head():
     assert y1['pred_pose'].shape == (batch_size, 24, 3, 3)
     assert y1['pred_shape'].shape == (batch_size, 10)
     assert y1['pred_cam'].shape == (batch_size, 3)
+
+    # test temporal feature
+    T = 16
+    x_temp_shape = (batch_size, T, 1024)
+    x_temp = _demo_head_inputs(x_temp_shape)
+    with pytest.raises(NotImplementedError):
+        model(x_temp, bbox_info)
+
+    # test other cases
+    model_wo_smpl_mean_params = CliffHead(feat_dim=2048)
+    assert model_wo_smpl_mean_params.init_pose.shape == (1, 144)
+    assert model_wo_smpl_mean_params.init_shape.shape == (1, 10)
+    assert model_wo_smpl_mean_params.init_cam.shape == (1, 3)
 
 
 def _demo_head_inputs(input_shape=(1, 3, 64, 64)):
