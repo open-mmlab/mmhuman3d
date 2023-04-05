@@ -417,6 +417,27 @@ def weak_perspective_projection(points, scale, translation):
     return projected_points
 
 
+def cam_crop2full(crop_cam, center, scale, full_img_shape, focal_length):
+    """convert the camera parameters from the crop camera to the full camera.
+
+    :param crop_cam: shape=(N, 3) weak perspective camera in cropped
+       img coordinates (s, tx, ty)
+    :param center: shape=(N, 2) bbox coordinates (c_x, c_y)
+    :param scale: shape=(N, 1) square bbox resolution  (b / 200)
+    :param full_img_shape: shape=(N, 2) original image height and width
+    :param focal_length: shape=(N,)
+    :return:
+    """
+    img_h, img_w = full_img_shape[:, 0], full_img_shape[:, 1]
+    cx, cy, b = center[:, 0], center[:, 1], scale
+    bs = b * crop_cam[:, 0] + 1e-9
+    tz = 2 * focal_length / bs
+    tx = (2 * (cx - img_w / 2.) / bs) + crop_cam[:, 1]
+    ty = (2 * (cy - img_h / 2.) / bs) + crop_cam[:, 2]
+    full_cam = torch.stack([tx, ty, tz], dim=-1)
+    return full_cam
+
+
 def projection(pred_joints, pred_camera, iwp_mode=True):
     """Project 3D points on the image plane based on the given camera info,
     Identity rotation and Weak Perspective (IWP) camera is used when

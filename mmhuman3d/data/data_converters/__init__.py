@@ -1,6 +1,7 @@
 from .agora import AgoraConverter
 from .amass import AmassConverter
 from .builder import build_data_converter
+from .cliff import CliffConverter
 from .coco import CocoConverter
 from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
@@ -43,5 +44,5 @@ __all__ = [
     'SurrealConverter', 'InstaVibeConverter', 'SpinConverter', 'VibeConverter',
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
-    'EHFConverter'
+    'EHFConverter', 'CliffConverter'
 ]

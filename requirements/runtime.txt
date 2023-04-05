@@ -8,7 +8,7 @@ h5py
 matplotlib
 numpy
 opencv-python
-pandas
+pandas<2.0.0
 pickle5
 plyfile
 rtree

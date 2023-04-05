@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from mmhuman3d.data.datasets.pipelines import (
+    GetBboxInfo,
     LoadImageFromFile,
     SyntheticOcclusion,
 )
@@ -57,3 +58,17 @@ def test_synthetic_occlusion():
 
     results = pipeline(results)
     assert results['img'].shape == (224, 224, 3)
+
+
+def test_get_bbox_inf():
+    pipeline = GetBboxInfo()
+    results = {
+        'img': np.ones((224, 224, 3)),
+        'center': np.array([100, 100]),
+        'scale': np.array([10, 10])
+    }
+    pipeline(results=results)
+    assert 'img_h' in results
+    assert 'img_w' in results
+    assert 'focal_length' in results
+    assert 'bbox_info' in results

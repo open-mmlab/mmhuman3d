@@ -323,6 +323,14 @@ def test_multi_human_data_preprocess():
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_test.npz')
     assert os.path.exists('/tmp/preprocessed_npzs/' + 'crowdpose_trainval.npz')
 
+    CLIFF_ROOT = os.path.join(root_path, 'eft')
+    cfg = dict(type='CliffConverter', modes=['coco', 'mpii'])
+    data_converter = build_data_converter(cfg)
+    data_converter.convert(
+        CLIFF_ROOT, output_path, enable_multi_human_data=True)
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'cliff_coco_train.npz')
+    assert os.path.exists('/tmp/preprocessed_npzs/' + 'cliff_mpii_train.npz')
+
 
 def test_preprocessed_npz():
     npz_folder = '/tmp/preprocessed_npzs'
