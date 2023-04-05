@@ -44,6 +44,10 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   A suite of differentiale visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
 
 ## News
+- 2023-04-05: MMHuman3D [v0.11.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.11.0) is released. Major updates include:
+  - Add [ExPose](configs/expose) inference
+  - Add [PyMAF-X](configs/pymafx) inference
+  - Support [CLIFF](configs/cliff)
 - 2022-10-12: MMHuman3D [v0.10.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.10.0) is released. Major updates include:
   - Add webcam demo and real-time renderer
   - Update dataloader to speed up training
@@ -53,10 +57,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - Support new body model [STAR](https://star.is.tue.mpg.de/)
   - Release of [GTA-Human](https://caizhongang.github.io/projects/GTA-Human/) dataset with SPIN-FT (51.98 mm) and PARE-FT (46.84 mm) baselines! (Official)
   - Refactor registration and improve performance of SPIN to 57.54 mm
-- 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) is released. Major updates include:
-  - Support SmoothNet (added by paper authors)
-  - Fix circular import and up to 2.5x speed up in module initialization
-  - Add documentations in Chinese
 
 ## Benchmark and Model Zoo
 
@@ -92,6 +92,9 @@ Supported methods:
 - [x] [ExPose](https://expose.is.tue.mpg.de) (ECCV'2020)
 - [x] [BalancedMSE](https://sites.google.com/view/balanced-mse/home) (CVPR'2022)
 - [x] [PyMAF-X](https://www.liuyebin.com/pymaf-x/) (arXiv'2022)
+- [x] [ExPose](configs/expose) (ECCV'2020)
+- [x] [PyMAF-X](configs/pymafx) (arXiv'2022)
+- [x] [CLIFF](configs/cliff) (ECCV'2022)
 
 </details>
 
