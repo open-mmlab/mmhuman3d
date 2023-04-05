@@ -44,6 +44,10 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   一整套可微的可视化工具支持人体参数化模型的渲染（包括部分分割，深度图以及点云）和传统 2D/3D 关键点的可视化。
 
 ## 最新进展
+- 2023-04-05: MMHuman3D [v0.11.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.11.0) 已经发布. 主要更新包括:
+  - 增加 [ExPose](configs/expose) 推理
+  - 增加 [PyMAF-X](configs/pymafx) 推理
+  - 支持 [CLIFF](configs/cliff)
 - 2022-10-12: MMHuman3D [v0.10.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.10.0) 已经发布. 主要更新包括:
   - 支持调用本地摄像头实时渲染
   - 更新数据载入脚本，进而实现训练加速
@@ -53,10 +57,6 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
   - 支持新的人体参数化模型 [STAR](https://star.is.tue.mpg.de/)
   - 开源 [GTA-Human](https://caizhongang.github.io/projects/GTA-Human/) 数据集，以及 SPIN-FT (51.98 mm) 和 PARE-FT (46.84 mm) 基线! (官方开源)
   - 重构配准管线并提升SPIN至 57.54 mm
-- 2022-05-31: MMHuman3D [v0.8.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.8.0) 已经发布. 主要更新包括:
-  - 支持 SmoothNet（由论文作者添加）
-  - 修复循环引用问题，获得最多2.5倍速度提升
-  - 增加中文版文档
 
 ## 基准与模型库
 
@@ -91,6 +91,10 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 - [x] [SmoothNet](https://ailingzeng.site/smoothnet) (ECCV'2022)
 - [x] [ExPose](https://expose.is.tue.mpg.de) (ECCV'2020)
 - [x] [BalancedMSE](https://sites.google.com/view/balanced-mse/home) (CVPR'2022)
+- [x] [ExPose](configs/expose) (ECCV'2020)
+- [x] [PyMAF-X](configs/pymafx) (arXiv'2022)
+- [x] [CLIFF](configs/cliff) (ECCV'2022)
+
 
 </details>
 
