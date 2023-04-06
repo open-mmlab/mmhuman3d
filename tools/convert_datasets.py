@@ -127,8 +127,7 @@ def main():
         data_converter = build_data_converter(cfg)
         data_converter.convert(
             input_path,
-            args.output_path,
-            enable_multi_human_data=args.enable_multi_human_data)
+            args.output_path)
         print(f'[{dataset}] Converting finished!')
 
 
