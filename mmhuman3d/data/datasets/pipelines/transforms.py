@@ -746,14 +746,18 @@ class MeshAffine:
     """
 
     def __init__(self, img_res):
-        self.img_res = img_res
-        self.image_size = np.array([img_res, img_res])
+        if isinstance(img_res, tuple):
+            self.image_size = img_res
+        else:
+            self.image_size = np.array([img_res, img_res])
 
     def __call__(self, results):
         c = results['center']
         s = results['scale']
         r = results['rotation']
         trans = get_affine_transform(c, s, r, self.image_size)
+        inv_trans = get_affine_transform(c, s, 0., self.image_size, inv=True)
+        crop_trans = get_affine_transform(c, s, 0., self.image_size)
 
         if 'img' in results:
             img = results['img']
@@ -797,6 +801,8 @@ class MeshAffine:
             global_orient = _rotate_smpl_pose(global_orient, r)
             results['smplx_global_orient'] = global_orient
 
+        results['crop_trans'] = crop_trans
+        results['inv_trans'] = inv_trans
         return results
 
 
@@ -949,5 +955,35 @@ class SimulateLowRes(object):
         img = results['img']
         img = self._sample_low_res(img)
         results['img'] = img
+
+        return results
+
+
+@PIPELINES.register_module()
+class GetBboxInfo:
+    """Get bbox for cliff."""
+
+    def estimate_focal_length(self, img_h, img_w):
+        return (img_w * img_w + img_h * img_h)**0.5  # fov: 55 degree
+
+    def __call__(self, results):
+        """(1) Get focal length from original image (2) get bbox_info from c
+        and s."""
+        img = results['img']
+        img_h, img_w = img.shape[:2]
+        focal_length = self.estimate_focal_length(img_h, img_w)
+
+        results['img_h'] = img_h
+        results['img_w'] = img_w
+        results['focal_length'] = focal_length
+        cx, cy = results['center']
+        s = results['scale'][0]
+
+        bbox_info = np.stack([cx - img_w / 2., cy - img_h / 2., s])
+        bbox_info[:2] = bbox_info[:2] / focal_length * 2.8  # [-1, 1]
+        bbox_info[2] = (bbox_info[2] - 0.24 * focal_length) / (
+            0.06 * focal_length)  # [-1, 1]
+
+        results['bbox_info'] = np.float32(bbox_info)
 
         return results
