@@ -27,6 +27,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     posetrack,
     pw3d,
     pymafx_smplx,
+    saas_manual_anno,
     smpl,
     smplx,
     spin_smplx,
@@ -78,6 +79,7 @@ KEYPOINTS_FACTORY = {
     'mano_hands_reorder': mano.MANO_HANDS_REORDER_KEYPOINTS,
     'mediapipe_whole_body': mediapipe.MP_WHOLE_BODY_KEYPOINTS,
     'mediapipe_body': mediapipe.MP_BODY_KEYPOINTS,
+    'labelme_superset_53': saas_manual_anno.LABELME_SUPERSET_DANCE_53,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
@@ -382,7 +384,7 @@ def get_keypoint_idx(name: str,
                 idx = -1
             if idx >= 0:
                 return idx
-    return idx
+    raise ValueError(f'Cannot find joint: {name} in convention type: {convention}')
 
 
 def get_keypoint_num(convention: str = 'smplx',
