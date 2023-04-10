@@ -118,7 +118,7 @@ train_pipeline = [
     dict(
         type='Collect',
         keys=['img', *data_keys],
-        meta_keys=['image_path', 'center', 'scale', 'rotation', 'dataset_name'])
+        meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 data_keys.remove('is_flipped')
 test_pipeline = [
@@ -146,7 +146,7 @@ inference_pipeline = [
 
 cache_files = {
     'h36m': 'data/cache/h36m_mosh_train_smpl_49.npz',
-    'mpi_inf_3dhp': 'data/cache/spin_mpi_inf_3dhp_train1_smpl_49.npz',
+    'mpi_inf_3dhp': 'data/cache/spin_mpi_inf_3dhp_train_smpl_49.npz',
     'lsp': 'data/cache/spin_lsp_train_smpl_49.npz',
     'lspet': 'data/cache/spin_lspet_train_smpl_49.npz',
     'mpii': 'data/cache/spin_mpii_train_smpl_49.npz',
@@ -175,7 +175,7 @@ data = dict(
                 pipeline=train_pipeline,
                 convention='smpl_49',
                 cache_data_path=cache_files['mpi_inf_3dhp'],
-                ann_file='spin_mpi_inf_3dhp_train1.npz'),
+                ann_file='spin_mpi_inf_3dhp_train.npz'),
             dict(
                 type=dataset_type,
                 dataset_name='lsp',
