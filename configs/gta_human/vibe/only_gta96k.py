@@ -63,8 +63,15 @@ extractor = dict(
 # dataset settings
 dataset_type = 'HumanVideoDataset'
 data_keys = [
-    'has_smpl', 'smpl_body_pose', 'smpl_global_orient', 'smpl_betas',
-    'smpl_transl', 'keypoints2d', 'keypoints3d', 'features', 'sample_idx',
+    'has_smpl',
+    'smpl_body_pose',
+    'smpl_global_orient',
+    'smpl_betas',
+    'smpl_transl',
+    'keypoints2d',
+    'keypoints3d',
+    'features',
+    'sample_idx',
 ]
 train_pipeline = [
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
@@ -98,7 +105,7 @@ extractor_pipeline = [
 ]
 inference_pipeline = test_pipeline
 cache_files = {
-    'gta_96k': 'data/cache2/vibe_gta96_smpl_54.npz',
+    'gta_96k': 'data/cache/vibe_gta96_smpl_54.npz',
 }
 data = dict(
     samples_per_gpu=32,

@@ -63,8 +63,15 @@ extractor = dict(
 # dataset settings
 dataset_type = 'HumanVideoDataset'
 data_keys = [
-    'has_smpl', 'smpl_body_pose', 'smpl_global_orient', 'smpl_betas',
-    'smpl_transl', 'keypoints2d', 'keypoints3d', 'features', 'sample_idx',
+    'has_smpl',
+    'smpl_body_pose',
+    'smpl_global_orient',
+    'smpl_betas',
+    'smpl_transl',
+    'keypoints2d',
+    'keypoints3d',
+    'features',
+    'sample_idx',
 ]
 train_pipeline = [
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
@@ -98,13 +105,7 @@ extractor_pipeline = [
 ]
 inference_pipeline = test_pipeline
 cache_files = {
-    # 'mpi_inf_3dhp': 'data/cache2/vibe_mpi_inf_3dhp_train_smpl_54.npz',
-    # 'insta_variety': 'data/cache2/vibe_insta_variety_smpl_54.npz',
-    's1': 'data/cache2/vibe_gta_0.npz',
-    's2': 'data/cache2/vibe_gta_1.npz',
-    's3': 'data/cache2/vibe_gta_2.npz',
-    's4': 'data/cache2/vibe_gta_3.npz',
-    's5': 'data/cache2/vibe_gta_4.npz',
+    'gta': 'data/cache/vibe_gta_smpl_54.npz',
 }
 data = dict(
     samples_per_gpu=32,
@@ -114,52 +115,15 @@ data = dict(
         configs=[
             dict(
                 type=dataset_type,
-                dataset_name='gta1',
+                dataset_name='gta',
                 data_prefix='data',
                 seq_len=16,
                 pipeline=train_pipeline,
                 convention='smpl_54',
-                cache_data_path=cache_files['s1'],
-                ann_file='vibe_gta_train_0.npz'),
-            dict(
-                type=dataset_type,
-                dataset_name='gta2',
-                data_prefix='data',
-                seq_len=16,
-                pipeline=train_pipeline,
-                convention='smpl_54',
-                cache_data_path=cache_files['s2'],
-                ann_file='vibe_gta_train_1.npz'),
-            dict(
-                type=dataset_type,
-                dataset_name='gta3',
-                data_prefix='data',
-                seq_len=16,
-                pipeline=train_pipeline,
-                convention='smpl_54',
-                cache_data_path=cache_files['s3'],
-                ann_file='vibe_gta_train_2.npz'),
-            dict(
-                type=dataset_type,
-                dataset_name='gta4',
-                data_prefix='data',
-                seq_len=16,
-                pipeline=train_pipeline,
-                convention='smpl_54',
-                cache_data_path=cache_files['s4'],
-                ann_file='vibe_gta_train_3.npz'),
-            dict(
-                type=dataset_type,
-                dataset_name='gta5',
-                data_prefix='data',
-                seq_len=16,
-                pipeline=train_pipeline,
-                convention='smpl_54',
-                cache_data_path=cache_files['s5'],
-                ann_file='vibe_gta_train_4.npz'),
+                cache_data_path=cache_files['gta'],
+                ann_file='vibe_gta_train.npz'),
         ],
-        partition=[0.2, 0.2, 0.2, 0.2, 0.2],
-        num_data=8000),
+        partition=[1]),
     test=dict(
         type=dataset_type,
         body_model=dict(

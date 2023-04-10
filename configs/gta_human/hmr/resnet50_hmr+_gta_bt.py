@@ -7,8 +7,7 @@ dist_params = dict(backend='gloo')
 evaluation = dict(interval=1, metric=['pa-mpjpe', 'mpjpe'])
 # optimizer
 optimizer = dict(
-    backbone=dict(type='Adam', lr=2.5e-5),
-    head=dict(type='Adam', lr=2.5e-5))
+    backbone=dict(type='Adam', lr=2.5e-5), head=dict(type='Adam', lr=2.5e-5))
 optimizer_config = dict(grad_clip=None)
 # learning policy
 lr_config = dict(policy='Fixed', by_epoch=False)
@@ -90,7 +89,8 @@ model = dict(
     loss_vertex=dict(type='L1Loss', loss_weight=2),
     loss_smpl_pose=dict(type='MSELoss', loss_weight=3),
     loss_smpl_betas=dict(type='MSELoss', loss_weight=0.02),
-    loss_camera=dict(type='CameraPriorLoss', loss_weight=60),)
+    loss_camera=dict(type='CameraPriorLoss', loss_weight=60),
+)
 # dataset settings
 dataset_type = 'HumanImageDataset'
 img_norm_cfg = dict(
@@ -102,10 +102,7 @@ data_keys = [
 ]
 
 file_client_args = dict(
-    backend='petrel',
-    path_mapping=dict({
-        'data/': 's3://mmhuman3d_datasets/'
-    }))
+    backend='petrel', path_mapping=dict({'data/': 's3://mmhuman3d_datasets/'}))
 train_pipeline = [
     dict(type='LoadImageFromFile', file_client_args=file_client_args),
     dict(type='RandomChannelNoise', noise_factor=0.4),
@@ -243,5 +240,4 @@ data = dict(
         dataset_name='pw3d',
         data_prefix='data',
         pipeline=test_pipeline,
-        ann_file='pw3d_test.npz')
-)
+        ann_file='pw3d_test.npz'))
