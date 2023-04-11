@@ -6,6 +6,7 @@ from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
 from .crowdpose import CrowdposeConverter
 from .eft import EftConverter
+from .egobody import EgoBodyConverter
 from .ehf import EHFConverter
 from .expose_curated_fits import ExposeCuratedFitsConverter
 from .expose_spin_smplx import ExposeSPINSMPLXConverter
@@ -46,5 +47,5 @@ __all__ = [
     'SurrealConverter', 'InstaVibeConverter', 'SpinConverter', 'VibeConverter',
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
-    'EHFConverter', 'SynbodyConverter', 'RenbodyConverter',
+    'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgoBodyConverter'
 ]
