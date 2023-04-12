@@ -60,6 +60,7 @@ DATASET_CONFIGS = dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
     synbody=dict(type='SynbodyConverter', prefix='synbody', modes=['train']),
     renbody=dict(type='RenbodyConverter', prefix='renbody', modes=['train']),
+    egobody=dict(type='EgobodyConverter', prefix='egobody', modes=['egocentric', 'kinect'])
 )
 
 
