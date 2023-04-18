@@ -21,7 +21,7 @@ log_config = dict(
         # dict(type='TensorboardLoggerHook')
     ])
 
-img_resolution = (192, 256)
+img_res = (192, 256)
 
 # model settings
 model = dict(
@@ -94,7 +94,7 @@ train_pipeline = [
     dict(type='RandomHorizontalFlip', flip_prob=0.5, convention='smpl_54'),
     dict(type='GetRandomScaleRotation', rot_factor=30, scale_factor=0.25),
     dict(type='GetBboxInfo'),
-    dict(type='MeshAffine', img_res=img_resolution),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),
@@ -111,7 +111,7 @@ test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='GetRandomScaleRotation', rot_factor=0, scale_factor=0),
     dict(type='GetBboxInfo'),
-    dict(type='MeshAffine', img_res=img_resolution),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
     dict(type='ToTensor', keys=data_keys),
@@ -125,12 +125,16 @@ test_pipeline = [
 ]
 
 inference_pipeline = [
-    dict(type='MeshAffine', img_res=img_resolution),
+    dict(type='GetBboxInfo'),
+    dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
+    dict(type='ToTensor', keys=['bbox_info', 'img_h', 'img_w',
+                                'center', 'scale', 'focal_length']),
     dict(
         type='Collect',
-        keys=['img', 'sample_idx'],
+        keys=['img', 'sample_idx', 'bbox_info', 'img_h', 'img_w',
+              'center', 'scale', 'focal_length'],
         meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 

@@ -183,22 +183,20 @@ def inference_image_based_model(
 
     batch_data = collate(batch_data, samples_per_gpu=1)
 
-    if next(model.parameters()).is_cuda:
-        # scatter not work so just move image to cuda device
-        batch_data['img'] = batch_data['img'].to(device)
-
     # get all img_metas of each bounding box
     batch_data['img_metas'] = [
         img_metas[0] for img_metas in batch_data['img_metas'].data
     ]
+    if next(model.parameters()).is_cuda:
+        # scatter not work so just move image to cuda device
+        batch_data = dict(map(
+            lambda item: item if not isinstance(item[1], torch.Tensor)
+            else (item[0], item[1].to(device)),
+            batch_data.items()))
 
     # forward the model
     with torch.no_grad():
-        results = model(
-            img=batch_data['img'],
-            img_metas=batch_data['img_metas'],
-            sample_idx=batch_data['sample_idx'],
-        )
+        results = model(**batch_data)
 
     for idx in range(len(det_results)):
         mesh_result = det_results[idx].copy()
