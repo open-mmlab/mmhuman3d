@@ -129,12 +129,17 @@ inference_pipeline = [
     dict(type='MeshAffine', img_res=img_res),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
-    dict(type='ToTensor', keys=['bbox_info', 'img_h', 'img_w',
-                                'center', 'scale', 'focal_length']),
+    dict(
+        type='ToTensor',
+        keys=[
+            'bbox_info', 'img_h', 'img_w', 'center', 'scale', 'focal_length'
+        ]),
     dict(
         type='Collect',
-        keys=['img', 'sample_idx', 'bbox_info', 'img_h', 'img_w',
-              'center', 'scale', 'focal_length'],
+        keys=[
+            'img', 'sample_idx', 'bbox_info', 'img_h', 'img_w', 'center',
+            'scale', 'focal_length'
+        ],
         meta_keys=['image_path', 'center', 'scale', 'rotation'])
 ]
 
