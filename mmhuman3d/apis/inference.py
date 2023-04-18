@@ -189,10 +189,10 @@ def inference_image_based_model(
     ]
     if next(model.parameters()).is_cuda:
         # scatter not work so just move image to cuda device
-        batch_data = dict(map(
-            lambda item: item if not isinstance(item[1], torch.Tensor)
-            else (item[0], item[1].to(device)),
-            batch_data.items()))
+        batch_data = dict(
+            map(
+                lambda item: item if not isinstance(item[1], torch.Tensor) else
+                (item[0], item[1].to(device)), batch_data.items()))
 
     # forward the model
     with torch.no_grad():
