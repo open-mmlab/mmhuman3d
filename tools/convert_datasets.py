@@ -60,7 +60,9 @@ DATASET_CONFIGS = dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
     synbody=dict(type='SynbodyConverter', prefix='synbody', modes=['train']),
     renbody=dict(type='RenbodyConverter', prefix='renbody', modes=['train']),
-    egobody=dict(type='EgobodyConverter', prefix='egobody', modes=['egocentric', 'kinect'])
+    egobody=dict(type='EgobodyConverter', prefix='egobody', modes=['egocentric_train', 
+                      'egocentric_test', 'egocentric_val',
+                      'kinect_train', 'kinect_test', 'kinect_val'])
 )
 
 
@@ -94,6 +96,13 @@ def parse_args():
         required=False,
         default=[],
         help=f'Need to comply with supported modes specified in tools/convert_datasets.py')
+    
+    parser.add_argument(
+        '--prefix',
+        type=str,
+        required=False,
+        default=None,
+        help=f'If you want to specify you folder name, please use this')
 
     parser.add_argument(
         '--enable_multi_human_data',
@@ -123,7 +132,10 @@ def main():
             print(f'For {cfg["prefix"]}, modes: {cfg["modes"]} are avaliable, process all modes as not specified')
             args.modes = cfg['modes']
 
-        prefix = cfg.pop('prefix', dataset)
+        if args.prefix != None:
+            prefix = args.prefix
+        else:
+            prefix = cfg.pop('prefix', dataset)
         input_path = os.path.join(args.root_path, prefix)
         data_converter = build_data_converter(cfg)
         data_converter.convert(
