@@ -62,7 +62,8 @@ DATASET_CONFIGS = dict(
     renbody=dict(type='RenbodyConverter', prefix='renbody', modes=['train']),
     egobody=dict(type='EgobodyConverter', prefix='egobody', modes=['egocentric_train', 
                       'egocentric_test', 'egocentric_val',
-                      'kinect_train', 'kinect_test', 'kinect_val'])
+                      'kinect_train', 'kinect_test', 'kinect_val']),
+    humanart=dict(type='HumanArtConverter', prefix='humanart', modes=['train', 'test']),
 )
 
 
