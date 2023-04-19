@@ -382,8 +382,8 @@ def get_keypoint_idx(name: str,
                 idx = keypoints.index(approximate_name)
             except ValueError:
                 idx = -1
-            if idx >= 0:
-                return idx
+    if idx >= 0:
+        return idx
     raise ValueError(f'Cannot find joint: {name} in convention type: {convention}')
 
 
