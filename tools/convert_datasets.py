@@ -63,7 +63,8 @@ DATASET_CONFIGS = dict(
     egobody=dict(type='EgobodyConverter', prefix='egobody', modes=['egocentric_train', 
                       'egocentric_test', 'egocentric_val',
                       'kinect_train', 'kinect_test', 'kinect_val']),
-    humanart=dict(type='HumanArtConverter', prefix='humanart', modes=['train', 'test']),
+    humanart=dict(type='HumanartConverter', prefix='humanart', modes=
+                     ['real_human', '2D_virtual_human', '3D_virtual_human']),
 )
 
 

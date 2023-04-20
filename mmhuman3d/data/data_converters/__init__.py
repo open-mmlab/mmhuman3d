@@ -18,7 +18,7 @@ from .h36m import H36mConverter
 from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_smplx import H36mSMPLXConverter
 from .humman import HuMManConverter
-from .humanart import HumanArtConverter
+from .humanart import HumanartConverter
 from .insta_vibe import InstaVibeConverter
 from .lsp import LspConverter
 from .lsp_extended import LspExtendedConverter
@@ -49,5 +49,5 @@ __all__ = [
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
     'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
-    'HumanArtConverter',
+    'HumanartConverter',
 ]
