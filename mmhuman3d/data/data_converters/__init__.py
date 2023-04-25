@@ -33,6 +33,7 @@ from .spin import SpinConverter
 from .stirling import StirlingConverter
 from .surreal import SurrealConverter
 from .synbody import SynbodyConverter
+from .ubody import UbodyConverter
 from .up3d import Up3dConverter
 from .vibe import VibeConverter
 from .renbody import RenbodyConverter
@@ -49,5 +50,5 @@ __all__ = [
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
     'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
-    'HumanartConverter',
+    'HumanartConverter', 'UbodyConverter'
 ]

@@ -65,6 +65,7 @@ DATASET_CONFIGS = dict(
                       'kinect_train', 'kinect_test', 'kinect_val']),
     humanart=dict(type='HumanartConverter', prefix='humanart', modes=
                      ['real_human', '2D_virtual_human', '3D_virtual_human']),
+    ubody=dict(type='UbodyConverter', prefix='ubody', modes=['train', 'test', 'val']),
 )
 
 
