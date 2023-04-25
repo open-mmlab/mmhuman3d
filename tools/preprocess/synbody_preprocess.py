@@ -20,8 +20,8 @@ import pdb
 
 def _get_imgname(v):
     rgb_folder = os.path.join(v, 'rgb')
-    root_folder_id = v.split('/').index(prefix)
-    imglist = os.path.join('/'.join(v.split('/')[root_folder_id:]), 'rgb')
+    root_folder_id = v.split(os.pathsep).index(prefix)
+    imglist = os.path.join(os.pathsep.join(v.split(os.pathsep)[root_folder_id:]), 'rgb')
 
     # image 1 is T-pose, don't use
     im = []
@@ -36,8 +36,8 @@ def _get_imgname(v):
 
 def _get_exrname(v):
     rgb_folder = os.path.join(v, 'rgb')
-    root_folder_id = v.split('/').index(prefix)
-    masklist = os.path.join('/'.join(v.split('/')[root_folder_id:]), 'mask')
+    root_folder_id = v.split(os.pathsep).index(prefix)
+    masklist = os.path.join(os.pathsep.join(v.split(os.pathsep)[root_folder_id:]), 'mask')
 
     # image 1 is T-pose, don't use
     images = [img for img in os.listdir(rgb_folder) if img.endswith('.jpeg')]
@@ -51,7 +51,7 @@ def _get_exrname(v):
 def _get_npzname(p, f_num):
     
     npz = []
-    npz_tmp = p.split('/')[-1]
+    npz_tmp = p.split(os.pathsep)[-1]
     for _ in range(f_num):
         npz.append(npz_tmp)
 
@@ -62,18 +62,18 @@ def _get_mask_conf(root, merged):
     
     os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
 
-    root_folder_id = root.split('/').index(prefix)
+    root_folder_id = root.split(os.pathsep).index(prefix)
 
     conf = []
     for idx, mask_path in enumerate(merged['mask_path']): # , desc='Frame kps conf'):
-        exr_path = os.path.join('/'.join(root.split('/')[:root_folder_id]), mask_path)
+        exr_path = os.path.join(os.pathsep.join(root.split(os.pathsep)[:root_folder_id]), mask_path)
 
         # import pdb; pdb.set_trace()
 
         image = cv2.imread(exr_path, cv2.IMREAD_UNCHANGED)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        json_path = os.path.join('/'.join(exr_path.split('/')[:-2]), 'seq_data.json')
+        json_path = os.path.join(os.pathsep.join(exr_path.split(os.pathsep)[:-2]), 'seq_data.json')
         jsfile_tmp = json.load(open(json_path, 'r'))
 
         p_rgb = [0, 0, 0]
@@ -102,12 +102,12 @@ def _get_mask_conf(root, merged):
 def process_npz(args):
 
     seq = args.seq
-    root_folder_id = seq.split('/').index(args.prefix)
-    root_path = '/'.join(seq.split('/')[:root_folder_id])
+    root_folder_id = seq.split(os.pathsep).index(args.prefix)
+    root_path = os.pathsep.join(seq.split(os.pathsep)[:root_folder_id])
 
     dataset_path = os.path.join(root_path, args.prefix)
 
-    batch_name, place, seq_name = seq.split('/')[root_folder_id+1:]
+    batch_name, place, seq_name = seq.split(os.pathsep)[root_folder_id+1:]
     # pdb.set_trace()
     outpath = os.path.join(args.output_path, batch_name, place, f'{seq_name}.npz')
     # assert not os.path.exists(outpath), f'{outpath} exist, skip!!'
