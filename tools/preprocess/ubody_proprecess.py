@@ -20,6 +20,19 @@ def process_vid(vid):
     vid = args.vid_p
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+    # prepare paths
+    root_idx = vid.split(os.path.sep).index('ubody')
+    anno_folder = os.path.sep.join(vid.split(os.path.sep)[:root_idx+3]).replace('videos', 'annotations')
+
+    seq = os.path.basename(vid)[:-4]
+    image_base_path = os.path.sep.join(vid.split(os.path.sep)[root_idx+1:root_idx+3]).replace('videos', 'images')
+
+    preprocess_folder = os.path.sep.join(vid.split(os.path.sep)[:root_idx+3]).replace('videos', 'preprocess')
+    preprocess_file = os.path.join(preprocess_folder, f'{seq}.npz')
+
+    if os.path.exists(preprocess_file):
+        return 
+
     smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
                 'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
                 'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3), 'expression': (-1, 10)}
@@ -49,12 +62,6 @@ def process_vid(vid):
                         flat_hand_mean=True,
                         use_pca=False,
                         batch_size=1)).to(device)
-
-    root_idx = vid.split(os.path.sep).index('ubody')
-    anno_folder = os.path.sep.join(vid.split(os.path.sep)[:root_idx+3]).replace('videos', 'annotations')
-
-    seq = os.path.basename(vid)[:-4]
-    image_base_path = os.path.sep.join(vid.split(os.path.sep)[root_idx+1:root_idx+3]).replace('videos', 'images')
 
     # load seq kp annotation
     with open(os.path.join(anno_folder, 'keypoint_annotation.json')) as f:
@@ -159,9 +166,9 @@ def process_vid(vid):
         param_dict['focal_length'].append(focal_length)
         param_dict['principal_point'].append(principal_point)
 
-    preprocess_folder = os.path.sep.join(vid.split(os.path.sep)[:root_idx+3]).replace('videos', 'preprocess')
+
     os.makedirs(preprocess_folder, exist_ok=True)
-    np.savez(os.path.join(preprocess_folder, f'{seq}.npz'), **param_dict)
+    np.savez(preprocess_file, **param_dict)
 
 
 if __name__ == '__main__':
