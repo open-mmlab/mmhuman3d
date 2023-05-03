@@ -36,8 +36,8 @@ def _get_imgname(v):
 
 def _get_exrname(v):
     rgb_folder = os.path.join(v, 'rgb')
-    root_folder_id = v.split(os.pathsep).index(prefix)
-    masklist = os.path.join(os.pathsep.join(v.split(os.pathsep)[root_folder_id:]), 'mask')
+    root_folder_id = v.split(os.path.sep).index(prefix)
+    masklist = os.path.join(os.path.sep.join(v.split(os.pathsep)[root_folder_id:]), 'mask')
 
     # image 1 is T-pose, don't use
     images = [img for img in os.listdir(rgb_folder) if img.endswith('.jpeg')]
