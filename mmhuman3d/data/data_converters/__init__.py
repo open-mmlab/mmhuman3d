@@ -29,6 +29,7 @@ from .penn_action import PennActionConverter
 from .posetrack import PosetrackConverter
 from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
+from .shapy import ShapyConverter
 from .spin import SpinConverter
 from .stirling import StirlingConverter
 from .surreal import SurrealConverter
@@ -50,5 +51,5 @@ __all__ = [
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
     'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
-    'HumanartConverter', 'UbodyConverter'
+    'HumanartConverter', 'UbodyConverter', 'ShapyConverter'
 ]

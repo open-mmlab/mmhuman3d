@@ -66,6 +66,7 @@ DATASET_CONFIGS = dict(
     humanart=dict(type='HumanartConverter', prefix='humanart', modes=
                      ['real_human', '2D_virtual_human', '3D_virtual_human']),
     ubody=dict(type='UbodyConverter', prefix='ubody', modes=['inter', 'intra']),
+    shapy=dict(type='ShapyConverter', prefix='shapy', modes=['train']),
 )
 
 
