@@ -295,6 +295,10 @@ class EgobodyConverter(BaseModeConverter):
                                 transl=torch.tensor(smplx_interactee['transl'], device=self.device),
                                 left_hand_pose=torch.tensor(smplx_interactee['left_hand_pose'], device=self.device),
                                 right_hand_pose=torch.tensor(smplx_interactee['right_hand_pose'], device=self.device),
+                                leye_pose=torch.tensor(smplx_interactee['leye_pose'], device=self.device),
+                                reye_pose=torch.tensor(smplx_interactee['reye_pose'], device=self.device),
+                                jaw_pose=torch.tensor(smplx_interactee['jaw_pose'], device=self.device),
+                                expression=torch.tensor(smplx_interactee['expression'], device=self.device),
                                 return_joints=True)
                         keypoints_3d = output['joints'].detach().cpu().numpy()
                         pelvis_world = keypoints_3d[0, get_keypoint_idx('pelvis', 'smplx')]
@@ -312,6 +316,10 @@ class EgobodyConverter(BaseModeConverter):
                                 transl=torch.tensor(np.array([transl_holoworld]), device=self.device),
                                 left_hand_pose=torch.tensor(smplx_interactee['left_hand_pose'], device=self.device),
                                 right_hand_pose=torch.tensor(smplx_interactee['right_hand_pose'], device=self.device),
+                                leye_pose=torch.tensor(smplx_interactee['leye_pose'], device=self.device),
+                                reye_pose=torch.tensor(smplx_interactee['reye_pose'], device=self.device),
+                                jaw_pose=torch.tensor(smplx_interactee['jaw_pose'], device=self.device),
+                                expression=torch.tensor(smplx_interactee['expression'], device=self.device),
                                 return_joints=True)
                         keypoints_3d = output['joints'].detach().cpu().numpy()
                         pelvis_holoworld = keypoints_3d[0, get_keypoint_idx('pelvis', 'smplx')]
@@ -331,6 +339,10 @@ class EgobodyConverter(BaseModeConverter):
                                 transl=torch.tensor(np.array([transl_pyrender]), device=self.device),
                                 left_hand_pose=torch.tensor(smplx_interactee['left_hand_pose'], device=self.device),
                                 right_hand_pose=torch.tensor(smplx_interactee['right_hand_pose'], device=self.device),
+                                leye_pose=torch.tensor(smplx_interactee['leye_pose'], device=self.device),
+                                reye_pose=torch.tensor(smplx_interactee['reye_pose'], device=self.device),
+                                jaw_pose=torch.tensor(smplx_interactee['jaw_pose'], device=self.device),
+                                expression=torch.tensor(smplx_interactee['expression'], device=self.device),
                                 return_joints=True)
                         keypoints_3d = output['joints'].detach().cpu().numpy()
                         pelvis_pyrender = keypoints_3d[0, get_keypoint_idx('pelvis', 'smplx')]
@@ -352,7 +364,13 @@ class EgobodyConverter(BaseModeConverter):
                                 transl=torch.tensor(np.array([transl_opencv]), device=self.device),
                                 left_hand_pose=torch.tensor(smplx_interactee['left_hand_pose'], device=self.device),
                                 right_hand_pose=torch.tensor(smplx_interactee['right_hand_pose'], device=self.device),
+                                leye_pose=torch.tensor(smplx_interactee['leye_pose'], device=self.device),
+                                reye_pose=torch.tensor(smplx_interactee['reye_pose'], device=self.device),
+                                jaw_pose=torch.tensor(smplx_interactee['jaw_pose'], device=self.device),
+                                expression=torch.tensor(smplx_interactee['expression'], device=self.device),
                                 return_joints=True)
+                        # smplx_param['global_orient'] = global_orient_opencv
+                        # smplx_param['transl'] = transl_opencv
                         keypoints_3d = output['joints']
 
                         ### transform 3d keypoints to 2d keypoints
@@ -373,7 +391,8 @@ class EgobodyConverter(BaseModeConverter):
                     
                         # append frame specific data
                         ## smplx params
-                        for key in ['body_pose', 'betas', 'left_hand_pose', 'right_hand_pose']:
+                        for key in ['body_pose', 'betas', 'left_hand_pose', 'right_hand_pose', 
+                                    'leye_pose', 'reye_pose', 'jaw_pose', 'expression']:
                             smplx_[key].append(smplx_interactee[key])
                         smplx_['global_orient'].append(global_orient_opencv)
                         smplx_['transl'].append(transl_opencv)
@@ -593,6 +612,10 @@ class EgobodyConverter(BaseModeConverter):
                                             transl=torch.tensor(smplx_param['transl'], device=self.device),
                                             left_hand_pose=torch.tensor(smplx_param['left_hand_pose'], device=self.device),
                                             right_hand_pose=torch.tensor(smplx_param['right_hand_pose'], device=self.device),
+                                            leye_pose=torch.tensor(smplx_param['leye_pose'], device=self.device),
+                                            reye_pose=torch.tensor(smplx_param['reye_pose'], device=self.device),
+                                            jaw_pose=torch.tensor(smplx_param['jaw_pose'], device=self.device),
+                                            expression=torch.tensor(smplx_param['expression'], device=self.device),
                                             return_joints=True) 
                                     keypoints_3d = output['joints'].detach().cpu().numpy()
                                     pelvis_world = keypoints_3d[0, get_keypoint_idx('pelvis', 'smplx')]
@@ -614,7 +637,13 @@ class EgobodyConverter(BaseModeConverter):
                                         transl=torch.tensor(transl_sub, device=self.device),
                                         left_hand_pose=torch.tensor(smplx_param['left_hand_pose'], device=self.device),
                                         right_hand_pose=torch.tensor(smplx_param['right_hand_pose'], device=self.device),
+                                        leye_pose=torch.tensor(smplx_param['leye_pose'], device=self.device),
+                                        reye_pose=torch.tensor(smplx_param['reye_pose'], device=self.device),
+                                        jaw_pose=torch.tensor(smplx_param['jaw_pose'], device=self.device),
+                                        expression=torch.tensor(smplx_param['expression'], device=self.device),
                                         return_joints=True)
+                                smplx_param['global_orient'] = global_orient_sub
+                                smplx_param['transl'] = transl_sub
                                 keypoints_3d = output['joints']
 
                                 ### transform 3d keypoints to 2d keypoints
@@ -635,7 +664,9 @@ class EgobodyConverter(BaseModeConverter):
                             
                                 # append frame specific data
                                 ## smplx params
-                                for key in ['body_pose', 'betas', 'left_hand_pose', 'right_hand_pose']:
+
+                                for key in ['body_pose', 'betas', 'left_hand_pose', 'right_hand_pose', 
+                                            'leye_pose', 'reye_pose', 'jaw_pose', 'expression']:
                                     smplx_[key].append(smplx_param[key])
                                 smplx_['global_orient'].append(global_orient_sub)
                                 smplx_['transl'].append(transl_sub)
