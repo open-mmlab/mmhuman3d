@@ -161,13 +161,13 @@ class UbodyConverter(BaseModeConverter):
                             use_pca=False,
                             batch_size=1)).to(self.device)
 
-        # scene_split = scene_split[:1]
+        scene_split = scene_split
 
         for scene in tqdm(scene_split, desc=f'Processing {mode} data...', leave=False):
             vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
             # vid_ps = vid_ps[:1]
 
-            num_proc = 8
+            num_proc = 4
             with Pool(num_proc) as p:
                 r = list(tqdm(p.imap(self.preprocess_ubody, vid_ps), total=len(vid_ps), 
                         desc=f'Scene: {scene}', leave=False, position=1))
