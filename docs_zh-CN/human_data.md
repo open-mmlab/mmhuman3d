@@ -11,6 +11,7 @@
 
 - image_path: (N, ), 字符串组成的列表, 每一个元素是图像相对于根目录的路径。
 - bbox_xywh: (N, 5), numpy array, 边界框的置信度, 边界框左下角点的坐标x和y, 边界框的宽w和高h, 置信度得分放置在最后。
+- face_bbox_xywh, lhand_bbox_xywh, rhand_bbox_xywh: 如果数据标注中含有`smplx`, 则应包括这三个key，由smplx2d关键点得出，格式同上。
 - config: (), 字符串, 单个数据集的配置的标志。
 - keypoints2d: (N, 190, 3), numpy array, `smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints3d: (N, 190, 4), numpy array, `smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
@@ -20,6 +21,19 @@
 - keypoints2d_mask: (190, ), numpy array, 表示`keypoints2d`中关键点是否有效的掩膜。 0表示该位置的关键点在原始数据集中无法找到。
 - keypoints3d_mask: (190, ), numpy array, 表示`keypoints3d`中关键点是否有效的掩膜。 0表示该位置的关键点在原始数据集中无法找到。
 - misc: (1, ), 字典, `keys`和`values`由用户定义。`misc`占用的空间(可以通过`sys.getsizeof(misc)`获取)不能超过6MB。
+
+Misc 中建议（可能）包含的内容
+- kps3d_root_aligned： Bool 描述keypoints3d是否经过root align，建议不进行root_alignment
+- bbox_body_scale or bbox: 描述由smpl/smplx关键点推导出的身体关键点框的放大比例，建议`bbox_body_scale=1.2`或者如果bbox由数据集提供`bbox='by_dataset'`
+- bbox_facehand_scale or hand_bbox, face_bbox: 描述同上，建议`'bbox_facehand_scale=1.0'`或者如果bbox由数据集提供`face_bbox='by_dataset'`
+
+Meta 中建议（可能）包含的内容
+- gender: (N, )， 字符串组成的列表, 每一个元素是smplx模型的性别（中性则不必标注）
+- height， width：(N, )， 字符串组成的列表, 每一个元素是图片的长或宽（数据集图片分辨率一致则不必标注）
+- 其它有标识性的key，若数据集中该key不一致，且会影响keypoints or smpl/smplx，则建议标注，如focal_length与principal_point
+
+相机参数空间
+- 默认opencv，可以用`from mmhuman3d.models.body_models.utils import transform_to_camera_frame, batch_transform_to_camera_frame`进行smpl/smplx的相机空间转换
 
 #### 检查`HumanData`中的`key`.
 
