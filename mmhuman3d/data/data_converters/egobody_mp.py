@@ -12,6 +12,7 @@ from tqdm import tqdm
 import torch
 import smplx
 import ast
+from multiprocessing import Pool
 
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
@@ -22,7 +23,7 @@ from .builder import DATA_CONVERTERS
 from mmhuman3d.models.body_models.builder import build_body_model
 # from mmhuman3d.core.conventions.keypoints_mapping import smplx
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
-from mmhuman3d.models.body_models.utils import transform_to_camera_frame, batch_transform_to_camera_frame
+from mmhuman3d.models.body_models.utils import transform_to_camera_frame
 
 
 import pdb
@@ -52,6 +53,7 @@ class EgobodyConverter(BaseModeConverter):
         Args:
             keypoints (np.ndarray): Keypoints
             scale (float): Bounding Box scale
+
         Returns:
             bbox_xyxy (np.ndarray): Bounding box in xyxy format
         '''
@@ -104,15 +106,12 @@ class EgobodyConverter(BaseModeConverter):
         return bboxs
     
 
-    def _revert_smplx_hands_pca(self, param_dict, num_pca_comps, gender='neutral', gendered_model=None):
+    def _revert_smplx_hands_pca(self, param_dict, num_pca_comps, gender):
         # egobody 12
         hl_pca = param_dict['left_hand_pose']
         hr_pca = param_dict['right_hand_pose']
 
-        if gendered_model != None:
-            smplx_model = gendered_model
-        else:
-            smplx_model = dict(np.load(f'data/body_models/smplx/SMPLX_{gender.upper()}.npz', allow_pickle=True))
+        smplx_model = dict(np.load(f'data/body_models/smplx/SMPLX_{gender.upper()}.npz', allow_pickle=True))
 
         hl = smplx_model['hands_componentsl'] # 45, 45
         hr = smplx_model['hands_componentsr'] # 45, 45
@@ -127,6 +126,137 @@ class EgobodyConverter(BaseModeConverter):
         param_dict['right_hand_pose'] = hr_reverted
 
         return param_dict
+    
+
+    def _process_kinect_frame(self, frame_idx):
+
+        frame_output = {}
+        for key in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh',
+                'body_pose', 'betas', 'left_hand_pose', 'right_hand_pose', 'global_orient',
+                'leye_pose', 'reye_pose', 'jaw_pose', 'expression', 'transl',
+                'keypoints2d', 'keypoints3d', 'view', 'character', 'gender']:
+            frame_output[key] = []
+
+        # load variables
+        valid_smplx_ee_list = self.seq_param['valid_smplx_ee_list']
+        valid_smplx_wr_list = self.seq_param['valid_smplx_wr_list']
+        smplx_interatcee_ps = self.seq_param['smplx_interatcee_ps']
+        smplx_camera_wearer_ps = self.seq_param['smplx_camera_wearer_ps']
+        smplx_model_interactee = self.seq_param['smplx_model_interactee']
+        smplx_model_wearer = self.seq_param['smplx_model_wearer']
+        view = self.seq_param['view']
+        if view != 'master':
+            trans_maintosub = self.seq_param['trans_maintosub']
+        width = self.seq_param['width']
+        height = self.seq_param['height']
+        valid_rgb_list = self.seq_param['valid_rgb_list']
+        image_path = self.seq_param['image_path']
+        camera = self.seq_param['camera']
+        out_path = self.seq_param['out_path']
+
+        # get smplx data
+        smplx_ee_idx = valid_smplx_ee_list.index(frame_idx)
+        smplx_interactee = dict(np.load(smplx_interatcee_ps[smplx_ee_idx], allow_pickle=True))
+        smplx_wr_idx = valid_smplx_wr_list.index(frame_idx)
+        smplx_wearer = dict(np.load(smplx_camera_wearer_ps[smplx_wr_idx], allow_pickle=True))
+
+        ## revert smplx hands pca
+        hand_pca_comps_ee = smplx_interactee['left_hand_pose'].shape[1]
+        smplx_interactee = self._revert_smplx_hands_pca(smplx_interactee, 
+                        hand_pca_comps_ee, gender=smplx_interactee['gender'])
+        hand_pca_comps_wr = smplx_wearer['left_hand_pose'].shape[1]
+        smplx_wearer = self._revert_smplx_hands_pca(smplx_wearer,
+                        hand_pca_comps_wr, gender=smplx_wearer['gender'])
+
+        ## get smplx keypoints for interactee and wearer
+        character_list = ['interactee', 'wearer']
+        for character in character_list:
+            if character == 'interactee':
+                smplx_model = smplx_model_interactee
+                smplx_param = smplx_interactee
+            if character == 'wearer':
+                smplx_model = smplx_model_wearer
+                smplx_param = smplx_wearer
+
+            if view != 'master':
+                # transfrom from main to sub
+                output = smplx_model(
+                        global_orient=torch.tensor(smplx_param['global_orient'], device=self.device),
+                        body_pose=torch.tensor(smplx_param['body_pose'], device=self.device),
+                        betas=torch.tensor(smplx_param['betas'], device=self.device),
+                        transl=torch.tensor(smplx_param['transl'], device=self.device),
+                        left_hand_pose=torch.tensor(smplx_param['left_hand_pose'], device=self.device),
+                        right_hand_pose=torch.tensor(smplx_param['right_hand_pose'], device=self.device),
+                        leye_pose=torch.tensor(smplx_param['leye_pose'], device=self.device),
+                        reye_pose=torch.tensor(smplx_param['reye_pose'], device=self.device),
+                        jaw_pose=torch.tensor(smplx_param['jaw_pose'], device=self.device),
+                        expression=torch.tensor(smplx_param['expression'], device=self.device),
+                        return_joints=True) 
+                keypoints_3d = output['joints'].detach().cpu().numpy()
+                pelvis_world = keypoints_3d[0, get_keypoint_idx('pelvis', 'smplx')]
+
+                global_orient_sub, transl_sub = transform_to_camera_frame(
+                    global_orient=smplx_param['global_orient'], 
+                    transl=smplx_param['transl'], pelvis=pelvis_world, extrinsic=trans_maintosub)
+                global_orient_sub = np.array([global_orient_sub])
+                transl_sub = np.array([transl_sub])
+            else:
+                global_orient_sub = smplx_param['global_orient']
+                transl_sub = smplx_param['transl']
+
+            ### get smplx keypoints
+            output = smplx_model(
+                    global_orient=torch.tensor(global_orient_sub, device=self.device),
+                    body_pose=torch.tensor(smplx_param['body_pose'], device=self.device),
+                    betas=torch.tensor(smplx_param['betas'], device=self.device),
+                    transl=torch.tensor(transl_sub, device=self.device),
+                    left_hand_pose=torch.tensor(smplx_param['left_hand_pose'], device=self.device),
+                    right_hand_pose=torch.tensor(smplx_param['right_hand_pose'], device=self.device),
+                    leye_pose=torch.tensor(smplx_param['leye_pose'], device=self.device),
+                    reye_pose=torch.tensor(smplx_param['reye_pose'], device=self.device),
+                    jaw_pose=torch.tensor(smplx_param['jaw_pose'], device=self.device),
+                    expression=torch.tensor(smplx_param['expression'], device=self.device),
+                    return_joints=True)
+            smplx_param['global_orient'] = global_orient_sub
+            smplx_param['transl'] = transl_sub
+            keypoints_3d = output['joints']
+
+            ### transform 3d keypoints to 2d keypoints
+            keypoints_2d_xyd = camera.transform_points_screen(keypoints_3d)
+            keypoints_2d = keypoints_2d_xyd[..., :2].detach().cpu().numpy()
+            keypoints_3d = keypoints_3d.detach().cpu().numpy()
+
+            # get bbox from 2d keypoints
+            bboxs = self._keypoints_to_scaled_bbox_bfh(keypoints_2d, 
+                    body_scale=self.misc_config['bbox_body_scale'], fh_scale=self.misc_config['bbox_facehand_scale'])
+            ## convert xyxy to xywh
+            for i, bbox_name in enumerate(['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']):
+                xmin, ymin, xmax, ymax, conf = bboxs[i]
+                bbox = np.array([max(0, xmin), max(0, ymin), min(width, xmax), min(height, ymax)])
+                bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
+                bbox_xywh.append(conf)  # (5,)
+                frame_output[bbox_name].append(bbox_xywh)
+        
+            # append frame specific data
+            ## smplx params
+
+            for key in ['body_pose', 'betas', 'left_hand_pose', 'right_hand_pose', 
+                        'leye_pose', 'reye_pose', 'jaw_pose', 'expression']:
+                frame_output[key].append(smplx_param[key])
+            frame_output['global_orient'].append(global_orient_sub)
+            frame_output['transl'].append(transl_sub)
+            ## keypoints
+            frame_output['keypoints_2d'].append(keypoints_2d)
+            frame_output['keypoints_3d'].append(keypoints_3d)
+
+            # append meta data
+            frame_output['image_path'].append(image_path[valid_rgb_list.index(frame_idx)])
+            frame_output['view'].append(view)
+            frame_output['character'].append(character)
+            frame_output['gender'].append(smplx_model.gender)
+
+        # save temp file
+        np.savez(os.path.join(out_path, 'temp', f'frame_{frame_idx}.npz'), **frame_output)
 
     
     def convert_by_mode(self, dataset_path: str, out_path: str,
@@ -137,6 +267,7 @@ class EgobodyConverter(BaseModeConverter):
             annotations are stored.
             out_path (str): Path to directory to save preprocessed npz file
             mode (str): Mode in accepted modes
+
         Returns:
             dict:
                 A dict containing keys image_path, bbox_xywh, keypoints2d,
@@ -145,14 +276,16 @@ class EgobodyConverter(BaseModeConverter):
         """
 
         # use HumanData to store all data
-        human_data = HumanData() 
+        human_data = HumanData()
+
+        torch.multiprocessing.set_start_method('spawn')
 
         # get trageted sequence list
         batch_name, batch_part = mode.split('_')
         seqs = pd.read_csv(os.path.join(dataset_path, 'data_splits.csv'))[batch_part].dropna().to_list()
         meta_df = pd.read_csv(os.path.join(dataset_path, 'data_info_release.csv'))
 
-        seed, size = '230503', '999'
+        seed, size = '230425', '999'
         size_i = min(int(size), len(seqs))
         random.seed(int(seed))
         # random.shuffle(npzs)
@@ -471,12 +604,6 @@ class EgobodyConverter(BaseModeConverter):
                 'master': '',
             }
 
-            # load smplx gendered model
-            gendered_model = {}
-            gendered_model['male'] = dict(np.load(f'data/body_models/smplx/SMPLX_MALE.npz', allow_pickle=True))
-            gendered_model['female'] = dict(np.load(f'data/body_models/smplx/SMPLX_FEMALE.npz', allow_pickle=True))
-
-            # seqs = seqs[:4]
 
             for seq in tqdm(seqs, desc='Extracting Sequences Data', leave=False):
                 try:
@@ -487,9 +614,8 @@ class EgobodyConverter(BaseModeConverter):
                     # get all possible views
                     avaliable_views = os.listdir(os.path.join(dataset_path, f'{batch_name}_color', seq))
 
-                    for view in tqdm(avaliable_views, desc='Extracting Views Data', leave=False, position=1):
-                        
-                        # print(f'Preparing {seq} {view} data paths', end='/r')
+                    for view in avaliable_views:
+
                         # get all valid rdb image path
                         imgp = glob.glob(os.path.join(dataset_path, f'{batch_name}_color', seq, view, '*.jpg'))
                         
@@ -518,9 +644,7 @@ class EgobodyConverter(BaseModeConverter):
 
                         # get all valid depth path
                         pass
-                        
-                        
-                        # print(f'Preparing {seq} {view} smplx model', end='\r')
+
                         # get intercept of all valid list
                         ## valid_frame_list: frames that has all data included
                         valid_frame_list = sorted(list(set(valid_smplx_ee_list) & set(valid_rgb_list) &
@@ -585,129 +709,65 @@ class EgobodyConverter(BaseModeConverter):
                                 image_size=(holo_h, holo_w),
                                 principal_point=np.array([c_x, c_y]).reshape(-1, 2))).to(self.device)
 
-                        # valid_frame_list = valid_frame_list[0:10]
 
-                        # print(f'Preparing {seq} {view} frame list', end='\r')
-                        # iterate through valid frames to load smplx
-                        smplx_interactee = []
-                        smplx_wearer = []
-                        for frame_idx in tqdm(valid_frame_list, desc=f'Preparing {seq} {view} frame list',
-                                                leave=False, position=2):
+                        # prepare a dict to store seq data in self for multiprocessing
+                        self.seq_param = {}
+                        self.seq_param['valid_smplx_ee_list'] = valid_smplx_ee_list
+                        self.seq_param['valid_smplx_wr_list'] = valid_smplx_wr_list
+                        self.seq_param['smplx_interatcee_ps'] = smplx_interatcee_ps
+                        self.seq_param['smplx_camera_wearer_ps'] = smplx_camera_wearer_ps
+                        self.seq_param['smplx_model_interactee'] = smplx_model_interactee
+                        self.seq_param['smplx_model_wearer'] = smplx_model_wearer
+                        self.seq_param['view'] = view
+                        if view != 'master':
+                            self.seq_param['trans_miantosub'] = trans_maintosub
+                        self.seq_param['width'] = holo_w
+                        self.seq_param['height'] = holo_h
+                        self.seq_param['valid_rgb_list'] = valid_rgb_list
+                        self.seq_param['image_path'] = imgp
+                        self.seq_param['camera'] = camera
+                        self.seq_param['out_path'] = out_path
+
+                        # iterate through valid frames
+                        for idx, frame_idx in enumerate(tqdm(valid_frame_list, desc=f'Processing {seq} {view}',
+                                                             position=1, leave=False)):
+                            pass
+                        # multiprocessing
+                        num_proc = 2
+                        with Pool(num_proc) as p:
                             
-                            # get smplx data
-                            smplx_ee_idx = valid_smplx_ee_list.index(frame_idx)
-                            smplx_interactee_temp = dict(np.load(smplx_interatcee_ps[smplx_ee_idx], allow_pickle=True))
-                            smplx_wr_idx = valid_smplx_wr_list.index(frame_idx)
-                            smplx_wearer_temp = dict(np.load(smplx_camera_wearer_ps[smplx_wr_idx], allow_pickle=True))
+                            r = list(tqdm(p.imap(self._process_kinect_frame, valid_frame_list), total=len(valid_frame_list), 
+                                desc=f'Processing {seq} {view}', leave=False, position=1))
+                            
+                        for frame_idx in valid_frame_list:
 
-                            ## revert smplx hands pca
-                            hand_pca_comps_ee = smplx_interactee_temp['left_hand_pose'].shape[1]
-                            smplx_interactee.append(self._revert_smplx_hands_pca(smplx_interactee_temp, 
-                                            hand_pca_comps_ee, gendered_model=gendered_model[smplx_interactee_temp['gender']]))
-                            hand_pca_comps_wr = smplx_wearer_temp['left_hand_pose'].shape[1]
-                            smplx_wearer.append(self._revert_smplx_hands_pca(smplx_wearer_temp,
-                                            hand_pca_comps_wr, gendered_model=gendered_model[smplx_wearer_temp['gender']]))
+                            npzf = os.path.join(out_path, 'temp', f'frame_{frame_idx}.npz')
+                            frame_output = np.load(npzf, allow_pickle=True)
+                            
+                            # append bbox
+                            for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
+                                bboxs_[bbox_name] += frame_output[bbox_name].tolist()
 
-                        ## get smplx keypoints for interactee and wearer
-                        character_list = ['interactee', 'wearer']
-                        for character in character_list:
-                            # print(f'Preparing {seq} {view} character: {character}', end='\r')
-                            if character == 'interactee':
-                                smplx_model = smplx_model_interactee
-                                smplx_data = smplx_interactee
-                            if character == 'wearer':
-                                smplx_model = smplx_model_wearer
-                                smplx_data = smplx_wearer
+                            # keypoints
+                            keypoints2d_ += frame_output['keypoints2d'].tolist()
+                            keypoints3d_ += frame_output['keypoints3d'].tolist()
 
-                            smplx_param = {}
-                            for key in self.smplx_shape.keys():
-                                smplx_param[key] = np.concatenate([data[key] for data in smplx_data], axis=0)
-
-                            if view != 'master':
-                                # transfrom from main to sub
-                                output = smplx_model(
-                                        global_orient=torch.tensor(smplx_param['global_orient'], device=self.device),
-                                        body_pose=torch.tensor(smplx_param['body_pose'], device=self.device),
-                                        betas=torch.tensor(smplx_param['betas'], device=self.device),
-                                        transl=torch.tensor(smplx_param['transl'], device=self.device),
-                                        left_hand_pose=torch.tensor(smplx_param['left_hand_pose'], device=self.device),
-                                        right_hand_pose=torch.tensor(smplx_param['right_hand_pose'], device=self.device),
-                                        leye_pose=torch.tensor(smplx_param['leye_pose'], device=self.device),
-                                        reye_pose=torch.tensor(smplx_param['reye_pose'], device=self.device),
-                                        jaw_pose=torch.tensor(smplx_param['jaw_pose'], device=self.device),
-                                        expression=torch.tensor(smplx_param['expression'], device=self.device),
-                                        return_joints=True) 
-                                keypoints_3d = output['joints'].detach().cpu().numpy()
-                                pelvis_world = keypoints_3d[:, get_keypoint_idx('pelvis', 'smplx'), :]
-
-                                global_orient_sub, transl_sub = batch_transform_to_camera_frame(
-                                    global_orient=smplx_param['global_orient'], 
-                                    transl=smplx_param['transl'], pelvis=pelvis_world, extrinsic=trans_maintosub)
-                                global_orient_sub = np.array([global_orient_sub]).reshape(-1, 3)
-                                transl_sub = np.array([transl_sub]).reshape(-1, 3)
-                            else:
-                                global_orient_sub = smplx_param['global_orient']
-                                transl_sub = smplx_param['transl']
-
-                            ### get smplx keypoints
-                            output = smplx_model(
-                                    global_orient=torch.tensor(global_orient_sub, device=self.device),
-                                    body_pose=torch.tensor(smplx_param['body_pose'], device=self.device),
-                                    betas=torch.tensor(smplx_param['betas'], device=self.device),
-                                    transl=torch.tensor(transl_sub, device=self.device),
-                                    left_hand_pose=torch.tensor(smplx_param['left_hand_pose'], device=self.device),
-                                    right_hand_pose=torch.tensor(smplx_param['right_hand_pose'], device=self.device),
-                                    leye_pose=torch.tensor(smplx_param['leye_pose'], device=self.device),
-                                    reye_pose=torch.tensor(smplx_param['reye_pose'], device=self.device),
-                                    jaw_pose=torch.tensor(smplx_param['jaw_pose'], device=self.device),
-                                    expression=torch.tensor(smplx_param['expression'], device=self.device),
-                                    return_joints=True)
-                            smplx_param['global_orient'] = global_orient_sub
-                            smplx_param['transl'] = transl_sub
-                            keypoints_3d = output['joints']
-
-                            ### transform 3d keypoints to 2d keypoints
-                            keypoints_2d_xyd = camera.transform_points_screen(keypoints_3d)
-                            keypoints_2d = keypoints_2d_xyd[..., :2].detach().cpu().numpy()
-                            keypoints_3d = keypoints_3d.detach().cpu().numpy()
-        
-                            # get bbox from 2d keypoints
-                            for keypoints_2d_frame in keypoints_2d:
-                                bboxs = self._keypoints_to_scaled_bbox_bfh(keypoints_2d_frame, 
-                                        body_scale=self.misc_config['bbox_body_scale'], fh_scale=self.misc_config['bbox_facehand_scale'])
-                                ## convert xyxy to xywh
-                                for i, bbox_name in enumerate(['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']):
-                                    xmin, ymin, xmax, ymax, conf = bboxs[i]
-                                    bbox = np.array([max(0, xmin), max(0, ymin), min(width, xmax), min(height, ymax)])
-                                    bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
-                                    bbox_xywh.append(conf)  # (5,)
-                                    bboxs_[bbox_name].append(bbox_xywh)
+                            # smplx
+                            for smplx_key in self.smplx_shape.keys():
+                                smplx_[smplx_key] += frame_output[smplx_key].tolist()
+                            
+                            # meta
+                            image_path_ += frame_output['image_path'].tolist()
+                            meta_['view'] += frame_output['view'].tolist()
+                            meta_['character'] += frame_output['character'].tolist()
+                            meta_['gender'] += frame_output['gender'].tolist()   
                         
-                            # append frame specific data
-                            ## smplx params
-
-                            for key in ['body_pose', 'betas', 'left_hand_pose', 'right_hand_pose', 
-                                        'leye_pose', 'reye_pose', 'jaw_pose', 'expression']:
-                                smplx_[key].append(smplx_param[key])
-                            smplx_['global_orient'].append(global_orient_sub)
-                            smplx_['transl'].append(transl_sub)
-                            ## keypoints
-                            keypoints2d_.append(keypoints_2d)
-                            keypoints3d_.append(keypoints_3d)
-
-                            # append meta data
-                            for frame_idx in valid_frame_list:
-                                image_path_.append(image_path[valid_rgb_list.index(frame_idx)])
-                                meta_['view'].append(view)
-                                meta_['character'].append(character)
-                                meta_['gender'].append(smplx_model.gender)
-
                 except FloatingPointError:
                     print('Error in seq', seq)
                     continue
 
             for key in smplx_.keys():
-                smplx_[key] = np.concatenate(smplx_[key], axis=0).reshape(self.smplx_shape[key])
+                smplx_[key] = np.array(smplx_[key]).reshape(self.smplx_shape[key])
             human_data['smplx'] = smplx_
             print('Smpl and/or Smplx finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
@@ -717,7 +777,7 @@ class EgobodyConverter(BaseModeConverter):
             print('BBox generation finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
             # keypoints 2d
-            keypoints2d = np.concatenate(keypoints2d_, axis=0).reshape(-1, 144, 2)
+            keypoints2d = np.array(keypoints2d_).reshape(-1, 144, 2)
             keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
             keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
             keypoints2d, keypoints2d_mask = \
@@ -726,7 +786,7 @@ class EgobodyConverter(BaseModeConverter):
             human_data['keypoints2d_mask'] = keypoints2d_mask
 
             # keypoints 3d
-            keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
+            keypoints3d = np.array(keypoints3d_).reshape(-1, 144, 3)
             keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
             keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
             keypoints3d, keypoints3d_mask = \
@@ -748,8 +808,14 @@ class EgobodyConverter(BaseModeConverter):
             human_data['config'] = f'egobody_{mode}'
             human_data['misc'] = self.misc_config
 
+
+
+        
         human_data.compress_keypoints_by_mask()
         os.makedirs(out_path, exist_ok=True)
         out_file = os.path.join(out_path, f'egobody_{mode}_{seed}_{"{:03d}".format(size_i)}.npz')
         human_data.dump(out_file)
 
+
+
+        
