@@ -30,7 +30,7 @@ import pdb
 @DATA_CONVERTERS.register_module()
 class ShapyConverter(BaseModeConverter):
 
-    ACCEPTED_MODES = ['train']
+    ACCEPTED_MODES = ['test', 'val']
 
     def __init__(self, modes: List = []) -> None:
         # check pytorch device
@@ -43,3 +43,12 @@ class ShapyConverter(BaseModeConverter):
                 'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3), 'expression': (-1, 10)}
 
         super(ShapyConverter, self).__init__(modes)
+
+    
+    def convert_by_mode(self, dataset_path: str, out_path: str,
+                    mode: str) -> dict:
+        
+        # use HumanData to store data
+        human_data = HumanData()
+
+        
