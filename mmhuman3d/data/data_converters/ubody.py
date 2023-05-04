@@ -26,7 +26,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_k
 from mmhuman3d.models.body_models.utils import transform_to_camera_frame
 
 import pdb
-
+import itertools
 
 @DATA_CONVERTERS.register_module()
 class UbodyConverter(BaseModeConverter):
@@ -37,7 +37,7 @@ class UbodyConverter(BaseModeConverter):
         # check pytorch device
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.misc_config = dict(
-            kps3d_root_aligned=False, face_bbox='by_dataset', hand_bbpx='by_dataset', bbox='by_dataset',
+            kps3d_root_aligned=False, face_bbox='by_dataset', hand_bbox='by_dataset', bbox='by_dataset',
         )
         self.smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
                 'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
