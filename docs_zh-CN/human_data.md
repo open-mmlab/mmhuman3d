@@ -13,10 +13,10 @@
 - bbox_xywh: (N, 5), numpy array, 边界框的置信度, 边界框左下角点的坐标x和y, 边界框的宽w和高h, 置信度得分放置在最后。
 - face_bbox_xywh, lhand_bbox_xywh, rhand_bbox_xywh: 如果数据标注中含有`smplx`, 则应包括这三个key，由smplx2d关键点得出，格式同上。
 - config: (), 字符串, 单个数据集的配置的标志。
-- keypoints2d: (N, 190, 3), numpy array, `smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
-- keypoints2d_original: (N, 190, 3), numpy array, 由数据集本身提供的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
-- keypoints3d: (N, 190, 4), numpy array, `smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints3d_smpl / keypoints3d_smpl: (N, 190, 4), numpy array, `smplx / smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints3d_original: (N, 190, 4), numpy array, 由数据集本身提供的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints2d_smpl / keypoints2d_smplx: (N, 190, 3), numpy array, `smpl / smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints2d_original: (N, 190, 3), numpy array, 由数据集本身提供的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - smpl: (1, ), 字典, `keys` 分别为 ['body_pose': numpy array, (N, 23, 3), 'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3)].
 - smplx: (1, ), 字典, `keys` 分别为 ['body_pose': numpy array, (N, 21, 3),'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3), 'left_hand_pose': numpy array, (N, 15, 3), 'right_hand_pose': numpy array, (N, 15, 3), 'expression': numpy array (N, 10), 'leye_pose': numpy array (N, 3), 'reye_pose': (N, 3), 'jaw_pose': numpy array (N, 3)].
 - meta: (1, ), 字典, `keys` 为数据集中类似性别的元数据。
@@ -32,7 +32,7 @@ Misc 中建议（可能）包含的内容
 Meta 中建议（可能）包含的内容
 - gender: (N, )， 字符串组成的列表, 每一个元素是smplx模型的性别（中性则不必标注）
 - height， width：(N, )， 字符串组成的列表, 每一个元素是图片的长或宽（数据集图片分辨率一致则不必标注）
-- 其它有标识性的key，若数据集中该key不一致，且会影响keypoints or smpl/smplx，则建议标注，如focal_length与principal_point
+- 其它有标识性的key，若数据集中该key不一致，且会影响keypoints or smpl/smplx，则建议标注，如focal_length与principal_point, focal_length = (N, 2), principal_point = (N, 2)
 
 相机参数空间
 - 默认opencv，可以用`from mmhuman3d.models.body_models.utils import transform_to_camera_frame, batch_transform_to_camera_frame`进行smpl/smplx的相机空间转换
