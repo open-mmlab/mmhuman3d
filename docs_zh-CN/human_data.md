@@ -14,7 +14,9 @@
 - face_bbox_xywh, lhand_bbox_xywh, rhand_bbox_xywh: 如果数据标注中含有`smplx`, 则应包括这三个key，由smplx2d关键点得出，格式同上。
 - config: (), 字符串, 单个数据集的配置的标志。
 - keypoints2d: (N, 190, 3), numpy array, `smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints2d_original: (N, 190, 3), numpy array, 由数据集本身提供的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints3d: (N, 190, 4), numpy array, `smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints3d_original: (N, 190, 4), numpy array, 由数据集本身提供的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - smpl: (1, ), 字典, `keys` 分别为 ['body_pose': numpy array, (N, 23, 3), 'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3)].
 - smplx: (1, ), 字典, `keys` 分别为 ['body_pose': numpy array, (N, 21, 3),'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3), 'left_hand_pose': numpy array, (N, 15, 3), 'right_hand_pose': numpy array, (N, 15, 3), 'expression': numpy array (N, 10), 'leye_pose': numpy array (N, 3), 'reye_pose': (N, 3), 'jaw_pose': numpy array (N, 3)].
 - meta: (1, ), 字典, `keys` 为数据集中类似性别的元数据。
