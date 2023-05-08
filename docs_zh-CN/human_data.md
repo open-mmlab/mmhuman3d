@@ -10,6 +10,7 @@
 #### 如下是对`HumanData`支持的`Key`和`Value`的描述.
 
 - image_path: (N, ), 字符串组成的列表, 每一个元素是图像相对于根目录的路径。
+- segmantation_path (可选): (N, ), 字符串组成的列表, 每一个元素是图像相对于根目录的路径。
 - bbox_xywh: (N, 5), numpy array, 边界框的置信度, 边界框左下角点的坐标x和y, 边界框的宽w和高h, 置信度得分放置在最后。
 - face_bbox_xywh, lhand_bbox_xywh, rhand_bbox_xywh: 如果数据标注中含有`smplx`, 则应包括这三个key，由smplx2d关键点得出，格式同上。
 - config: (), 字符串, 单个数据集的配置的标志。
