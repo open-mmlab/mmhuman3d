@@ -10,6 +10,7 @@ https://github.com/vchoutas/expose
 - OPENPOSE_118_KEYPOINTS: body(25) + hand(42) + face(51)
 - OPENPOSE_135_KEYPOINTS: body(25) + hand(40) + face(70)
 - OPENPOSE_137_KEYPOINTS: body(27) + hand(40) + face(70)
+- OPENPOSE_137_SHAPY_KEYPOINTS: body(25) + hand(40) + face(70) Same as OPENPOSE_137_KEYPOINTS
 
 Note that:
 1. 135 and coco17 share the first 17 body keypoints
