@@ -31,6 +31,7 @@ from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .shapy import ShapyConverter
 from .spin import SpinConverter
+from .ssp3d import Ssp3dConverter
 from .stirling import StirlingConverter
 from .surreal import SurrealConverter
 from .synbody import SynbodyConverter
@@ -51,5 +52,5 @@ __all__ = [
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
     'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
-    'HumanartConverter', 'UbodyConverter', 'ShapyConverter'
+    'HumanartConverter', 'UbodyConverter', 'ShapyConverter', 'Ssp3dConverter'
 ]

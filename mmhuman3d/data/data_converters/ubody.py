@@ -167,7 +167,7 @@ class UbodyConverter(BaseModeConverter):
             vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
             # vid_ps = vid_ps[:1]
 
-            num_proc = 4
+            num_proc = 3
             with Pool(num_proc) as p:
                 r = list(tqdm(p.imap(self.preprocess_ubody, vid_ps), total=len(vid_ps), 
                         desc=f'Scene: {scene}', leave=False, position=1))
