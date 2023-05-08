@@ -30,6 +30,7 @@ from .posetrack import PosetrackConverter
 from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .shapy import ShapyConverter
+from .sminchisescu import ImarDatasetsConverter
 from .spin import SpinConverter
 from .ssp3d import Ssp3dConverter
 from .stirling import StirlingConverter
@@ -52,5 +53,6 @@ __all__ = [
     'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
     'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
-    'HumanartConverter', 'UbodyConverter', 'ShapyConverter', 'Ssp3dConverter'
+    'HumanartConverter', 'UbodyConverter', 'ShapyConverter', 'Ssp3dConverter',
+    'ImarDatasetsConverter'
 ]

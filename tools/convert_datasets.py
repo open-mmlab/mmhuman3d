@@ -67,6 +67,9 @@ DATASET_CONFIGS = dict(
                      ['real_human', '2D_virtual_human', '3D_virtual_human']),
     ubody=dict(type='UbodyConverter', prefix='ubody', modes=['inter', 'intra']),
     shapy=dict(type='ShapyConverter', prefix='shapy', modes=['test', 'val']),
+    ssp3d=dict(type='Ssp3dConverter', prefix='ssp-3d'),
+    sminchisescu=dict(type='ImarDatasetsConverter', prefix='sminchisescu-research-datasets',
+                       modes=['FIT3D', 'CHI3D', 'HumanSC3D']),
 )
 
 
