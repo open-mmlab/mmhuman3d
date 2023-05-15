@@ -25,6 +25,7 @@ from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
 from mmhuman3d.models.body_models.utils import transform_to_camera_frame
 
+
 import pdb
 import itertools
 
@@ -123,6 +124,10 @@ class UbodyConverter(BaseModeConverter):
         scene_split = np.load(os.path.join(dataset_path, 'splits', 
                                                 f'{mode}_scene_test_list.npy'), allow_pickle=True)
         vid_ps_all = glob.glob(os.path.join(dataset_path, 'videos', '**', '*.mp4'), recursive=True)
+        # vid_ps_all_format = glob.glob(os.path.join(dataset_path, 'videos', '**', '*.*'), recursive=True)
+        # pdb.set_trace()
+        
+
 
         processed_vids = []
 
@@ -145,29 +150,42 @@ class UbodyConverter(BaseModeConverter):
 
         test_vids, train_vids = [], []
 
-        if mode == 'inter':
-            for scene in scene_split:
-                vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
-                test_vids += vid_ps
-            test_vids = list(dict.fromkeys(test_vids))
-            train_vids = [vid_p for vid_p in vid_ps_all if vid_p not in test_vids]
-        if mode == 'intra':
-            for scene in scene_split:
-                vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
-                train_vids += vid_ps[:int((len(vid_ps)+1)*.70)]
-                test_vids += vid_ps[int((len(vid_ps)+1)*.70):]
-
+        # if mode == 'inter':
+        #     for scene in scene_split:
+        #         if not '_' in scene:
+        #             continue
+        #         vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
+        #         test_vids += vid_ps
+        #     test_vids = list(dict.fromkeys(test_vids))
+        #     train_vids = [vid_p for vid_p in vid_ps_all if vid_p not in test_vids]
+        # if mode == 'intra':
+        #     for scene in scene_split:
+        #         if not '_' in scene:
+        #             continue
+        #         vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
+        #         train_vids += vid_ps[:int((len(vid_ps)+1)*.70)]
+        #         test_vids += vid_ps[int((len(vid_ps)+1)*.70):]
+                # processed_vids += vid_ps
+        # processed_vids = list(dict.fromkeys(processed_vids))
+        for scene in scene_split:
+            if not '_' in scene:
+                continue
+            vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
+            test_vids += vid_ps
+        test_vids = list(dict.fromkeys(test_vids))
+        train_vids = [vid_p for vid_p in vid_ps_all if vid_p not in test_vids]
+        # pdb.set_trace()
 
             # vid_ps = vid_ps[:1]
 
-        for batch, vid_ps in zip(['train', 'test'], [train_vids, test_vids]):
+        for batch, vid_ps_batch in zip(['train', 'test'], [train_vids, test_vids]):
 
-            # num_proc = 3
-            # with Pool(num_proc) as p:
-            #     r = list(tqdm(p.imap(self.preprocess_ubody, vid_ps), total=len(vid_ps), 
-            #             desc=f'Scene: {scene}', leave=False, position=1))
+            num_proc = 4
+            with Pool(num_proc) as p:
+                r = list(tqdm(p.imap(self.preprocess_ubody, vid_ps_batch), total=len(vid_ps_batch), 
+                        desc=f'Scene: {mode} {batch}', leave=False, position=1))
             
-            processed_vids = vid_ps
+            processed_vids = vid_ps_batch
 
             seed, size = '230508', '99999'
 

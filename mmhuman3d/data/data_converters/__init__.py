@@ -1,5 +1,6 @@
 from .agora import AgoraConverter
 from .amass import AmassConverter
+from .behave import BehaveConverter
 from .builder import build_data_converter
 from .coco import CocoConverter
 from .coco_hybrik import CocoHybrIKConverter
@@ -54,5 +55,5 @@ __all__ = [
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
     'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
     'HumanartConverter', 'UbodyConverter', 'ShapyConverter', 'Ssp3dConverter',
-    'ImarDatasetsConverter'
+    'ImarDatasetsConverter', 'BehaveConverter'
 ]

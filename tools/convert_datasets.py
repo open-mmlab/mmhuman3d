@@ -70,6 +70,7 @@ DATASET_CONFIGS = dict(
     ssp3d=dict(type='Ssp3dConverter', prefix='ssp-3d'),
     sminchisescu=dict(type='ImarDatasetsConverter', prefix='sminchisescu-research-datasets',
                        modes=['FIT3D', 'CHI3D', 'HumanSC3D']),
+    behave=dict(type='BehaveConverter', prefix='behave', modes=['train', 'test']),
 )
 
 

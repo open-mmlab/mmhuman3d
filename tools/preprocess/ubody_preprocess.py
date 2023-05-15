@@ -99,6 +99,8 @@ def process_vid(vid):
         rhand_kps = kp_param['righthand_kpts']
 
         keypoints_2d_ubody = np.array(body_kps + foot_kps + face_kps + lhand_kps + rhand_kps).reshape(-1, 3)
+
+        # import pdb; pdb.set_trace()
         
         # collect bbox
         for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
