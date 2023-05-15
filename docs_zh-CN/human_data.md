@@ -29,6 +29,9 @@ Misc 中建议（可能）包含的内容
 - kps3d_root_aligned： Bool 描述keypoints3d是否经过root align，建议不进行root_alignment
 - bbox_body_scale or bbox: 描述由smpl/smplx关键点推导出的身体关键点框的放大比例，建议`bbox_body_scale=1.2`或者如果bbox由数据集提供`bbox='by_dataset'`
 - bbox_facehand_scale or hand_bbox, face_bbox: 描述同上，建议`'bbox_facehand_scale=1.0'`或者如果bbox由数据集提供`face_bbox='by_dataset'`
+- bbox_soruce: 描述bbox的来源，`bbox_soruce='keypoints2d_smpl' or 'keypoints2d_smplx' or 'keypoints2d_original' or 'original'`,来描述bbox是来源于smpl/smplx关键点，数据集提供的关键点或者直接有数据集提供
+- cam_param_source: 描述相机参数的来源，`cam_param_source='original' or 'estimated' or 'neural_annot'`, 来描述相机参数是来源于数据集提供，数据集估计或者neural_annot
+- smpl_source / smplx_source: 描述smpl/smplx的来源，`'original', 'nerual_annot', 'eft', 'osx_annot', 'cliff_annot'`, 来描述smpl/smnplx是来源于数据集提供，或者其它标注来源
 
 Meta 中建议（可能）包含的内容
 - gender: (N, )， 字符串组成的列表, 每一个元素是smplx模型的性别（中性则不必标注）
