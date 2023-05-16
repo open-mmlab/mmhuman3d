@@ -14,7 +14,7 @@
 - bbox_xywh: (N, 5), numpy array, 边界框的置信度, 边界框左下角点的坐标x和y, 边界框的宽w和高h, 置信度得分放置在最后。
 - face_bbox_xywh, lhand_bbox_xywh, rhand_bbox_xywh: 如果数据标注中含有`smplx`, 则应包括这三个key，由smplx2d关键点得出，格式同上。
 - config: (), 字符串, 单个数据集的配置的标志。
-- keypoints3d_smpl / keypoints3d_smpl: (N, 190, 4), numpy array, `smplx / smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints3d_smpl / keypoints3d_smplx: (N, 190, 4), numpy array, `smplx / smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints3d_original: (N, 190, 4), numpy array, 由数据集本身提供的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints2d_smpl / keypoints2d_smplx: (N, 190, 3), numpy array, `smpl / smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints2d_original: (N, 190, 3), numpy array, 由数据集本身提供的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
