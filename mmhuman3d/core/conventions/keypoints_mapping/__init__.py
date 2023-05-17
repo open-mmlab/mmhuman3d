@@ -28,9 +28,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     posetrack,
     pw3d,
     pymafx_smplx,
-    saas_manual_anno,
     smpl,
-    smplh,
     smplx,
     spin_smplx,
     star,
@@ -48,7 +46,6 @@ KEYPOINTS_FACTORY = {
     'smpl_54': smpl.SMPL_54_KEYPOINTS,
     'smpl_49': smpl.SMPL_49_KEYPOINTS,
     'smpl_24': smpl.SMPL_24_KEYPOINTS,
-    'smplh_73': smplh.SMPLH_73_KEYPOINTS,
     'star': star.STAR_KEYPOINTS,
     'mpi_inf_3dhp': mpi_inf_3dhp.MPI_INF_3DHP_KEYPOINTS,
     'mpi_inf_3dhp_test': mpi_inf_3dhp.MPI_INF_3DHP_TEST_KEYPOINTS,
@@ -83,7 +80,6 @@ KEYPOINTS_FACTORY = {
     'mano_hands_reorder': mano.MANO_HANDS_REORDER_KEYPOINTS,
     'mediapipe_whole_body': mediapipe.MP_WHOLE_BODY_KEYPOINTS,
     'mediapipe_body': mediapipe.MP_BODY_KEYPOINTS,
-    'labelme_superset_53': saas_manual_anno.LABELME_SUPERSET_DANCE_53,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
