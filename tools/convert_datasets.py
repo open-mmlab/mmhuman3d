@@ -59,7 +59,7 @@ DATASET_CONFIGS = dict(
     humman=dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
     synbody=dict(type='SynbodyConverter', prefix='synbody', modes=['train']),
-    renbody=dict(type='RenbodyConverter', prefix='renbody', modes=['train']),
+    renbody=dict(type='RenbodyConverter', prefix='renbody', modes=['train', 'train_highrescam', 'test', 'test_highrescam']),
     egobody=dict(type='EgobodyConverter', prefix='egobody', modes=['egocentric_train', 
                       'egocentric_test', 'egocentric_val',
                       'kinect_train', 'kinect_test', 'kinect_val']),
