@@ -3,7 +3,8 @@ from typing import List, Tuple
 
 import cv2
 import numpy as np
-import pickle5 as pickle
+# import pickle5 as pickle
+import pickle
 from tqdm import tqdm
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
