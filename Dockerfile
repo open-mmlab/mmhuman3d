@@ -28,4 +28,4 @@ RUN pip install -v -e .
 
 RUN pip install numpy==1.23
 RUN pip install pillow==9.5
-RUN pip install scipy==1.9.1 
+RUN pip install scipy==1.9.1
