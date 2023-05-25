@@ -74,7 +74,7 @@ class BehaveConverter(BaseModeConverter):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.misc_config = dict(bbox_body_scale=1.2, bbox_facehand_scale=1.0, bbox_source='original',
                          cam_param_source='original', smplh_source='original', image_size=(1536, 2048), fps=30,
-                         downsampled=True, downsampled_fps=1)
+                         downsampled=True, downsampled_fps=1, keypoints3d='keypoints3d_original')
         self.smplh_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 'body_pose': (-1, 21, 3),
                            'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3)}
         
@@ -87,7 +87,7 @@ class BehaveConverter(BaseModeConverter):
         human_data = HumanData()
 
         # init seed
-        seed, size = '230516', '999'
+        seed, size = '230519', '999'
         random.seed(int(seed))
 
         # init output for HumanData
@@ -154,6 +154,23 @@ class BehaveConverter(BaseModeConverter):
                                 num_betas=10,
                                 use_pca=False,
                                 batch_size=1)).to(self.device)
+        # import pickle
+        # with open(os.path.join('data/body_models/smplh', 'SMPLH_MALE.pkl'), 'rb') as f:
+        #     smplh_male = pickle.load(f, encoding='latin1')
+        # pdb.set_trace()
+        # build smplh model
+        # gendered_smplh_model = {}
+        # for gender in ['male', 'female']:
+        #     gendered_smplh_model[gender] = smplx.create(
+        #         model_path='data/body_models',
+        #         model_type='smplh',
+        #         gender=gender, 
+        #         use_face_contour=True,
+        #         num_betas=10,
+        #         use_pca=False,
+        #         num_pca_comps=15,
+        #         ext='pkl')
+        # pdb.set_trace()
         # # build mano hand model
         # mano_model = build_body_model(dict(type='MANO',
         #                     keypoint_src='mano',
@@ -244,7 +261,8 @@ class BehaveConverter(BaseModeConverter):
                     world2local[:3, 3] = world2local_t
 
                     # transform keypoints original to kinect camera space
-                    # j3d_cam = np.matmul(joints3d, world2local_r.T) + world2local_t
+                    j3d_cam = np.matmul(joints3d, world2local_r.T) + world2local_t
+                    # pdb.set_trace()
 
                     # transform smpl to kinect camera space
                     global_orient_kinect, transl_kinect = transform_to_camera_frame(
@@ -279,9 +297,9 @@ class BehaveConverter(BaseModeConverter):
 
                     # save undistorted img
                     img_undis_p = os.path.join(os.path.join(frame_data_folder, view_id + '.color_undistorted.jpg'))
+                    img = cv2.imread(os.path.join(frame_data_folder, view_id + '.color.jpg'))
+                    undistorted_img = cv2.undistort(img, intrinsics[view_id], dist_coeffs[view_id])
                     if not os.path.exists(img_undis_p):
-                        img = cv2.imread(os.path.join(frame_data_folder, view_id + '.color.jpg'))
-                        undistorted_img = cv2.undistort(img, intrinsics[view_id], dist_coeffs[view_id])
                         cv2.imwrite(img_undis_p, undistorted_img)
 
                     # save image path
@@ -311,16 +329,17 @@ class BehaveConverter(BaseModeConverter):
                     j2d_conf = np.zeros((137,1))
                     j2d_conf[np.any(j2d != 0, axis=1)] = 1
                     keypoints2d_original_.append(np.concatenate([j2d, j2d_conf], axis=1))
+                    keypoints3d_original_.append(j3d_cam)
 
                     # kps2d = keypoints_2d[0,:,:]
                     # for i in range(len(kps2d)):
                     #     cv2.circle(undistorted_img, (int(kps2d[i][0]), int(kps2d[i][1])), 5, (0, 0, 255), -1)
                     # cv2.imwrite(os.path.join(out_path, f'{seq}_{frame}_{view_id}.jpg'), undistorted_img)
 
-                    # # draw j2d on image (test)
-                    # for i in range(len(j2d)):
-                    #     cv2.circle(undistorted_img, (int(j2d[i][0]), int(j2d[i][1])), 5, (0, 255, 0), -1)
-                    # cv2.imwrite(os.path.join(out_path, f'{seq}_{frame}_{view_id}.jpg'), undistorted_img)
+                    # draw j2d on image (test)
+                    for i in range(len(j2d)):
+                        cv2.circle(undistorted_img, (int(j2d[i][0]), int(j2d[i][1])), 3, (0, 255, 0), -1)
+                    cv2.imwrite(os.path.join(out_path, f'{seq}_{frame}_{view_id}.jpg'), undistorted_img)
 
                     # for key in j2d_gt.keys():
                     #     for i in range(len(j2d_gt[key])):
@@ -348,14 +367,23 @@ class BehaveConverter(BaseModeConverter):
         human_data['keypoints2d_original'] = keypoints2d_original
         human_data['keypoints2d_original_mask'] = keypoints2d_original_mask
 
-        # keypoints 3d ego
+        # keypoints 3d
         keypoints3d = np.concatenate(keypoints3d_).reshape(-1, 45, 3)
         keypoints3d_conf = np.ones([keypoints3d.shape[0], 45, 1])
         keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
         keypoints3d, keypoints3d_mask = \
                 convert_kps(keypoints3d, src='smpl_45', dst='human_data')
-        human_data['keypoints3d_smpl'] = keypoints3d
-        human_data['keypoints3d_smpl_mask'] = keypoints3d_mask
+        human_data['keypoints3d'] = keypoints3d
+        human_data['keypoints3d_mask'] = keypoints3d_mask
+
+        # keypoints_3d_original
+        keypoints3d_original = np.concatenate(keypoints3d_original_).reshape(-1, 25, 3)
+        keypoints3d_ = np.ones([keypoints3d.shape[0], 25, 1])
+        keypoints3d_original = np.concatenate([keypoints3d_original, keypoints3d_], axis=-1)
+        keypoints3d_original, keypoints3d_original_mask = \
+                convert_kps(keypoints3d_original, src='openpose_25', dst='human_data')
+        human_data['keypoints3d_original'] = keypoints3d_original
+        human_data['keypoints3d_original_mask'] = keypoints3d_original_mask
         print('Keypoint conversion finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
         # image path

@@ -107,7 +107,7 @@ class RenbodyConverter(BaseModeConverter):
                     mode: str) -> dict:
         
         # get trageted sequence list
-        seed, size = '230517', '01000'
+        seed, size = '230525', '01000'
         random.seed(int(seed))
         camera_num_per_seq = 3
         invalid_camera_list = ['09']
@@ -149,6 +149,7 @@ class RenbodyConverter(BaseModeConverter):
             
 
         slices = self.slices[mode]
+        # slices=1
         slice_vids = int(len(seqs_split)/slices) + 1
 
         for slice_idx in range(slices):
@@ -247,7 +248,7 @@ class RenbodyConverter(BaseModeConverter):
 
                     # get smplx keypoints 2d
                     smplx_param = {key: torch.tensor(smplx_cam[key], device=self.device) for key in self.smplx_shape.keys()}
-                    output = gender_model[gender](**smplx_param)
+                    output = gender_model[gender](**smplx_param, return_verts=True)
                     keypoints_3d = output['joints']
                     keypoints_2d_xyd = camera_opencv.transform_points_screen(keypoints_3d)
                     keypoints_2d = keypoints_2d_xyd[..., :2].detach().cpu().numpy()
@@ -260,6 +261,15 @@ class RenbodyConverter(BaseModeConverter):
                     keypoints3d_original = np.matmul(keypoints3d_original_world, world2local_r.T) + world2local_t
                     keypoints2d_original = camera_opencv.transform_points_screen(
                             torch.tensor(keypoints3d_original, device=self.device, dtype=torch.float32))[..., :2].detach().cpu().numpy()
+                    
+                    # overlay vertes on image
+                    vert_3d = output['vertices']
+                    vert_2d_xyd = camera_opencv.transform_points_screen(vert_3d)
+                    vert_2d = vert_2d_xyd[..., :2].detach().cpu().numpy()
+                    img = cv2.imread(img_ps[0])
+                    for i in range(len(vert_2d[0])):
+                        cv2.circle(img, (int(vert_2d[0][i][0]), int(vert_2d[0][i][1])), 1, (0, 0, 255), -1)
+                    cv2.imwrite(os.path.join(out_path, f'{seq_basename}_{cam_id}.jpg'), img)
 
                     # save an image for debug
                     # img = cv2.imread(img_ps[0])
@@ -297,8 +307,8 @@ class RenbodyConverter(BaseModeConverter):
                         smplx_[key].append(smplx_cam[key])
 
                     # keypoints
-                    # keypoints2d_.append(keypoints_2d)
-                    # keypoints3d_.append(keypoints_3d)
+                    keypoints2d_.append(keypoints_2d)
+                    keypoints3d_.append(keypoints_3d)
                     keypoints2d_original_.append(keypoints2d_original)
                     keypoints3d_original_.append(keypoints3d_original)
                     keypoints_original_mask_.append(keypoints3d_original_mask)
@@ -315,23 +325,23 @@ class RenbodyConverter(BaseModeConverter):
                 human_data[bbox_name] = bbox_
             print('Bbox finished at', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
 
-            # # keypoints 2d
-            # keypoints2d = np.concatenate(keypoints2d_, axis=0).reshape(-1, 144, 2)
-            # keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
-            # keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
-            # keypoints2d, keypoints2d_mask = \
-            #         convert_kps(keypoints2d, src='smplx', dst='human_data')
-            # human_data['keypoints2d_smplx'] = keypoints2d
-            # human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
+            # keypoints 2d
+            keypoints2d = np.concatenate(keypoints2d_, axis=0).reshape(-1, 144, 2)
+            keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
+            keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
+            keypoints2d, keypoints2d_mask = \
+                    convert_kps(keypoints2d, src='smplx', dst='human_data')
+            human_data['keypoints2d_smplx'] = keypoints2d
+            human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
 
-            # # keypoints 3d
-            # keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
-            # keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
-            # keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
-            # keypoints3d, keypoints3d_mask = \
-            #         convert_kps(keypoints3d, src='smplx', dst='human_data')
-            # human_data['keypoints3d_smplx'] = keypoints3d
-            # human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
+            # keypoints 3d
+            keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
+            keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
+            keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
+            keypoints3d, keypoints3d_mask = \
+                    convert_kps(keypoints3d, src='smplx', dst='human_data')
+            human_data['keypoints3d_smplx'] = keypoints3d
+            human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
 
             # keypoints 2d original
             keypoints_2d_original = np.concatenate(keypoints2d_original_, axis=0).reshape(-1, 190, 2)

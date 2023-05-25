@@ -117,7 +117,7 @@ class Ssp3dConverter(BaseConverter):
         image_path_, keypoints2d_, bbox_xywh_ = [], [], []
 
 
-        seed, size = '230508', '999'
+        seed, size = '230525', '999'
         random.seed(int(seed))
 
 
@@ -209,7 +209,7 @@ class Ssp3dConverter(BaseConverter):
             keypoints2d_.append(keypoints_2d.reshape(1, -1, 2))
             keypoints3d_.append(keypoints_3d.reshape(1, -1, 3))
             for key in ['betas', 'body_pose', 'global_orient', 'transl']:
-                smpl_[key].append(smpl_params[key].reshape(self.smpl_shape[key]))
+                smpl_[key].append(smpl_params[key].detach().cpu().numpy().reshape(self.smpl_shape[key]))
 
             # get bbox
             bboxs = self._keypoints_to_scaled_bbox_bfh(keypoints_2d, vertices=vertices_2d, body_scale=self.misc['bbox_body_scale'],
@@ -224,6 +224,12 @@ class Ssp3dConverter(BaseConverter):
             
             # gender
             meta_['gender'].append(gender)
+
+        # smpl
+        for key in self.smpl_shape.keys():
+            smpl_[key] = np.concatenate(smpl_[key], axis=0).reshape(self.smpl_shape[key])
+        human_data['smpl'] = smpl_
+
 
         # bboxs
         for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
