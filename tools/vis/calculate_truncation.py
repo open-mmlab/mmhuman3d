@@ -10,6 +10,8 @@ import trimesh
 import json
 from tqdm import tqdm
 
+from tools.convert_datasets import DATASET_CONFIGS
+
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
 
 from mmhuman3d.models.body_models.builder import build_body_model
@@ -231,7 +233,7 @@ def visualize_humandata(args):
 
     dataset_path_dict = {
         'shapy': '/mnt/e/shapy',
-        'gta_human2': '/mnt/e/gta_human2_multiple',
+        'gta_human2': '/mnt/e/gta_human2',
         'renbody': '/mnt/d/renbody',
         'egobody': '/mnt/d/egobody',
         'ubody': '/mnt/d/ubody',
@@ -243,6 +245,7 @@ def visualize_humandata(args):
     
     anno_path = {
         'shapy': 'output',
+        'gta_human2': 'output',
         'renbody': 'output',
         'egobody': 'output',
         'ubody': 'output',
@@ -260,19 +263,26 @@ def visualize_humandata(args):
     # load humandata
     dataset_name = args.dataset_name
 
-    param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
-                                      anno_path[dataset_name], f'{dataset_name}*_0.npz'))
-    if len(param_ps) == 0:
-        param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
-                                      anno_path[dataset_name], f'{dataset_name}*.npz'))
+    if 'modes' in DATASET_CONFIGS[dataset_name].keys(): 
+        dataset_modes = DATASET_CONFIGS[dataset_name]['modes']
 
+        # only use train modes
+        dataset_modes = [mode for mode in dataset_modes if 'test' not in mode]
+        dataset_modes = [mode for mode in dataset_modes if 'val' not in mode]
+
+        for mode in dataset_modes:
+            param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
+                                        anno_path[dataset_name], f'{dataset_name}*{mode}*.npz'))        
+
+    else:
+        param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
+                                        anno_path[dataset_name], f'{dataset_name}*.npz'))
+        
     # truncation dict
     trunc_dict = {}
 
     for npz_id, param_p in enumerate(tqdm(param_ps, desc=f'Processing npzs',
                         position=0, leave=False)):
-
-        print(param_p)
         
         trunc_log = {'image_path': [], 'truncation': []}
 
@@ -290,8 +300,9 @@ def visualize_humandata(args):
             body_model_param_smpl = param['smpl'].item()
         if has_smplx:
             body_model_param_smplx = param['smplx'].item()  
-        if 'gender' in param['meta'].item().keys():
-            has_gender = True
+        if 'meta' in param.keys():
+            if 'gender' in param['meta'].item().keys():
+                has_gender = True
         # read smplx only if has both smpl and smplx
         if has_smpl and has_smplx:
             has_smpl = False
@@ -335,8 +346,13 @@ def visualize_humandata(args):
         # idx_list = [340, 139181]
 
         # for idx in idx_list:
-        for i in tqdm(range(args.sample_size), desc=f'Processing {args.sample_size} sample, '
-                      f'in npz {npz_id} / {len(param_ps)}',
+        if args.sample_size > len(param['image_path']):
+            idxs = range(len(param['image_path']))
+        else:
+            idxs = random.sample(range(len(param['image_path'])), args.sample_size)
+
+        for i in tqdm(idxs, desc=f'Processing {args.sample_size} sample, '
+                      f'in {os.path.basename(param_p)}',
                         position=1, leave=False):
             idx = random.randint(0, len(param['image_path']) - 1)
 
@@ -418,7 +434,7 @@ def visualize_humandata(args):
                                             cam_s=camera_small,
                                             cam_b=camera_big,
                                             cam_scale=cam_scale)
-            
+
             trunc_log['image_path'].append(image_p)
             trunc_log['truncation'].append(trunc)
                 
@@ -455,6 +471,9 @@ def visualize_humandata(args):
 
 
 if __name__ == '__main__':
+
+    # python tools/vis/calculate_truncation.py --dataset_name egobody
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', type=str, required=False, 
                         help='which dataset', 
