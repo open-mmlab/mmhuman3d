@@ -152,7 +152,7 @@ class EgobodyConverter(BaseModeConverter):
         seqs = pd.read_csv(os.path.join(dataset_path, 'data_splits.csv'))[batch_part].dropna().to_list()
         meta_df = pd.read_csv(os.path.join(dataset_path, 'data_info_release.csv'))
 
-        seed, size = '230503', '999'
+        seed, size = '230529', '999'
         size_i = min(int(size), len(seqs))
         random.seed(int(seed))
         # random.shuffle(npzs)
@@ -167,7 +167,7 @@ class EgobodyConverter(BaseModeConverter):
         for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
             bboxs_[bbox_name] = []
         meta_ = {}
-        for meta_key in ['gender', 'character', 'view']:
+        for meta_key in ['gender', 'character', 'view', 'principal_point', 'focal_length']:
             meta_[meta_key] = []
         image_path_ = []
 
@@ -400,6 +400,10 @@ class EgobodyConverter(BaseModeConverter):
                         ## keypoints
                         keypoints2d_.append(keypoints_2d)
                         keypoints3d_.append(keypoints_3d)
+
+                        # meta
+                        meta_['principal_point'].append((holo_cx, holo_cy))
+                        meta_['focal_length'].append((focal_length_x, focal_length_y))
 
                     # prepare for output
                     for p in image_list[valid_kps_anno_idx].tolist():
@@ -701,6 +705,8 @@ class EgobodyConverter(BaseModeConverter):
                                 meta_['view'].append(view)
                                 meta_['character'].append(character)
                                 meta_['gender'].append(smplx_model.gender)
+                                meta_['focal_length'].append([f_x, f_y])
+                                meta_['principal_point'].append([c_x, c_y])
 
                 except FloatingPointError:
                     print('Error in seq', seq)
