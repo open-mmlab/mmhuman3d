@@ -20,8 +20,8 @@ import pdb
 
 def _get_imgname(v):
     rgb_folder = os.path.join(v, 'rgb')
-    root_folder_id = v.split(os.pathsep).index(prefix)
-    imglist = os.path.join(os.pathsep.join(v.split(os.pathsep)[root_folder_id:]), 'rgb')
+    root_folder_id = v.split(os.path.sep).index(prefix)
+    imglist = os.path.join(os.path.sep.join(v.split(os.path.sep)[root_folder_id:]), 'rgb')
 
     # image 1 is T-pose, don't use
     im = []
@@ -37,7 +37,7 @@ def _get_imgname(v):
 def _get_exrname(v):
     rgb_folder = os.path.join(v, 'rgb')
     root_folder_id = v.split(os.path.sep).index(prefix)
-    masklist = os.path.join(os.path.sep.join(v.split(os.pathsep)[root_folder_id:]), 'mask')
+    masklist = os.path.join(os.path.sep.join(v.split(os.path.sep)[root_folder_id:]), 'mask')
 
     # image 1 is T-pose, don't use
     images = [img for img in os.listdir(rgb_folder) if img.endswith('.jpeg')]
@@ -51,7 +51,7 @@ def _get_exrname(v):
 def _get_npzname(p, f_num):
     
     npz = []
-    npz_tmp = p.split(os.pathsep)[-1]
+    npz_tmp = p.split(os.path.sep)[-1]
     for _ in range(f_num):
         npz.append(npz_tmp)
 
@@ -62,18 +62,18 @@ def _get_mask_conf(root, merged):
     
     os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
 
-    root_folder_id = root.split(os.pathsep).index(prefix)
+    root_folder_id = root.split(os.path.sep).index(prefix)
 
     conf = []
     for idx, mask_path in enumerate(merged['mask_path']): # , desc='Frame kps conf'):
-        exr_path = os.path.join(os.pathsep.join(root.split(os.pathsep)[:root_folder_id]), mask_path)
+        exr_path = os.path.join(os.path.sep.join(root.split(os.path.sep)[:root_folder_id]), mask_path)
 
         # import pdb; pdb.set_trace()
 
         image = cv2.imread(exr_path, cv2.IMREAD_UNCHANGED)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        json_path = os.path.join(os.pathsep.join(exr_path.split(os.pathsep)[:-2]), 'seq_data.json')
+        json_path = os.path.join(os.path.sep.join(exr_path.split(os.path.sep)[:-2]), 'seq_data.json')
         jsfile_tmp = json.load(open(json_path, 'r'))
 
         p_rgb = [0, 0, 0]
@@ -102,12 +102,13 @@ def _get_mask_conf(root, merged):
 def process_npz(args):
 
     seq = args.seq
-    root_folder_id = seq.split(os.pathsep).index(args.prefix)
-    root_path = os.pathsep.join(seq.split(os.pathsep)[:root_folder_id])
+    # pdb.set_trace()
+    root_folder_id = seq.split(os.path.sep).index(args.prefix)
+    root_path = os.path.sep.join(seq.split(os.path.sep)[:root_folder_id])
 
     dataset_path = os.path.join(root_path, args.prefix)
 
-    batch_name, place, seq_name = seq.split(os.pathsep)[root_folder_id+1:]
+    batch_name, place, seq_name = seq.split(os.path.sep)[root_folder_id+1:]
     # pdb.set_trace()
     outpath = os.path.join(args.output_path, batch_name, place, f'{seq_name}.npz')
     # assert not os.path.exists(outpath), f'{outpath} exist, skip!!'
@@ -116,7 +117,8 @@ def process_npz(args):
         return
 
     merged = {}
-    for key in ['image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d', 'keypoints3d', 'occlusion']:
+    # for key in ['image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d', 'keypoints3d', 'occlusion']:
+    for key in ['image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d', 'keypoints3d']:
         merged[key] = []
     merged['smpl'] = {}
     for key in ['transl', 'global_orient', 'betas', 'body_pose']:
@@ -133,10 +135,10 @@ def process_npz(args):
         # for p in tqdm(glob.glob(v + '/smpl_with_joints/*.npz'), desc='person'):
         ps = [p for p in os.listdir(os.path.join(seq, 'smpl_refit_withJoints_inCamSpace_noBUG')) if p.endswith('.npz')]
 
-        for p in sorted(ps):
-            occfile_tmp = np.load(os.path.join(seq, 'occlusion', p), allow_pickle=True)
-            occ = occfile_tmp['occlusion'][1:valid_frame_number+1]
-            merged['occlusion'].append(occ)
+        # for p in sorted(ps):
+        #     occfile_tmp = np.load(os.path.join(seq, 'occlusion', p), allow_pickle=True)
+        #     occ = occfile_tmp['occlusion'][1:valid_frame_number+1]
+        #     merged['occlusion'].append(occ)
 
         for p in sorted(ps):
             npfile_tmp = np.load(os.path.join(seq, 'smpl_refit_withJoints_inCamSpace_noBUG', p), allow_pickle=True)
@@ -182,7 +184,7 @@ def process_npz(args):
 
         merged['keypoints3d'] = np.vstack(merged['keypoints3d'])
         merged['keypoints2d'] = np.vstack(merged['keypoints2d'])
-        merged['occlusion'] = np.vstack(merged['occlusion'])
+        # merged['occlusion'] = np.vstack(merged['occlusion'])
 
         merged['conf'] = np.vstack(_get_mask_conf(dataset_path, merged)).reshape(-1, 144, 1)
 

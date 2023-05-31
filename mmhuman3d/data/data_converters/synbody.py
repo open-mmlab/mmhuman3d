@@ -27,6 +27,12 @@ class SynbodyConverter(BaseModeConverter):
     ACCEPTED_MODES = ['train']
 
     def __init__(self, modes: List = []) -> None:
+
+        self.misc_config = dict(bbox_body_scale=1.2, bbox_facehand_scale=1.0, flat_hand_mean=False,
+                                bbox_source='keypoints2d_original', kps3d_root_aligned=False, smplx_source='original',
+                                fps=30)
+
+
         super(SynbodyConverter, self).__init__(modes)
         # self.do_npz_merge = do_npz_merge
         # merged_path is the folder (will) contain merged npz
@@ -70,7 +76,7 @@ class SynbodyConverter(BaseModeConverter):
 
     #     return npz
 
-    def _keypoints_to_scaled_bbox_fh(self, keypoints, occ, scale=1.0, convention='smplx'):
+    def _keypoints_to_scaled_bbox_fh(self, keypoints, occ=None, scale=1.0, convention='smplx'):
         '''Obtain scaled bbox in xyxy format given keypoints
         Args:
             keypoints (np.ndarray): Keypoints
@@ -85,14 +91,18 @@ class SynbodyConverter(BaseModeConverter):
 
             # keypoints_factory=smplx.SMPLX_KEYPOINTS)
             kps = keypoints[kp_id]
-            occ_p = occ[kp_id]
 
-            if np.sum(occ_p) / len(kp_id) >= 0.1:
-                conf = 0
-                # print(f'{body_part} occluded, occlusion: {np.sum(occ_p) / len(kp_id)}, skip')
-            else:
-                # print(f'{body_part} good, {np.sum(self_occ_p + occ_p) / len(kp_id)}')
+            if occ == None:
                 conf = 1
+            else:
+                occ_p = occ[kp_id]
+
+                if np.sum(occ_p) / len(kp_id) >= 0.1:
+                    conf = 0
+                    # print(f'{body_part} occluded, occlusion: {np.sum(occ_p) / len(kp_id)}, skip')
+                else:
+                    # print(f'{body_part} good, {np.sum(self_occ_p + occ_p) / len(kp_id)}')
+                    conf = 1
 
             xmin, ymin = np.amin(kps, axis=0)
             xmax, ymax = np.amax(kps, axis=0)
@@ -289,12 +299,12 @@ class SynbodyConverter(BaseModeConverter):
         # get trageted sequence list
         root_dir, prefix = os.path.split(dataset_path)
         print(root_dir)
-        preprocessed_dir = os.path.join(root_dir, 'preprocessed')
+        preprocessed_dir = os.path.join(root_dir, 'preprocessed_0220_renew')
         npzs = glob.glob(os.path.join(preprocessed_dir, '*', '*', 'LS*.npz'))
-        seed, size = '230301', '04000'
-        random.seed(int(seed))
-        random.shuffle(npzs)
-        npzs = npzs[:int(size)]
+        seed, size = '230526_renew', '04000'
+        # random.seed(int(seed))
+        # random.shuffle(npzs)
+        # npzs = npzs[:int(size)]
         # print(npzs[:10])
 
         # initialize storage
@@ -329,10 +339,19 @@ class SynbodyConverter(BaseModeConverter):
         for key in smplx_shape:
             _smplx_l[key] = []
 
+        # pdb.set_trace()
+
+        size_n = max(int(size), len(npzs))
+
         for npzf in tqdm(npzs, desc='Npzfiles concating'):
             try:
                 npfile = dict(np.load(npzf, allow_pickle=True))
-                (width, height) = npfile['shape']
+
+                # (width, height) = npfile['shape']
+                if 'shape' in npfile.keys():
+                    (width, height) = npfile['shape']
+                else:
+                    (width, height) = (1280, 720)
 
                 # seq_folder_id = npzf.split('/').index('preprocessed')
                 # synbody_path = '/mnt/lustre/share_data/meihaiyi/shared_data/'
@@ -346,7 +365,7 @@ class SynbodyConverter(BaseModeConverter):
                 #     occ = np.load(occ_file)['occlusion'][i]
                 #     occs_.append(occ)
 
-                occs_ = npfile['occlusion']
+                # occs_ = npfile['occlusion']
 
                 # pdb.set_trace()
                 # os._exit(0)
@@ -366,7 +385,7 @@ class SynbodyConverter(BaseModeConverter):
                 if len(valid_id) == 0:
                     raise ValueError('No good keypoints found, skip!!')
                 valid_id = np.array(valid_id)
-                keypoints3d_[:, :, :] -= pelvis[:, None, :]
+                # keypoints3d_[:, :, :] -= pelvis[:, None, :]
                 # print('Root centered finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
             except Exception as e:
@@ -377,7 +396,8 @@ class SynbodyConverter(BaseModeConverter):
                 # since the 2d keypoints are not strictly corrcet, a large scale factor is used
             for idx in valid_id:
                 kp = keypoints2d_[idx]
-                occ = occs_[idx]
+                # occ = occs_[idx]
+                occ = None
                 bbox_tmp_ = {}
                 bbox_tmp_['bbox_xywh'] = self._keypoints_to_scaled_bbox(kp, 1.2)
                 bbox_tmp_['face_bbox_xywh'], bbox_tmp_['lhand_bbox_xywh'], bbox_tmp_[
@@ -429,16 +449,13 @@ class SynbodyConverter(BaseModeConverter):
                 # _smplx[k] = np.concatenate((_smplx[k], npfile['smplx'].item()[k][valid_id].reshape(smplx_shape[k])), axis=0)
                 _smplx_l[k].append(npfile['smplx'].item()[k][valid_id].reshape(smplx_shape[k]))
             gender = []
-            for meta_tmp in npfile['meta']:
-                s = meta_tmp.item()['gender']
-                if s == 'male':
-                    gender.append('m')
-                elif s == 'female':
-                    gender.append('f')
-                else:
-                    gender.append('n')
+            for idx, meta_tmp in enumerate(npfile['meta'][valid_id]):
+                gender.append(meta_tmp.item()['gender'])
 
-            _meta['gender'].append(np.array(gender)[valid_id].tolist())
+            _meta['gender'] += gender
+            # pdb.set_trace()
+
+            # _meta['gender'].append(np.array(gender)[valid_id].tolist())
             # _keypoints2d = np.concatenate((_keypoints2d, keypoints2d_[valid_id]), axis=0)
             # _keypoints3d = np.concatenate((_keypoints3d, keypoints3d_[valid_id]), axis=0)
             _keypoints2d_list.append(keypoints2d_[valid_id])
@@ -461,10 +478,10 @@ class SynbodyConverter(BaseModeConverter):
         _keypoints2d, mask = convert_kps(_keypoints2d, 'smplx', 'human_data')
         _keypoints3d, mask = convert_kps(_keypoints3d, 'smplx', 'human_data')
 
-        human_data['keypoints2d'] = _keypoints2d
-        human_data['keypoints3d'] = _keypoints3d
-        human_data['keypoints2d_mask'] = mask
-        human_data['keypoints3d_mask'] = mask
+        human_data['keypoints2d_original'] = _keypoints2d
+        human_data['keypoints3d_original'] = _keypoints3d
+        human_data['keypoints2d_original_mask'] = mask
+        human_data['keypoints3d_original_mask'] = mask
         print('Keypoint conversion finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
         for key in _smpl.keys():
@@ -480,10 +497,12 @@ class SynbodyConverter(BaseModeConverter):
 
         human_data['config'] = 'synbody_train'
         human_data['meta'] = _meta
+        human_data['misc'] = self.misc_config
         print('MetaData finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
         human_data.compress_keypoints_by_mask()
         # store the data struct
         os.makedirs(out_path, exist_ok=True)
-        out_file = os.path.join(out_path, f'synbody_train_{seed}_{size}.npz')
+
+        out_file = os.path.join(out_path, f'synbody_train_{seed}_{str(size_n)}.npz')
         human_data.dump(out_file)
