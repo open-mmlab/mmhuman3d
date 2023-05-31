@@ -22,7 +22,7 @@ import multiprocessing as mp
 
 def process_npz_one(seq):
     cmd = f'srun -p Zoetrope --gres=gpu:0 --cpus-per-task=4 -x SH-IDC1-10-198-8-[51,56,68,72,78,100,116,123] -N 1 ' \
-        f'python tools/synbody_preprocess.py --seq {seq} ' \
+        f'python tools/preprocess/synbody_preprocess.py --seq {seq} ' \
         f'--output_path {output_path} ' \
         f'--prefix {prefix}'
 
@@ -39,7 +39,8 @@ def process_npz_multiprocessing(args):
     dataset_path = os.path.join(args.root_path, args.prefix)
     batch_paths = [os.path.join(args.root_path, p) for p in os.listdir(dataset_path)]
 
-    seqs_targeted = glob.glob(os.path.join(args.root_path, args.prefix, '*', '*', 'LS*'))
+    seqs_targeted = glob.glob(os.path.join(args.root_path, args.prefix, '*renew_0220', '*', 'LS*'))
+    # pdb.set_trace()
     print(f'There are {len(batch_paths)} batches and {len(seqs_targeted)} sequences')
 
     # print(ple)
