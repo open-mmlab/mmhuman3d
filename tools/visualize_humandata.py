@@ -16,7 +16,7 @@ from mmhuman3d.models.body_models.builder import build_body_model
 import pdb
 
 
-def render_pose(img, body_model_param, body_model, camera):
+def render_pose(img, body_model_param, body_model, camera, return_mask=False):
 
     # the inverse is same
     pyrender2opencv = np.array([[1.0, 0, 0, 0],
@@ -71,13 +71,15 @@ def render_pose(img, body_model_param, body_model, camera):
     img = (output_img * 255).astype(np.uint8)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+    if return_mask:
+        return img, valid_mask, (color * 255).astype(np.uint8)
+
     return img
 
 
 def render_truncation(img, body_model_param, body_model, cam_s, cam_b, cam_scale):
 
     # the inverse is same
-    camera = cam_s
     pyrender2opencv = np.array([[1.0, 0, 0, 0],
                                 [0, -1, 0, 0],
                                 [0, 0, -1, 0],
@@ -194,15 +196,38 @@ def render_truncation(img, body_model_param, body_model, cam_s, cam_b, cam_scale
     min_col, max_col = np.min(cols), np.max(cols)
     cropped_image = img_s[min_row:max_row+1, min_col:max_col+1, :]
 
-    return cropped_image, trunc, img_s, img_b
+    return cropped_image, trunc
 
 
-def calculate_pp_occlusion(masks, h, w):
+def render_pp_occlusion(img, body_model_params, body_models, genders, camera):
 
-    # sum all masks
-    return
-    mask_all = a
+    masks, colors = [], []
 
+    # render separate masks
+    for i, body_model_param in enumerate(body_model_params):
+        _, mask, color = render_pose(img=img, 
+                                        body_model_param=body_model_param, 
+                                        body_model=body_models[genders[i]],
+                                        camera=camera,
+                                        return_mask=True)
+        masks.append(mask)
+        colors.append(color)
+
+    # sum masks
+    mask_sum = np.sum(masks, axis=0)
+    mask_all = (mask_sum > 0)[:, :, np.newaxis]
+
+    pp_occ = 1 - np.sum(mask_all) / np.sum(mask_sum)
+
+    # overlay colors to img
+    for i, color in enumerate(colors):
+        mask = masks[i]
+        img = img * (1 - mask) + color * mask
+
+    img = img.astype(np.uint8)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    return img, pp_occ
 
 
 def visualize_humandata(args):
@@ -327,20 +352,11 @@ def visualize_humandata(args):
             except KeyError:
                 focal_length = param['misc'].item()['focal_length']
                 camera_center = param['meta'].item()['principal_point']
-
-        # prepare for mesh projection
-        camera = pyrender.camera.IntrinsicsCamera(
-            fx=focal_length[0], fy=focal_length[1],
-            cx=camera_center[0], cy=camera_center[1])
         
-        # prepare camera for calculating truncation and pp occlusion
-        cam_scale = 2
-        camera_small = pyrender.camera.IntrinsicsCamera(
-            fx=focal_length[0] / cam_scale, fy=focal_length[1] / cam_scale,
-            cx=camera_center[0] * cam_scale, cy=camera_center[1] * cam_scale)
-        camera_big = pyrender.camera.IntrinsicsCamera(
-            fx=focal_length[0] * cam_scale, fy=focal_length[1] * cam_scale,
-            cx=camera_center[0] * cam_scale, cy=camera_center[1] * cam_scale)
+        if isinstance(focal_length, float):
+            focal_length = [focal_length, focal_length]
+        if isinstance(camera_center, float):
+            camera_center = [camera_center, camera_center]
  
         # read gender
         if has_gender:
@@ -348,70 +364,171 @@ def visualize_humandata(args):
         else:
             gender = 'neutral'
 
-        # read smpl smplx params and build body model
-        if has_smpl:
-            body_model_param_tensor = {key: torch.tensor(body_model_param_smpl[key][idx:idx+1],
-                                                          device=device, dtype=torch.float32)
-                            for key in body_model_param_smpl.keys()
-                            if body_model_param_smpl[key][idx:idx+1].shape[0] > 0}
-            rendered_image = render_pose(img=image, 
-                                        body_model_param=body_model_param_tensor, 
-                                        body_model=smpl_model[gender],
-                                        camera=camera)
+        # ---------------------- render pose ----------------------
+        if args.save_pose:
+            # prepare for mesh projection
+            camera = pyrender.camera.IntrinsicsCamera(
+                fx=focal_length[0], fy=focal_length[1],
+                cx=camera_center[0], cy=camera_center[1])
+            
+            # read smpl smplx params and build body model
+            if has_smpl:
+                body_model_param_tensor = {key: torch.tensor(body_model_param_smpl[key][idx:idx+1],
+                                                            device=device, dtype=torch.float32)
+                                for key in body_model_param_smpl.keys()
+                                if body_model_param_smpl[key][idx:idx+1].shape[0] > 0}
+                rendered_image = render_pose(img=image, 
+                                            body_model_param=body_model_param_tensor, 
+                                            body_model=smpl_model[gender],
+                                            camera=camera)
 
-        if has_smplx:
-            body_model_param_tensor = {key: torch.tensor(body_model_param_smplx[key][idx:idx+1],
-                                                          device=device, dtype=torch.float32)
-                            for key in body_model_param_smplx.keys()
-                            if body_model_param_smplx[key][idx:idx+1].shape[0] > 0}
-            rendered_image = render_pose(img=image, 
-                                        body_model_param=body_model_param_tensor, 
-                                        body_model=smplx_model[gender],
-                                        camera=camera)
-            trunc_image, trunc, img_s, img_b = render_truncation(img=image,
-                                        body_model_param=body_model_param_tensor, 
-                                        body_model=smplx_model[gender],
-                                        cam_s=camera_small,
-                                        cam_b=camera_big,
-                                        cam_scale=cam_scale)
+            if has_smplx:
+                body_model_param_tensor = {key: torch.tensor(body_model_param_smplx[key][idx:idx+1],
+                                                            device=device, dtype=torch.float32)
+                                for key in body_model_param_smplx.keys()
+                                if body_model_param_smplx[key][idx:idx+1].shape[0] > 0}
+                rendered_image = render_pose(img=image, 
+                                            body_model_param=body_model_param_tensor, 
+                                            body_model=smplx_model[gender],
+                                            camera=camera)
+
+        # ---------------------- render truncation ----------------------
+        if args.save_trunc:    
+            # prepare camera for calculating truncation and pp occlusion
+            cam_scale = 2
+            camera_small = pyrender.camera.IntrinsicsCamera(
+                fx=focal_length[0] / cam_scale, fy=focal_length[1] / cam_scale,
+                cx=camera_center[0] * cam_scale, cy=camera_center[1] * cam_scale)
+            camera_big = pyrender.camera.IntrinsicsCamera(
+                fx=focal_length[0] * cam_scale, fy=focal_length[1] * cam_scale,
+                cx=camera_center[0] * cam_scale, cy=camera_center[1] * cam_scale)
+
+            # read smpl smplx params and build body model
+            if has_smpl:
+                body_model_param_tensor = {key: torch.tensor(body_model_param_smpl[key][idx:idx+1],
+                                                            device=device, dtype=torch.float32)
+                                for key in body_model_param_smpl.keys()
+                                if body_model_param_smpl[key][idx:idx+1].shape[0] > 0}
+                trunc_image, trunc = render_truncation(img=image,
+                                            body_model_param=body_model_param_tensor, 
+                                            body_model=smpl_model[gender],
+                                            cam_s=camera_small,
+                                            cam_b=camera_big,
+                                            cam_scale=cam_scale)
+
+            if has_smplx:
+                body_model_param_tensor = {key: torch.tensor(body_model_param_smplx[key][idx:idx+1],
+                                                            device=device, dtype=torch.float32)
+                                for key in body_model_param_smplx.keys()
+                                if body_model_param_smplx[key][idx:idx+1].shape[0] > 0}
+                trunc_image, trunc = render_truncation(img=image,
+                                            body_model_param=body_model_param_tensor, 
+                                            body_model=smplx_model[gender],
+                                            cam_s=camera_small,
+                                            cam_b=camera_big,
+                                            cam_scale=cam_scale)
             
 
+        # ---------------------- render pp occlusion ----------------------
+        ppocc_processed = False
+        if args.save_pp_occ:
 
+            img_idxs = [idx for idx, imgp in enumerate(param['image_path'].tolist()) if imgp == image_p]
 
-        # trunc = calculate_truncation(mask, image.shape[0], image.shape[1])
-        # trunc = 1
+            if len(img_idxs) < 2:
+                print(f'PP occlusion for {image_p} cannot be done because' \
+                        'there is only one annotated person in the image')
+            else:     
+                if not args.save_pose:
+                    # prepare camera
+                    camera = pyrender.camera.IntrinsicsCamera(
+                        fx=focal_length[0], fy=focal_length[1],
+                        cx=camera_center[0], cy=camera_center[1])
 
-        # write truncation on image
-        cv2.putText(rendered_image, f'Truncation: {trunc}', 
-                    (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4, cv2.LINE_AA)
+                params, genders = [], []
 
-        print(f'Truncation: {trunc}')
+                # prepare gender
+                for pp_img_idx in img_idxs:
+                    if has_gender:
+                        gender = param['meta'].item()['gender'][pp_img_idx]
+                    else:
+                        gender = 'neutral'
+                    genders.append(gender)
 
-        
+                if has_smpl:
+                    for pp_img_idx in img_idxs:
+                        body_model_param_tensor = {key: torch.tensor(body_model_param_smpl[key][pp_img_idx:pp_img_idx+1],
+                                                                    device=device, dtype=torch.float32)
+                                    for key in body_model_param_smpl.keys()
+                                    if body_model_param_smpl[key][pp_img_idx:pp_img_idx+1].shape[0] > 0}
+                        params.append(body_model_param_tensor)
+                    ppocc_image, pp_occ = render_pp_occlusion(img=image, 
+                                                body_model_param=params, 
+                                                body_models=smpl_model,
+                                                genders=genders,
+                                                camera=camera)
 
+                if has_smplx:
+                    for pp_img_idx in img_idxs:
+                        body_model_param_tensor = {key: torch.tensor(body_model_param_smplx[key][pp_img_idx:pp_img_idx+1],
+                                                                    device=device, dtype=torch.float32)
+                                    for key in body_model_param_smplx.keys()
+                                    if body_model_param_smplx[key][pp_img_idx:pp_img_idx+1].shape[0] > 0}
+                        params.append(body_model_param_tensor)
+                    ppocc_image, pp_occ = render_pp_occlusion(img=image, 
+                                                body_model_params=params, 
+                                                body_models=smplx_model,
+                                                genders=genders,
+                                                camera=camera)
+                ppocc_processed = True
 
+        # ---------------------- render results ----------------------
+        # print(f'Truncation: {trunc}')
+        if not args.save_pose:
+            rendered_image = image
         os.makedirs(os.path.join(args.out_path, args.dataset_name), exist_ok=True)
-        out_image_path = os.path.join(args.out_path, args.dataset_name,
-                                    f'{os.path.basename(param_ps[0])[:-4]}_{idx}.png')
-        print(f'Saving image to {out_image_path}')
-        cv2.imwrite(out_image_path, rendered_image)
+
+        font_size = image.shape[1] / 1000
+        front_location_y = int(image.shape[1] / 10)
+        front_location_x = int(image.shape[0] / 10)
 
         if args.save_trunc:
+            cv2.putText(rendered_image, f'Truncation: {trunc}', 
+                    (front_location_x, front_location_y), cv2.FONT_HERSHEY_SIMPLEX, 
+                    font_size, (0, 0, 255), 4, cv2.LINE_AA)
             out_image_path_trunc = os.path.join(args.out_path, args.dataset_name,
                                 f'{os.path.basename(param_ps[0])[:-4]}_{idx}_trunc.png')
             cv2.imwrite(out_image_path_trunc, trunc_image)
 
-            out_image_path_s = os.path.join(args.out_path, args.dataset_name,
-                                f'{os.path.basename(param_ps[0])[:-4]}_{idx}_s.png')
-            cv2.imwrite(out_image_path_s, img_s)
+            # out_image_path_s = os.path.join(args.out_path, args.dataset_name,
+            #                     f'{os.path.basename(param_ps[0])[:-4]}_{idx}_s.png')
+            # cv2.imwrite(out_image_path_s, img_s)
 
-            out_image_path_b = os.path.join(args.out_path, args.dataset_name,
-                                f'{os.path.basename(param_ps[0])[:-4]}_{idx}_b.png')
-            cv2.imwrite(out_image_path_b, img_b)
+            # out_image_path_b = os.path.join(args.out_path, args.dataset_name,
+            #                     f'{os.path.basename(param_ps[0])[:-4]}_{idx}_b.png')
+            # cv2.imwrite(out_image_path_b, img_b)
 
+        if args.save_pp_occ:
+            if ppocc_processed:
+                cv2.putText(ppocc_image, f'PP occlusion: {pp_occ}',
+                        (front_location_x, front_location_y * 2), cv2.FONT_HERSHEY_SIMPLEX, 
+                        font_size, (0, 0, 255), 4, cv2.LINE_AA)
+                cv2.putText(rendered_image, f'PP occlusion: {pp_occ}',
+                        (front_location_x, front_location_y * 2), cv2.FONT_HERSHEY_SIMPLEX, 
+                        font_size, (0, 0, 255), 4, cv2.LINE_AA)
+                out_image_path_pp_occ = os.path.join(args.out_path, args.dataset_name,
+                                    f'{os.path.basename(param_ps[0])[:-4]}_{idx}_ppocc.png')
+                cv2.imwrite(out_image_path_pp_occ, ppocc_image)
+            else:
+                cv2.putText(rendered_image, f'PP occlusion not avliable',
+                        (front_location_x, front_location_y * 2), cv2.FONT_HERSHEY_SIMPLEX, 
+                        font_size, (0, 0, 255), 4, cv2.LINE_AA)
 
-
-
+        if args.save_pose:
+            out_image_path = os.path.join(args.out_path, args.dataset_name,
+                                        f'{os.path.basename(param_ps[0])[:-4]}_{idx}.png')
+            # print(f'Saving image to {out_image_path}')
+            cv2.imwrite(out_image_path, rendered_image)
 
         pdb.set_trace()
 
@@ -434,12 +551,15 @@ if __name__ == '__main__':
     
 
     # optional args
+    parser.add_argument('--save_pose', type=bool, required=False,
+                        help='save rendered smpl/smplx pose images',
+                        default=True)
     parser.add_argument('--save_trunc', type=bool, required=False, 
                         help='save truncation images', 
                         default=True)
-    parser.add_argument('--save_pp_occlusion', type=bool, required=False,
-                        help='save pp occlusion images',
-                        default=False)
+    parser.add_argument('--save_pp_occ', type=bool, required=False,
+                        help='save person-person occlusion images',
+                        default=True)
 
 
 
