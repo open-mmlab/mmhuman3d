@@ -10,9 +10,9 @@ import trimesh
 import PIL.Image as pil_img
 
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
-
+from tools.convert_datasets import DATASET_CONFIGS
 from mmhuman3d.models.body_models.builder import build_body_model
-
+from tools.utils.request_files_server import request_files, request_files_name
 import pdb
 
 
@@ -212,15 +212,20 @@ def render_truncation(img, body_model_param, body_model, cam_s, cam_b, cam_scale
                                     :]
     # in_screen_mask_s = valid_mask_s[:img_b.shape[0],:img_b.shape[1],:]
     # in_screen_mask_s = np.pad(in_screen_mask_s, ((0, padding_width), (0, padding_height), (0, 0)), mode='constant')
-    trunc = 1 - np.sum(in_screen_mask_s) / np.sum(valid_mask_s)
+    
+    if np.sum(valid_mask_s) == 0:
+        trunc = 1
+        return img_s, trunc
+    else:
+        trunc = 1 - np.sum(in_screen_mask_s) / np.sum(valid_mask_s)
 
-    # crop image_s to its bbox
-    rows, cols, _ = np.where(valid_mask_s)
-    min_row, max_row = np.min(rows), np.max(rows)
-    min_col, max_col = np.min(cols), np.max(cols)
-    cropped_image = img_s[min_row:max_row+1, min_col:max_col+1, :]
+        # crop image_s to its bbox
+        rows, cols, _ = np.where(valid_mask_s)
+        min_row, max_row = np.min(rows), np.max(rows)
+        min_col, max_col = np.min(cols), np.max(cols)
+        cropped_image = img_s[min_row:max_row+1, min_col:max_col+1, :]
+        return cropped_image, trunc
 
-    return cropped_image, trunc
 
 
 def render_pp_occlusion(img, body_model_params, body_models, genders, cameras):
@@ -256,13 +261,47 @@ def render_pp_occlusion(img, body_model_params, body_models, genders, cameras):
 
 def visualize_humandata(args):
 
-    avaliable_datasets = ['shapy', 'gta_human2', 'renbody', 'egobody', 'ubody', 'ssp3d', 
+    avaliable_datasets = ['shapy', 'gta_human2', 'egobody', 'ubody', 'ssp3d', 
                           'FIT3D', 'CHI3D', 'HumanSC3D', 'behave']
+    # some datasets are on 1988
+    server_datasets = ['renbody']
+
+    
+    humandata_datasets = [ # name, glob pattern, exclude pattern
+        ('arctic', 'p1_train.npz', ''),
+        ('bedlam', 'bedlam_train.npz', ''),
+        ('behave', 'behave_train_230516_231_downsampled.npz', ''),
+        ('chi3d', 'CHI3D_train_230511_1492_*.npz', ''),
+        ('crowdpose', 'crowdpose_neural_annot_train_new.npz', ''),
+        ('lspet', 'eft_lspet.npz', ''),
+        ('ochuman', 'eft_ochuman.npz', ''),
+        ('posetrack', 'eft_posetrack.npz', ''),
+        ('egobody_ego', 'egobody_egocentric_train_230425_065_fix_betas.npz', ''),
+        ('egobody_kinect', 'egobody_kinect_train_230503_065_fix_betas.npz', ''),
+        ('fit3d', 'FIT3D_train_230511_1504_*.npz', ''),
+        ('gta', 'gta_human2multiple_230406_04000_0.npz', ''),
+        ('ehf', 'h4w_ehf_val_updated_v2.npz', ''),  # use humandata ehf to get bbox
+        ('humansc3d', 'HumanSC3D_train_230511_2752_*.npz', ''),
+        ('instavariety', 'insta_variety_neural_annot_train.npz', ''),
+        ('mpi_inf_3dhp', 'mpi_inf_3dhp_neural_annot_train.npz', ''),
+        ('mtp', 'mtp_smplx_train.npz', ''),
+        ('muco3dhp', 'muco3dhp_train.npz', ''),
+        ('prox', 'prox_train_smplx_new.npz', ''),
+        ('renbody', 'renbody_train_230525_399_*.npz', ''),
+        ('renbody_highres', 'renbody_train_highrescam_230517_399_*_fix_betas.npz', ''),
+        ('rich', 'rich_train_fix_betas.npz', ''),
+        ('spec', 'spec_train_smpl.npz', ''),
+        ('ssp3d', 'ssp3d_230525_311.npz', ''),
+        ('synbody_magic1', 'synbody_amass_230328_02172.npz', ''),
+        ('synbody', 'synbody_train_230521_04000_fix_betas.npz', ''),
+        ('talkshow', 'talkshow_smplx_*.npz', 'path'),
+        ('up3d', 'up3d_trainval.npz', ''),
+    ]
 
     dataset_path_dict = {
         'shapy': '/mnt/e/shapy',
-        'gta_human2': '/mnt/e/gta_human2_multiple',
-        'renbody': '/mnt/d/renbody',
+        'gta_human2': '/mnt/e/gta_human2',
+        'renbody': '/lustre/share_data/weichen1/renbody',
         'egobody': '/mnt/d/egobody',
         'ubody': '/mnt/d/ubody',
         'ssp3d': '/mnt/e/ssp-3d',
@@ -273,8 +312,8 @@ def visualize_humandata(args):
     
     anno_path = {
         'shapy': 'output',
-        'renbody': 'output',
         'egobody': 'output',
+        'gta_human2': 'output',
         'ubody': 'output',
         'ssp3d': 'output',
         'FIT3D': 'output',
@@ -284,17 +323,30 @@ def visualize_humandata(args):
     
     camera_params_dict = {
         'gta_human2': {'principal_point': [960, 540], 'focal_length': [1158.0337, 1158.0337]},
-
     }
 
     # load humandata
     dataset_name = args.dataset_name
 
-    param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
-                                      anno_path[dataset_name], f'{dataset_name}*_0.npz'))
-    if len(param_ps) == 0:
+    if dataset_name not in server_datasets:
         param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
-                                      anno_path[dataset_name], f'{dataset_name}*.npz'))
+                                            anno_path[dataset_name], f'{dataset_name}*.npz'))
+    else:
+        data_info = [info for info in humandata_datasets if info[0] == dataset_name][0]
+        _, filename, exclude = data_info
+
+        param_ps = glob.glob(os.path.join(args.server_local_path, filename))
+        if exclude != '':
+            param_ps = [p for p in param_ps if exclude not in p]
+    
+    # if 'modes' in DATASET_CONFIGS[dataset_name].keys(): 
+    #     dataset_modes = DATASET_CONFIGS[dataset_name]['modes']
+
+    #     # only use train modes
+    #     dataset_modes = [mode for mode in dataset_modes if 'test' not in mode]
+    #     dataset_modes = [mode for mode in dataset_modes if 'val' not in mode]
+
+    #     param_ps = [p for p in param_ps if any([mode in p for mode in dataset_modes])]
 
     for param_p in param_ps:
         param = dict(np.load(param_p, allow_pickle=True))
@@ -305,7 +357,6 @@ def visualize_humandata(args):
             has_smplx = True
         elif 'smpl' in param.keys():
             has_smpl = True
-
 
         # load params
         if has_smpl:
@@ -353,17 +404,36 @@ def visualize_humandata(args):
                         use_pca=False,
                         batch_size=1
                     )).to(device)
-        
-        # idx_list = [340, 139181]
 
         # for idx in idx_list:
-        for i in range(5):
-            idx = random.randint(0, len(param['image_path']) - 1)
+        sample_size = 5
+        if sample_size > len(param['image_path']):
+            idxs = range(len(param['image_path']))
+        else:
+            idxs = random.sample(range(len(param['image_path'])), sample_size)
+
+        # idxs = [340, 139181]
+
+        # prepare for server request if datasets on server
+        if dataset_name in server_datasets:
+            print('getting images from server...')
+            files = param['image_path'][idxs]
+            pdb.set_trace()
+            local_image_folder = os.path.join(args.image_cache_path, dataset_name)
+            os.makedirs(local_image_folder, exist_ok=True)
+            request_files(files, 
+                        server_path=dataset_path_dict[dataset_name], 
+                        local_path=local_image_folder, 
+                        server_name='1988')
+            print('done')
+        else:
+            local_image_folder = dataset_path_dict[dataset_name]
+        
+        for idx in idxs:
 
             image_p = param['image_path'][idx]
-
             # read image
-            image_path = os.path.join(dataset_path_dict[dataset_name], image_p)
+            image_path = os.path.join(local_image_folder, image_p)
             image = cv2.imread(image_path)
             # convert to BGR
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -566,7 +636,12 @@ if __name__ == '__main__':
     parser.add_argument('--out_path', type=str, required=False, 
                         help='path to the output folder',
                         default='/mnt/c/users/12595/desktop/humandata_vis')
-    
+    parser.add_argument('--server_local_path', type=str, required=False, 
+                        help='local path to where you save the annotations of server datasets',
+                        default='/mnt/d/annotations_1988')
+    parser.add_argument('--image_cache_path', type=str, required=False,
+                        help='local path to image cache folder for server datasets',
+                        default='/mnt/d/image_cache_1988')
 
     # optional args
     parser.add_argument('--save_pose', type=bool, required=False,
