@@ -16,15 +16,35 @@ from mmhuman3d.models.body_models.builder import build_body_model
 from tools.utils.request_files_server import request_files, request_files_name
 import pdb
 
+smpl_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 'body_pose': (-1, 69)}
+smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
+        'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
+        'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3), 'expression': (-1, 10)}
+
 
 def get_cam_params(camera_params_dict, dataset_name, param, idx):
 
+    eft_datasets = ['ochuman','lspet', 'posetrack']
+
+    R, T = None, None
     # read cam params
     if dataset_name in camera_params_dict.keys():
         cx, cy = camera_params_dict[dataset_name]['principal_point']
         fx, fy = camera_params_dict[dataset_name]['focal_length']
         camera_center = (cx, cy)
         focal_length = (fx, fy)
+    elif dataset_name in eft_datasets:
+        pred_cam = param['meta'].item()['pred_cam'][idx]
+        cam_scale, cam_trans = pred_cam[0], pred_cam[1:]
+        # pdb.set_trace()
+        bbox_xywh = param['bbox_xywh'][idx][:4]
+        R = np.eye(3) * cam_scale * bbox_xywh[-1] / 2
+        T = np.array([
+                (cam_trans[0]+1)*bbox_xywh[-1]/2 + bbox_xywh[0], 
+                (cam_trans[1]+1)*bbox_xywh[-1]/2 + bbox_xywh[1], 
+                0])
+        focal_length = [5000, 5000]
+        camera_center = [0, 0]
     else:
         try:
             focal_length = param['meta'].item()['focal_length'][idx]
@@ -32,16 +52,30 @@ def get_cam_params(camera_params_dict, dataset_name, param, idx):
         except KeyError:
             focal_length = param['misc'].item()['focal_length']
             camera_center = param['meta'].item()['principal_point']
-    
-    if isinstance(focal_length, float):
+        except TypeError:
+            focal_length = param['meta'].item()['focal_length']
+            camera_center = param['meta'].item()['princpt']
+        try:
+            R = param['meta'].item()['R'][idx]
+            T = param['meta'].item()['T'][idx]
+        except KeyError or IndexError:
+            R = None
+            T = None
+        
+            
+    focal_length = np.asarray(focal_length).reshape(-1)
+    camera_center = np.asarray(camera_center).reshape(-1)
+
+    if len(focal_length)==1:
         focal_length = [focal_length, focal_length]
-    if isinstance(camera_center, float):
+    if len(camera_center)==1:
         camera_center = [camera_center, camera_center]
 
-    return focal_length, camera_center
+    return focal_length, camera_center, R, T
 
 
-def render_pose(img, body_model_param, body_model, camera, return_mask=False):
+def render_pose(img, body_model_param, body_model, camera, return_mask=False,
+                 R=None, T=None, dataset_name=None):
 
     # the inverse is same
     pyrender2opencv = np.array([[1.0, 0, 0, 0],
@@ -53,6 +87,20 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False):
     
     vertices = output['vertices'].detach().cpu().numpy().squeeze()
     faces = body_model.faces
+
+    eft_datasets = ['ochuman', 'lspet', 'posetrack']
+    # adjust vertices beased on R and T
+    if R is not None:
+        joints = output['joints'].detach().cpu().numpy().squeeze()
+        root_joints = joints[0]
+        if dataset_name in eft_datasets:
+            vertices = np.dot(R, vertices.transpose(1,0)).transpose(1,0) + T.reshape(1,3)
+            vertices[:, 2] = (vertices[:, 2]-vertices[:, 2].min())/ (vertices[:, 2].max()-vertices[:, 2].min())*30 +500
+            vertices[:, :2] *= vertices[:, [2]]
+            vertices[:, :2] /= 5000.
+        else:
+            T = np.dot(np.array(R), root_joints) - root_joints  + np.array(T)
+            vertices = vertices + T
 
     # render material
     base_color = (1.0, 193/255, 193/255, 1.0)
@@ -102,23 +150,28 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False):
     return img
 
 
-def render_pp_occlusion(img, body_model_params, body_models, genders, cameras):
+def render_pp_occlusion(img, body_model_params, body_models, genders, cameras,
+                        Rs=[], Ts=[]):
 
     masks, colors = [], []
 
     # render separate masks
     for i, body_model_param in enumerate(body_model_params):
+
+        R = Rs[i]
+        T = Ts[i]
         _, mask, color = render_pose(img=img, 
                                         body_model_param=body_model_param, 
                                         body_model=body_models[genders[i]],
                                         camera=cameras[i],
-                                        return_mask=True)
+                                        return_mask=True,
+                                        R=R, T=T,)
         masks.append(mask)
         colors.append(color)
 
     # sum masks
     mask_sum = np.sum(masks, axis=0)
-    mask_all = (mask_sum > 0)[:, :, np.newaxis]
+    mask_all = (mask_sum > 0)
 
     pp_occ = 1 - np.sum(mask_all) / np.sum(mask_sum)
 
@@ -138,7 +191,10 @@ def visualize_humandata(args):
     avaliable_datasets = ['shapy', 'gta_human2', 'egobody', 'ubody', 'ssp3d', 
                           'FIT3D', 'CHI3D', 'HumanSC3D', 'behave']
     # some datasets are on 1988
-    server_datasets = ['renbody', 'arctic']
+    server_datasets = ['arctic', 'bedlam', 'crowdpose', 'lspet', 'ochuman',
+                       'posetrack', 'ehf', 'instavariety', 'mpi_inf_3dhp',
+                       'mtp', 'muco3dhp', 'prox', 'renbody', 'rich', 'spec',
+                       'synbody','talkshow', 'up3d', 'renbody_highres', 'agora']
 
     
     humandata_datasets = [ # name, glob pattern, exclude pattern
@@ -175,27 +231,29 @@ def visualize_humandata(args):
     dataset_path_dict = {
         'arctic': '/lustre/share_data/weichen1/arctic/unpack/arctic_data/data/images',
         'behave': '/mnt/e/behave',
-        'bedlam': '',
+        'bedlam': '/lustre/share_data/weichen1/bedlam/train_images',
         'CHI3D': '/mnt/d/sminchisescu-research-datasets',
-        'crowdpose': '',
+        'crowdpose': '/lustrenew/share_data/zoetrope/data/datasets/crowdpose',
         'lspet': '',
         'ochuman': '',
-        'posetrack': '',
         'egobody': '/mnt/d/egobody',
         'FIT3D': '/mnt/d/sminchisescu-research-datasets',
         'gta_human2': '/mnt/e/gta_human2',
         'ehf': '',
         'HumanSC3D': '/mnt/d/sminchisescu-research-datasets',
-        'instavariety': '',
-        'mpi_inf_3dhp': '',
+        'instavariety': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/insta_variety/',
+        'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/mpi_inf_3dhp',
         'mtp': '',
         'muco3dhp': '/lustre/share_data/weichen1/MuCo',
-        'prox': '',
+        'posetrack': 'lustrenew/share_data/zoetrope/data/datasets/posetrack/data/images',
+        'prox': '/lustre/share_data/weichen1/PROXFlip',
         'renbody': '/lustre/share_data/weichen1/renbody',
-        'rich': '',
-        'spec': '',
+        'renbody_highres': '/lustre/share_data/weichen1/renbody',
+        'rich': '/lustrenew/share_data/zoetrope/data/datasets/rich/images/train',
+        'spec': '/lustre/share_data/weichen1/spec/',
         'ssp3d': '/mnt/e/ssp-3d',
-        'synbody': '',
+        'synbody': '/lustre/share_data/meihaiyi/shared_data/SynBody',
+        'synbody_magic1': '/lustre/share_data/weichen1/synbody',
         'talkshow': '',
         'ubody': '/mnt/d/ubody',
         'up3d': '',
@@ -213,13 +271,15 @@ def visualize_humandata(args):
         'HumanSC3D': 'output',
         'behave': 'output'}
     
-
     camera_params_dict = {
         'gta_human2': {'principal_point': [960, 540], 'focal_length': [1158.0337, 1158.0337]},
+        'ssp3d': {'focal_length': [5000, 5000], 'principal_point': [256, 256]},
+        'synbody': {'focal_length': [640, 640], 'principal_point': [640, 360]},
     }
 
     # load humandata
     dataset_name = args.dataset_name
+    flat_hand_mean = False
 
     if dataset_name not in server_datasets:
         param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
@@ -264,13 +324,16 @@ def visualize_humandata(args):
             body_model_param_smpl = param['smpl'].item()
         if has_smplx:
             body_model_param_smplx = param['smplx'].item()  
+            if dataset_name == 'bedlam':
+                body_model_param_smplx['betas'] = body_model_param_smplx['betas'][:, :10]
+                flat_hand_mean = True
+
         if 'meta' in param.keys():
             if 'gender' in param['meta'].item().keys():
                 has_gender = True
         # read smplx only if has both smpl and smplx
         if has_smpl and has_smplx:
             has_smpl = False
-
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
         # build smpl model
@@ -302,7 +365,7 @@ def visualize_humandata(args):
                         gender=gender,
                         num_betas=10,
                         use_face_contour=True,
-                        flat_hand_mean=False,
+                        flat_hand_mean=flat_hand_mean,
                         use_pca=False,
                         batch_size=1
                     )).to(device)
@@ -343,11 +406,19 @@ def visualize_humandata(args):
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
             # read cam params
-            focal_length, camera_center = get_cam_params(camera_params_dict, args.dataset_name, param, idx)
+            focal_length, camera_center, R, T = get_cam_params(
+                            camera_params_dict, args.dataset_name, param, idx)
     
             # read gender
             if has_gender:
-                gender = param['meta'].item()['gender'][idx]
+                try:
+                    gender = param['meta'].item()['gender'][idx]
+                    if gender == 'f':
+                        gender = 'female'
+                    elif gender == 'm':
+                        gender = 'male'
+                except IndexError: 
+                    gender = 'neutral'
             else:
                 gender = 'neutral'
 
@@ -369,53 +440,70 @@ def visualize_humandata(args):
                 #         'there is only one annotated person in the image')
                 ppocc_image, pp_occ = image, -1
             else:     
-                params, genders, cameras = [], [], []
+                params, genders, cameras, Rs, Ts = [], [], [], [], []
 
                 # prepare camera
                 for pp_img_idx in img_idxs:
-                    focal_length, camera_center = get_cam_params(camera_params_dict, args.dataset_name, param, pp_img_idx)
+                    focal_length, camera_center, R, T = get_cam_params(
+                        camera_params_dict, args.dataset_name, param, pp_img_idx)
                     camera = pyrender.camera.IntrinsicsCamera(
                         fx=focal_length[0], fy=focal_length[1],
                         cx=camera_center[0], cy=camera_center[1])
                     cameras.append(camera)
+                    Rs.append(R)
+                    Ts.append(T)
 
-                # prepare gender
-                for pp_img_idx in img_idxs:
+                    # read gender
                     if has_gender:
-                        gender = param['meta'].item()['gender'][pp_img_idx]
+                        try:
+                            gender = param['meta'].item()['gender'][idx]
+                            if gender == 'f':
+                                gender = 'female'
+                            elif gender == 'm':
+                                gender = 'male'
+                        except IndexError: 
+                            gender = 'neutral'
                     else:
                         gender = 'neutral'
                     genders.append(gender)
 
+
+
                 if has_smpl:
                     for pp_img_idx in img_idxs:
-                        body_model_param_tensor = {key: torch.tensor(body_model_param_smpl[key][pp_img_idx:pp_img_idx+1],
-                                                                    device=device, dtype=torch.float32)
-                                    for key in body_model_param_smpl.keys()
-                                    if body_model_param_smpl[key][pp_img_idx:pp_img_idx+1].shape[0] > 0}
+                        intersect_key = list(set(body_model_param_smpl.keys()) & set(smpl_shape.keys()))
+                        body_model_param_tensor = {key: torch.tensor(
+                                np.array(body_model_param_smpl[key][pp_img_idx:pp_img_idx+1]).reshape(smpl_shape[key]),
+                                        device=device, dtype=torch.float32)
+                                        for key in intersect_key
+                                        if len(body_model_param_smpl[key][pp_img_idx:pp_img_idx+1]) > 0}
                         params.append(body_model_param_tensor)
                     ppocc_image, pp_occ = render_pp_occlusion(img=image, 
-                                                body_model_param=params, 
+                                                body_model_params=params, 
                                                 body_models=smpl_model,
                                                 genders=genders,
-                                                cameras=cameras)
+                                                cameras=cameras,
+                                                Rs=Rs, Ts=Ts)
 
                 if has_smplx:
                     for pp_img_idx in img_idxs:
-                        body_model_param_tensor = {key: torch.tensor(body_model_param_smplx[key][pp_img_idx:pp_img_idx+1],
-                                                                    device=device, dtype=torch.float32)
-                                    for key in body_model_param_smplx.keys()
-                                    if body_model_param_smplx[key][pp_img_idx:pp_img_idx+1].shape[0] > 0}
+                        intersect_key = list(set(body_model_param_smplx.keys()) & set(smplx_shape.keys()))
+                        body_model_param_tensor = {key: torch.tensor(
+                        np.array(body_model_param_smplx[key][pp_img_idx:pp_img_idx+1]).reshape(smplx_shape[key]),
+                                device=device, dtype=torch.float32)
+                                for key in intersect_key
+                                if len(body_model_param_smplx[key][pp_img_idx:pp_img_idx+1]) > 0}
                         params.append(body_model_param_tensor)
                     ppocc_image, pp_occ = render_pp_occlusion(img=image, 
                                                 body_model_params=params, 
                                                 body_models=smplx_model,
                                                 genders=genders,
-                                                cameras=cameras)
-                if not pp_occ >= 0.49:
+                                                cameras=cameras,
+                                                Rs=Rs, Ts=Ts)
+                if not pp_occ >= 0.35:
                     ppocc_processed = True
                 else:
-                    ppocc = -1
+                    pp_occ = -1
 
             ppocc_log['image_path'].append(image_p)
             ppocc_log['ppocc'].append(pp_occ)
