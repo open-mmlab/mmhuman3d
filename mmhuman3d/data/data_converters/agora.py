@@ -131,7 +131,7 @@ class AgoraConverter(BaseModeConverter):
         image_param = param['images']
         anno_param = param['annotations']
 
-        for anno_info in anno_param:
+        for anno_info in tqdm(anno_param, desc=f'Processing Agora {mode}'):
 
             image_id = anno_info['image_id']
 
