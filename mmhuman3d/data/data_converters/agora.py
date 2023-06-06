@@ -153,11 +153,11 @@ class AgoraConverter(BaseModeConverter):
 
             # collect keypoints
             smplx_joints_2d_path = os.path.join(dataset_path, anno_info['smplx_joints_2d_path'])
-            smplx_joints_2d = pickle.load(open(smplx_joints_2d_path, 'rb'))
+            smplx_joints_2d = pickle.load(open(smplx_joints_2d_path, 'rb'), encoding='latin1')
             keypoints2d_.append(smplx_joints_2d)
 
             smplx_joints_3d_path = os.path.join(dataset_path, anno_info['smplx_joints_3d_path'])
-            smplx_joints_3d = pickle.load(open(smplx_joints_3d_path, 'rb'))
+            smplx_joints_3d = pickle.load(open(smplx_joints_3d_path, 'rb'), encoding='latin1')
             keypoints3d_.append(smplx_joints_3d)
 
             # get camera parameters
