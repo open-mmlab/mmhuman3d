@@ -5,7 +5,8 @@ from mmhuman3d.data.data_converters import build_data_converter
 
 DATASET_CONFIGS = dict(
     agora=dict(
-        type='AgoraConverter', modes=['train', 'validation'], fit='smplx'),
+        type='AgoraConverter', modes=['validation_3840', 'train_3840',
+                            'train_1280', 'validation_1280'], prefix='agora'),   
     amass=dict(type='AmassConverter', prefix='AMASS_file'),
     coco=dict(type='CocoConverter'),
     coco_wholebody=dict(
