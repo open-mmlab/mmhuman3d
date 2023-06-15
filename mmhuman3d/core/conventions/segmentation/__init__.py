@@ -10,13 +10,17 @@ class body_segmentation(object):
             self.DICT = SMPL_SEGMENTATION_DICT
             self.super_set = SMPL_SUPER_SET
             self.NUM_VERTS = 6890
+        elif model_type == 'star':
+            self.DICT = SMPL_SEGMENTATION_DICT
+            self.super_set = SMPL_SUPER_SET
+            self.NUM_VERTS = 6890
         elif model_type == 'smplx':
             self.DICT = SMPLX_SEGMENTATION_DICT
             self.super_set = SMPLX_SUPER_SET
             self.NUM_VERTS = 10475
         else:
             raise ValueError(f'Wrong model_type: {model_type}.'
-                             f' Should be in {["smpl", "smplx"]}')
+                             f' Should be in {["smpl", "smplx", "star"]}')
         self.model_type = model_type
         self.len = len(list(self.DICT))
 
