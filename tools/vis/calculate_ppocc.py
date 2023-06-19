@@ -58,7 +58,10 @@ def get_cam_params(camera_params_dict, dataset_name, param, idx):
         try:
             R = param['meta'].item()['R'][idx]
             T = param['meta'].item()['T'][idx]
-        except KeyError or IndexError:
+        except KeyError:
+            R = None
+            T = None
+        except IndexError:
             R = None
             T = None
         
@@ -194,29 +197,35 @@ def visualize_humandata(args):
     server_datasets = ['arctic', 'bedlam', 'crowdpose', 'lspet', 'ochuman',
                        'posetrack', 'ehf', 'instavariety', 'mpi_inf_3dhp',
                        'mtp', 'muco3dhp', 'prox', 'renbody', 'rich', 'spec',
-                       'synbody','talkshow', 'up3d', 'renbody_highres', 'agora']
+                       'synbody','talkshow', 'up3d', 'renbody_highres', 'agora',
+                       'mscoco', 'mpii', 'h36m', 'pw3d']
 
     
     humandata_datasets = [ # name, glob pattern, exclude pattern
+        ('agora', 'agora*forvis*.npz', ''),
         ('arctic', 'p1_train.npz', ''),
         ('bedlam', 'bedlam_train.npz', ''),
         ('behave', 'behave_train_230516_231_downsampled.npz', ''),
         ('chi3d', 'CHI3D_train_230511_1492_*.npz', ''),
         ('crowdpose', 'crowdpose_neural_annot_train_new.npz', ''),
-        ('lspet', 'eft_lspet.npz', ''),
-        ('ochuman', 'eft_ochuman.npz', ''),
-        ('posetrack', 'eft_posetrack.npz', ''),
+        ('lspet', 'eft_lspet*.npz', ''),
+        ('ochuman', 'eft_ochuman*.npz', ''),
+        ('posetrack', 'eft_posetrack*.npz', ''),
         ('egobody_ego', 'egobody_egocentric_train_230425_065_fix_betas.npz', ''),
         ('egobody_kinect', 'egobody_kinect_train_230503_065_fix_betas.npz', ''),
         ('fit3d', 'FIT3D_train_230511_1504_*.npz', ''),
         ('gta', 'gta_human2multiple_230406_04000_0.npz', ''),
         ('ehf', 'h4w_ehf_val_updated_v2.npz', ''),  # use humandata ehf to get bbox
+        ('h36m', 'h36m*', ''),
         ('humansc3d', 'HumanSC3D_train_230511_2752_*.npz', ''),
         ('instavariety', 'insta_variety_neural_annot_train.npz', ''),
+        ('mpii', 'mpii*.npz', ''),
         ('mpi_inf_3dhp', 'mpi_inf_3dhp_neural_annot_train.npz', ''),
+        ('mscoco', '*coco2017*.npz', ''),
         ('mtp', 'mtp_smplx_train.npz', ''),
         ('muco3dhp', 'muco3dhp_train.npz', ''),
         ('prox', 'prox_train_smplx_new.npz', ''),
+        ('pw3d', 'pw3d*.npz', ''),
         ('renbody', 'renbody_train_230525_399_*.npz', ''),
         ('renbody_highres', 'renbody_train_highrescam_230517_399_*_fix_betas.npz', ''),
         ('rich', 'rich_train_fix_betas.npz', ''),
@@ -225,28 +234,33 @@ def visualize_humandata(args):
         ('synbody_magic1', 'synbody_amass_230328_02172.npz', ''),
         ('synbody', 'synbody_train_230521_04000_fix_betas.npz', ''),
         ('talkshow', 'talkshow_smplx_*.npz', 'path'),
-        ('up3d', 'up3d_trainval.npz', ''),
+        ('up3d', 'up3d*.npz', ''),
     ]
 
     dataset_path_dict = {
+        'agora': '/lustrenew/share_data/caizhongang/data/datasets/agora',
         'arctic': '/lustre/share_data/weichen1/arctic/unpack/arctic_data/data/images',
         'behave': '/mnt/e/behave',
         'bedlam': '/lustre/share_data/weichen1/bedlam/train_images',
         'CHI3D': '/mnt/d/sminchisescu-research-datasets',
         'crowdpose': '/lustrenew/share_data/zoetrope/data/datasets/crowdpose',
-        'lspet': '',
-        'ochuman': '',
+        'lspet': '/lustrenew/share_data/zoetrope/data/datasets/hr-lspet',
+        'ochuman': '/lustrenew/share_data/zoetrope/data/datasets/ochuman',
         'egobody': '/mnt/d/egobody',
         'FIT3D': '/mnt/d/sminchisescu-research-datasets',
         'gta_human2': '/mnt/e/gta_human2',
-        'ehf': '',
+        'ehf': '/mnt/e/ehf',
         'HumanSC3D': '/mnt/d/sminchisescu-research-datasets',
+        'h36m': '/lustrenew/share_data/zoetrope/osx/data/Human36M',
         'instavariety': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/insta_variety/',
-        'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/mpi_inf_3dhp',
-        'mtp': '',
+        'mpii': '/lustrenew/share_data/zoetrope/data/datasets/mpii',
+        'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/osx/data/MPI_INF_3DHP_folder/data/',
+        'mscoco': '/lustrenew/share_data/zoetrope/data/datasets/coco/train_2017',
+        'mtp': '/lustre/share_data/weichen1/mtp',
         'muco3dhp': '/lustre/share_data/weichen1/MuCo',
         'posetrack': 'lustrenew/share_data/zoetrope/data/datasets/posetrack/data/images',
         'prox': '/lustre/share_data/weichen1/PROXFlip',
+        'pw3d': '',
         'renbody': '/lustre/share_data/weichen1/renbody',
         'renbody_highres': '/lustre/share_data/weichen1/renbody',
         'rich': '/lustrenew/share_data/zoetrope/data/datasets/rich/images/train',
@@ -254,9 +268,45 @@ def visualize_humandata(args):
         'ssp3d': '/mnt/e/ssp-3d',
         'synbody': '/lustre/share_data/meihaiyi/shared_data/SynBody',
         'synbody_magic1': '/lustre/share_data/weichen1/synbody',
-        'talkshow': '',
+        'talkshow': '/lustre/share_data/weichen1/talkshow_frames',
         'ubody': '/mnt/d/ubody',
-        'up3d': '',
+        'up3d': '/lustrenew/share_data/zoetrope/data/datasets/up3d/up-3d/up-3d',
+
+        }
+    dataset_path_dict = {
+        'agora': '/lustrenew/share_data/caizhongang/data/datasets/agora',
+        'arctic': '/lustre/share_data/weichen1/arctic/unpack/arctic_data/data/images',
+        'behave': '/mnt/e/behave',
+        'bedlam': '/lustre/share_data/weichen1/bedlam/train_images',
+        'CHI3D': '/mnt/d/sminchisescu-research-datasets',
+        'crowdpose': '/lustrenew/share_data/zoetrope/data/datasets/crowdpose',
+        'lspet': '/lustrenew/share_data/zoetrope/data/datasets/hr-lspet',
+        'ochuman': '/lustrenew/share_data/zoetrope/data/datasets/ochuman',
+        'egobody': '/mnt/d/egobody',
+        'FIT3D': '/mnt/d/sminchisescu-research-datasets',
+        'gta_human2': '/mnt/e/gta_human2',
+        'ehf': '/mnt/e/ehf',
+        'HumanSC3D': '/mnt/d/sminchisescu-research-datasets',
+        'h36m': '/lustrenew/share_data/zoetrope/osx/data/Human36M',
+        'instavariety': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/insta_variety/',
+        'mpii': '/lustrenew/share_data/zoetrope/data/datasets/mpii',
+        'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/osx/data/MPI_INF_3DHP_folder/data/',
+        'mscoco': '/lustrenew/share_data/zoetrope/data/datasets/coco/train_2017',
+        'mtp': '/lustre/share_data/weichen1/mtp',
+        'muco3dhp': '/lustre/share_data/weichen1/MuCo',
+        'posetrack': 'lustrenew/share_data/zoetrope/data/datasets/posetrack/data/images',
+        'prox': '/lustre/share_data/weichen1/PROXFlip',
+        'pw3d': '',
+        'renbody': '/lustre/share_data/weichen1/renbody',
+        'renbody_highres': '/lustre/share_data/weichen1/renbody',
+        'rich': '/lustrenew/share_data/zoetrope/data/datasets/rich/images/train',
+        'spec': '/lustre/share_data/weichen1/spec/',
+        'ssp3d': '/mnt/e/ssp-3d',
+        'synbody': '/lustre/share_data/meihaiyi/shared_data/SynBody',
+        'synbody_magic1': '/lustre/share_data/weichen1/synbody',
+        'talkshow': '/lustre/share_data/weichen1/talkshow_frames',
+        'ubody': '/mnt/d/ubody',
+        'up3d': '/lustrenew/share_data/zoetrope/data/datasets/up3d/up-3d/up-3d',
 
         }
     
@@ -386,6 +436,7 @@ def visualize_humandata(args):
             # pdb.set_trace()
             local_image_folder = os.path.join(args.image_cache_path, dataset_name)
             os.makedirs(local_image_folder, exist_ok=True)
+            print(files[:5])
             request_files(files, 
                         server_path=dataset_path_dict[dataset_name], 
                         local_path=local_image_folder, 
@@ -394,7 +445,10 @@ def visualize_humandata(args):
         else:
             local_image_folder = dataset_path_dict[dataset_name]
         
-        
+        # temporal fix for betas and gender
+        if dataset_name in ['bedlam']:
+            has_gender = False
+
         for idx in tqdm(idxs, desc=f'Processing npzs {npz_id}/{len(param_ps)}, sample size: {sample_size}',
                         position=1, leave=False):
 
@@ -449,6 +503,12 @@ def visualize_humandata(args):
                     camera = pyrender.camera.IntrinsicsCamera(
                         fx=focal_length[0], fy=focal_length[1],
                         cx=camera_center[0], cy=camera_center[1])
+                    if dataset_name in ['ochuman', 'lspet', 'posetrack']:
+                        zfar, znear= 600, 30
+                        camera = pyrender.camera.IntrinsicsCamera(
+                            fx=focal_length[0], fy=focal_length[1],
+                            cx=camera_center[0], cy=camera_center[1],
+                    zfar=zfar, znear=znear)
                     cameras.append(camera)
                     Rs.append(R)
                     Ts.append(T)

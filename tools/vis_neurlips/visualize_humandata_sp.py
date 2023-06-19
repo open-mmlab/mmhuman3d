@@ -7,7 +7,8 @@ import argparse
 import torch
 import pyrender
 import trimesh
-import PIL.Image as pil_img
+import pandas as pd
+
 
 from tqdm import tqdm
 
@@ -74,12 +75,8 @@ def get_cam_params(camera_params_dict, dataset_name, param, idx):
         except IndexError:
             R = None
             T = None
-
-    if dataset_name in ['muco3dhp']:
-        R = None
-        T = None
-    # pdb.set_trace()
         
+            
     focal_length = np.asarray(focal_length).reshape(-1)
     camera_center = np.asarray(camera_center).reshape(-1)
 
@@ -163,7 +160,9 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False,
     valid_mask = (color[:, :, -1] > 0)[:, :, np.newaxis]
     img = img / 255
     # output_img = (color[:, :, :-1] * valid_mask + (1 - valid_mask) * img)
-    output_img = (color[:, :, :] * valid_mask + (1 - valid_mask) * img)
+    opacity = 0.8
+    output_img = (color[:, :, :] * valid_mask * opacity + (1 - valid_mask) * img +
+                   valid_mask * (1 - opacity) * img)
 
     # output_img = color
 
@@ -176,47 +175,20 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False,
     return img
 
 
-def render_multi_pose(img, body_model_params, body_models, genders, cameras,
-                        Rs=[], Ts=[]):
+def visualize_gt_eva(args, image_idxs, image_paths, anno_param_dicts, ranked=True):
 
-    masks, colors = [], []
-
-    # render separate masks
-    for i, body_model_param in enumerate(body_model_params):
-
-        R = Rs[i]
-        T = Ts[i]
-        _, mask, color = render_pose(img=img, 
-                                        body_model_param=body_model_param, 
-                                        body_model=body_models[genders[i]],
-                                        camera=cameras[i],
-                                        return_mask=True,
-                                        R=R, T=T,)
-        masks.append(mask)
-        colors.append(color)
-
-    # sum masks
-    mask_sum = np.sum(masks, axis=0)
-    mask_all = (mask_sum > 0)
-
-    # pp_occ = 1 - np.sum(mask_all) / np.sum(mask_sum)
-
-    # overlay colors to img
-    for i, color in enumerate(colors):
-        mask = masks[i]
-        img = img * (1 - mask) + color * mask
-
-    img = img.astype(np.uint8)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    return img
-
-
-def visualize_humandata(args, local_datasets, server_datasets):
+    # dataset status
+    local_datasets = ['gta_human2', 'egobody', 'ubody', 'ssp3d', 
+                          'FIT3D', 'CHI3D', 'HumanSC3D']
+    # some datasets are on 1988
+    server_datasets = ['agora', 'arctic', 'bedlam', 'crowdpose', 'lspet', 'ochuman',
+                       'posetrack', 'instavariety', 'mpi_inf_3dhp',
+                       'mtp', 'muco3dhp', 'prox', 'renbody', 'rich', 'spec',
+                       'synbody','talkshow', 'up3d', 'renbody_highres']
     
     humandata_datasets = [ # name, glob pattern, exclude pattern
         ('agora', 'agora*forvis*.npz', ''),
-        ('arctic', 'p1_train.npz', ''),
+        ('arctic', 'p1_*.npz', ''),
         ('bedlam', 'bedlam_train.npz', ''),
         ('behave', 'behave_train_230516_231_downsampled.npz', ''),
         ('chi3d', 'CHI3D_train_230511_1492_*.npz', ''),
@@ -229,18 +201,14 @@ def visualize_humandata(args, local_datasets, server_datasets):
         ('fit3d', 'FIT3D_train_230511_1504_*.npz', ''),
         ('gta', 'gta_human2multiple_230406_04000_0.npz', ''),
         ('ehf', 'h4w_ehf_val_updated_v2.npz', ''),  # use humandata ehf to get bbox
-        ('h36m', 'h36m*', ''),
         ('humansc3d', 'HumanSC3D_train_230511_2752_*.npz', ''),
         ('instavariety', 'insta_variety_neural_annot_train.npz', ''),
-        ('mpii', 'mpii*.npz', ''),
         ('mpi_inf_3dhp', 'mpi_inf_3dhp_neural_annot_train.npz', ''),
-        ('mscoco', '*coco2017*.npz', ''),
         ('mtp', 'mtp_smplx_train.npz', ''),
         ('muco3dhp', 'muco3dhp_train.npz', ''),
         ('prox', 'prox_train_smplx_new.npz', ''),
-        ('pw3d', 'pw3d*.npz', ''),
         ('renbody', 'renbody_train_230525_399_*.npz', ''),
-        ('renbody_highres', 'renbody_train_highrescam_230517_399_*_fix_betas.npz', ''),
+        ('renbody_highres', 'renbody*highrescam*_fix_betas.npz', ''),
         ('rich', 'rich_train_fix_betas.npz', ''),
         ('spec', 'spec_train_smpl.npz', ''),
         ('ssp3d', 'ssp3d_230525_311.npz', ''),
@@ -264,16 +232,12 @@ def visualize_humandata(args, local_datasets, server_datasets):
         'gta_human2': '/mnt/e/gta_human2',
         'ehf': '/mnt/e/ehf',
         'HumanSC3D': '/mnt/d/sminchisescu-research-datasets',
-        'h36m': '/lustrenew/share_data/zoetrope/osx/data/Human36M',
         'instavariety': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/insta_variety/',
-        'mpii': '/lustrenew/share_data/zoetrope/data/datasets/mpii',
         'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/osx/data/MPI_INF_3DHP_folder/data/',
-        'mscoco': '/lustrenew/share_data/zoetrope/data/datasets/coco/train_2017',
         'mtp': '/lustre/share_data/weichen1/mtp',
         'muco3dhp': '/lustre/share_data/weichen1/MuCo',
         'posetrack': 'lustrenew/share_data/zoetrope/data/datasets/posetrack/data/images',
         'prox': '/lustre/share_data/weichen1/PROXFlip',
-        'pw3d': '',
         'renbody': '/lustre/share_data/weichen1/renbody',
         'renbody_highres': '/lustre/share_data/weichen1/renbody',
         'rich': '/lustrenew/share_data/zoetrope/data/datasets/rich/images/train',
@@ -284,14 +248,13 @@ def visualize_humandata(args, local_datasets, server_datasets):
         'talkshow': '/lustre/share_data/weichen1/talkshow_frames',
         'ubody': '/mnt/d/ubody',
         'up3d': '/lustrenew/share_data/zoetrope/data/datasets/up3d/up-3d/up-3d',
-
         }
     
     anno_path = {
         'shapy': 'output',
         'gta_human2': 'output',
         'egobody': 'output',
-        'ubody': 'output',
+        'ubody': 'output/intra',
         'ssp3d': 'output',
         'FIT3D': 'output',
         'CHI3D': 'output',
@@ -317,7 +280,7 @@ def visualize_humandata(args, local_datasets, server_datasets):
     if dataset_name not in server_datasets:
         param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
                                             anno_path[dataset_name], f'*{dataset_name}*.npz'))
-        param_ps = [p for p in param_ps if 'test' not in p]
+        # param_ps = [p for p in param_ps if 'test' not in p]s
         # param_ps = [p for p in param_ps if 'val' not in p]
     else:
         data_info = [info for info in humandata_datasets if info[0] == dataset_name][0]
@@ -326,12 +289,40 @@ def visualize_humandata(args, local_datasets, server_datasets):
         param_ps = glob.glob(os.path.join(args.server_local_path, filename))
         if exclude != '':
             param_ps = [p for p in param_ps if exclude not in p]
-    
+
+    # -------------------align image path-------------------
+    # ehf
+    if dataset_name == 'ehf':
+        image_paths = [os.path.basename(imgp) for imgp in image_paths] 
+    if dataset_name == 'arctic':
+        image_paths = [os.path.sep.join(imgp.split(os.path.sep)[-4:]) for imgp in image_paths]
+    if dataset_name == 'egobody':
+        image_paths = [os.path.sep.join(imgp.split(os.path.sep)[3:]) for imgp in image_paths]
+    if dataset_name == 'ubody':
+        image_paths = [os.path.sep.join(imgp.split(os.path.sep)[3:]) for imgp in image_paths]
+    if dataset_name == 'agora':
+        image_paths = [os.path.sep.join(imgp.split(os.path.sep)[4:]) for imgp in image_paths]
+        image_paths = [f'{imgp.split("_ann_id_")[0]}.png' for imgp in image_paths]
+        image_paths = [imgp.replace('validation_crop', 'validation') for imgp in image_paths]
+    if dataset_name in ['renbody', 'renbody_highres']:
+        image_paths = [os.path.sep.join(imgp.split(os.path.sep)[3:]) for imgp in image_paths]
+    # pdb.set_trace()
     # render
     # for npz_id, param_p in enumerate(tqdm(param_ps, desc=f'Processing npzs',
     #                     position=0, leave=False)):
-    for npz_id, param_p in enumerate(param_ps):
+    for npz_id, param_p in enumerate(tqdm(param_ps)):
         param = dict(np.load(param_p, allow_pickle=True))
+        # pdb.set_trace()
+        # ----------temporal align for single person dataset----------
+        idxs, anno_indexs = [], []
+        for idx, imgp in enumerate(param['image_path']): 
+            if imgp in image_paths:
+                anno_index = image_paths.index(imgp)
+                idxs.append(idx)
+                anno_indexs.append(anno_index)
+
+        if len(idxs) == 0:
+            continue
 
         # check for params
         has_smplx, has_smpl, has_gender = False, False, False
@@ -339,8 +330,6 @@ def visualize_humandata(args, local_datasets, server_datasets):
             has_smplx = True
         elif 'smpl' in param.keys():
             has_smpl = True
-        elif 'smplh' in param.keys():
-            has_smplh = True
 
         # check for params
         has_smplx, has_smpl, has_gender = False, False, False
@@ -357,14 +346,6 @@ def visualize_humandata(args, local_datasets, server_datasets):
             if dataset_name == 'bedlam':
                 body_model_param_smplx['betas'] = body_model_param_smplx['betas'][:, :10]
                 flat_hand_mean = True
-        if has_smplh:
-            body_model_param_smpl = param['smplh'].item()
-            data_len = body_model_param_smpl['betas'].shape[0]
-            body_model_param_smpl['body_pose'] = np.concatenate([body_model_param_smpl['body_pose'], 
-                                                np.array([0, 0, 0], dtype=np.float32).reshape(-1, 1, 3).repeat(data_len, axis=0),
-                                               np.array([0, 0, 0], dtype=np.float32).reshape(-1, 1, 3).repeat(data_len, axis=0),], axis=1)
-            # pdb.set_trace()
-            has_smpl = True
 
         if 'meta' in param.keys():
             if 'gender' in param['meta'].item().keys():
@@ -404,24 +385,29 @@ def visualize_humandata(args, local_datasets, server_datasets):
                         gender=gender,
                         num_betas=10,
                         use_face_contour=True,
-                        flat_hand_mean=flat_hand_mean,
+                        flat_hand_mean=False,
                         use_pca=False,
                         batch_size=1
                     )).to(device)
-        
-        # for idx in idx_list:
-        sample_size =  args.sample_size
-        if sample_size > len(param['image_path']):
-            idxs = range(len(param['image_path']))
-        else:
-            idxs = random.sample(range(len(param['image_path'])), sample_size)
+            smplx_model_fhm = {}
+            for gender in ['male', 'female', 'neutral']:
+                smplx_model_fhm[gender] = build_body_model(dict(
+                        type='SMPLX',
+                        keypoint_src='smplx',
+                        keypoint_dst='smplx',
+                        model_path='data/body_models/smplx',
+                        gender=gender,
+                        num_betas=10,
+                        use_face_contour=True,
+                        flat_hand_mean=True,
+                        use_pca=False,
+                        batch_size=1
+                    )).to(device)
 
-        # idxs = [340, 139181]
         # prepare for server request if datasets on server
-        # pdb.set_trace()
         if dataset_name in server_datasets:
             # print('getting images from server...')
-            files = param['image_path'][idxs].tolist()
+            files = param['image_path'][idxs]
             # pdb.set_trace()
             local_image_folder = os.path.join(args.image_cache_path, dataset_name)
             os.makedirs(local_image_folder, exist_ok=True)
@@ -433,8 +419,11 @@ def visualize_humandata(args, local_datasets, server_datasets):
         else:
             local_image_folder = dataset_path_dict[dataset_name]
 
-        for idx in tqdm(sorted(idxs), desc=f'Processing npzs {npz_id}/{len(param_ps)}, sample size: {sample_size}',
-                        position=0, leave=False):
+        # for idx in tqdm(sorted(idxs), desc=f'Processing npzs {npz_id}/{len(param_ps)}, sample size: {sample_size}',
+        #                 position=0, leave=False):
+        for idx, anno_idx in zip(idxs, anno_indexs):
+            anno_param_dict = anno_param_dicts[anno_idx]
+            rank = anno_idx
 
             image_p = param['image_path'][idx]
             image_path = os.path.join(local_image_folder, image_p)
@@ -442,244 +431,292 @@ def visualize_humandata(args, local_datasets, server_datasets):
             # convert to BGR
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-            # check for if multiple people exist
-            range_min = max(0, idx - 3000)
-            img_idxs = [img_i for img_i, imgp in enumerate(
-                        # param['image_path'].tolist()[range_min:idx+3000]) if imgp == image_p]
-                        param['image_path'].tolist()) if imgp == image_p]
-
-
             # temporal fix for betas and gender
             if dataset_name in ['bedlam']:
                 has_gender = False
 
-            if not (args.render_all_smpl and len(img_idxs) >= 2):
-                # ---------------------- render single pose ------------------------
-                # read cam params
-                focal_length, camera_center, R, T = get_cam_params(
-                                camera_params_dict, args.dataset_name, param, idx)
-        
-                # read gender
-                if has_gender:
-                    try:
-                        gender = param['meta'].item()['gender'][idx]
-                        if gender == 'f':
-                            gender = 'female'
-                        elif gender == 'm':
-                            gender = 'male'
-                    except IndexError: 
-                        gender = 'neutral'
-                else:
+            # ---------------------- render single pose ------------------------
+            # read cam params
+            focal_length, camera_center, R, T = get_cam_params(
+                            camera_params_dict, args.dataset_name, param, idx)
+    
+            # read gender
+            if has_gender:
+                try:
+                    gender = param['meta'].item()['gender'][idx]
+                    if gender == 'f':
+                        gender = 'female'
+                    elif gender == 'm':
+                        gender = 'male'
+                except IndexError: 
                     gender = 'neutral'
+            else:
+                gender = 'neutral'
 
-                if args.save_pose:
-                    # prepare for mesh projection
-                    camera = pyrender.camera.IntrinsicsCamera(
-                        fx=focal_length[0], fy=focal_length[1],
-                        cx=camera_center[0], cy=camera_center[1])
-                    # camera_opencv = build_cameras(
-                    #             dict(type='PerspectiveCameras',
-                    #                 convention='opencv',
-                    #                 in_ndc=False,
-                    #                 focal_length=np.array([focal_length[0], focal_length[1]]).reshape(-1, 2),
-                    #                 principal_point=np.array([camera_center[0], camera_center[1]]).reshape(-1, 2),
-                    #                 image_size=(image.shape[0], image.shape[1]))).to(device)
-                    
-                    # read smpl smplx params and build body model
-                    if has_smpl:
+            # prepare for mesh projection
+            camera = pyrender.camera.IntrinsicsCamera(
+                fx=focal_length[0], fy=focal_length[1],
+                cx=camera_center[0], cy=camera_center[1])
+
+            bmarks = list(anno_param_dict.keys())
+            for bmark in bmarks + ['gt']:
+
+                if has_smpl:
+                    if bmark == 'gt':
                         intersect_key = list(set(body_model_param_smpl.keys()) & set(smpl_shape.keys()))
                         body_model_param_tensor = {key: torch.tensor(
                                 np.array(body_model_param_smpl[key][idx:idx+1]).reshape(smpl_shape[key]),
                                         device=device, dtype=torch.float32)
                                         for key in intersect_key
                                         if len(body_model_param_smpl[key][idx:idx+1]) > 0}
-                        
-                        # temporal fix for ochuman, lspet, posetrack
-                        if dataset_name in ['ochuman', 'lspet', 'posetrack']:
-                            zfar, znear= 600, 30
-                            camera = pyrender.camera.IntrinsicsCamera(
-                                fx=focal_length[0], fy=focal_length[1],
-                                cx=camera_center[0], cy=camera_center[1],
-                                zfar=zfar, znear=znear)
-                            rendered_image = render_pose(img=image, 
-                                                    body_model_param=body_model_param_tensor, 
-                                                    body_model=smpl_model[gender],
-                                                    camera=camera,
-                                                    dataset_name=dataset_name,
-                                                    # eft=True,
-                                                    R=R, T=T)             
-                        else:
-                            rendered_image = render_pose(img=image, 
+                    else:
+                        intersect_key = list(set(anno_param_dict[bmark].keys()) & set(smpl_shape.keys()))
+                        body_model_param_tensor = {key: torch.tensor(
+                                np.array(anno_param_dict[bmark][key]).reshape(smpl_shape[key]),
+                                        device=device, dtype=torch.float32)
+                                        for key in intersect_key
+                                        if len(anno_param_dict[bmark][key]) > 0}
+                    # use transl in gt
+                    body_model_param_tensor['transl'] = torch.tensor(
+                            np.array(body_model_param_smpl['transl'][idx:idx+1]).reshape(smpl_shape['transl']),
+                            device=device, dtype=torch.float32)
+                    
+                    # temporal fix for ochuman, lspet, posetrack
+                    if dataset_name in ['ochuman', 'lspet', 'posetrack']:
+                        zfar, znear= 600, 30
+                        camera = pyrender.camera.IntrinsicsCamera(
+                            fx=focal_length[0], fy=focal_length[1],
+                            cx=camera_center[0], cy=camera_center[1],
+                            zfar=zfar, znear=znear)
+                        rendered_image = render_pose(img=image, 
                                                 body_model_param=body_model_param_tensor, 
                                                 body_model=smpl_model[gender],
                                                 camera=camera,
                                                 dataset_name=dataset_name,
-                                                R=R, T=T)
+                                                R=R, T=T)             
+                    else:
+                        rendered_image = render_pose(img=image, 
+                                            body_model_param=body_model_param_tensor, 
+                                            body_model=smpl_model[gender],
+                                            camera=camera,
+                                            dataset_name=dataset_name,
+                                            R=R, T=T)
 
-                    if has_smplx:
+                if has_smplx:
+                    if bmark == 'gt':
                         intersect_key = list(set(body_model_param_smplx.keys()) & set(smplx_shape.keys()))
                         body_model_param_tensor = {key: torch.tensor(
                                 np.array(body_model_param_smplx[key][idx:idx+1]).reshape(smplx_shape[key]),
                                         device=device, dtype=torch.float32)
                                         for key in intersect_key
                                         if len(body_model_param_smplx[key][idx:idx+1]) > 0}
+                        # arctic uses flat hand mean = True
+                        if dataset_name in ['arctic']:
+                            rendered_image = render_pose(img=image, 
+                                                        body_model_param=body_model_param_tensor, 
+                                                        body_model=smplx_model_fhm[gender],
+                                                        camera=camera,
+                                                        dataset_name=dataset_name,
+                                                        R=R, T=T, camera_opencv=None)
+                        else:
+                            rendered_image = render_pose(img=image, 
+                                                        body_model_param=body_model_param_tensor, 
+                                                        body_model=smplx_model[gender],
+                                                        camera=camera,
+                                                        dataset_name=dataset_name,
+                                                        R=R, T=T, camera_opencv=None)                           
+                    else:
+                        intersect_key = list(set(anno_param_dict[bmark].keys()) & set(smplx_shape.keys()))
+                        body_model_param_tensor = {key: torch.tensor(
+                                np.array(anno_param_dict[bmark][key]).reshape(smplx_shape[key]),
+                                        device=device, dtype=torch.float32)
+                                        for key in intersect_key
+                                        if len(anno_param_dict[bmark][key]) > 0}
+                        # use transl in gt
+                        body_model_param_tensor['transl'] = torch.tensor(
+                                np.array(body_model_param_smplx['transl'][idx:idx+1]).reshape(smplx_shape['transl']),
+                                device=device, dtype=torch.float32)
+                        
                         rendered_image = render_pose(img=image, 
                                                     body_model_param=body_model_param_tensor, 
-                                                    body_model=smplx_model[gender],
+                                                    body_model=smplx_model['neutral'],
                                                     camera=camera,
                                                     dataset_name=dataset_name,
                                                     R=R, T=T, camera_opencv=None)
-
-            else:
-                # ---------------------- render multiple pose ----------------------
-                params, genders, cameras, Rs, Ts = [], [], [], [], []
-
-                # prepare camera
-                for pp_img_idx in img_idxs:
-                    focal_length, camera_center, R, T = get_cam_params(
-                        camera_params_dict, args.dataset_name, param, pp_img_idx)
-                    camera = pyrender.camera.IntrinsicsCamera(
-                        fx=focal_length[0], fy=focal_length[1],
-                        cx=camera_center[0], cy=camera_center[1])
-                    if dataset_name in ['ochuman', 'lspet', 'posetrack']:
-                        zfar, znear= 600, 30
-                        camera = pyrender.camera.IntrinsicsCamera(
-                            fx=focal_length[0], fy=focal_length[1],
-                            cx=camera_center[0], cy=camera_center[1],
-                        zfar=zfar, znear=znear)
-                    cameras.append(camera)
-                    Rs.append(R)
-                    Ts.append(T)
-
-                    # read gender
-                    if has_gender:
-                        try:
-                            gender = param['meta'].item()['gender'][pp_img_idx]
-                            if gender == 'f':
-                                gender = 'female'
-                            elif gender == 'm':
-                                gender = 'male'
-                        except IndexError: 
-                            gender = 'neutral'
-                    else:
-                        gender = 'neutral'
-                    genders.append(gender)
-
-                    # print(genders)
-
-
-                if has_smpl:
-                    for pp_img_idx in img_idxs:
-                        intersect_key = list(set(body_model_param_smpl.keys()) & set(smpl_shape.keys()))
-                        body_model_param_tensor = {key: torch.tensor(
-                                np.array(body_model_param_smpl[key][pp_img_idx:pp_img_idx+1]).reshape(smpl_shape[key]),
-                                        device=device, dtype=torch.float32)
-                                        for key in intersect_key
-                                        if len(body_model_param_smpl[key][pp_img_idx:pp_img_idx+1]) > 0}
-                        params.append(body_model_param_tensor)
-                    rendered_image = render_multi_pose(img=image, 
-                                                body_model_params=params, 
-                                                body_models=smpl_model,
-                                                genders=genders,
-                                                cameras=cameras,
-                                                Rs=Rs, Ts=Ts)
-
-                if has_smplx:
-                    for pp_img_idx in img_idxs:
-                        intersect_key = list(set(body_model_param_smplx.keys()) & set(smplx_shape.keys()))
-                        body_model_param_tensor = {key: torch.tensor(
-                        np.array(body_model_param_smplx[key][pp_img_idx:pp_img_idx+1]).reshape(smplx_shape[key]),
-                                device=device, dtype=torch.float32)
-                                for key in intersect_key
-                                if len(body_model_param_smplx[key][pp_img_idx:pp_img_idx+1]) > 0}
-                        params.append(body_model_param_tensor)
-                    rendered_image = render_multi_pose(img=image, 
-                                                body_model_params=params, 
-                                                body_models=smplx_model,
-                                                genders=genders,
-                                                cameras=cameras,
-                                                Rs=Rs, Ts=Ts)
                     
-            # ---------------------- render results ----------------------
-            # print(f'Truncation: {trunc}')
-            if not args.save_pose:
-                rendered_image = image
-            os.makedirs(os.path.join(args.out_path, args.dataset_name), exist_ok=True)
+                # ---------------------- render results ----------------------
+                # print(f'Truncation: {trunc}')
+                os.makedirs(os.path.join(args.out_path, args.dataset_name), exist_ok=True)
 
-            # for writting on image
-            font_size = image.shape[1] / 1000
-            line_sickness = int(image.shape[1] / 1000) + 1
-            front_location_y = int(image.shape[1] / 10)
-            front_location_x = int(image.shape[0] / 10)
+                # for writting on image
+                font_size = image.shape[1] / 1000
+                line_sickness = int(image.shape[1] / 1000) + 1
+                front_location_y = int(image.shape[1] / 10)
+                front_location_x = int(image.shape[0] / 10)
 
-            if args.save_pose:
-                out_image_path = os.path.join(args.out_path, args.dataset_name,
-                                            f'{os.path.basename(param_ps[npz_id])[:-4]}_{idx}.png')
-                # print(f'Saving image to {out_image_path}')
+                # write rank
+                if ranked:
+                    out_image_path = os.path.join(args.out_path, args.dataset_name,
+                        f'{"{:03d}".format(rank)}_{os.path.basename(param_ps[npz_id])[:-4]}_{idx}_{bmark}.png')
+                else:
+                    out_image_path = os.path.join(args.out_path, args.dataset_name,
+                                f'{os.path.basename(param_ps[npz_id])[:-4]}_{idx}_{bmark}.png')
+                print(f'Saving image to {out_image_path}')
                 cv2.imwrite(out_image_path, rendered_image)
-            
-            if args.save_original_img:
-                out_image_path_org = os.path.join(args.out_path, args.dataset_name,
-                                            f'{os.path.basename(param_ps[npz_id])[:-4]}_{idx}_original.png')
-                # convert to RGB
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                cv2.imwrite(out_image_path_org, image)
 
-            # pdb.set_trace()
+            # write rank
+            if ranked:
+                out_image_path_org = os.path.join(args.out_path, args.dataset_name,
+                    f'{"{:03d}".format(rank)}_{os.path.basename(param_ps[npz_id])[:-4]}_{idx}_zoriginal.png')
+            else:
+                out_image_path_org = os.path.join(args.out_path, args.dataset_name,
+                            f'{os.path.basename(param_ps[npz_id])[:-4]}_{idx}_zoriginal.png')
+            # convert to RGB
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            cv2.imwrite(out_image_path_org, image)
+
+                # pdb.set_trace()
+
+
+def ftp_target_anno(anno_base_dir, anno_dir, anno_names, local_dir):
+
+    # pdb.set_trace()
+    os.makedirs(os.path.join(local_dir, anno_dir), exist_ok=True)
+
+    # read local file
+    pending_download = []
+    for anno_name in anno_names:
+        target_local_file = os.path.join(local_dir, anno_dir, anno_name)
+        if not os.path.exists(target_local_file):
+            pending_download.append(os.path.join(anno_dir, anno_name))
+    if len(pending_download) > 0:
+        request_files(pending_download, 
+                    server_path=anno_base_dir, 
+                    local_path=local_dir, 
+                    server_name='1988') 
+        
+
+def visualize_eva(args):
+
+    # dataset status
+    eva_datasets = ['gta_human2', 'egobody', 'ubody', 'ssp3d', 
+                          'FIT3D', 'CHI3D', 'HumanSC3D']
+    # on 1988
+    eva_output = '/lustrenew/share_data/zoetrope/osx/output_wanqi'
+
+    eva_keys = ['H4W', 'OSX', 'L32', 'H20']
+    # dict_path for every benchmark output
+    eva_anno_dict = dict(
+        ehf={
+            'H4W': 'test_h4w_vis_ep7_EHF_20230606_180847/vis',
+            'OSX': 'test_osx_vis_ep999_EHF_20230606_174828/vis',
+            'L32': 'test_exp114_vis_ep3_EHF_20230607_164910/vis',
+            'H20': 'test_exp117_vis_ep4_EHF_20230607_164825/vis',
+        },
+        agora={
+            'H4W': 'test_h4w_vis_ep7_AGORA_val_20230607_145313/vis',
+            'OSX': 'test_osx_vis_ep999_AGORA_val_20230607_144123/vis',
+            'L32': 'test_exp114_vis_ep3_AGORA_val_20230607_151156/vis',
+            'H20': 'test_exp117_vis_ep4_AGORA_val_20230607_160510/vis',
+        },
+        ubody={
+            'H4W': 'test_h4w_vis_ep7_UBody_20230607_150602/vis',
+            'OSX': 'test_osx_vis_ep999_UBody_20230607_145041/vis',
+            'L32': 'test_exp114_vis_ep3_UBody_20230607_153803/vis',
+            'H20': 'test_exp117_vis_ep4_UBody_20230607_153854/vis',
+        },
+        egobody={
+            'H4W': 'test_h4w_vis_ep7_EgoBody_Egocentric_20230607_153925/vis',
+            'OSX': 'test_osx_vis_ep999_EgoBody_Egocentric_20230607_152442/vis',
+            'L32': 'test_exp114_vis_ep3_EgoBody_Egocentric_20230607_163538/vis',
+            'H20': 'test_exp117_vis_ep4_EgoBody_Egocentric_20230607_163546/vis',
+        },
+        arctic={
+            'H4W': 'test_h4w_vis_ep7_ARCTIC_20230607_184338/vis',
+            'OSX': 'test_osx_vis_ep999_ARCTIC_20230607_182625/vis',
+            'L32': 'test_exp114_vis_ep3_ARCTIC_20230607_203528/vis',
+            'H20': 'test_exp117_vis_ep4_ARCTIC_20230607_204153/vis',
+        },
+        renbody_highres={
+            'H4W': 'test_h4w_vis_ep7_RenBody_20230607_213652/vis',
+            'OSX': 'test_osx_vis_ep999_RenBody_20230607_200129/vis',
+            'L32': 'test_exp114_vis_ep3_RenBody_20230607_214327/vis',
+            'H20': 'test_exp117_vis_ep4_RenBody_20230607_212645/vis',
+        }
+    )
+    # selected frame
+    eva_selection_path = '/home/weichen/zoehuman/mmhuman3d/tools/vis_neurlips'
+    eva_selection_dict = dict(
+        ehf='select_ehf_smplx_error.csv',
+        agora='select_agora_smplx_error.csv',
+        ubody='select_UBody_smplx_error.csv',
+        egobody='select_EgoBody_Egocentric_smplx_error.csv',
+        arctic='select_ARCTIC_smplx_error.csv',
+        renbody_highres='select_RenBody_HiRes_smplx_error.csv',
+    )
+
+    # prepare visualize input
+    image_idxs, image_paths = [], []
+    anno_param_dicts = []
+
+    selected_frame_df = pd.read_csv(os.path.join(
+            eva_selection_path, eva_selection_dict[args.dataset_name]))
+    for bmark in eva_keys:
+        # read selected frame
+
+        # frame by frame visualization
+        eva_annos = eva_anno_dict[args.dataset_name]
+
+        anno_names = [f'{str(name)}.npz' for name in selected_frame_df.iloc[:, 0]]
+        ftp_target_anno(eva_output, eva_annos[bmark], anno_names,
+                    local_dir=os.path.join(args.cache_path, 'evaluation'))
+        
+
+        # every frame
+    for idx, row in tqdm(selected_frame_df.iterrows(), desc=f'Processing {bmark}',
+                            total=100, position=0, leave=False):
+        anno_param_dict = {}
+        for bmark in eva_keys:
+            image_idx = row[0]
+            image_path = row[1]
+            anno_name = f'{str(image_idx)}.npz'
+
+            # every benchmark
+            target_local_file = os.path.join(args.cache_path,
+                                'evaluation', eva_annos[bmark], anno_name)
+            anno_param = dict(np.load(target_local_file, allow_pickle=True))
+            anno_param_dict[bmark] = anno_param    
+
+            # prepare args
+            args.server_local_path = '/mnt/d/annotations_1988'
+            args.image_cache_path = args.cache_path
+            args.flat_hand_mean = False
+
+        image_idxs.append(image_idx)
+        image_paths.append(image_path)
+        anno_param_dicts.append(anno_param_dict)
+
+    # pdb.set_trace()
+
+    print('Retriving annos from server...done')
+
+    # pdb.set_trace()
+    visualize_gt_eva(args, image_idxs, image_paths, anno_param_dicts)
 
 
 if __name__ == '__main__':
+
+    # main args
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_name', type=str, required=False, 
-                        help='which dataset', 
-                        default='')
-    # parser.add_argument('--dataset_path', type=str, required=True, help='path to the dataset')
-    parser.add_argument('--out_path', type=str, required=False, 
-                        help='path to the output folder',
-                        default='/mnt/c/users/12595/desktop/humandata_vis')
-    parser.add_argument('--server_local_path', type=str, required=False, 
-                        help='local path to where you save the annotations of server datasets',
-                        default='/mnt/d/annotations_1988')
-    parser.add_argument('--image_cache_path', type=str, required=False,
-                        help='local path to image cache folder for server datasets',
-                        default='/mnt/d/image_cache_1988')
+    parser.add_argument('--dataset_name', type=str, default='ehf')
+    parser.add_argument('--out_path', type=str, 
+                        default='/mnt/c/users/12595/desktop/humandata_vis/zzz-paper')
 
     # optional args
-    parser.add_argument('--save_original_img', type=bool, required=False,
-                        help='save original images',
-                        default=True)
-    parser.add_argument('--save_pose', type=bool, required=False,
-                        help='save rendered smpl/smplx pose images',
-                        default=True)
-    parser.add_argument('--sample_size', type=int, required=False,
-                        help='number of samples to visualize',
-                        default=1000)
-    parser.add_argument('--render_all_smpl', type=bool, required=False,
-                        help='render all smpl/smplx models (works for multipeople datasets)',
-                        default=True)
-    parser.add_argument('--flat_hand_mean', type=bool, required=False,
-                        help='use flat hand mean for smplx',
-                        default=False)
+    parser.add_argument('--cache_path', type=str, default='/mnt/d/image_cache_1988',
+                        required=False)
     args = parser.parse_args()
 
-    # dataset status
-    local_datasets = ['gta_human2', 'egobody', 'ubody', 'ssp3d', 
-                          'FIT3D', 'CHI3D', 'HumanSC3D']
-    # some datasets are on 1988
-    server_datasets = ['agora', 'arctic', 'bedlam', 'crowdpose', 'lspet', 'ochuman',
-                       'posetrack', 'instavariety', 'mpi_inf_3dhp',
-                       'mtp', 'muco3dhp', 'prox', 'renbody', 'rich', 'spec',
-                       'synbody','talkshow', 'up3d', 'renbody_highres',
-                       'mscoco', 'mpii', 'h36m']
-    
-    if args.dataset_name != '':
-        visualize_humandata(args, local_datasets, server_datasets)
-    else:
-        for dataset_to_vis in server_datasets:
-            args.dataset_name = dataset_to_vis
-            try:
-                print(f'processing dataset: {args.dataset_name}')
-                visualize_humandata(args, local_datasets, server_datasets)
-            except:
-                pass
+    visualize_eva(args)
+
     

@@ -133,7 +133,10 @@ class AgoraConverter(BaseModeConverter):
 
         for anno_info in tqdm(anno_param, desc=f'Processing Agora {mode}'):
 
+            pdb.set_trace()
+
             image_id = anno_info['image_id']
+            print(anno_info['gender'])
 
             # get image details
             image_info = image_param[image_id]
@@ -151,14 +154,14 @@ class AgoraConverter(BaseModeConverter):
             for key in self.smplx_shape.keys():
                 smplx_[key].append(smplx_param[key])
 
-            # collect keypoints
-            smplx_joints_2d_path = os.path.join(dataset_path, anno_info['smplx_joints_2d_path'])
-            smplx_joints_2d = json.load(open(smplx_joints_2d_path, 'rb'), encoding='latin1')
-            keypoints2d_.append(smplx_joints_2d)
+            # # collect keypoints
+            # smplx_joints_2d_path = os.path.join(dataset_path, anno_info['smplx_joints_2d_path'])
+            # smplx_joints_2d = json.load(open(smplx_joints_2d_path, 'rb'), encoding='latin1')
+            # keypoints2d_.append(smplx_joints_2d)
 
-            smplx_joints_3d_path = os.path.join(dataset_path, anno_info['smplx_joints_3d_path'])
-            smplx_joints_3d = json.load(open(smplx_joints_3d_path, 'rb'), encoding='latin1')
-            keypoints3d_.append(smplx_joints_3d)
+            # smplx_joints_3d_path = os.path.join(dataset_path, anno_info['smplx_joints_3d_path'])
+            # smplx_joints_3d = json.load(open(smplx_joints_3d_path, 'rb'), encoding='latin1')
+            # keypoints3d_.append(smplx_joints_3d)
 
             # get camera parameters
             principal_point = np.array([self.misc_config['image_size'][0] / 2, self.misc_config['image_size'][1] / 2])

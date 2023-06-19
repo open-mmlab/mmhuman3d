@@ -210,7 +210,7 @@ class ImarDatasetsConverter(BaseModeConverter):
         vid_ps_test = [vid_p for vid_p in vid_ps_all if 'test' in vid_p]
         vid_ps_train = [vid_p for vid_p in vid_ps_all if 'train' in vid_p]
 
-        seed, size = '230511', '9999'
+        seed, size = '230605', '9999'
         random.seed(int(seed))
 
         # build smplx model
@@ -285,8 +285,8 @@ class ImarDatasetsConverter(BaseModeConverter):
                                 dict(type='PerspectiveCameras',
                                     convention='opencv',
                                     in_ndc=False,
-                                    focal_length=cam_params['intrinsics_wo_distortion']['f'].reshape(-1, 2),
-                                    principal_point=cam_params['intrinsics_wo_distortion']['c'].reshape(-1, 2),
+                                    focal_length=cam_params['intrinsics_w_distortion']['f'].reshape(-1, 2),
+                                    principal_point=cam_params['intrinsics_w_distortion']['c'].reshape(-1, 2),
                                     image_size=(width, height))).to(self.device)
 
                             # reshape smplx params
@@ -370,8 +370,8 @@ class ImarDatasetsConverter(BaseModeConverter):
                             keypoints_3d_original_.append(keypoints_3d_original)
 
                             # write meta
-                            meta_['focal_length'] += cam_params['intrinsics_wo_distortion']['f'].repeat(len(image_path)).tolist()
-                            meta_['principal_point'] += cam_params['intrinsics_wo_distortion']['c'].repeat(len(image_path)).tolist()
+                            meta_['focal_length'] += cam_params['intrinsics_w_distortion']['f'].repeat(len(image_path)).tolist()
+                            meta_['principal_point'] += cam_params['intrinsics_w_distortion']['c'].repeat(len(image_path)).tolist()
 
                             # write image path
                             image_path_ += image_path
@@ -441,8 +441,27 @@ class ImarDatasetsConverter(BaseModeConverter):
                     human_data.dump(out_file)
 
             if batch == 'test':
-                continue
                 for vid_p in tqdm(vid_ps, desc=f'Processing {mode} {batch}'):
+                    return
+                    if mode == 'FIT3D':
+                        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     if mode == 'CHI3D':
                         subj_ids = [0, 1]
                     else:

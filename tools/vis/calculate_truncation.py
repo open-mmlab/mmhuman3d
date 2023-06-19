@@ -16,7 +16,7 @@ from mmhuman3d.models.body_models.builder import build_body_model
 
 from tools.utils.request_files_server import request_files
 
-
+from tools.vis.visualize_humandata_qp import render_pose as render_pose_qp
 
 import pdb
 smpl_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 'body_pose': (-1, 69)}
@@ -43,7 +43,7 @@ def get_cam_params(camera_params_dict, dataset_name, param, idx):
         pred_cam = param['meta'].item()['pred_cam'][idx]
         cam_scale, cam_trans = pred_cam[0], pred_cam[1:]
         # pdb.set_trace()
-        bbox_xywh = param['bbox_xywh'][idx][:4]
+        bbox_xywh = param['bbox_xywh_vis'][idx][:4]
         R = np.eye(3) * cam_scale * bbox_xywh[-1] / 2
         T = np.array([
                 (cam_trans[0]+1)*bbox_xywh[-1]/2 + bbox_xywh[0], 
@@ -95,7 +95,7 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False,
     output = body_model(**body_model_param, return_verts=True)
     
     vertices = output['vertices'].detach().cpu().numpy().squeeze()
-    faces = body_model.faces
+
 
     eft_datasets = ['ochuman', 'lspet', 'posetrack']
     # adjust vertices beased on R and T
@@ -110,6 +110,8 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False,
         else:
             T = np.dot(np.array(R), root_joints) - root_joints  + np.array(T)
             vertices = vertices + T
+
+    faces = body_model.faces
 
     # render material
     base_color = (1.0, 193/255, 193/255, 1.0)
@@ -306,29 +308,35 @@ def visualize_humandata(args):
     server_datasets = ['arctic', 'bedlam', 'crowdpose', 'lspet', 'ochuman',
                        'posetrack', 'ehf', 'instavariety', 'mpi_inf_3dhp',
                        'mtp', 'muco3dhp', 'prox', 'renbody', 'rich', 'spec',
-                       'synbody','talkshow', 'up3d', 'renbody_highres', 'agora']
+                       'synbody','talkshow', 'up3d', 'renbody_highres', 'agora',
+                       'mscoco', 'mpii', 'h36m']
 
     
     humandata_datasets = [ # name, glob pattern, exclude pattern
+        ('agora', 'agora*forvis*.npz', ''),
         ('arctic', 'p1_train.npz', ''),
         ('bedlam', 'bedlam_train.npz', ''),
         ('behave', 'behave_train_230516_231_downsampled.npz', ''),
         ('chi3d', 'CHI3D_train_230511_1492_*.npz', ''),
         ('crowdpose', 'crowdpose_neural_annot_train_new.npz', ''),
-        ('lspet', 'eft_lspet.npz', ''),
-        ('ochuman', 'eft_ochuman.npz', ''),
-        ('posetrack', 'eft_posetrack.npz', ''),
+        ('lspet', 'eft_lspet*.npz', ''),
+        ('ochuman', 'eft_ochuman*.npz', ''),
+        ('posetrack', 'eft_posetrack*.npz', ''),
         ('egobody_ego', 'egobody_egocentric_train_230425_065_fix_betas.npz', ''),
         ('egobody_kinect', 'egobody_kinect_train_230503_065_fix_betas.npz', ''),
         ('fit3d', 'FIT3D_train_230511_1504_*.npz', ''),
         ('gta', 'gta_human2multiple_230406_04000_0.npz', ''),
         ('ehf', 'h4w_ehf_val_updated_v2.npz', ''),  # use humandata ehf to get bbox
+        ('h36m', 'h36m*', ''),
         ('humansc3d', 'HumanSC3D_train_230511_2752_*.npz', ''),
         ('instavariety', 'insta_variety_neural_annot_train.npz', ''),
+        ('mpii', 'mpii*.npz', ''),
         ('mpi_inf_3dhp', 'mpi_inf_3dhp_neural_annot_train.npz', ''),
+        ('mscoco', '*coco2017*.npz', ''),
         ('mtp', 'mtp_smplx_train.npz', ''),
         ('muco3dhp', 'muco3dhp_train.npz', ''),
         ('prox', 'prox_train_smplx_new.npz', ''),
+        ('pw3d', 'pw3d*.npz', ''),
         ('renbody', 'renbody_train_230525_399_*.npz', ''),
         ('renbody_highres', 'renbody_train_highrescam_230517_399_*_fix_betas.npz', ''),
         ('rich', 'rich_train_fix_betas.npz', ''),
@@ -337,10 +345,11 @@ def visualize_humandata(args):
         ('synbody_magic1', 'synbody_amass_230328_02172.npz', ''),
         ('synbody', 'synbody_train_230521_04000_fix_betas.npz', ''),
         ('talkshow', 'talkshow_smplx_*.npz', 'path'),
-        ('up3d', 'up3d_trainval.npz', ''),
+        ('up3d', 'up3d*.npz', ''),
     ]
 
     dataset_path_dict = {
+        'agora': '/lustrenew/share_data/caizhongang/data/datasets/agora',
         'arctic': '/lustre/share_data/weichen1/arctic/unpack/arctic_data/data/images',
         'behave': '/mnt/e/behave',
         'bedlam': '/lustre/share_data/weichen1/bedlam/train_images',
@@ -351,14 +360,18 @@ def visualize_humandata(args):
         'egobody': '/mnt/d/egobody',
         'FIT3D': '/mnt/d/sminchisescu-research-datasets',
         'gta_human2': '/mnt/e/gta_human2',
-        'ehf': '',
+        'ehf': '/mnt/e/ehf',
         'HumanSC3D': '/mnt/d/sminchisescu-research-datasets',
+        'h36m': '/lustrenew/share_data/zoetrope/osx/data/Human36M',
         'instavariety': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/insta_variety/',
-        'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/mpi_inf_3dhp',
+        'mpii': '/lustrenew/share_data/zoetrope/data/datasets/mpii',
+        'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/osx/data/MPI_INF_3DHP_folder/data/',
+        'mscoco': '/lustrenew/share_data/zoetrope/data/datasets/coco/train_2017',
         'mtp': '/lustre/share_data/weichen1/mtp',
         'muco3dhp': '/lustre/share_data/weichen1/MuCo',
         'posetrack': 'lustrenew/share_data/zoetrope/data/datasets/posetrack/data/images',
         'prox': '/lustre/share_data/weichen1/PROXFlip',
+        'pw3d': '',
         'renbody': '/lustre/share_data/weichen1/renbody',
         'renbody_highres': '/lustre/share_data/weichen1/renbody',
         'rich': '/lustrenew/share_data/zoetrope/data/datasets/rich/images/train',
@@ -541,19 +554,20 @@ def visualize_humandata(args):
                 fx=focal_length[0] * cam_scale, fy=focal_length[1] * cam_scale,
                 cx=camera_center[0] * cam_scale, cy=camera_center[1] * cam_scale)
             
-            if dataset_name in ['ochuman']:
+            if dataset_name in ['ochuman', 'lspet', 'posetrack']:
+                zfar, znear= 600, 30
                 camera = pyrender.camera.IntrinsicsCamera(
                     fx=focal_length[0], fy=focal_length[1],
                     cx=camera_center[0], cy=camera_center[1],
-                    zfar=600, znear=30)                    
+                    zfar=zfar, znear=znear)                    
                 camera_small = pyrender.camera.IntrinsicsCamera(
                     fx=focal_length[0] / cam_scale, fy=focal_length[1] / cam_scale,
                     cx=camera_center[0] * cam_scale, cy=camera_center[1] * cam_scale,
-                    zfar=600, znear=30)
+                    zfar=zfar, znear=znear)
                 camera_big = pyrender.camera.IntrinsicsCamera(
                     fx=focal_length[0] * cam_scale, fy=focal_length[1] * cam_scale,
                     cx=camera_center[0] * cam_scale, cy=camera_center[1] * cam_scale,
-                    zfar=600, znear=30)
+                    zfar=zfar, znear=znear)
 
             # read smpl smplx params and build body model
             if has_smpl:
@@ -563,6 +577,15 @@ def visualize_humandata(args):
                                 device=device, dtype=torch.float32)
                                 for key in intersect_key
                                 if len(body_model_param_smpl[key][idx:idx+1]) > 0}
+                eft_datasets = ['ochuman', 'lspet', 'posetrack']
+                if dataset_name in eft_datasets:
+                    rendered_image = render_pose(img=image, 
+                                            body_model_param=body_model_param_tensor, 
+                                            body_model=smpl_model[gender],
+                                            camera=camera,
+                                            eft=True,
+                                            R=R, T=T)
+
                 rendered_image = render_pose(img=image, 
                                             body_model_param=body_model_param_tensor, 
                                             body_model=smpl_model[gender],
