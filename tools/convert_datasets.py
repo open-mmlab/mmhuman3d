@@ -4,9 +4,7 @@ import os
 from mmhuman3d.data.data_converters import build_data_converter
 
 DATASET_CONFIGS = dict(
-    agora=dict(
-        type='AgoraConverter', modes=['validation_3840', 'train_3840',
-                            'train_1280', 'validation_1280'], prefix='agora'),   
+
     amass=dict(type='AmassConverter', prefix='AMASS_file'),
     coco=dict(type='CocoConverter'),
     coco_wholebody=dict(
@@ -56,22 +54,49 @@ DATASET_CONFIGS = dict(
         pretrained_ckpt='data/checkpoints/spin.pth',
         prefix='vibe_data'),
     gta_human=dict(type='GTAHumanConverter', prefix='gta_human'),
-    gta_human2=dict(type='GTAHuman2Converter', prefix='gta_human2', modes=['single', 'multiple']),
     humman=dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
-    synbody=dict(type='SynbodyConverter', prefix='synbody', modes=['train']),
-    renbody=dict(type='RenbodyConverter', prefix='renbody', modes=['train', 'train_highrescam', 'test', 'test_highrescam']),
-    egobody=dict(type='EgobodyConverter', prefix='egobody', modes=['egocentric_train', 
-                      'egocentric_test', 'egocentric_val',
-                      'kinect_train', 'kinect_test', 'kinect_val']),
-    humanart=dict(type='HumanartConverter', prefix='humanart', modes=
-                     ['real_human', '2D_virtual_human', '3D_virtual_human']),
-    ubody=dict(type='UbodyConverter', prefix='ubody', modes=['inter', 'intra']),
-    shapy=dict(type='ShapyConverter', prefix='shapy', modes=['test', 'val']),
-    ssp3d=dict(type='Ssp3dConverter', prefix='ssp-3d'),
-    sminchisescu=dict(type='ImarDatasetsConverter', prefix='sminchisescu-research-datasets',
-                       modes=['FIT3D', 'CHI3D', 'HumanSC3D']),
-    behave=dict(type='BehaveConverter', prefix='behave', modes=['train', 'test']),
+
+    # -------------- below datasets are done by WC --------------
+
+    # -------------- multi-human dataset --------------
+    agora=dict(type='AgoraConverter', # synthetic
+               prefix='agora', modes=['validation_3840', 'train_3840',
+                            'train_1280', 'validation_1280']),
+    egobody=dict(type='EgobodyConverter', # real, egocentric: single
+                 prefix='egobody', 
+                 modes=['egocentric_train', 'egocentric_test', 'egocentric_val',
+                    'kinect_train', 'kinect_test', 'kinect_val']),   
+    gta_human2=dict(type='GTAHuman2Converter', # synthetic
+                    prefix='gta_human2', modes=['single', 'multiple']),
+
+    synbody=dict(type='SynbodyConverter', # synthetic
+                 prefix='synbody', modes=['train']),
+
+    ubody=dict(type='UbodyConverter', # real, has some single
+               prefix='ubody', modes=['inter', 'intra']),
+    
+
+    # -------------- single-human dataset --------------
+    behave=dict(type='BehaveConverter', # real
+                prefix='behave', modes=['train', 'test']),
+    moyo=dict(type='MoyoConverter', # real
+              prefix='moyo', modes=['train', 'val']),
+    renbody=dict(type='RenbodyConverter', # real
+                 prefix='renbody', modes=['train', 'train_highrescam', 'test', 'test_highrescam']),
+    sminchisescu=dict(type='ImarDatasetsConverter', # real, 3 studio datasets
+                      prefix='sminchisescu-research-datasets',
+                      modes=['FIT3D', 'CHI3D', 'HumanSC3D']),
+    ssp3d=dict(type='Ssp3dConverter', # real 
+               prefix='ssp-3d'),
+
+    # -------------- other dataset (no complete smpl/smplx) --------------
+    humanart=dict(type='HumanartConverter', # real, but have some human-like instances 
+                  prefix='humanart', 
+                  modes=['real_human', '2D_virtual_human', '3D_virtual_human']),
+    shapy=dict(type='ShapyConverter', # real
+               prefix='shapy', modes=['test', 'val']),
+
 )
 
 

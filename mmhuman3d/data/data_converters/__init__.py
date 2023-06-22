@@ -23,6 +23,7 @@ from .humanart import HumanartConverter
 from .insta_vibe import InstaVibeConverter
 from .lsp import LspConverter
 from .lsp_extended import LspExtendedConverter
+from .moyo import MoyoConverter
 from .mpi_inf_3dhp import MpiInf3dhpConverter
 from .mpi_inf_3dhp_hybrik import MpiInf3dhpHybrIKConverter
 from .mpii import MpiiConverter
@@ -55,5 +56,5 @@ __all__ = [
     'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
     'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
     'HumanartConverter', 'UbodyConverter', 'ShapyConverter', 'Ssp3dConverter',
-    'ImarDatasetsConverter', 'BehaveConverter'
+    'ImarDatasetsConverter', 'BehaveConverter', 'MoyoConverter'
 ]
