@@ -5,6 +5,7 @@ import random
 import numpy as np
 import torch
 from tqdm import tqdm
+import pdb
 
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import (
@@ -16,6 +17,14 @@ from mmhuman3d.models.body_models.builder import build_body_model
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idxs_by_part
+
+smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
+        'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
+        'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3), 'expression': (-1, 10)}
+smplx_shape_except_expression = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
+        'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
+        'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3)}
+smplx_shape = smplx_shape_except_expression
 
 @DATA_CONVERTERS.register_module()
 class GTAHuman2Converter(BaseModeConverter):
@@ -59,6 +68,14 @@ class GTAHuman2Converter(BaseModeConverter):
                 focal_length=focal_length,
                 image_size=image_size,
                 principal_point=camera_center)).to(self.device)
+        
+        self.misc = dict(
+            focal_length=np.array([focal_length, focal_length]),
+            camera_center=np.array(camera_center),
+            image_shape=np.array(image_size),
+            bbox_source='keypoints2d_smplx', smplx_source='smplifyx',
+            cam_param_type='prespective', flat_hand_mean=True,)
+
 
     
     def _keypoints_to_scaled_bbox_fh(self, keypoints, occ, self_occ, scale=1.0, convention='gta'):
@@ -142,24 +159,38 @@ class GTAHuman2Converter(BaseModeConverter):
 
         if mode == 'single':
             ann_paths_total = sorted(
-                glob.glob(os.path.join(dataset_path, 'annotations_single_person', '*.npz')))
+                glob.glob(os.path.join(dataset_path, 'annotations_single_smplx', '*.npz')))
         elif mode == 'multiple':
             ann_paths_total = sorted(
-                glob.glob(os.path.join(dataset_path, 'annotations_multiple_person', '*.npz')))
+                glob.glob(os.path.join(dataset_path, 'annotations_multiple_smplx', '*.npz')))
 
         print(f'{len(ann_paths_total)} sequences are avliable in this mode: {mode}')
 
-        seed, size = '230406', '04000'
+        seed, size = '230619', '04000'
+        size = str(max([int(size), len(ann_paths_total)]))
         random.seed(int(seed))
-        random.shuffle(ann_paths_total)
-        ann_paths_total = ann_paths_total[:int(size)]
+        # random.shuffle(ann_paths_total)
+        # ann_paths_total = ann_paths_total[:int(size)]
 
-        s_num = 1
+        s_num = 9
         print(f'Seperate in to {s_num} files')
 
         slice = int(int(size)/s_num) + 1
 
         for i in range(s_num):
+
+            body_model = build_body_model(
+                        dict(
+                            type='SMPLX',
+                            keypoint_src='smplx',
+                            keypoint_dst='smplx',
+                            model_path='data/body_models/smplx',
+                            num_betas=10,
+                            use_face_contour=True,
+                            flat_hand_mean=True,
+                            use_pca=False,
+                            batch_size=1,
+                        )).to(self.device)
 
             ann_paths = ann_paths_total[slice*i:slice*(i+1)]
 
@@ -179,164 +210,172 @@ class GTAHuman2Converter(BaseModeConverter):
 
             # structs we use
             image_path_, bbox_xywh_, keypoints_2d_gta_, keypoints_3d_gta_, \
-                keypoints_2d_, keypoints_3d_, keypoints_3d_ra_, keypoints_3d_gta_ra_ = [], [], [], [], [], [], [], []
+                keypoints_2d_, keypoints_3d_= [], [], [], [], [], []
 
 
-            for ann_path in tqdm(ann_paths):
+            for ann_path in tqdm(ann_paths, desc=f'Processing {i}/{s_num} slices'):
 
                 # with open(ann_path, 'rb') as f:
                 #     ann = pickle.load(f, encoding='latin1')
-                try:
-                    ann = dict(np.load(ann_path, allow_pickle=True))
 
-                    base = os.path.basename(ann_path)  # -> seq_00090376_154131.npz -> seq_00090376_154131
-                    seq_idx, ped_idx = base[4:12], base[13:19]  # -> 00090376, 154131
-                    num_frames = len(ann['body_pose'])
+                ann = dict(np.load(ann_path, allow_pickle=True))
 
-                   
-                    # convention
-                    # try:
-                    #     aaa =  ann['keypoints_2d']
-                    # except:
-                    #     print(ann.keys())
+                base = os.path.basename(ann_path)  # -> seq_00090376_154131.npz -> seq_00090376_154131
+                seq_idx, ped_idx = base[4:12], base[13:19]  # -> 00090376, 154131
+                num_frames = len(ann['body_pose'])
+
+                
+                # convention
+                # try:
+                #     aaa =  ann['keypoints_2d']
+                # except:
+                #     print(ann.keys())
 
 
-                    keypoints_2d_gta, keypoints_2d_gta_mask = convert_kps(
-                        ann['keypoints_2d'], src='gta', dst='smplx')
-                    keypoints_3d_gta, keypoints_3d_gta_mask = convert_kps(
-                        ann['keypoints_3d'], src='gta', dst='smplx')
-                    
-                    global_orient = np.array(ann['global_orient'])
-                    body_pose = ann['body_pose']
-                    betas = ann['betas']
-                    transl = ann['transl']
+                keypoints_2d_gta, keypoints_2d_gta_mask = convert_kps(
+                    ann['keypoints_2d'], src='gta', dst='smplx')
+                keypoints_3d_gta, keypoints_3d_gta_mask = convert_kps(
+                    ann['keypoints_3d'], src='gta', dst='smplx')
+                
+                global_orient = np.array(ann['global_orient'])
+                body_pose = ann['body_pose']
+                betas = ann['betas']
+                transl = ann['transl']
+                left_hand_pose = ann['left_hand_pose']
+                right_hand_pose = ann['right_hand_pose']
+
+                # normally gta-human++ hands is presented in pca=24
+                hand_pca_comps = left_hand_pose.shape[1]
+                if hand_pca_comps < 45:
+                    ann = self._revert_smplx_hands_pca(param_dict=ann, num_pca_comps=hand_pca_comps)
                     left_hand_pose = ann['left_hand_pose']
                     right_hand_pose = ann['right_hand_pose']
 
-                    # normally gta-human++ hands is presented in pca=24
-                    hand_pca_comps = left_hand_pose.shape[1]
-                    if hand_pca_comps < 45:
-                        ann = self._revert_smplx_hands_pca(param_dict=ann, num_pca_comps=hand_pca_comps)
-                        left_hand_pose = ann['left_hand_pose']
-                        right_hand_pose = ann['right_hand_pose']
 
-                    body_model = build_body_model(
-                        dict(
-                            type='SMPLX',
-                            keypoint_src='smplx',
-                            keypoint_dst='smplx',
-                            model_path='data/body_models/smplx',
-                            num_betas=10,
-                            use_face_contour=True,
-                            flat_hand_mean=True,
-                            use_pca=False,
-                            batch_size=len(betas),
-                        )).to(self.device)
-                    output = body_model(
-                        global_orient=torch.tensor(global_orient, device=self.device),
-                        body_pose=torch.tensor(body_pose, device=self.device),
-                        betas=torch.tensor(betas, device=self.device),
-                        transl=torch.tensor(transl, device=self.device),
-                        left_hand_pose=torch.tensor(left_hand_pose, device=self.device),
-                        right_hand_pose=torch.tensor(right_hand_pose, device=self.device),
-                        return_joints=True)
+                intersect_key = list(set(ann.keys()) & set(smplx_shape.keys()))
+                
+                # prepare tensor
+                body_model_param_tensor = {}
+                batch_frames = global_orient.shape[0]
+                for key in smplx_shape.keys():
+                    if key in intersect_key:
+                        body_model_param_tensor[key] = torch.tensor(np.array(ann[key]).reshape(smplx_shape[key]),
+                                device=self.device, dtype=torch.float32)
+                    else:
+                        shape = np.array(smplx_shape[key])
+                        shape[0] = batch_frames
+                        zero_tensor = np.zeros(shape)
+                        body_model_param_tensor[key] = torch.tensor(zero_tensor, device=self.device, dtype=torch.float32)
 
 
-                    keypoints_3d = output['joints']
-                    keypoints_2d_xyd = self.camera.transform_points_screen(keypoints_3d)
-                    keypoints_2d = keypoints_2d_xyd[..., :2]
+                # for keys in body_model_param_tensor.keys():
+                #     print(keys, body_model_param_tensor[keys].shape)
+                output = body_model(return_verts=True, **body_model_param_tensor)
 
-                    keypoints_3d = keypoints_3d.detach().cpu().numpy()
-                    keypoints_2d = keypoints_2d.detach().cpu().numpy()
-
-                    if np.sum(np.isnan(keypoints_2d)) + np.sum(np.isnan(keypoints_3d)) > 0:
-                        raise ValueError(f'{base} skip due to nan in data')
-
-                    # root align
-                    root_idx = get_keypoint_idx('pelvis', convention='smplx')
-                    keypoints_3d_gta_ra = \
-                        keypoints_3d_gta - keypoints_3d_gta[:, [root_idx], :]
-                    keypoints_3d_ra = keypoints_3d - keypoints_3d[:, [root_idx], :]
+                # output = body_model(
+                #     global_orient=torch.tensor(global_orient, device=self.device),
+                #     body_pose=torch.tensor(body_pose, device=self.device),
+                #     betas=torch.tensor(betas, device=self.device),
+                #     transl=torch.tensor(transl, device=self.device),
+                #     left_hand_pose=torch.tensor(left_hand_pose, device=self.device),
+                #     right_hand_pose=torch.tensor(right_hand_pose, device=self.device),
+                #     return_joints=True)
 
 
+                keypoints_3d = output['joints']
+                keypoints_2d_xyd = self.camera.transform_points_screen(keypoints_3d)
+                keypoints_2d = keypoints_2d_xyd[..., :2]
 
-                    for frame_idx in range(num_frames):
-                        
-                        image_path = os.path.join('images_' + mode, 'seq_' + seq_idx, '{:08d}.jpeg'.format(frame_idx))
-                        image_path_real = os.path.join(f'/mnt/e/gtahuman2_{mode}', 'seq_' + seq_idx, '{:08d}.jpeg'.format(frame_idx))
-                        if not os.path.exists(image_path_real):
-                            raise FileNotFoundError(image_path_real)
+                keypoints_3d = keypoints_3d.detach().cpu().numpy()
+                keypoints_2d = keypoints_2d.detach().cpu().numpy()
+
+                if np.sum(np.isnan(keypoints_2d)) + np.sum(np.isnan(keypoints_3d)) > 0:
+                    print(f'{base} skip due to nan in data')
+                    continue
+                    # raise ValueError(f'{base} skip due to nan in data')
+
+                # root align
+                # root_idx = get_keypoint_idx('pelvis', convention='smplx')
+                # keypoints_3d_gta_ra = \
+                #     keypoints_3d_gta - keypoints_3d_gta[:, [root_idx], :]
+                # keypoints_3d_ra = keypoints_3d - keypoints_3d[:, [root_idx], :]
+
+
+
+                for frame_idx in range(num_frames):
+                    
+                    image_path = os.path.join('images_' + mode, 'seq_' + seq_idx, '{:08d}.jpeg'.format(frame_idx))
+                    image_path_real = os.path.join(f'/mnt/e/gta_human2/images_{mode}', 'seq_' + seq_idx, '{:08d}.jpeg'.format(frame_idx))
+                    if not os.path.exists(image_path_real):
+                        continue
+                        # raise FileNotFoundError(image_path_real)
+                    # import pdb; pdb.set_trace()
+                    # print(image_path)
+                    # reject examples with bbox center outside the frame
+                    # x, y, w, h = bbox_xywh
+                    # x = max([x, 0.0])
+                    # y = max([y, 0.0])
+                    # w = min([w, 1920 - x])  # x + w <= img_width
+                    # h = min([h, 1080 - y])  # y + h <= img_height
+                    # if not (0 <= x < 1920 and 0 <= y < 1080 and 0 < w < 1920
+                    #         and 0 < h < 1080):
+                    #     continue
+
+                    image_path_.append(image_path)
+                    # bbox_xywh_.append([x, y, w, h])
+
+                    kp = ann['keypoints_2d'][frame_idx]
+                    kp = kp[:, :2]
+                    occ = ann['occ'][frame_idx]
+                    self_occ = ann['self_occ'][frame_idx]
+
+                    # import pdb; pdb.set_trace()
+                    # since the 2d keypoints are nearly correct, scale a little bit
+                    bbox_tmp_ = {}
+
+                    # bbox = np.array([max(0, xmin), max(0, ymin), min(1920, xmax), min(1080, ymax)])
+                    # import pdb; pdb.set_trace()
+                    if np.sum(occ)/len(kp) >= 0.5:
+                        body_conf = 0
+                    else:
+                        body_conf = 1
+
+                    bbox_tmp_['bbox_xywh'] = ann['bbox_xywh'][frame_idx]
+                    bbox_tmp_['face_bbox_xywh'], bbox_tmp_['lhand_bbox_xywh'], bbox_tmp_[
+                        'rhand_bbox_xywh'] = self._keypoints_to_scaled_bbox_fh(kp, occ, self_occ, 1.0)
+                    for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
                         # import pdb; pdb.set_trace()
-                        # print(image_path)
-                        # reject examples with bbox center outside the frame
-                        # x, y, w, h = bbox_xywh
-                        # x = max([x, 0.0])
-                        # y = max([y, 0.0])
-                        # w = min([w, 1920 - x])  # x + w <= img_width
-                        # h = min([h, 1080 - y])  # y + h <= img_height
-                        # if not (0 <= x < 1920 and 0 <= y < 1080 and 0 < w < 1920
-                        #         and 0 < h < 1080):
-                        #     continue
-
-                        image_path_.append(image_path)
-                        # bbox_xywh_.append([x, y, w, h])
-
-                        kp = ann['keypoints_2d'][frame_idx]
-                        kp = kp[:, :2]
-                        occ = ann['occ'][frame_idx]
-                        self_occ = ann['self_occ'][frame_idx]
-
-                        # import pdb; pdb.set_trace()
-                        # since the 2d keypoints are nearly correct, scale a little bit
-                        bbox_tmp_ = {}
-
-                        # bbox = np.array([max(0, xmin), max(0, ymin), min(1920, xmax), min(1080, ymax)])
-                        # import pdb; pdb.set_trace()
-                        if np.sum(occ)/len(kp) >= 0.5:
-                            body_conf = 0
+                        if bbox_name != 'bbox_xywh':
+                            bbox = bbox_tmp_[bbox_name]
+                            xmin, ymin, xmax, ymax, conf = bbox
+                            bbox = np.array([max(0, xmin), max(0, ymin), min(1920, xmax), min(1080, ymax)])
+                            bbox_xywh = self._xyxy2xywh(bbox)
                         else:
-                            body_conf = 1
+                            bbox_xywh = bbox_tmp_[bbox_name].tolist()
+                            xmin, ymin, w, h = bbox_xywh
+                            xmax = w + xmin
+                            ymax = h + ymin
+                            bbox = np.array([max(0, xmin), max(0, ymin), min(1920, xmax), min(1080, ymax)])
+                            conf = body_conf
 
-                        bbox_tmp_['bbox_xywh'] = ann['bbox_xywh'][frame_idx]
-                        bbox_tmp_['face_bbox_xywh'], bbox_tmp_['lhand_bbox_xywh'], bbox_tmp_[
-                            'rhand_bbox_xywh'] = self._keypoints_to_scaled_bbox_fh(kp, occ, self_occ, 1.0)
-                        for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
-                            # import pdb; pdb.set_trace()
-                            if bbox_name != 'bbox_xywh':
-                                bbox = bbox_tmp_[bbox_name]
-                                xmin, ymin, xmax, ymax, conf = bbox
-                                bbox = np.array([max(0, xmin), max(0, ymin), min(1920, xmax), min(1080, ymax)])
-                                bbox_xywh = self._xyxy2xywh(bbox)
-                            else:
-                                bbox_xywh = bbox_tmp_[bbox_name].tolist()
-                                xmin, ymin, w, h = bbox_xywh
-                                xmax = w + xmin
-                                ymax = h + ymin
-                                bbox = np.array([max(0, xmin), max(0, ymin), min(1920, xmax), min(1080, ymax)])
-                                conf = body_conf
+                        if bool(set(bbox).intersection([0, 1280, 1920])):
+                            bbox_xywh.append(0)
+                        else: 
+                            bbox_xywh.append(conf)
+                        bboxs[bbox_name].append(bbox_xywh)
+                        # print(bbox_xywh)
 
-                            if bool(set(bbox).intersection([0, 1280, 1920])):
-                                bbox_xywh.append(0)
-                            else: 
-                                bbox_xywh.append(conf)
-                            bboxs[bbox_name].append(bbox_xywh)
-                            # print(bbox_xywh)
+                    smplx['global_orient'].append(global_orient[frame_idx])
+                    smplx['body_pose'].append(body_pose[frame_idx])
+                    smplx['betas'].append(betas[frame_idx])
+                    smplx['transl'].append(transl[frame_idx])
+                    smplx['left_hand_pose'].append(left_hand_pose[frame_idx])
+                    smplx['right_hand_pose'].append(right_hand_pose[frame_idx])
 
-                        smplx['global_orient'].append(global_orient[frame_idx])
-                        smplx['body_pose'].append(body_pose[frame_idx])
-                        smplx['betas'].append(betas[frame_idx])
-                        smplx['transl'].append(transl[frame_idx])
-                        smplx['left_hand_pose'].append(left_hand_pose[frame_idx])
-                        smplx['right_hand_pose'].append(right_hand_pose[frame_idx])
-
-                        keypoints_2d_gta_.append(keypoints_2d_gta[frame_idx])
-                        keypoints_3d_gta_.append(keypoints_3d_gta[frame_idx])
-                        keypoints_3d_gta_ra_.append(keypoints_3d_gta_ra[frame_idx])
-                        keypoints_2d_.append(keypoints_2d[frame_idx])
-                        keypoints_3d_.append(keypoints_3d[frame_idx])
-                        keypoints_3d_ra_.append(keypoints_3d_ra[frame_idx])
-                except Exception as e:
-                    print(e)
+                    keypoints_2d_gta_.append(keypoints_2d_gta[frame_idx])
+                    keypoints_3d_gta_.append(keypoints_3d_gta[frame_idx])
+                    keypoints_2d_.append(keypoints_2d[frame_idx])
+                    keypoints_3d_.append(keypoints_3d[frame_idx])
 
             smplx['global_orient'] = np.array(smplx['global_orient']).reshape(-1, 3)
             smplx['body_pose'] = np.array(smplx['body_pose']).reshape(-1, 21, 3)
@@ -361,8 +400,8 @@ class GTAHuman2Converter(BaseModeConverter):
             keypoints2d, keypoints2d_mask = \
                 convert_kps(keypoints2d, src='smplx', dst='human_data')
             # import pdb; pdb.set_trace()
-            human_data['keypoints2d'] = keypoints2d
-            human_data['keypoints2d_mask'] = keypoints2d_mask
+            human_data['keypoints2d_smplx'] = keypoints2d
+            human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
 
             keypoints3d = np.array(keypoints_3d_).reshape(-1, 144, 3)
             keypoints2d_conf = np.ones([keypoints3d.shape[0], 144, 1])
@@ -371,34 +410,20 @@ class GTAHuman2Converter(BaseModeConverter):
                 [keypoints3d, np.ones([keypoints3d.shape[0], 144, 1])], axis=-1)
             keypoints3d, keypoints3d_mask = \
                 convert_kps(keypoints3d, src='smplx', dst='human_data')
-            human_data['keypoints3d_cam'] = keypoints3d
-            human_data['keypoints3d_cam_mask'] = keypoints3d_mask
-
-            keypoints3d_ra = np.array(keypoints_3d_ra_).reshape(-1, 144, 3)
-            keypoints3d_ra = np.concatenate(
-                [keypoints3d_ra, np.ones([keypoints3d_ra.shape[0], 144, 1])], axis=-1)
-            keypoints3d_ra, keypoints3d_ra_mask = \
-                convert_kps(keypoints3d_ra, src='smplx', dst='human_data')
-            human_data['keypoints3d'] = keypoints3d_ra
-            human_data['keypoints3d_mask'] = keypoints3d_ra_mask
+            human_data['keypoints3d_smplx'] = keypoints3d
+            human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
 
             keypoints2d_gta = np.array(keypoints_2d_gta_).reshape(-1, 144, 3)
             keypoints2d_gta, keypoints2d_gta_mask = \
                 convert_kps(keypoints2d_gta, src='smplx', dst='human_data')
-            human_data['keypoints2d_gta'] = keypoints2d_gta
-            human_data['keypoints2d_gta_mask'] = keypoints2d_gta_mask
-
-            keypoints3d_gta_ra = np.array(keypoints_3d_gta_ra_).reshape(-1, 144, 4)
-            keypoints3d_gta_ra, keypoints3d_gta_ra_mask = \
-                convert_kps(keypoints3d_gta_ra, src='smplx', dst='human_data')
-            human_data['keypoints3d_gta'] = keypoints3d_gta_ra
-            human_data['keypoints3d_gta_mask'] = keypoints3d_gta_ra_mask
+            human_data['keypoints2d_original'] = keypoints2d_gta
+            human_data['keypoints2d_original_mask'] = keypoints2d_gta_mask
 
             keypoints3d_gta = np.array(keypoints_3d_gta_).reshape(-1, 144, 4)
             keypoints3d_gta, keypoints3d_gta_mask = \
                 convert_kps(keypoints3d_gta, src='smplx', dst='human_data')
-            human_data['keypoints3d_gta_cam'] = keypoints3d_gta
-            human_data['keypoints3d_gta_cam_mask'] = keypoints3d_gta_mask
+            human_data['keypoints3d_original'] = keypoints3d_gta
+            human_data['keypoints3d_original_mask'] = keypoints3d_gta_mask
 
             human_data['image_path'] = image_path_
 
