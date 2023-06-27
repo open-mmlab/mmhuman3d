@@ -8,9 +8,9 @@ HumanData is a subclass of python built-in class dict, containing single-view, i
 
 #### Paths:
 
-Image path is included, and optionally path of segmantation map and depth image can be included if provided by dataset.
+Image path is included, and optionally path of segmentation map and depth image can be included if provided by dataset.
 - image_path: (N, ), list of str, each element is a relative path from the root folder (exclusive) to the image.
-- segmantation_path (optional): (N, ), list of str, each element is a relative path from the root folder (exclusive) to the segmantation map.
+- segmentation (optional): (N, ), list of str, each element is a relative path from the root folder (exclusive) to the segmentation map.
 - depth_path (optional): (N, ), list of str, each element is a relative path from the root folder (exclusive) to the depth image.
 
 #### Keypoints：
@@ -24,7 +24,7 @@ Following keys should be included in `HumanData` if applicable. For each diction
 
 #### Bounding Box：
 
-Bounding box of body (smpl), face and hand (smplx), which data type is `[x_min, y_min, width, height, confidence]`，and should not exceed the image boundary. 
+Bounding box of body (smpl), face and hand (smplx), which data type is `[x_min, y_min, width, height, confidence]`，and should not exceed the image boundary.
 - bbox_xywh: (N, 5), numpy array, bounding box with confidence, coordinates of bottom-left point x, y, width w and height h of bbox, score at last.
 - face_bbox_xywh, lhand_bbox_xywh, rhand_bbox_xywh (optional): (N, 5), numpy array, should be included if `smplx` data is provided, and is derived from smplx2d keypoints. Have the same srtucture as above.
 
@@ -44,7 +44,7 @@ Normally saved as smpl/smplx.
 #### Suggestion for WHAT to include in `HumanData['misc']`:
 
 Miscellaneous contains the info of different settings for each dataset, including camaera type, source of keypoints annotation, bounding box etc. Aims to faclitate different usage of data.
-`HumanData['misc']` is a dictionary and its keys are discribed as following:
+`HumanData['misc']` is a dictionary and its keys are described as following:
 - kps3d_root_aligned： Bool, stating that if keypoints3d is root-aligned，root_alignment is not preferred for HumanData. If this key does not exist, root_aligenment is by default to be `False`.
 - flat_hand_mean：Bool, applicable for smplx data，for most datasets `flat_hand_mean=False`.
 - bbox_source：source of bounding box，`bbox_soruce='keypoints2d_smpl' or 'keypoints2d_smplx' or 'keypoints2d_original'`，describing which type of keypoints are used to derive the bounding box，OR `bbox_source='provide_by_dataset'` shows that bounding box if provided by dataset. (For example, from some detection module rather than keypoints)
@@ -59,11 +59,11 @@ Miscellaneous contains the info of different settings for each dataset, includin
 
 - gender: (N, ), list of str, each element represents the gender for an smpl/smplx instance. (key not required if dataset use gender-neutral model)
 - height， width：(N, )， list of str, each element represents the width of height of image. (keys should be in `HumanData['misc']` if image shape are same across the dataset）
-- other keys，applicable if the key value is different，and have some imapct on keypoints or smpl/smplx (2d and 3d)，For example, `focal_length` and `principal_point`, focal_length = (N, 2), principal_point = (N, 2)
+- other keys，applicable if the key value is different，and have some impact on keypoints or smpl/smplx (2d and 3d)，For example, `focal_length` and `principal_point`, focal_length = (N, 2), principal_point = (N, 2)
 
 #### Some other info of HumanData
 
-- All annotations are transfromed from world space to opencv camera space, for space transformation we use:
+- All annotations are transformed from world space to opencv camera space, for space transformation we use:
 
     ```from mmhuman3d.models.body_models.utils import transform_to_camera_frame, batch_transform_to_camera_frame```
 
