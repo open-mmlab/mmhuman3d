@@ -64,6 +64,11 @@ Hence, `gta_human_4x.npz` is used as the training, it may be obtained in two way
 
 Please refer to [getting_started.md](../../docs/getting_started.md) for training and evaluation on MMHuman3D.
 
+## Visualization
+
+We prepared a script with a sample sequence that should help you with the SMPL overlay. 
+You may download it from [here](https://drive.google.com/file/d/11osPM67KiQN6NbdJo3plcgNoPNxfJ_j7/view?usp=share_link).
+
 ## Notes
 
 For different base models, you can find detailed data preparation steps in each subfolder.
