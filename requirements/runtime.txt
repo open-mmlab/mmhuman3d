@@ -6,7 +6,7 @@ easydev
 einops
 h5py
 matplotlib
-numpy==1.23.1
+numpy<=1.23
 opencv-python
 pandas<2.0.0
 pickle5
