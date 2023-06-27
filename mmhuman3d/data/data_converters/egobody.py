@@ -38,6 +38,8 @@ class EgobodyConverter(BaseModeConverter):
         # check pytorch device
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.misc_config = dict(
+            bbox_source='keypoints2d_smplx', smplx_source='original',
+            flat_hand_mean=False, camera_param_type='perspective',
             kps3d_root_aligned=False, bbox_body_scale=1.2, bbox_facehand_scale=1.0,
         )
         self.smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
@@ -152,7 +154,7 @@ class EgobodyConverter(BaseModeConverter):
         seqs = pd.read_csv(os.path.join(dataset_path, 'data_splits.csv'))[batch_part].dropna().to_list()
         meta_df = pd.read_csv(os.path.join(dataset_path, 'data_info_release.csv'))
 
-        seed, size = '230529', '999'
+        seed, size = '230622', '999'
         size_i = min(int(size), len(seqs))
         random.seed(int(seed))
         # random.shuffle(npzs)
@@ -231,7 +233,7 @@ class EgobodyConverter(BaseModeConverter):
                                         gender=gender,
                                         num_betas=10,
                                         use_face_contour=True,
-                                        flat_hand_mean=True,
+                                        flat_hand_mean=False,
                                         use_pca=False,
                                         batch_size=1)).to(self.device)
                     
@@ -430,8 +432,8 @@ class EgobodyConverter(BaseModeConverter):
             keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
             keypoints2d, keypoints2d_mask = \
                     convert_kps(keypoints2d, src='smplx', dst='human_data')
-            human_data['keypoints2d'] = keypoints2d
-            human_data['keypoints2d_mask'] = keypoints2d_mask
+            human_data['keypoints2d_smplx'] = keypoints2d
+            human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
 
             # keypoints 3d
             keypoints3d = np.array(keypoints3d_).reshape(-1, 144, 3)
@@ -439,8 +441,8 @@ class EgobodyConverter(BaseModeConverter):
             keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
             keypoints3d, keypoints3d_mask = \
                     convert_kps(keypoints3d, src='smplx', dst='human_data')
-            human_data['keypoints3d'] = keypoints3d
-            human_data['keypoints3d_mask'] = keypoints3d_mask
+            human_data['keypoints3d_smplx'] = keypoints3d
+            human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
 
             # keypoints 3d ego
             keypoints3d_ego = np.array(keypoints3d_ego_).reshape(-1, 25, 3)
@@ -448,8 +450,8 @@ class EgobodyConverter(BaseModeConverter):
             keypoints3d_ego = np.concatenate([keypoints3d_ego, keypoints3d_ego_conf], axis=-1)
             keypoints3d_ego, keypoints3d_ego_mask = \
                     convert_kps(keypoints3d_ego, src='openpose_25', dst='human_data')
-            human_data['keypoints3d_ego'] = keypoints3d_ego
-            human_data['keypoints3d_ego_mask'] = keypoints3d_ego_mask
+            human_data['keypoints3d_original'] = keypoints3d_ego
+            human_data['keypoints3d_original_mask'] = keypoints3d_ego_mask
             print('Keypoint conversion finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
             # image path
@@ -543,7 +545,7 @@ class EgobodyConverter(BaseModeConverter):
                                             gender=gender_interactee,
                                             num_betas=10,
                                             use_face_contour=True,
-                                            flat_hand_mean=True,
+                                            flat_hand_mean=False,
                                             use_pca=False,
                                             batch_size=1)).to(self.device)
                         
@@ -557,7 +559,7 @@ class EgobodyConverter(BaseModeConverter):
                                             gender=gender_wearer,
                                             num_betas=10,
                                             use_face_contour=True,
-                                            flat_hand_mean=True,
+                                            flat_hand_mean=False,
                                             use_pca=False,
                                             batch_size=1)).to(self.device)
                         
@@ -728,8 +730,8 @@ class EgobodyConverter(BaseModeConverter):
             keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
             keypoints2d, keypoints2d_mask = \
                     convert_kps(keypoints2d, src='smplx', dst='human_data')
-            human_data['keypoints2d'] = keypoints2d
-            human_data['keypoints2d_mask'] = keypoints2d_mask
+            human_data['keypoints2d_smplx'] = keypoints2d
+            human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
 
             # keypoints 3d
             keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
@@ -737,8 +739,8 @@ class EgobodyConverter(BaseModeConverter):
             keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
             keypoints3d, keypoints3d_mask = \
                     convert_kps(keypoints3d, src='smplx', dst='human_data')
-            human_data['keypoints3d'] = keypoints3d
-            human_data['keypoints3d_mask'] = keypoints3d_mask
+            human_data['keypoints3d_smplx'] = keypoints3d
+            human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
 
             print('Keypoint conversion finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
