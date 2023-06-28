@@ -1,15 +1,15 @@
+import json
 import os
+import pdb
+# import pickle5 as pickle
+import pickle
+import time
 from typing import List, Tuple
 
 import cv2
 import numpy as np
-# import pickle5 as pickle
-import pickle
-from tqdm import tqdm
 import torch
-import json
-import pdb
-import time
+from tqdm import tqdm
 
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
@@ -31,18 +31,34 @@ class AgoraConverter(BaseModeConverter):
         fit (str): 'smpl' or 'smplx for available body model fits
         res (tuple): (1280, 720) or (3840, 2160) for available image resolution
     """
-    ACCEPTED_MODES = ['validation_3840', 'train_3840', 'train_1280', 'validation_1280']
+    ACCEPTED_MODES = [
+        'validation_3840', 'train_3840', 'train_1280', 'validation_1280'
+    ]
 
     def __init__(self, modes: List = []) -> None:
         # check pytorch device
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.misc_config = dict(bbox_body_scale=1.2, bbox_facehand_scale=1.0, bbox_source='keypoints2d_smplx',
-                                cam_param_source='original', smplx_source='original')
+        self.misc_config = dict(
+            bbox_body_scale=1.2,
+            bbox_facehand_scale=1.0,
+            bbox_source='keypoints2d_smplx',
+            cam_param_source='original',
+            smplx_source='original')
 
-        self.smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3),
-                            'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3),
-                            'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3), 'expression': (-1, 10)}
+        self.smplx_shape = {
+            'betas': (-1, 10),
+            'transl': (-1, 3),
+            'global_orient': (-1, 3),
+            'body_pose': (-1, 21, 3),
+            'left_hand_pose': (-1, 15, 3),
+            'right_hand_pose': (-1, 15, 3),
+            'leye_pose': (-1, 3),
+            'reye_pose': (-1, 3),
+            'jaw_pose': (-1, 3),
+            'expression': (-1, 10)
+        }
 
         super(AgoraConverter, self).__init__(modes)
 
@@ -97,7 +113,10 @@ class AgoraConverter(BaseModeConverter):
             smplx_[keys] = []
         keypoints2d_, keypoints3d_, = [], []
         bboxs_ = {}
-        for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
+        for bbox_name in [
+                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                'rhand_bbox_xywh'
+        ]:
             bboxs_[bbox_name] = []
         meta_ = {}
         for meta_key in ['principal_point', 'focal_length', 'gender']:
@@ -109,21 +128,22 @@ class AgoraConverter(BaseModeConverter):
         # build smplx model
         smplx_model = {}
         for gender in ['male', 'female', 'neutral']:
-            smplx_model[gender] = build_body_model(dict(
-                type='SMPLX',
-                keypoint_src='smplx',
-                keypoint_dst='smplx',
-                model_path='data/body_models/smplx',
-                gender=gender,
-                num_betas=10,
-                use_face_contour=True,
-                flat_hand_mean=False,
-                use_pca=False,
-                batch_size=1
-            )).to(device)
+            smplx_model[gender] = build_body_model(
+                dict(
+                    type='SMPLX',
+                    keypoint_src='smplx',
+                    keypoint_dst='smplx',
+                    model_path='data/body_models/smplx',
+                    gender=gender,
+                    num_betas=10,
+                    use_face_contour=True,
+                    flat_hand_mean=False,
+                    use_pca=False,
+                    batch_size=1)).to(device)
 
         # data info path
-        data_info_path = os.path.join(dataset_path, f'AGORA_{batch_info}_fix_betas.json')
+        data_info_path = os.path.join(dataset_path,
+                                      f'AGORA_{batch_info}_fix_betas.json')
 
         # read data info
         with open(data_info_path, 'r') as f:
@@ -140,15 +160,17 @@ class AgoraConverter(BaseModeConverter):
 
             # get image details
             image_info = image_param[image_id]
-            image_path = image_info[f"file_name_{self.misc_config['image_size'][0]}x"
-                                    f"{self.misc_config['image_size'][1]}"]
+            image_path = image_info[
+                f"file_name_{self.misc_config['image_size'][0]}x"
+                f"{self.misc_config['image_size'][1]}"]
 
             # collect bbox
             for key in ['bbox', 'face_bbox', 'lhand_bbox', 'rhand_bbox']:
                 bboxs_[f'{key}_xywh'].append(np.array(anno_info[key] + [1]))
 
             # collect smplx_params
-            smplx_path = os.path.join(dataset_path, anno_info['smplx_param_path'])
+            smplx_path = os.path.join(dataset_path,
+                                      anno_info['smplx_param_path'])
             smplx_param = pickle.load(open(smplx_path, 'rb'))
 
             for key in self.smplx_shape.keys():
@@ -164,8 +186,12 @@ class AgoraConverter(BaseModeConverter):
             # keypoints3d_.append(smplx_joints_3d)
 
             # get camera parameters
-            principal_point = np.array([self.misc_config['image_size'][0] / 2, self.misc_config['image_size'][1] / 2])
-            focal_length = self._focalLength_mm2px(self._get_focal_length(image_path), principal_point)
+            principal_point = np.array([
+                self.misc_config['image_size'][0] / 2,
+                self.misc_config['image_size'][1] / 2
+            ])
+            focal_length = self._focalLength_mm2px(
+                self._get_focal_length(image_path), principal_point)
 
             # collect meta
             meta_['gender'].append(anno_info['gender'])
@@ -201,13 +227,15 @@ class AgoraConverter(BaseModeConverter):
         for key in smplx_.keys():
             smplx_[key] = np.array(smplx_[key]).reshape(self.smplx_shape[key])
         human_data['smplx'] = smplx_
-        print('Smpl and/or Smplx finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('Smpl and/or Smplx finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         # bbox
         for key in bboxs_.keys():
             bbox_ = np.array(bboxs_[key]).reshape((-1, 5))
             human_data[key] = bbox_
-        print('BBox generation finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('BBox generation finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         # keypoints 2d
         keypoints2d = np.array(keypoints2d_).reshape(-1, 144, 2)
@@ -229,11 +257,13 @@ class AgoraConverter(BaseModeConverter):
 
         # image path
         human_data['image_path'] = image_path_
-        print('Image path writting finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('Image path writing finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         # meta
         human_data['meta'] = meta_
-        print('Meta writting finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('Meta writing finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         # store
         human_data['config'] = f'agora_{mode}'
@@ -243,7 +273,9 @@ class AgoraConverter(BaseModeConverter):
 
         human_data.compress_keypoints_by_mask()
         os.makedirs(out_path, exist_ok=True)
-        out_file = os.path.join(out_path, f'agora_{mode}_{seed}_{"{:06d}".format(int(size_i))}_.npz')
+        out_file = os.path.join(
+            out_path,
+            f'agora_{mode}_{seed}_{"{:06d}".format(int(size_i))}_.npz')
         human_data.dump(out_file)
 
 

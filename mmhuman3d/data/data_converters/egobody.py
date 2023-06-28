@@ -182,7 +182,7 @@ class EgobodyConverter(BaseModeConverter):
         # use HumanData to store all data
         human_data = HumanData()
 
-        # get trageted sequence list
+        # get targeted sequence list
         batch_name, batch_part = mode.split('_')
         seqs = pd.read_csv(os.path.join(
             dataset_path, 'data_splits.csv'))[batch_part].dropna().to_list()
@@ -662,7 +662,7 @@ class EgobodyConverter(BaseModeConverter):
 
             # image path
             human_data['image_path'] = image_path_
-            print('Image path writting finished at',
+            print('Image path writing finished at',
                   time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
             # meta
@@ -914,7 +914,7 @@ class EgobodyConverter(BaseModeConverter):
                                     [data[key] for data in smplx_data], axis=0)
 
                             if view != 'master':
-                                # transfrom from main to sub
+                                # transform from main to sub
                                 output = smplx_model(
                                     global_orient=torch.tensor(
                                         smplx_param['global_orient'],
@@ -1103,7 +1103,7 @@ class EgobodyConverter(BaseModeConverter):
 
             # image path
             human_data['image_path'] = image_path_
-            print('Image path writting finished at',
+            print('Image path writing finished at',
                   time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
             # meta

@@ -1,32 +1,37 @@
-import os
-from typing import List
-
-import time
-import numpy as np
-import pandas as pd
-import json
-import cv2
-import glob
-import random
-from tqdm import tqdm
-import torch
-import smplx
 import ast
 import copy
+import glob
+import json
+import os
+import pdb
+import random
+import time
+from typing import List
+
+import cv2
+import numpy as np
+import pandas as pd
+import smplx
+import torch
+from tqdm import tqdm
 
 from mmhuman3d.core.cameras import build_cameras
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+# from mmhuman3d.core.conventions.keypoints_mapping import smplx
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_keypoint_idx,
+    get_keypoint_idxs_by_part,
+)
 from mmhuman3d.data.data_structures.human_data import HumanData
-from .base_converter import BaseModeConverter
-from .builder import DATA_CONVERTERS
 # import mmcv
 from mmhuman3d.models.body_models.builder import build_body_model
-# from mmhuman3d.core.conventions.keypoints_mapping import smplx
-from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
-from mmhuman3d.models.body_models.utils import transform_to_camera_frame, batch_transform_to_camera_frame
+from mmhuman3d.models.body_models.utils import (
+    batch_transform_to_camera_frame,
+    transform_to_camera_frame,
+)
 from mmhuman3d.utils.transforms import aa_to_rotmat, rotmat_to_aa
-
-import pdb
+from .base_converter import BaseModeConverter
+from .builder import DATA_CONVERTERS
 
 
 @DATA_CONVERTERS.register_module()
@@ -35,18 +40,44 @@ class RenbodyConverter(BaseModeConverter):
     ACCEPTED_MODES = ['train', 'train_highrescam', 'test', 'test_highrescam']
 
     def __init__(self, modes: List = []) -> None:
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.misc_config = dict(bbox_body_scale=1.2, bbox_facehand_scale=1.0, flat_hand_mean=False,
-                                bbox_source='keypoints2d_original', kps3d_root_aligned=False, smplx_source='original', fps=30)
-        self.smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
-                'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
-                'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3), 'expression': (-1, 10)}
-        self.slices = {'train': 10, 'train_highrescam': 2, 'test': 2, 'test_highrescam': 1}
-       
+        self.device = torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
+        self.misc_config = dict(
+            bbox_body_scale=1.2,
+            bbox_facehand_scale=1.0,
+            flat_hand_mean=False,
+            bbox_source='keypoints2d_original',
+            kps3d_root_aligned=False,
+            smplx_source='original',
+            fps=30)
+        self.smplx_shape = {
+            'betas': (-1, 10),
+            'transl': (-1, 3),
+            'global_orient': (-1, 3),
+            'body_pose': (-1, 21, 3),
+            'left_hand_pose': (-1, 15, 3),
+            'right_hand_pose': (-1, 15, 3),
+            'leye_pose': (-1, 3),
+            'reye_pose': (-1, 3),
+            'jaw_pose': (-1, 3),
+            'expression': (-1, 10)
+        }
+        self.slices = {
+            'train': 10,
+            'train_highrescam': 2,
+            'test': 2,
+            'test_highrescam': 1
+        }
+
         super(RenbodyConverter, self).__init__(modes)
 
     # def _keypoints_to_scaled_bbox_fh(self, keypoints, occ, self_occ, scale=1.0, convention='renbody'):
-    def _keypoints_to_scaled_bbox_bfh(self, keypoints, occ=None, body_scale=1.0, fh_scale=1.0, convention='smplx'):
+    def _keypoints_to_scaled_bbox_bfh(self,
+                                      keypoints,
+                                      occ=None,
+                                      body_scale=1.0,
+                                      fh_scale=1.0,
+                                      convention='smplx'):
         '''Obtain scaled bbox in xyxy format given keypoints
         Args:
             keypoints (np.ndarray): Keypoints
@@ -68,7 +99,8 @@ class RenbodyConverter(BaseModeConverter):
                 kps = keypoints
             else:
                 scale = fh_scale
-                kp_id = get_keypoint_idxs_by_part(body_part, convention=convention)
+                kp_id = get_keypoint_idxs_by_part(
+                    body_part, convention=convention)
                 kps = keypoints[kp_id]
 
             if not occ is None:
@@ -97,16 +129,16 @@ class RenbodyConverter(BaseModeConverter):
             ymin = y_center - 0.5 * height
             ymax = y_center + 0.5 * height
 
-            bbox = np.stack([xmin, ymin, xmax, ymax, conf], axis=0).astype(np.float32)
+            bbox = np.stack([xmin, ymin, xmax, ymax, conf],
+                            axis=0).astype(np.float32)
             bboxs.append(bbox)
 
         return bboxs
 
-
     def convert_by_mode(self, dataset_path: str, out_path: str,
-                    mode: str) -> dict:
-        
-        # get trageted sequence list
+                        mode: str) -> dict:
+
+        # get targeted sequence list
         seed, size = '230525', '01000'
         random.seed(int(seed))
         camera_num_per_seq = 3
@@ -126,17 +158,22 @@ class RenbodyConverter(BaseModeConverter):
         else:
             high_res_cam = False
 
-        with open(os.path.join(dataset_path, f'new_{batch}_230207.txt'), 'r') as f:
+        with open(os.path.join(dataset_path, f'new_{batch}_230207.txt'),
+                  'r') as f:
             split = f.read().splitlines()
 
-        seqs_split = [s for s in seqs if s.replace(f'{dataset_path}{os.path.sep}smpl{os.path.sep}', '')
-                      .replace('/', os.path.sep) in split]
+        seqs_split = [
+            s for s in seqs
+            if s.replace(f'{dataset_path}{os.path.sep}smpl{os.path.sep}',
+                         '').replace('/', os.path.sep) in split
+        ]
 
         # init smplx gendered models
         gender_model = {}
         for gender in ['male', 'female']:
             gender_model[gender] = build_body_model(
-                dict(type='SMPLX',
+                dict(
+                    type='SMPLX',
                     keypoint_src='smplx',
                     keypoint_dst='smplx',
                     model_path='data/body_models/smplx',
@@ -146,15 +183,14 @@ class RenbodyConverter(BaseModeConverter):
                     flat_hand_mean=False,
                     use_pca=False,
                     batch_size=1)).to(self.device)
-            
 
         slices = self.slices[mode]
         # slices=1
-        slice_vids = int(len(seqs_split)/slices) + 1
+        slice_vids = int(len(seqs_split) / slices) + 1
 
         for slice_idx in range(slices):
-            
-            # use HumanData to store all data 
+
+            # use HumanData to store all data
             human_data = HumanData()
 
             # initialize storage
@@ -164,22 +200,35 @@ class RenbodyConverter(BaseModeConverter):
             keypoints2d_, keypoints3d_, keypoints2d_original_, keypoints3d_original_ = [], [], [], []
             keypoints_original_mask_ = []
             bboxs_ = {}
-            for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
+            for bbox_name in [
+                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                    'rhand_bbox_xywh'
+            ]:
                 bboxs_[bbox_name] = []
             meta_ = {}
-            for meta_key in ['principal_point', 'focal_length', 'height', 'width', 'gender', 'cam_id']:
+            for meta_key in [
+                    'principal_point', 'focal_length', 'height', 'width',
+                    'gender', 'cam_id'
+            ]:
                 meta_[meta_key] = []
             image_path_ = []
 
             # for seq in seqs_split:
-            for seq in tqdm(seqs_split[slice_vids*slice_idx:slice_vids*(slice_idx+1)]
-                            , desc=f'Renbody {mode}, {slice_idx} / {slices}', position=0, leave=False):
+            for seq in tqdm(
+                    seqs_split[slice_vids * slice_idx:slice_vids *
+                               (slice_idx + 1)],
+                    desc=f'Renbody {mode}, {slice_idx} / {slices}',
+                    position=0,
+                    leave=False):
 
                 # get smplx params
-                smplx_path = os.path.join(dataset_path, seq, 'smplx_xrmocap', 'human_data_smplx.npz')
+                smplx_path = os.path.join(dataset_path, seq, 'smplx_xrmocap',
+                                          'human_data_smplx.npz')
                 smplx_params = dict(np.load(smplx_path, allow_pickle=True))
 
-                kps_path = os.path.join(dataset_path, seq, 'smplx_xrmocap', 'human_data_optimized_keypoints3d.npz')
+                kps_path = os.path.join(
+                    dataset_path, seq, 'smplx_xrmocap',
+                    'human_data_optimized_keypoints3d.npz')
                 kps_params = dict(np.load(kps_path, allow_pickle=True))
 
                 gender = str(smplx_params['gender'])
@@ -189,7 +238,9 @@ class RenbodyConverter(BaseModeConverter):
                 image_annot_dir, seq_basename = os.path.split(image_dir)
 
                 # camera details
-                annot1 = np.load(os.path.join(image_annot_dir, 'annots.npy'), allow_pickle=True).item()
+                annot1 = np.load(
+                    os.path.join(image_annot_dir, 'annots.npy'),
+                    allow_pickle=True).item()
                 # annot2 = np.load(os.path.join(image_annot_dir, 'annots2.npy'), allow_pickle=True).item()
                 # annot3 = np.load(os.path.join(image_annot_dir, 'annots3.npy'), allow_pickle=True).item()
 
@@ -202,15 +253,28 @@ class RenbodyConverter(BaseModeConverter):
 
                 # for cam_id in cam_list:
                 if high_res_cam:
-                    cam_list = [cam_id for cam_id in cam_list if int(cam_id) > 47]
+                    cam_list = [
+                        cam_id for cam_id in cam_list if int(cam_id) > 47
+                    ]
                 else:
-                    cam_list = [cam_id for cam_id in cam_list if int(cam_id) <= 47]
+                    cam_list = [
+                        cam_id for cam_id in cam_list if int(cam_id) <= 47
+                    ]
 
-                for cam_id in tqdm(cam_list, desc=f'Processing {seq} camera views ', position=1, leave=False):
+                for cam_id in tqdm(
+                        cam_list,
+                        desc=f'Processing {seq} camera views ',
+                        position=1,
+                        leave=False):
 
                     # get image path
-                    img_ps = sorted(glob.glob(os.path.join(image_dir, 'image', cam_id, '*.jpg')))
-                    image_paths = [p.replace(f'{dataset_path}{os.path.sep}', '') for p in img_ps]
+                    img_ps = sorted(
+                        glob.glob(
+                            os.path.join(image_dir, 'image', cam_id, '*.jpg')))
+                    image_paths = [
+                        p.replace(f'{dataset_path}{os.path.sep}', '')
+                        for p in img_ps
+                    ]
 
                     height, width, _ = cv2.imread(img_ps[0]).shape
 
@@ -218,58 +282,84 @@ class RenbodyConverter(BaseModeConverter):
                     cam_param = annot1['cams'][cam_id]
 
                     extrinsics = np.linalg.inv(cam_param['RT'])
-                    intrinsics = cam_param['K'] 
+                    intrinsics = cam_param['K']
 
                     # build camera
                     principal_point = (intrinsics[0, 2], intrinsics[1, 2])
                     focal_length = (intrinsics[0, 0], intrinsics[1, 1])
                     camera_opencv = build_cameras(
-                        dict(type='PerspectiveCameras',
+                        dict(
+                            type='PerspectiveCameras',
                             convention='opencv',
                             in_ndc=False,
                             principal_point=principal_point,
                             focal_length=focal_length,
                             image_size=(width, height))).to(self.device)
-                    
+
                     # prepare smplx params and get world smplx
-                    smplx_param = {key: torch.tensor(smplx_params[key], device=self.device) for key in self.smplx_shape.keys()}
+                    smplx_param = {
+                        key:
+                        torch.tensor(smplx_params[key], device=self.device)
+                        for key in self.smplx_shape.keys()
+                    }
                     output = gender_model[gender](**smplx_param)
                     keypoints_3d = output['joints'].detach().cpu().numpy()
-                    pelvis_world = keypoints_3d[..., get_keypoint_idx('pelvis', 'smplx'),:]
-                    
+                    pelvis_world = keypoints_3d[
+                        ..., get_keypoint_idx('pelvis', 'smplx'), :]
+
                     # transform smplx params to camera frame
                     global_orient_cam, transl_cam = batch_transform_to_camera_frame(
-                            global_orient=smplx_params['global_orient'], transl=smplx_params['transl'],
-                            pelvis=pelvis_world, extrinsic=extrinsics)
-                    
+                        global_orient=smplx_params['global_orient'],
+                        transl=smplx_params['transl'],
+                        pelvis=pelvis_world,
+                        extrinsic=extrinsics)
+
                     smplx_cam = smplx_params.copy()
                     smplx_cam['global_orient'] = global_orient_cam
                     smplx_cam['transl'] = transl_cam
 
                     # get smplx keypoints 2d
-                    smplx_param = {key: torch.tensor(smplx_cam[key], device=self.device) for key in self.smplx_shape.keys()}
-                    output = gender_model[gender](**smplx_param, return_verts=True)
+                    smplx_param = {
+                        key: torch.tensor(smplx_cam[key], device=self.device)
+                        for key in self.smplx_shape.keys()
+                    }
+                    output = gender_model[gender](
+                        **smplx_param, return_verts=True)
                     keypoints_3d = output['joints']
-                    keypoints_2d_xyd = camera_opencv.transform_points_screen(keypoints_3d)
-                    keypoints_2d = keypoints_2d_xyd[..., :2].detach().cpu().numpy()
+                    keypoints_2d_xyd = camera_opencv.transform_points_screen(
+                        keypoints_3d)
+                    keypoints_2d = keypoints_2d_xyd[
+                        ..., :2].detach().cpu().numpy()
                     keypoints_3d = keypoints_3d.detach().cpu().numpy()
 
-                    # transform keypoints_3d_original to camera space  
+                    # transform keypoints_3d_original to camera space
                     world2local_r = extrinsics[:3, :3]
                     world2local_t = extrinsics[:3, 3]
 
-                    keypoints3d_original = np.matmul(keypoints3d_original_world, world2local_r.T) + world2local_t
+                    keypoints3d_original = np.matmul(
+                        keypoints3d_original_world,
+                        world2local_r.T) + world2local_t
                     keypoints2d_original = camera_opencv.transform_points_screen(
-                            torch.tensor(keypoints3d_original, device=self.device, dtype=torch.float32))[..., :2].detach().cpu().numpy()
-                    
+                        torch.tensor(
+                            keypoints3d_original,
+                            device=self.device,
+                            dtype=torch.float32))[
+                                ..., :2].detach().cpu().numpy()
+
                     # overlay vertes on image
                     vert_3d = output['vertices']
-                    vert_2d_xyd = camera_opencv.transform_points_screen(vert_3d)
+                    vert_2d_xyd = camera_opencv.transform_points_screen(
+                        vert_3d)
                     vert_2d = vert_2d_xyd[..., :2].detach().cpu().numpy()
                     img = cv2.imread(img_ps[0])
                     for i in range(len(vert_2d[0])):
-                        cv2.circle(img, (int(vert_2d[0][i][0]), int(vert_2d[0][i][1])), 1, (0, 0, 255), -1)
-                    cv2.imwrite(os.path.join(out_path, f'{seq_basename}_{cam_id}.jpg'), img)
+                        cv2.circle(
+                            img,
+                            (int(vert_2d[0][i][0]), int(vert_2d[0][i][1])), 1,
+                            (0, 0, 255), -1)
+                    cv2.imwrite(
+                        os.path.join(out_path, f'{seq_basename}_{cam_id}.jpg'),
+                        img)
 
                     # save an image for debug
                     # img = cv2.imread(img_ps[0])
@@ -281,18 +371,29 @@ class RenbodyConverter(BaseModeConverter):
 
                     # get bbox
                     for keypoints_2d_frame in keypoints_2d:
-                        bboxs = self._keypoints_to_scaled_bbox_bfh(keypoints_2d_frame, 
-                                body_scale=self.misc_config['bbox_body_scale'], fh_scale=self.misc_config['bbox_facehand_scale'])
+                        bboxs = self._keypoints_to_scaled_bbox_bfh(
+                            keypoints_2d_frame,
+                            body_scale=self.misc_config['bbox_body_scale'],
+                            fh_scale=self.misc_config['bbox_facehand_scale'])
                         ## convert xyxy to xywh
-                        for i, bbox_name in enumerate(['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']):
+                        for i, bbox_name in enumerate([
+                                'bbox_xywh', 'face_bbox_xywh',
+                                'lhand_bbox_xywh', 'rhand_bbox_xywh'
+                        ]):
                             xmin, ymin, xmax, ymax, conf = bboxs[i]
-                            bbox = np.array([max(0, xmin), max(0, ymin), min(width, xmax), min(height, ymax)])
+                            bbox = np.array([
+                                max(0, xmin),
+                                max(0, ymin),
+                                min(width, xmax),
+                                min(height, ymax)
+                            ])
                             bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
                             bbox_xywh.append(conf)  # (5,)
                             bboxs_[bbox_name].append(bbox_xywh)
 
                     # get meta
-                    meta_['principal_point'] += [principal_point] * len(image_paths)
+                    meta_['principal_point'] += [principal_point
+                                                 ] * len(image_paths)
                     meta_['focal_length'] += [focal_length] * len(image_paths)
                     meta_['height'] += [height] * len(image_paths)
                     meta_['width'] += [width] * len(image_paths)
@@ -315,51 +416,70 @@ class RenbodyConverter(BaseModeConverter):
 
             # save smplx
             for key in smplx_.keys():
-                smplx_[key] = np.concatenate(smplx_[key], axis=0).reshape(self.smplx_shape[key])
+                smplx_[key] = np.concatenate(
+                    smplx_[key], axis=0).reshape(self.smplx_shape[key])
             human_data['smplx'] = smplx_
-            print('Smpl and/or Smplx finished at', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+            print(
+                'Smpl and/or Smplx finished at',
+                time.strftime('%Y-%m-%d %H:%M:%S',
+                              time.localtime(time.time())))
 
             # save bbox
             for bbox_name in bboxs_.keys():
                 bbox_ = np.array(bboxs_[bbox_name]).reshape(-1, 5)
                 human_data[bbox_name] = bbox_
-            print('Bbox finished at', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+            print(
+                'Bbox finished at',
+                time.strftime('%Y-%m-%d %H:%M:%S',
+                              time.localtime(time.time())))
 
             # keypoints 2d
-            keypoints2d = np.concatenate(keypoints2d_, axis=0).reshape(-1, 144, 2)
+            keypoints2d = np.concatenate(
+                keypoints2d_, axis=0).reshape(-1, 144, 2)
             keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
-            keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
+            keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf],
+                                         axis=-1)
             keypoints2d, keypoints2d_mask = \
                     convert_kps(keypoints2d, src='smplx', dst='human_data')
             human_data['keypoints2d_smplx'] = keypoints2d
             human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
 
             # keypoints 3d
-            keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
+            keypoints3d = np.concatenate(
+                keypoints3d_, axis=0).reshape(-1, 144, 3)
             keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
-            keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
+            keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf],
+                                         axis=-1)
             keypoints3d, keypoints3d_mask = \
                     convert_kps(keypoints3d, src='smplx', dst='human_data')
             human_data['keypoints3d_smplx'] = keypoints3d
             human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
 
             # keypoints 2d original
-            keypoints_2d_original = np.concatenate(keypoints2d_original_, axis=0).reshape(-1, 190, 2)
-            keypoints_2d_original_conf = np.concatenate(keypoints_original_mask_, axis=0).reshape(-1, 190, 1)
-            keypoints_2d_original = np.concatenate([keypoints_2d_original, keypoints_2d_original_conf], axis=-1)
+            keypoints_2d_original = np.concatenate(
+                keypoints2d_original_, axis=0).reshape(-1, 190, 2)
+            keypoints_2d_original_conf = np.concatenate(
+                keypoints_original_mask_, axis=0).reshape(-1, 190, 1)
+            keypoints_2d_original = np.concatenate(
+                [keypoints_2d_original, keypoints_2d_original_conf], axis=-1)
             keypoints_2d_original, keypoints_2d_original_mask = \
                     convert_kps(keypoints_2d_original, src='human_data', dst='human_data')
             human_data['keypoints2d_original'] = keypoints_2d_original
-            human_data['keypoints2d_original_mask'] = keypoints_2d_original_mask
+            human_data[
+                'keypoints2d_original_mask'] = keypoints_2d_original_mask
 
             # keypoints 3d original
-            keypoints_3d_original = np.concatenate(keypoints3d_original_, axis=0).reshape(-1, 190, 3)
-            keypoints_3d_original_conf = np.concatenate(keypoints_original_mask_, axis=0).reshape(-1, 190, 1)
-            keypoints_3d_original = np.concatenate([keypoints_3d_original, keypoints_3d_original_conf], axis=-1)
+            keypoints_3d_original = np.concatenate(
+                keypoints3d_original_, axis=0).reshape(-1, 190, 3)
+            keypoints_3d_original_conf = np.concatenate(
+                keypoints_original_mask_, axis=0).reshape(-1, 190, 1)
+            keypoints_3d_original = np.concatenate(
+                [keypoints_3d_original, keypoints_3d_original_conf], axis=-1)
             keypoints_3d_original, keypoints_3d_original_mask = \
                     convert_kps(keypoints_3d_original, src='human_data', dst='human_data')
             human_data['keypoints3d_original'] = keypoints_3d_original
-            human_data['keypoints3d_original_mask'] = keypoints_3d_original_mask
+            human_data[
+                'keypoints3d_original_mask'] = keypoints_3d_original_mask
 
             # meta
             human_data['meta'] = meta_
@@ -375,8 +495,7 @@ class RenbodyConverter(BaseModeConverter):
             human_data.compress_keypoints_by_mask()
             os.makedirs(out_path, exist_ok=True)
             size_i = min(len(seqs_split), int(size))
-            out_file = os.path.join(out_path, f'renbody_{mode}_{seed}_{str(size_i)}_{str(slice_idx)}.npz')
+            out_file = os.path.join(
+                out_path,
+                f'renbody_{mode}_{seed}_{str(size_i)}_{str(slice_idx)}.npz')
             human_data.dump(out_file)
-
-
-

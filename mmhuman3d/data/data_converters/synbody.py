@@ -1,37 +1,42 @@
+import glob
+import json
 import os
+import pdb
+import random
+import time
 from typing import List
 
-import pdb
-import time
-import numpy as np
-import json
 import cv2
-import glob
-import random
+import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.data.data_structures.human_data import HumanData
-from .base_converter import BaseModeConverter
-from .builder import DATA_CONVERTERS
 # import mmcv
 # from mmhuman3d.models.body_models.builder import build_body_model
 # from mmhuman3d.core.conventions.keypoints_mapping import smplx
-from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idxs_by_part
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_keypoint_idxs_by_part,
+)
+from mmhuman3d.data.data_structures.human_data import HumanData
+from .base_converter import BaseModeConverter
+from .builder import DATA_CONVERTERS
 
 
 @DATA_CONVERTERS.register_module()
 class SynbodyConverter(BaseModeConverter):
-    """Synbody dataset
-    """
+    """Synbody dataset."""
     ACCEPTED_MODES = ['train']
 
     def __init__(self, modes: List = []) -> None:
 
-        self.misc_config = dict(bbox_body_scale=1.2, bbox_facehand_scale=1.0, flat_hand_mean=False,
-                                bbox_source='keypoints2d_original', kps3d_root_aligned=False, smplx_source='original',
-                                fps=30)
-
+        self.misc_config = dict(
+            bbox_body_scale=1.2,
+            bbox_facehand_scale=1.0,
+            flat_hand_mean=False,
+            bbox_source='keypoints2d_original',
+            kps3d_root_aligned=False,
+            smplx_source='original',
+            fps=30)
 
         super(SynbodyConverter, self).__init__(modes)
         # self.do_npz_merge = do_npz_merge
@@ -76,7 +81,11 @@ class SynbodyConverter(BaseModeConverter):
 
     #     return npz
 
-    def _keypoints_to_scaled_bbox_fh(self, keypoints, occ=None, scale=1.0, convention='smplx'):
+    def _keypoints_to_scaled_bbox_fh(self,
+                                     keypoints,
+                                     occ=None,
+                                     scale=1.0,
+                                     convention='smplx'):
         '''Obtain scaled bbox in xyxy format given keypoints
         Args:
             keypoints (np.ndarray): Keypoints
@@ -117,7 +126,8 @@ class SynbodyConverter(BaseModeConverter):
             ymin = y_center - 0.5 * height
             ymax = y_center + 0.5 * height
 
-            bbox = np.stack([xmin, ymin, xmax, ymax, conf], axis=0).astype(np.float32)
+            bbox = np.stack([xmin, ymin, xmax, ymax, conf],
+                            axis=0).astype(np.float32)
 
             bboxs.append(bbox)
         return bboxs[0], bboxs[1], bboxs[2]
@@ -296,7 +306,7 @@ class SynbodyConverter(BaseModeConverter):
         # use HumanData to store all data
         human_data = HumanData()
 
-        # get trageted sequence list
+        # get targeted sequence list
         root_dir, prefix = os.path.split(dataset_path)
         print(root_dir)
         preprocessed_dir = os.path.join(root_dir, 'preprocessed_0220_renew')
@@ -311,7 +321,10 @@ class SynbodyConverter(BaseModeConverter):
         _bboxs = {}
         _meta = {}
         _meta['gender'] = []
-        for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
+        for bbox_name in [
+                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                'rhand_bbox_xywh'
+        ]:
             _bboxs[bbox_name] = []
         _image_path = []
 
@@ -324,7 +337,12 @@ class SynbodyConverter(BaseModeConverter):
 
         # initialize smpl and smplx
         _smpl, _smplx = {}, {}
-        smpl_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 'body_pose': (-1, 23, 3)}
+        smpl_shape = {
+            'betas': (-1, 10),
+            'transl': (-1, 3),
+            'global_orient': (-1, 3),
+            'body_pose': (-1, 23, 3)
+        }
         smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 'body_pose': (-1, 21, 3), \
                        'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 'leye_pose': (-1, 3),
                        'reye_pose': (-1, 3), \
@@ -371,8 +389,10 @@ class SynbodyConverter(BaseModeConverter):
                 # os._exit(0)
                 bbox_ = []
                 # bbox_ = npfile['bbox']
-                keypoints2d_ = npfile['keypoints2d'].reshape(len(npfile['image_path']), -1, 2)
-                keypoints3d_ = npfile['keypoints3d'].reshape(len(npfile['image_path']), -1, 3)
+                keypoints2d_ = npfile['keypoints2d'].reshape(
+                    len(npfile['image_path']), -1, 2)
+                keypoints3d_ = npfile['keypoints3d'].reshape(
+                    len(npfile['image_path']), -1, 3)
 
                 # root centered
                 valid_id = []
@@ -393,16 +413,22 @@ class SynbodyConverter(BaseModeConverter):
                 continue
 
             # for kp in keypoints2d_[valid_id]:
-                # since the 2d keypoints are not strictly corrcet, a large scale factor is used
+            # since the 2d keypoints are not strictly corrcet, a large scale factor is used
             for idx in valid_id:
                 kp = keypoints2d_[idx]
                 # occ = occs_[idx]
                 occ = None
                 bbox_tmp_ = {}
-                bbox_tmp_['bbox_xywh'] = self._keypoints_to_scaled_bbox(kp, 1.2)
-                bbox_tmp_['face_bbox_xywh'], bbox_tmp_['lhand_bbox_xywh'], bbox_tmp_[
-                    'rhand_bbox_xywh'] = self._keypoints_to_scaled_bbox_fh(kp, occ=occ, scale=1.0)
-                for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
+                bbox_tmp_['bbox_xywh'] = self._keypoints_to_scaled_bbox(
+                    kp, 1.2)
+                bbox_tmp_['face_bbox_xywh'], bbox_tmp_[
+                    'lhand_bbox_xywh'], bbox_tmp_[
+                        'rhand_bbox_xywh'] = self._keypoints_to_scaled_bbox_fh(
+                            kp, occ=occ, scale=1.0)
+                for bbox_name in [
+                        'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                        'rhand_bbox_xywh'
+                ]:
                     bbox = bbox_tmp_[bbox_name]
                     xmin, ymin, xmax, ymax = bbox[:4]
                     if bbox_name == 'bbox_xywh':
@@ -412,7 +438,12 @@ class SynbodyConverter(BaseModeConverter):
                         # if bbox_conf == 0:
                         #     print(f'{npzf}, {idx},{bbox_name} invalid')
                     # import pdb; pdb.set_trace()
-                    bbox = np.array([max(0, xmin), max(0, ymin), min(width, xmax), min(height, ymax)])
+                    bbox = np.array([
+                        max(0, xmin),
+                        max(0, ymin),
+                        min(width, xmax),
+                        min(height, ymax)
+                    ])
                     bbox_xywh = self._xyxy2xywh(bbox)
                     bbox_xywh.append(bbox_conf)
 
@@ -444,10 +475,12 @@ class SynbodyConverter(BaseModeConverter):
 
             for k in npfile['smpl'].item().keys():
                 # _smpl[k] = np.concatenate((_smpl[k], npfile['smpl'].item()[k][valid_id].reshape(smpl_shape[k])), axis=0)
-                _smpl_l[k].append(npfile['smpl'].item()[k][valid_id].reshape(smpl_shape[k]))
+                _smpl_l[k].append(npfile['smpl'].item()[k][valid_id].reshape(
+                    smpl_shape[k]))
             for k in npfile['smplx'].item().keys():
                 # _smplx[k] = np.concatenate((_smplx[k], npfile['smplx'].item()[k][valid_id].reshape(smplx_shape[k])), axis=0)
-                _smplx_l[k].append(npfile['smplx'].item()[k][valid_id].reshape(smplx_shape[k]))
+                _smplx_l[k].append(npfile['smplx'].item()[k][valid_id].reshape(
+                    smplx_shape[k]))
             gender = []
             for idx, meta_tmp in enumerate(npfile['meta'][valid_id]):
                 gender.append(meta_tmp.item()['gender'])
@@ -462,14 +495,16 @@ class SynbodyConverter(BaseModeConverter):
             _keypoints3d_list.append(keypoints3d_[valid_id])
 
         human_data['image_path'] = _image_path
-        print('Image path writting finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('Image path writing finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         for key in _bboxs.keys():
             bbox_ = np.array(_bboxs[key]).reshape((-1, 5))
             # bbox_ = np.hstack([bbox_, np.zeros([bbox_.shape[0], 1])])
             # import pdb; pdb.set_trace()
             human_data[key] = bbox_
-        print('BBox generation finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('BBox generation finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         # for kp_set in _keypoints2d_list:
         #     _keypoints2d = np.concatenate((_keypoints2d, kp_set), axis=0)
@@ -482,7 +517,8 @@ class SynbodyConverter(BaseModeConverter):
         human_data['keypoints3d_original'] = _keypoints3d
         human_data['keypoints2d_original_mask'] = mask
         human_data['keypoints3d_original_mask'] = mask
-        print('Keypoint conversion finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('Keypoint conversion finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         for key in _smpl.keys():
             # for model_param in _smpl_l[key]:
@@ -493,16 +529,19 @@ class SynbodyConverter(BaseModeConverter):
 
         human_data['smpl'] = _smpl
         human_data['smplx'] = _smplx
-        print('Smpl and/or Smplx finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('Smpl and/or Smplx finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         human_data['config'] = 'synbody_train'
         human_data['meta'] = _meta
         human_data['misc'] = self.misc_config
-        print('MetaData finished at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        print('MetaData finished at',
+              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
         human_data.compress_keypoints_by_mask()
         # store the data struct
         os.makedirs(out_path, exist_ok=True)
 
-        out_file = os.path.join(out_path, f'synbody_train_{seed}_{str(size_n)}.npz')
+        out_file = os.path.join(out_path,
+                                f'synbody_train_{seed}_{str(size_n)}.npz')
         human_data.dump(out_file)

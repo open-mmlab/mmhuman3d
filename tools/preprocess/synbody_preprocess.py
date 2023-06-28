@@ -1,27 +1,30 @@
+import argparse
+import glob
+import json
 import os
+import pdb
+import time
 from typing import List
 
-import argparse
-import time
-import numpy as np
-import json
 import cv2
-import glob
+import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.data.data_structures.human_data import HumanData
 # import mmcv
 # from mmhuman3d.models.body_models.builder import build_body_model
 # from mmhuman3d.core.conventions.keypoints_mapping import smplx
-from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idxs_by_part
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_keypoint_idxs_by_part,
+)
+from mmhuman3d.data.data_structures.human_data import HumanData
 
-import pdb
 
 def _get_imgname(v):
     rgb_folder = os.path.join(v, 'rgb')
     root_folder_id = v.split(os.path.sep).index(prefix)
-    imglist = os.path.join(os.path.sep.join(v.split(os.path.sep)[root_folder_id:]), 'rgb')
+    imglist = os.path.join(
+        os.path.sep.join(v.split(os.path.sep)[root_folder_id:]), 'rgb')
 
     # image 1 is T-pose, don't use
     im = []
@@ -29,7 +32,7 @@ def _get_imgname(v):
     for i in range(1, len(images)):
         imglist_tmp = os.path.join(imglist, f'{i:04d}.jpeg')
         im.append(imglist_tmp)
-    
+
     # import pdb; pdb.set_trace()
     return im
 
@@ -37,7 +40,8 @@ def _get_imgname(v):
 def _get_exrname(v):
     rgb_folder = os.path.join(v, 'rgb')
     root_folder_id = v.split(os.path.sep).index(prefix)
-    masklist = os.path.join(os.path.sep.join(v.split(os.path.sep)[root_folder_id:]), 'mask')
+    masklist = os.path.join(
+        os.path.sep.join(v.split(os.path.sep)[root_folder_id:]), 'mask')
 
     # image 1 is T-pose, don't use
     images = [img for img in os.listdir(rgb_folder) if img.endswith('.jpeg')]
@@ -48,8 +52,9 @@ def _get_exrname(v):
 
     return exr
 
+
 def _get_npzname(p, f_num):
-    
+
     npz = []
     npz_tmp = p.split(os.path.sep)[-1]
     for _ in range(f_num):
@@ -59,31 +64,40 @@ def _get_npzname(p, f_num):
 
 
 def _get_mask_conf(root, merged):
-    
-    os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
+
+    os.environ['OPENCV_IO_ENABLE_OPENEXR'] = '1'
 
     root_folder_id = root.split(os.path.sep).index(prefix)
 
     conf = []
-    for idx, mask_path in enumerate(merged['mask_path']): # , desc='Frame kps conf'):
-        exr_path = os.path.join(os.path.sep.join(root.split(os.path.sep)[:root_folder_id]), mask_path)
+    for idx, mask_path in enumerate(
+            merged['mask_path']):  # , desc='Frame kps conf'):
+        exr_path = os.path.join(
+            os.path.sep.join(root.split(os.path.sep)[:root_folder_id]),
+            mask_path)
 
         # import pdb; pdb.set_trace()
 
         image = cv2.imread(exr_path, cv2.IMREAD_UNCHANGED)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        json_path = os.path.join(os.path.sep.join(exr_path.split(os.path.sep)[:-2]), 'seq_data.json')
+        json_path = os.path.join(
+            os.path.sep.join(exr_path.split(os.path.sep)[:-2]),
+            'seq_data.json')
         jsfile_tmp = json.load(open(json_path, 'r'))
 
         p_rgb = [0, 0, 0]
         keys = list(jsfile_tmp['Actors']['CharacterActors'].keys())
         for key in keys:
-            if jsfile_tmp['Actors']['CharacterActors'][key]['animation'] == merged['npz_name'][idx][:-4]:
-                p_rgb = jsfile_tmp['Actors']['CharacterActors'][key]['mask_rgb_value']
+            if jsfile_tmp['Actors']['CharacterActors'][key][
+                    'animation'] == merged['npz_name'][idx][:-4]:
+                p_rgb = jsfile_tmp['Actors']['CharacterActors'][key][
+                    'mask_rgb_value']
                 break
         if p_rgb == [0, 0, 0]:
-            raise ValueError(f'Cannot find info of {merged["npz_name"][idx][:-4]} in {json_path}')
+            raise ValueError(
+                f'Cannot find info of {merged["npz_name"][idx][:-4]} in {json_path}'
+            )
 
         kps2d = merged['keypoints2d'][idx]
         v = []
@@ -108,9 +122,10 @@ def process_npz(args):
 
     dataset_path = os.path.join(root_path, args.prefix)
 
-    batch_name, place, seq_name = seq.split(os.path.sep)[root_folder_id+1:]
+    batch_name, place, seq_name = seq.split(os.path.sep)[root_folder_id + 1:]
     # pdb.set_trace()
-    outpath = os.path.join(args.output_path, batch_name, place, f'{seq_name}.npz')
+    outpath = os.path.join(args.output_path, batch_name, place,
+                           f'{seq_name}.npz')
     # assert not os.path.exists(outpath), f'{outpath} exist, skip!!'
     if os.path.exists(outpath):
         print(f'{outpath} exists, skip!!')
@@ -118,14 +133,20 @@ def process_npz(args):
 
     merged = {}
     # for key in ['image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d', 'keypoints3d', 'occlusion']:
-    for key in ['image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d', 'keypoints3d']:
+    for key in [
+            'image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d',
+            'keypoints3d'
+    ]:
         merged[key] = []
     merged['smpl'] = {}
     for key in ['transl', 'global_orient', 'betas', 'body_pose']:
         merged['smpl'][key] = []
     merged['smplx'] = {}
-    for key in ['transl', 'global_orient', 'betas', 'body_pose', 
-                'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose', 'expression']:
+    for key in [
+            'transl', 'global_orient', 'betas', 'body_pose', 'left_hand_pose',
+            'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose',
+            'expression'
+    ]:
         merged['smplx'][key] = []
 
     try:
@@ -133,7 +154,11 @@ def process_npz(args):
         exrname = _get_exrname(seq)
         valid_frame_number = len(imgname)
         # for p in tqdm(glob.glob(v + '/smpl_with_joints/*.npz'), desc='person'):
-        ps = [p for p in os.listdir(os.path.join(seq, 'smpl_refit_withJoints_inCamSpace_noBUG')) if p.endswith('.npz')]
+        ps = [
+            p for p in os.listdir(
+                os.path.join(seq, 'smpl_refit_withJoints_inCamSpace_noBUG'))
+            if p.endswith('.npz')
+        ]
 
         # for p in sorted(ps):
         #     occfile_tmp = np.load(os.path.join(seq, 'occlusion', p), allow_pickle=True)
@@ -141,7 +166,9 @@ def process_npz(args):
         #     merged['occlusion'].append(occ)
 
         for p in sorted(ps):
-            npfile_tmp = np.load(os.path.join(seq, 'smpl_refit_withJoints_inCamSpace_noBUG', p), allow_pickle=True)
+            npfile_tmp = np.load(
+                os.path.join(seq, 'smpl_refit_withJoints_inCamSpace_noBUG', p),
+                allow_pickle=True)
             merged['image_path'] += imgname
             merged['mask_path'] += exrname
             merged['npz_name'] += _get_npzname(p, valid_frame_number)
@@ -150,29 +177,49 @@ def process_npz(args):
                 merged['meta'].append(npfile_tmp['meta'])
 
             for key in ['betas', 'global_orient', 'transl', 'body_pose']:
-                if key == 'betas' and len(npfile_tmp['smpl'].item()['betas']) == 1:
-                    betas = np.repeat(npfile_tmp['smpl'].item()[key], valid_frame_number, axis=0)
+                if key == 'betas' and len(
+                        npfile_tmp['smpl'].item()['betas']) == 1:
+                    betas = np.repeat(
+                        npfile_tmp['smpl'].item()[key],
+                        valid_frame_number,
+                        axis=0)
                     merged['smpl']['betas'].append(betas)
                 else:
-                    if len(npfile_tmp['smpl'].item()[key]) == valid_frame_number:
-                        merged['smpl'][key].append(npfile_tmp['smpl'].item()[key])
+                    if len(npfile_tmp['smpl'].item()
+                           [key]) == valid_frame_number:
+                        merged['smpl'][key].append(
+                            npfile_tmp['smpl'].item()[key])
                     else:
-                        merged['smpl'][key].append(npfile_tmp['smpl'].item()[key][1:valid_frame_number+1])
+                        merged['smpl'][key].append(npfile_tmp['smpl'].item()
+                                                   [key][1:valid_frame_number +
+                                                         1])
 
-            npfile_tmp = np.load(os.path.join(seq, 'smplx_withJoints_inCamSpace_noBUG', p), allow_pickle=True)
-            merged['keypoints2d'].append(npfile_tmp['keypoints2d'][1:valid_frame_number+1])
-            merged['keypoints3d'].append(npfile_tmp['keypoints3d'][1:valid_frame_number+1])
+            npfile_tmp = np.load(
+                os.path.join(seq, 'smplx_withJoints_inCamSpace_noBUG', p),
+                allow_pickle=True)
+            merged['keypoints2d'].append(
+                npfile_tmp['keypoints2d'][1:valid_frame_number + 1])
+            merged['keypoints3d'].append(
+                npfile_tmp['keypoints3d'][1:valid_frame_number + 1])
 
             for key in ['betas', 'global_orient', 'transl', 'body_pose', \
                         'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'leye_pose', 'reye_pose', 'expression']:
-                if key == 'betas' and len(npfile_tmp['smplx'].item()['betas']) == 1:
-                    betas = np.repeat(npfile_tmp['smplx'].item()[key], valid_frame_number, axis=0)
+                if key == 'betas' and len(
+                        npfile_tmp['smplx'].item()['betas']) == 1:
+                    betas = np.repeat(
+                        npfile_tmp['smplx'].item()[key],
+                        valid_frame_number,
+                        axis=0)
                     merged['smplx']['betas'].append(betas)
                 else:
-                    if len(npfile_tmp['smplx'].item()[key]) == valid_frame_number:
-                        merged['smplx'][key].append(npfile_tmp['smplx'].item()[key])
+                    if len(npfile_tmp['smplx'].item()
+                           [key]) == valid_frame_number:
+                        merged['smplx'][key].append(
+                            npfile_tmp['smplx'].item()[key])
                     else:
-                        merged['smplx'][key].append(npfile_tmp['smplx'].item()[key][1:valid_frame_number+1])
+                        merged['smplx'][key].append(
+                            npfile_tmp['smplx'].item()[key]
+                            [1:valid_frame_number + 1])
 
         for k in merged['smpl'].keys():
             merged['smpl'][k] = np.vstack(merged['smpl'][k])
@@ -180,20 +227,23 @@ def process_npz(args):
             merged['smplx'][k] = np.vstack(merged['smplx'][k])
         for k in ['left_hand_pose', 'right_hand_pose']:
             merged['smplx'][k] = merged['smplx'][k].reshape(-1, 15, 3)
-        merged['smplx']['body_pose'] = merged['smplx']['body_pose'].reshape(-1, 21, 3)
+        merged['smplx']['body_pose'] = merged['smplx']['body_pose'].reshape(
+            -1, 21, 3)
 
         merged['keypoints3d'] = np.vstack(merged['keypoints3d'])
         merged['keypoints2d'] = np.vstack(merged['keypoints2d'])
         # merged['occlusion'] = np.vstack(merged['occlusion'])
 
-        merged['conf'] = np.vstack(_get_mask_conf(dataset_path, merged)).reshape(-1, 144, 1)
+        merged['conf'] = np.vstack(_get_mask_conf(dataset_path,
+                                                  merged)).reshape(-1, 144, 1)
 
-        os.makedirs(os.path.join(args.output_path, batch_name, place), exist_ok=True)
+        os.makedirs(
+            os.path.join(args.output_path, batch_name, place), exist_ok=True)
 
         np.savez(outpath, **merged)
-            
+
         # pdb.set_trace()
-            
+
     # except Exception as e:
     except Exception as e:
         # failed.append(seq)
@@ -206,10 +256,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Convert datasets')
 
     parser.add_argument(
-        '--seq',
-        type=str,
-        required=True,
-        help='absolute path to the sequence')
+        '--seq', type=str, required=True, help='absolute path to the sequence')
 
     # parser.add_argument(
     #     '--root_path',
@@ -230,7 +277,7 @@ def parse_args():
         required=False,
         default='synbody',
         help='dataset folder name')
-    
+
     # parser.add_argument(
     #     '--modes',
     #     type=str,
@@ -248,4 +295,3 @@ if __name__ == '__main__':
     args = parse_args()
     prefix = args.prefix
     process_npz(args)
-

@@ -1,31 +1,32 @@
+import ast
+import glob
+import json
 import os
+import pdb
+import random
+import time
 from typing import List
 
-import time
+import cv2
 import numpy as np
 import pandas as pd
-import json
-import cv2
-import glob
-import random
-from tqdm import tqdm
-import torch
 import smplx
-import ast
+import torch
+from tqdm import tqdm
 
 from mmhuman3d.core.cameras import build_cameras
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
+# from mmhuman3d.core.conventions.keypoints_mapping import smplx
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_keypoint_idx,
+    get_keypoint_idxs_by_part,
+)
 from mmhuman3d.data.data_structures.human_data import HumanData
-from .base_converter import BaseModeConverter
-from .builder import DATA_CONVERTERS
 # import mmcv
 from mmhuman3d.models.body_models.builder import build_body_model
-# from mmhuman3d.core.conventions.keypoints_mapping import smplx
-from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_keypoint_idxs_by_part
 from mmhuman3d.models.body_models.utils import transform_to_camera_frame
-
-import pdb
-
+from .base_converter import BaseModeConverter
+from .builder import DATA_CONVERTERS
 
 
 @DATA_CONVERTERS.register_module()

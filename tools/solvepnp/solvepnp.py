@@ -234,7 +234,7 @@ def solvepnp(args):
         # imgPoints = kps2d[..., :2].reshape(-1, 2)
         # objPoints = kps3d_smpl.reshape(-1, 3)
 
-        # assume a prespective camera
+        # assume a perspective camera
         focal_length = [5000, 5000]
         camera_center = [width / 2, height / 2]
 
@@ -262,7 +262,7 @@ def solvepnp(args):
         tvec = tvec * 1
         extrinics[:3, 3] = tvec.reshape(3)
 
-        # transfrom smpl to camera space
+        # transform smpl to camera space
         pelvis_world = kps3d_smpl[get_keypoint_idx('pelvis', 'smpl')]
         global_orient_cam, transl_cam = transform_to_camera_frame(
             global_orient=body_model_param['global_orient'],

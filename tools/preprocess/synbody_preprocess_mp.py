@@ -1,23 +1,24 @@
+import argparse
+import glob
+import json
+import multiprocessing as mp
 import os
+import pdb
+import time
 from typing import List
 
-import argparse
-import time
-import numpy as np
-import json
 import cv2
-import glob
+import numpy as np
 from tqdm import tqdm
 
-from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.data.data_structures.human_data import HumanData
 # import mmcv
 # from mmhuman3d.models.body_models.builder import build_body_model
 # from mmhuman3d.core.conventions.keypoints_mapping import smplx
-from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idxs_by_part
-
-import pdb
-import multiprocessing as mp
+from mmhuman3d.core.conventions.keypoints_mapping import (
+    convert_kps,
+    get_keypoint_idxs_by_part,
+)
+from mmhuman3d.data.data_structures.human_data import HumanData
 
 
 def process_npz_one(seq):
@@ -29,7 +30,6 @@ def process_npz_one(seq):
     os.system(cmd)
 
 
-
 def process_npz_multiprocessing(args):
 
     # root_path is where the npz files stored. Should ends with 'synbody' or 'Synbody'
@@ -37,18 +37,27 @@ def process_npz_multiprocessing(args):
     #     root_path = os.path.join(root_path, 'synbody')
     # ple = [p for p in ple if '.' not in p]
     dataset_path = os.path.join(args.root_path, args.prefix)
-    batch_paths = [os.path.join(args.root_path, p) for p in os.listdir(dataset_path)]
+    batch_paths = [
+        os.path.join(args.root_path, p) for p in os.listdir(dataset_path)
+    ]
 
-    seqs_targeted = glob.glob(os.path.join(args.root_path, args.prefix, '*renew_0220', '*', 'LS*'))
+    seqs_targeted = glob.glob(
+        os.path.join(args.root_path, args.prefix, '*renew_0220', '*', 'LS*'))
     # pdb.set_trace()
-    print(f'There are {len(batch_paths)} batches and {len(seqs_targeted)} sequences')
+    print(
+        f'There are {len(batch_paths)} batches and {len(seqs_targeted)} sequences'
+    )
 
     # print(ple)
     os.makedirs(args.output_path, exist_ok=True)
     # failed = []
 
     with mp.Pool(args.num_proc) as p:
-        r = list(tqdm(p.imap(process_npz_one, seqs_targeted), total=len(seqs_targeted), desc='sequences'))
+        r = list(
+            tqdm(
+                p.imap(process_npz_one, seqs_targeted),
+                total=len(seqs_targeted),
+                desc='sequences'))
 
 
 def parse_args():
@@ -73,7 +82,7 @@ def parse_args():
         required=False,
         default='synbody',
         help='dataset folder name')
-    
+
     parser.add_argument(
         '--num_proc',
         required=False,

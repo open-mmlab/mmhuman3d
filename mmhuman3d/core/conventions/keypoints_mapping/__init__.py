@@ -384,7 +384,8 @@ def get_keypoint_idx(name: str,
                 idx = -1
     if idx >= 0:
         return idx
-    raise ValueError(f'Cannot find joint: {name} in convention type: {convention}')
+    raise ValueError(
+        f'Cannot find joint: {name} in convention type: {convention}')
 
 
 def get_keypoint_num(convention: str = 'smplx',

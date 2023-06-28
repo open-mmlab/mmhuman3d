@@ -75,7 +75,7 @@ class BaseConverter(metaclass=ABCMeta):
 
         if len(kp_x) * len(kp_y) == 0:
             return np.array([0, 0, 0, 0])
-        
+
         xmin = np.min(kp_x)
         ymin = np.min(kp_y)
         xmax = np.max(kp_x)

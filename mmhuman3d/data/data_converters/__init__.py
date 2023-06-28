@@ -18,8 +18,8 @@ from .gta_human2 import GTAHuman2Converter
 from .h36m import H36mConverter
 from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_smplx import H36mSMPLXConverter
-from .humman import HuMManConverter
 from .humanart import HumanartConverter
+from .humman import HuMManConverter
 from .insta_vibe import InstaVibeConverter
 from .lsp import LspConverter
 from .lsp_extended import LspExtendedConverter
@@ -31,6 +31,7 @@ from .penn_action import PennActionConverter
 from .posetrack import PosetrackConverter
 from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
+from .renbody import RenbodyConverter
 from .shapy import ShapyConverter
 from .sminchisescu import ImarDatasetsConverter
 from .spin import SpinConverter
@@ -41,7 +42,6 @@ from .synbody import SynbodyConverter
 from .ubody import UbodyConverter
 from .up3d import Up3dConverter
 from .vibe import VibeConverter
-from .renbody import RenbodyConverter
 
 __all__ = [
     'build_data_converter', 'AgoraConverter', 'MpiiConverter', 'H36mConverter',
@@ -49,12 +49,13 @@ __all__ = [
     'H36mConverter', 'LspExtendedConverter', 'LspConverter',
     'MpiInf3dhpConverter', 'PennActionConverter', 'PosetrackConverter',
     'Pw3dConverter', 'Up3dConverter', 'CrowdposeConverter', 'EftConverter',
-    'GTAHumanConverter', 'GTAHuman2Converter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
-    'H36mSMPLXConverter', 'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter',
-    'SurrealConverter', 'InstaVibeConverter', 'SpinConverter', 'VibeConverter',
-    'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
-    'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
-    'EHFConverter', 'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
+    'GTAHumanConverter', 'GTAHuman2Converter', 'CocoHybrIKConverter',
+    'H36mHybrIKConverter', 'H36mSMPLXConverter', 'MpiInf3dhpHybrIKConverter',
+    'Pw3dHybrIKConverter', 'SurrealConverter', 'InstaVibeConverter',
+    'SpinConverter', 'VibeConverter', 'HuMManConverter', 'FFHQFlameConverter',
+    'ExposeCuratedFitsConverter', 'ExposeSPINSMPLXConverter',
+    'FreihandConverter', 'StirlingConverter', 'EHFConverter',
+    'SynbodyConverter', 'RenbodyConverter', 'EgobodyConverter',
     'HumanartConverter', 'UbodyConverter', 'ShapyConverter', 'Ssp3dConverter',
     'ImarDatasetsConverter', 'BehaveConverter', 'MoyoConverter'
 ]
