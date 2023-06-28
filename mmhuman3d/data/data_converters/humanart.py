@@ -1,28 +1,23 @@
-import ast
-import glob
+# import ast
+# import glob
 import json
 import os
-import pdb
 import random
-import time
 from typing import List
 
-import cv2
+# import cv2
 import numpy as np
-import pandas as pd
-import smplx
-import torch
+# import pandas as pd
+# import smplx
+# import torch
 from tqdm import tqdm
 
-from mmhuman3d.core.cameras import build_cameras
+# from mmhuman3d.core.cameras import build_cameras
 # from mmhuman3d.core.conventions.keypoints_mapping import smplx
-from mmhuman3d.core.conventions.keypoints_mapping import (
-    convert_kps,
-    get_keypoint_idxs_by_part,
-)
+from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
 # import mmcv
-from mmhuman3d.models.body_models.builder import build_body_model
+# from mmhuman3d.models.body_models.builder import build_body_model
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -111,7 +106,7 @@ class HumanartConverter(BaseModeConverter):
                     # get keypoints
                     keypoints21 = np.array(annotation['keypoints_21']).reshape(
                         -1, 3)
-                    ## change [x, y, 2] to [x, y, 1] (conf == 1)
+                    # change [x, y, 2] to [x, y, 1] (conf == 1)
                     keypoints21[:,
                                 -1] = (keypoints21[:,
                                                    -1] == 2).astype(np.float32)
@@ -128,7 +123,7 @@ class HumanartConverter(BaseModeConverter):
 
             keypoints2d = np.array(keypoints21_).reshape(-1, 21, 3)
             keypoints2d, keypoints2d_mask = \
-                    convert_kps(keypoints2d, src='humanart', dst='human_data')
+                convert_kps(keypoints2d, src='humanart', dst='human_data')
             human_data['keypoints2d_humanart'] = keypoints2d
             human_data['keypoints2d_humanart_mask'] = keypoints2d_mask
 
