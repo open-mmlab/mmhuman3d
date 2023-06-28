@@ -4,7 +4,6 @@ import os
 from mmhuman3d.data.data_converters import build_data_converter
 
 DATASET_CONFIGS = dict(
-
     amass=dict(type='AmassConverter', prefix='AMASS_file'),
     coco=dict(type='CocoConverter'),
     coco_wholebody=dict(
@@ -60,43 +59,68 @@ DATASET_CONFIGS = dict(
     # -------------- below datasets are done by WC --------------
 
     # -------------- multi-human dataset --------------
-    agora=dict(type='AgoraConverter', # synthetic
-               prefix='agora', modes=['validation_3840', 'train_3840',
-                            'train_1280', 'validation_1280']),
-    egobody=dict(type='EgobodyConverter', # real, egocentric: single
-                 prefix='egobody', 
-                 modes=['egocentric_train', 'egocentric_test', 'egocentric_val',
-                    'kinect_train', 'kinect_test', 'kinect_val']),   
-    gta_human2=dict(type='GTAHuman2Converter', # synthetic
-                    prefix='gta_human2', modes=['single', 'multiple']),
-
-    synbody=dict(type='SynbodyConverter', # synthetic
-                 prefix='synbody', modes=['train']),
-
-    ubody=dict(type='UbodyConverter', # real, has some single
-               prefix='ubody', modes=['inter', 'intra']),
-    
+    agora=dict(
+        type='AgoraConverter',  # synthetic
+        prefix='agora',
+        modes=[
+            'validation_3840', 'train_3840', 'train_1280', 'validation_1280'
+        ]),
+    egobody=dict(
+        type='EgobodyConverter',  # real, egocentric: single
+        prefix='egobody',
+        modes=[
+            'egocentric_train', 'egocentric_test', 'egocentric_val',
+            'kinect_train', 'kinect_test', 'kinect_val'
+        ]),
+    gta_human2=dict(
+        type='GTAHuman2Converter',  # synthetic
+        prefix='gta_human2',
+        modes=['single', 'multiple']),
+    synbody=dict(
+        type='SynbodyConverter',  # synthetic
+        prefix='synbody',
+        modes=['train']),
+    ubody=dict(
+        type='UbodyConverter',  # real, has some single
+        prefix='ubody',
+        modes=['inter', 'intra']),
 
     # -------------- single-human dataset --------------
-    behave=dict(type='BehaveConverter', # real
-                prefix='behave', modes=['train', 'test']),
-    moyo=dict(type='MoyoConverter', # real
-              prefix='moyo', modes=['train', 'val']),
-    renbody=dict(type='RenbodyConverter', # real
-                 prefix='renbody', modes=['train', 'train_highrescam', 'test', 'test_highrescam']),
-    sminchisescu=dict(type='ImarDatasetsConverter', # real, 3 studio datasets
-                      prefix='sminchisescu-research-datasets',
-                      modes=['FIT3D', 'CHI3D', 'HumanSC3D']),
-    ssp3d=dict(type='Ssp3dConverter', # real 
-               prefix='ssp-3d'),
+    behave=dict(
+        type='BehaveConverter',  # real
+        prefix='behave',
+        modes=['train', 'test']),
+    moyo=dict(
+        type='MoyoConverter',  # real
+        prefix='moyo',
+        modes=['train', 'val']),
+    renbody=dict(
+        type='RenbodyConverter',  # real
+        prefix='renbody',
+        modes=['train', 'train_highrescam', 'test', 'test_highrescam']),
+    sminchisescu=dict(
+        type='ImarDatasetsConverter',  # real, 3 studio datasets
+        prefix='sminchisescu-research-datasets',
+        modes=['FIT3D', 'CHI3D', 'HumanSC3D']),
+    ssp3d=dict(
+        type='Ssp3dConverter',  # real
+        prefix='ssp-3d'),
+
+    # -------------- hand and face dataset (no complete smplx) --------------
+    freihand=dict(
+        type='FreihandConverter',  # real, hand only
+        prefix='freihand',
+        modes=['train', 'val', 'test']),
 
     # -------------- other dataset (no complete smpl/smplx) --------------
-    humanart=dict(type='HumanartConverter', # real, but have some human-like instances 
-                  prefix='humanart', 
-                  modes=['real_human', '2D_virtual_human', '3D_virtual_human']),
-    shapy=dict(type='ShapyConverter', # real
-               prefix='shapy', modes=['test', 'val']),
-
+    humanart=dict(
+        type='HumanartConverter',  # real, but have some human-like instances
+        prefix='humanart',
+        modes=['real_human', '2D_virtual_human', '3D_virtual_human']),
+    shapy=dict(
+        type='ShapyConverter',  # real
+        prefix='shapy',
+        modes=['test', 'val']),
 )
 
 
@@ -122,21 +146,22 @@ def parse_args():
         required=True,
         default=[],
         help=f'Supported datasets: {list(DATASET_CONFIGS.keys())}')
-    
+
     parser.add_argument(
         '--modes',
         type=str,
         nargs='+',
         required=False,
         default=[],
-        help=f'Need to comply with supported modes specified in tools/convert_datasets.py')
-    
+        help='Need to comply with supported modes'
+        'specified in tools/convert_datasets.py')
+
     parser.add_argument(
         '--prefix',
         type=str,
         required=False,
         default=None,
-        help=f'If you want to specify you folder name, please use this')
+        help='If you want to specify you folder name, please use this')
 
     parser.add_argument(
         '--enable_multi_human_data',
@@ -158,23 +183,23 @@ def main():
         print(f'[{dataset}] Converting ...')
         cfg = DATASET_CONFIGS[dataset]
 
-        if ('modes' in cfg.keys()) and (args.modes != []):        
+        if ('modes' in cfg.keys()) and (args.modes != []):
             assert all(x in cfg['modes'] for x in args.modes), \
-                f'Unsupported mode found, supported mode for {cfg["prefix"]} is {cfg["modes"]}'
+                f'Unsupported mode found, supported mode for' \
+                f'{cfg["prefix"]} is {cfg["modes"]}'
             cfg['modes'] = args.modes
         elif ('modes' in cfg.keys()) and (args.modes == []):
-            print(f'For {cfg["prefix"]}, modes: {cfg["modes"]} are avaliable, process all modes as not specified')
+            print(f'For {cfg["prefix"]}, modes: {cfg["modes"]} are available,'
+                  'process all modes as not specified')
             args.modes = cfg['modes']
 
-        if args.prefix != None:
+        if args.prefix is not None:
             prefix = args.prefix
         else:
             prefix = cfg.pop('prefix', dataset)
         input_path = os.path.join(args.root_path, prefix)
         data_converter = build_data_converter(cfg)
-        data_converter.convert(
-            input_path,
-            args.output_path)
+        data_converter.convert(input_path, args.output_path)
         print(f'[{dataset}] Converting finished!')
 
 
