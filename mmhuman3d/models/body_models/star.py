@@ -8,8 +8,8 @@ import torch
 import torch.nn as nn
 
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
-from mmhuman3d.utils.transforms import aa_to_rotmat
 from mmhuman3d.utils.geometry import rotation_matrix_to_angle_axis
+from mmhuman3d.utils.transforms import aa_to_rotmat
 
 
 class STAR(nn.Module):
@@ -374,7 +374,6 @@ class STAR(nn.Module):
         v_sin = torch.sin(angle)
         quat = torch.cat([v_sin * normalized, v_cos - 1], dim=1)
         return quat
-
 
     def name(self) -> str:
         return 'STAR'
