@@ -5,21 +5,66 @@
 `HumanData`是Python内置字典的子类，主要用于存放包含人体的单视角图像的信息。它具有通用的基础结构，也兼容具有新特性的客制化数据。
 原生的`HumanData`包含`numpy.ndarray`或其他的Python内置的数据结构，但不包含`torch.Tensor`的数据。可以使用`human_data.to()`将其转换为`torch.Tensor`(支持CPU和GPU)。
 
-### `Key/Value`的定义
+### `Key/Value`的定义：如下是对`HumanData`支持的`Key`和`Value`的描述.
 
-#### 如下是对`HumanData`支持的`Key`和`Value`的描述.
+#### 路径:
 
+通常包含图片路径，如果数据集有提供额外的深度或者分割图，也可以记录下来。
 - image_path: (N, ), 字符串组成的列表, 每一个元素是图像相对于根目录的路径。
+- segmantation_path (可选): (N, ), 字符串组成的列表, 每一个元素是图像分割图相对于根目录的路径。
+- depth_path (可选): (N, ), 字符串组成的列表, 每一个元素是图像深度图相对于根目录的路径。
+
+#### 关键点：
+
+以下关键点keys如果适用，则应包含在HumanData中。任何一个关键点的key，应存在一个mask，表示其中哪些关键点有效。如`keypoints3d_original`应对应`keypoints3d_original_mask`。
+`HumanData` 中的关键点存储格式为`HUMAN_DATA`, 包含190个关键点。MMHuman3d中提供了很多常用关键点格式的转换（2d及3d均支持）, 详见 [keypoints_convention](../docs_zh-CN/keypoints_convention.md).
+- keypoints3d_smpl / keypoints3d_smplx: (N, 190, 4), numpy array, `smplx / smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints3d_original: (N, 190, 4), numpy array, 由数据集本身提供的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints2d_smpl / keypoints2d_smplx: (N, 190, 3), numpy array, `smpl / smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- keypoints2d_original: (N, 190, 3), numpy array, 由数据集本身提供的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- （mask示例） keypoints2d_smpl_mask: (190, ), numpy array, 表示`keypoints2d_smpl`中关键点是否有效的掩膜。 0表示该位置的关键点在原始数据集中无法找到。
+
+#### 检测框：
+
+身体（smpl），手脸（smplx）的检测框，标注为`[x_min, y_min, width, height, confidence]`，且不应超出图片。
 - bbox_xywh: (N, 5), numpy array, 边界框的置信度, 边界框左下角点的坐标x和y, 边界框的宽w和高h, 置信度得分放置在最后。
-- config: (), 字符串, 单个数据集的配置的标志。
-- keypoints2d: (N, 190, 3), numpy array, `smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
-- keypoints3d: (N, 190, 4), numpy array, `smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
+- face_bbox_xywh, lhand_bbox_xywh, rhand_bbox_xywh（可选）： (N, 5), numpy array, 如果数据标注中含有`smplx`, 则应包括这三个key，由smplx2d关键点得出，格式同上。
+
+#### 人体模型参数：
+
+通常以smpl/smplx格式存储。
 - smpl: (1, ), 字典, `keys` 分别为 ['body_pose': numpy array, (N, 23, 3), 'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3)].
 - smplx: (1, ), 字典, `keys` 分别为 ['body_pose': numpy array, (N, 21, 3),'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3), 'left_hand_pose': numpy array, (N, 15, 3), 'right_hand_pose': numpy array, (N, 15, 3), 'expression': numpy array (N, 10), 'leye_pose': numpy array (N, 3), 'reye_pose': (N, 3), 'jaw_pose': numpy array (N, 3)].
-- meta: (1, ), 字典, `keys` 为数据集中类似性别的元数据。
-- keypoints2d_mask: (190, ), numpy array, 表示`keypoints2d`中关键点是否有效的掩膜。 0表示该位置的关键点在原始数据集中无法找到。
-- keypoints3d_mask: (190, ), numpy array, 表示`keypoints3d`中关键点是否有效的掩膜。 0表示该位置的关键点在原始数据集中无法找到。
-- misc: (1, ), 字典, `keys`和`values`由用户定义。`misc`占用的空间(可以通过`sys.getsizeof(misc)`获取)不能超过6MB。
+
+#### 其它keys
+
+- config: (), 字符串, 单个数据集的配置的标志。
+- meta: (1, ), 字典, `keys`为数据集中的各种元数据。
+- misc: (1, ), 字典, `keys`为数据集中各种独特设定，也可以由用户自定义。`misc`占用的空间（可以通过`sys.getsizeof(misc)`获取）不能超过6MB。
+
+#### `HumanData['misc']`中建议（可能）包含的内容:
+Miscellaneous部分中包含了每个数据集的独特设定，包括相机种类，关键点标注来源，检测框来源，是否包含smpl/smplx标注等等，用于便利数据读取。
+`HumanData['misc']`中包含一个dictionary，建议包含的key如下所示：
+- kps3d_root_aligned： Bool 描述keypoints3d是否经过root align，建议不进行root_alignment，如果不包含这个key，则默认没有进行过root_aligenment
+- flat_hand_mean：Bool 对于smplx标注的数据，应该存在此项，大多数数据集中`flat_hand_mean=False`
+- bbox_source：描述检测框的来源，`bbox_soruce='keypoints2d_smpl' or 'keypoints2d_smplx' or 'keypoints2d_original'`，描述检测框是由哪种关键点得出的，或者`bbox_source='provide_by_dataset'`表示检测框由数据集直接给出（比如用其自带检测器生成而不是由关键点推导得出）
+- bbox_body_scale: 如果检测框由关键点推导得出，则应包含此项，描述由smpl/smplx/2d_gt关键点推导出的身体检测框的放大比例，建议`bbox_body_scale=1.2`
+- bbox_hand_scale, bbox_face_scale: 如果检测框由关键点推导得出，则应包含这两项，描述由smpl/smplx/2d_gt关键点推导出的身体检测框的放大比例，建议`bbox_hand_scale=1.0, bbox_face_scale=1.0`
+- smpl_source / smplx_source: 描述smpl/smplx的来源，`'original', 'nerual_annot', 'eft', 'osx_annot', 'cliff_annot'`, 来描述smpl/smnplx是来源于数据集提供，或者其它标注来源
+- cam_param_type: 描述相机参数的种类，`cam_param_type='prespective' or 'predicted_camera' or 'eft_camera'`
+- principal_point, focal_length: (1, 2), numpy array，如果数据集中相机参数恒定，则应包含这两项，通常适用于生成数据集。
+- image_shape: (1, 2), numpy array，如果数据集中图片大小恒定，则应包含此项。
+
+#### `HumanData['meta']`中建议（可能）包含的内容:
+- gender: (N, )， 字符串组成的列表, 每一个元素是smplx模型的性别（中性则不必标注）
+- height（width）：(N, )， 字符串组成的列表, 每一个元素是图片的高（或宽），这里不推荐使用`image_shape=(width, height): (N, 2)`，因为有时需要按反顺序读取图片格式。（数据集图片分辨率一致则应标注在`HumanData['misc']`中）
+- 其它有标识性的key，若数据集中该key不一致，且会影响keypoints or smpl/smplx，则建议标注，如focal_length与principal_point, focal_length = (N, 2), principal_point = (N, 2)
+
+#### 关于HumanData的一些说明
+
+- 所有数据标注均已从世界坐标转移到opencv相机空间，进行smpl/smplx的相机空间转换可以用
+
+```from mmhuman3d.models.body_models.utils import transform_to_camera_frame, batch_transform_to_camera_frame```
 
 #### 检查`HumanData`中的`key`.
 
