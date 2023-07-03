@@ -17,7 +17,7 @@
 #### 关键点：
 
 以下关键点keys如果适用，则应包含在HumanData中。任何一个关键点的key，应存在一个mask，表示其中哪些关键点有效。如`keypoints3d_original`应对应`keypoints3d_original_mask`。
-`HumanData` 中的关键点存储格式为`HUMAN_DATA`, 包含190个关键点. MMHuman3d中提供了很多常用关键点格式的转换（2d及3d均支持）, 详见 [keypoints_convention](../docs_zh-CN/keypoints_convention.md).
+`HumanData` 中的关键点存储格式为`HUMAN_DATA`, 包含190个关键点。MMHuman3d中提供了很多常用关键点格式的转换（2d及3d均支持）, 详见 [keypoints_convention](../docs_zh-CN/keypoints_convention.md).
 - keypoints3d_smpl / keypoints3d_smplx: (N, 190, 4), numpy array, `smplx / smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints3d_original: (N, 190, 4), numpy array, 由数据集本身提供的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints2d_smpl / keypoints2d_smplx: (N, 190, 3), numpy array, `smpl / smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
