@@ -66,7 +66,7 @@ Please refer to [getting_started.md](../../docs/getting_started.md) for training
 
 ## Visualization
 
-We prepared a script with a sample sequence that should help you with the SMPL overlay. 
+We prepared a script with a sample sequence that should help you with the SMPL overlay.
 You may download it from [here](https://drive.google.com/file/d/11osPM67KiQN6NbdJo3plcgNoPNxfJ_j7/view?usp=share_link).
 
 ## Notes
