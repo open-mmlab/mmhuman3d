@@ -107,9 +107,13 @@ DATASET_CONFIGS = dict(
         prefix='ssp-3d'),
 
     # -------------- hand and face dataset (no complete smplx) --------------
-    freihand=dict(
+    freihand=dict(  # in progress
         type='FreihandConverter',  # real, hand only
         prefix='freihand',
+        modes=['train', 'val', 'test']),
+    interhand26m=dict(  # in progress
+        type='Interhand26MConverter',  # real, hand only
+        prefix='interhand26m',
         modes=['train', 'val', 'test']),
 
     # -------------- other dataset (no complete smpl/smplx) --------------
