@@ -2,6 +2,7 @@ from .agora import AgoraConverter
 from .amass import AmassConverter
 from .behave import BehaveConverter
 from .builder import build_data_converter
+from .cliff import CliffConverter
 from .coco import CocoConverter
 from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
@@ -80,6 +81,7 @@ __all__ = [
     'FreihandConverter',
     'StirlingConverter',
     'EHFConverter',
+    'CliffConverter',
     'SynbodyConverter',
     'RenbodyConverter',
     'EgobodyConverter',
