@@ -50,6 +50,10 @@ class FreihandConverter(BaseModeConverter):
                 A dict containing keys image_path, bbox_xywh, smplx, meta
                 stored in HumanData() format
         """
+
+        seed = '230703'
+
+
         # use HumanData to store all data
         human_data = HumanData()
         # structs we use
@@ -130,10 +134,10 @@ class FreihandConverter(BaseModeConverter):
         smplx['right_hand_pose'] = np.array(smplx['right_hand_pose'])
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
-        human_data['keypoints2d'] = keypoints2d
-        human_data['keypoints2d_mask'] = keypoints2d_mask
-        human_data['keypoints3d'] = keypoints3d
-        human_data['keypoints3d_mask'] = keypoints3d_mask
+        human_data['keypoints2d_smplx'] = keypoints2d
+        human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
+        human_data['keypoints3d_smplx'] = keypoints3d
+        human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
 
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
@@ -150,6 +154,6 @@ class FreihandConverter(BaseModeConverter):
             human_data = human_data.get_slice(
                 int(0.8 * len(image_path_)), len(image_path_))
 
-        file_name = 'freihand_{}.npz'.format(mode)
+        file_name = f'freihand_{mode}_{seed}.npz'
         out_file = os.path.join(out_path, file_name)
         human_data.dump(out_file)
