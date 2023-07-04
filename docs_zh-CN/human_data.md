@@ -16,7 +16,8 @@
 
 #### 关键点：
 
-以下关键点keys如果适用，则应包含在HumanData中。任何一个关键点的key，应存在一个mask，表示其中哪些关键点有效。如`keypoints3d_original`应对应`keypoints3d_original_mask`
+以下关键点keys如果适用，则应包含在HumanData中。任何一个关键点的key，应存在一个mask，表示其中哪些关键点有效。如`keypoints3d_original`应对应`keypoints3d_original_mask`。
+`HumanData` 中的关键点存储格式为`HUMAN_DATA`, 包含190个关键点。MMHuman3d中提供了很多常用关键点格式的转换（2d及3d均支持）, 详见 [keypoints_convention](../docs_zh-CN/keypoints_convention.md).
 - keypoints3d_smpl / keypoints3d_smplx: (N, 190, 4), numpy array, `smplx / smplx`模型的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints3d_original: (N, 190, 4), numpy array, 由数据集本身提供的3d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
 - keypoints2d_smpl / keypoints2d_smplx: (N, 190, 3), numpy array, `smpl / smplx`模型的2d关节点与置信度, 每一个数据集的关节点映射到了`HUMAN_DATA`的关节点。
@@ -39,7 +40,7 @@
 
 - config: (), 字符串, 单个数据集的配置的标志。
 - meta: (1, ), 字典, `keys`为数据集中的各种元数据。
-- misc: (1, ), 字典, `keys`为数据集中各种独特设定，也可以由用户自定义。`misc`占用的空间(可以通过`sys.getsizeof(misc)`获取)不能超过6MB。
+- misc: (1, ), 字典, `keys`为数据集中各种独特设定，也可以由用户自定义。`misc`占用的空间（可以通过`sys.getsizeof(misc)`获取）不能超过6MB。
 
 #### `HumanData['misc']`中建议（可能）包含的内容:
 Miscellaneous部分中包含了每个数据集的独特设定，包括相机种类，关键点标注来源，检测框来源，是否包含smpl/smplx标注等等，用于便利数据读取。
@@ -56,7 +57,7 @@ Miscellaneous部分中包含了每个数据集的独特设定，包括相机种�
 
 #### `HumanData['meta']`中建议（可能）包含的内容:
 - gender: (N, )， 字符串组成的列表, 每一个元素是smplx模型的性别（中性则不必标注）
-- height， width：(N, )， 字符串组成的列表, 每一个元素是图片的长或宽（数据集图片分辨率一致则应标注在`HumanData['misc']`中）
+- height（width）：(N, )， 字符串组成的列表, 每一个元素是图片的高（或宽），这里不推荐使用`image_shape=(width, height): (N, 2)`，因为有时需要按反顺序读取图片格式。（数据集图片分辨率一致则应标注在`HumanData['misc']`中）
 - 其它有标识性的key，若数据集中该key不一致，且会影响keypoints or smpl/smplx，则建议标注，如focal_length与principal_point, focal_length = (N, 2), principal_point = (N, 2)
 
 #### 关于HumanData的一些说明

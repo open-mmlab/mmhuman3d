@@ -16,6 +16,9 @@ Image path is included, and optionally path of segmentation map and depth image 
 #### Keypoints：
 
 Following keys should be included in `HumanData` if applicable. For each dictionary key of keypoints，a corresponding dictionart key of mask should be included，stating which keypoint is valid. For example `keypoints3d_original` should correspond to `keypoints3d_original_mask`.
+
+In `HumanData`, keypoints are stored as `HUMAN_DATA` format, which includes 190 joints. We provide keypoints format (for both 2d and 3d keypoints) convention for many datasets, please see [keypoints_convention](../docs/keypoints_convention.md).
+
 - keypoints3d_smpl / keypoints3d_smplx: (N, 190, 4), numpy array, `smplx / smplx` 3d joints with confidence, joints from each datasets are mapped to HUMAN_DATA joints.
 - keypoints3d_original: (N, 190, 4), numpy array, 3d joints with confidence which provided by the dataset originally, joints from each datasets are mapped to HUMAN_DATA joints.
 - keypoints2d_smpl / keypoints2d_smplx: (N, 190, 3), numpy array, `smpl / smplx` 2d joints with confidence, joints from each datasets are mapped to HUMAN_DATA joints.
@@ -39,7 +42,7 @@ Normally saved as smpl/smplx.
 
 - config: (), str, the flag name of config for individual dataset.
 - meta: (1, ), dict, its keys are meta data from dataset like 'gender'.
-- misc: (1, ), dict, keys and values are designed to describe the different settings for each dataset. Can also be defined by user. The space misc takes(sys.getsizeof(misc)) shall be no more than 6MB.
+- misc: (1, ), dict, keys and values are designed to describe the different settings for each dataset. Can also be defined by user. The space misc takes (sys.getsizeof(misc)) shall be no more than 6MB.
 
 #### Suggestion for WHAT to include in `HumanData['misc']`:
 
@@ -58,7 +61,7 @@ Miscellaneous contains the info of different settings for each dataset, includin
 #### Suggestion for WHAT to include in `HumanData['meta']`:
 
 - gender: (N, ), list of str, each element represents the gender for an smpl/smplx instance. (key not required if dataset use gender-neutral model)
-- height， width：(N, )， list of str, each element represents the width of height of image. (keys should be in `HumanData['misc']` if image shape are same across the dataset）
+- height (width)：(N, )， list of str, each element represents the height (width) of an image, `image_shape=(width, height): (N, 2)` is not suggested as width and height might need to be referenced in different orders. (keys should be in `HumanData['misc']` if image shape are same across the dataset)
 - other keys，applicable if the key value is different，and have some impact on keypoints or smpl/smplx (2d and 3d)，For example, `focal_length` and `principal_point`, focal_length = (N, 2), principal_point = (N, 2)
 
 #### Some other info of HumanData
