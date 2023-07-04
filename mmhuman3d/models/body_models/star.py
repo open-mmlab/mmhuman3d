@@ -176,7 +176,7 @@ class STAR(nn.Module):
         if create_body_pose:
             if body_pose is None:
                 default_body_pose = torch.zeros(
-                    [batch_size, self.NUM_JOINTS * 3], dtype=dtype)
+                    [batch_size, self.NUM_JOINTS, 3, 3], dtype=dtype)
             else:
                 if torch.is_tensor(body_pose):
                     default_body_pose = body_pose.clone().detach()
@@ -242,16 +242,18 @@ class STAR(nn.Module):
             output: Contains output parameters and attributes corresponding
             to other body models.
         """
-        device = body_pose.device
         body_pose = body_pose if body_pose is not None else self.body_pose
-        # body_pose = body_pose.contiguous()
-        if global_orient is not None:
+        device = body_pose.device
+
+        if body_pose.shape[1] % 24 != 0:
             body_pose = torch.cat((global_orient, body_pose), dim=1)
         betas = betas if betas is not None else self.betas
         if transl is None and hasattr(self, 'transl'):
             transl = self.transl
 
         batch_size = body_pose.shape[0]
+        if body_pose.shape[1] == 72:
+            body_pose = body_pose.view(batch_size, -1, 3)
         v_template = self.v_template[None, :]
         shapedirs = self.shapedirs.view(-1, self.num_betas)[None, :].expand(
             batch_size, -1, -1)
@@ -352,7 +354,7 @@ class STAR(nn.Module):
         :return: A tensor batch size x 4 x 4 (appended with 0,0,0,1)
         """
         batch_size = input.shape[0]
-        row_append = torch.cuda.FloatTensor(([0.0, 0.0, 0.0, 1.0]))
+        row_append = torch.FloatTensor(([0.0, 0.0, 0.0, 1.0])).to(input.device)
         row_append.requires_grad = False
         padded_tensor = torch.cat(
             [input, row_append.view(1, 1, 4).repeat(batch_size, 1, 1)], 1)
