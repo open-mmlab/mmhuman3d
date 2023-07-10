@@ -4,26 +4,35 @@
   <!-- * [Overview](#overview)
   * [Generate dataset files](#generate-dataset-files)
   * [Obtain preprocessed datasets](#obtain-preprocessed-datasets) -->
-- [Datasets for supported algorithms](#datasets-for-supported-algorithms)
-- [Folder structure](#folder-structure)
-  * [AGORA](#agora)
-  * [COCO](#coco)
-  * [COCO-WholeBody](#coco-wholebody)
-  * [CrowdPose](#crowdpose)
-  * [EFT](#eft)
-  * [GTA-Human](#gta-human)
-  * [Human3.6M](#human36m)
-  * [Human3.6M Mosh](#human36m-mosh)
-  * [HybrIK](#hybrik)
-  * [LSP](#lsp)
-  * [LSPET](#lspet)
-  * [MPI-INF-3DHP](#mpi-inf-3dhp)
-  * [MPII](#mpii)
-  * [PoseTrack18](#posetrack18)
-  * [Penn Action](#penn-action)
-  * [PW3D](#pw3d)
-  * [SPIN](#spin)
-  * [SURREAL](#surreal)
+- [Data preparation](#data-preparation)
+  - [Overview](#overview)
+  - [Datasets for supported algorithms](#datasets-for-supported-algorithms)
+  - [Folder structure](#folder-structure)
+    - [AGORA](#agora)
+    - [AMASS](#amass)
+    - [COCO](#coco)
+    - [COCO-WholeBody](#coco-wholebody)
+    - [CrowdPose](#crowdpose)
+    - [EFT](#eft)
+    - [GTA-Human](#gta-human)
+    - [Human3.6M](#human36m)
+    - [Human3.6M Mosh](#human36m-mosh)
+    - [HybrIK](#hybrik)
+    - [LSP](#lsp)
+    - [LSPET](#lspet)
+    - [MPI-INF-3DHP](#mpi-inf-3dhp)
+    - [MPII](#mpii)
+    - [PoseTrack18](#posetrack18)
+    - [Penn Action](#penn-action)
+    - [PW3D](#pw3d)
+    - [SPIN](#spin)
+    - [SURREAL](#surreal)
+    - [VIBE](#vibe)
+    - [FreiHand](#freihand)
+    - [EHF](#ehf)
+    - [FFHQ](#ffhq)
+    - [ExPose](#expose)
+    - [Stirling](#stirling)
 
 
 ## Overview
@@ -131,7 +140,8 @@ DATASET_CONFIGS = dict(
 
 ## Datasets for supported algorithms
 
-For all algorithms, the root path for our datasets and output path for our preprocessed npz files are stored in `data/datasets` and `data/preprocessed_datasets`. As such, use this command with the listed `dataset-names`:
+For all algorithms, the root path for our datasets and output path for our preprocessed npz files are stored in `data/datasets` and `data/preprocessed_datasets`.
+As such, use this command with the listed `dataset-names`:
 
 ```bash
 python tools/convert_datasets.py \
@@ -188,6 +198,11 @@ mmhuman3d
         ├── mpii_train.npz
         └── pw3d_test.npz
 ```
+Note that, to avoid generating npz files every iteration during training, please create a blank cache directory. To do so, run the following command:
+```
+cp -r data/preprocessed_datasets data/cache
+```
+Also, remember to use the *_cache.py config during training.
 
 For SPIN training, the following datasets are required:
   - [COCO](#coco)
