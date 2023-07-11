@@ -10,6 +10,8 @@ from mmhuman3d.data.data_converters.builder import DATA_CONVERTERS
 from mmhuman3d.data.data_structures.human_data import HumanData
 from .base_converter import BaseModeConverter
 
+import pdb
+
 
 def project_points(K, xyz):
     """Project keypoints 3D to keypoints 2D on images.
@@ -90,6 +92,8 @@ class FreihandConverter(BaseModeConverter):
         # scale = param[:, 60:]
         global_pose = pose[:, 0:1]
         right_hand_pose = pose[:, 1:]
+
+        # pdb.set_trace()
 
         # # load mean hand pose
         right_hand_mean = None
