@@ -195,7 +195,7 @@ def main():
             cfg['modes'] = args.modes
         elif ('modes' in cfg.keys()) and (args.modes == []):
             print(f'For {cfg["prefix"]}, modes: {cfg["modes"]} are available,'
-                  'process all modes as not specified')
+                  ' process all modes as not specified')
             args.modes = cfg['modes']
 
         if args.prefix is not None:

@@ -40,6 +40,13 @@ python tools/convert_datasets.py \
     --output_path /mnt/d/humanart/output \
     --modes cosplay
 
+# interhand-converter
+python tools/convert_datasets.py \
+    --datasets interhand26m \
+    --root_path /mnt/d \
+    --output_path /mnt/d/interhand26m/output \
+    --modes train
+
 # moyo-converter
 python tools/convert_datasets.py \
     --datasets moyo \
