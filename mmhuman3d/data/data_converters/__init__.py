@@ -19,6 +19,7 @@ from .gta_human2 import GTAHuman2Converter
 from .h36m import H36mConverter
 from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_smplx import H36mSMPLXConverter
+from .hanco import HancoConverter
 from .humanart import HumanartConverter
 from .humman import HuMManConverter
 from .insta_vibe import InstaVibeConverter
@@ -93,4 +94,5 @@ __all__ = [
     'BehaveConverter',
     'MoyoConverter',
     'Interhand26MConverter',
+    'HancoConverter',
 ]
