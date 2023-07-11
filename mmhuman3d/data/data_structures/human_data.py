@@ -34,16 +34,51 @@ _HumanData_SUPPORTED_KEYS = {
         'shape': (-1, 5),
         'dim': 0
     },
+    'lhand_bbox_xywh': {
+        'type': np.ndarray,
+        'shape': (-1, 5),
+        'dim': 0
+    },
+    'rhand_bbox_xywh': {
+        'type': np.ndarray,
+        'shape': (-1, 5),
+        'dim': 0
+    },
+    'face_bbox_xywh': {
+        'type': np.ndarray,
+        'shape': (-1, 5),
+        'dim': 0
+    },
     'config': {
         'type': str,
         'dim': None
     },
-    'keypoints2d': {
+    'keypoints2d_smpl': {
         'type': np.ndarray,
         'shape': (-1, -1, 3),
         'dim': 0
     },
-    'keypoints3d': {
+    'keypoints2d_smplx': {
+        'type': np.ndarray,
+        'shape': (-1, -1, 3),
+        'dim': 0
+    },
+    'keypoints2d_original': {
+        'type': np.ndarray,
+        'shape': (-1, -1, 3),
+        'dim': 0
+    },
+    'keypoints3d_smpl': {
+        'type': np.ndarray,
+        'shape': (-1, -1, 4),
+        'dim': 0
+    },
+    'keypoints3d_smplx': {
+        'type': np.ndarray,
+        'shape': (-1, -1, 4),
+        'dim': 0
+    },
+    'keypoints3d_original': {
         'type': np.ndarray,
         'shape': (-1, -1, 4),
         'dim': 0
@@ -65,8 +100,19 @@ _HumanData_SUPPORTED_KEYS = {
     },
     'meta': {
         'type': dict,
+        'dim': 0
     },
-    'keypoints2d_mask': {
+    'keypoints2d_smpl_mask': {
+        'type': np.ndarray,
+        'shape': (-1, ),
+        'dim': None
+    },
+    'keypoints2d_smplx_mask': {
+        'type': np.ndarray,
+        'shape': (-1, ),
+        'dim': None
+    },
+    'keypoints2d_original_mask': {
         'type': np.ndarray,
         'shape': (-1, ),
         'dim': None
@@ -75,7 +121,17 @@ _HumanData_SUPPORTED_KEYS = {
         'type': str,
         'dim': None
     },
-    'keypoints3d_mask': {
+    'keypoints3d_smpl_mask': {
+        'type': np.ndarray,
+        'shape': (-1, ),
+        'dim': None
+    },
+    'keypoints3d_smplx_mask': {
+        'type': np.ndarray,
+        'shape': (-1, ),
+        'dim': None
+    },
+    'keypoints3d_original_mask': {
         'type': np.ndarray,
         'shape': (-1, ),
         'dim': None
@@ -668,8 +724,10 @@ class HumanData(dict):
                 self.check_keypoints_compressed() is True and
                 mask of a keypoint item is missing.
         """
-        self.__check_key__(key)
-        self.__check_value__(key, val)
+        if not (hasattr(self, 'skip_keys_check')
+                and key in self.skip_keys_check):
+            self.__check_key__(key)
+            self.__check_value__(key, val)
         # if it can be compressed by mask
         if self.__keypoints_compressed__:
             class_logger = self.__class__.logger
