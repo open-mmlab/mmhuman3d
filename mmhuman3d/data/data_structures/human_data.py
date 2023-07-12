@@ -100,7 +100,6 @@ _HumanData_SUPPORTED_KEYS = {
     },
     'meta': {
         'type': dict,
-        'dim': 0
     },
     'keypoints2d_smpl_mask': {
         'type': np.ndarray,
