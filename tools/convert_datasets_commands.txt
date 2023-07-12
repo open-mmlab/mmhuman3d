@@ -33,6 +33,13 @@ python tools/convert_datasets.py \
     --output_path /mnt/e/gta_human2/output \
     --modes multiple
 
+# hanco-converter
+python tools/convert_datasets.py \
+    --datasets hanco \
+    --root_path /mnt/d \
+    --output_path /mnt/d/hanco/output \
+    --modes train
+
 # humanart-converter
 python tools/convert_datasets.py \
     --datasets humanart \
@@ -73,6 +80,13 @@ python tools/convert_datasets.py \
     --datasets shapy \
     --root_path /mnt/e \
     --output_path /mnt/e/shapy/output \
+    --modes train
+
+# sloper4d-converter
+python tools/convert_datasets.py \
+    --datasets sloper4d \
+    --root_path /mnt/d \
+    --output_path /mnt/d/sloper4d/output \
     --modes train
 
 # ssp3d-converter

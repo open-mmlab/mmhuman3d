@@ -36,6 +36,7 @@ from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .renbody import RenbodyConverter
 from .shapy import ShapyConverter
+from .sloper4d import Sloper4dConverter
 from .sminchisescu import ImarDatasetsConverter
 from .spin import SpinConverter
 from .ssp3d import Ssp3dConverter
@@ -95,4 +96,5 @@ __all__ = [
     'MoyoConverter',
     'Interhand26MConverter',
     'HancoConverter',
+    'Sloper4dConverter',
 ]
