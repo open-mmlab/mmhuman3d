@@ -167,7 +167,7 @@ class Interhand26MConverter(BaseModeConverter):
         human_data = HumanData()
 
         seed = '230705'
-        size = 99999
+        size = 999999
 
         # initialize
         smplx_ = {}
@@ -200,7 +200,8 @@ class Interhand26MConverter(BaseModeConverter):
             # img = cv2.imread(img_path_list[0])
             height, width = self.misc_config['image_shape']
 
-            for image_path in tqdm(img_path_list, desc=f'Processing {seq_name}',
+            for image_path in tqdm(img_path_list, desc=f'Processing Capture{capture_id} '
+                                   f'{seq_name} Camera{camera_id}',
                                    total=len(img_path_list), position=1, leave=False):
                 
                 # get all indexs
