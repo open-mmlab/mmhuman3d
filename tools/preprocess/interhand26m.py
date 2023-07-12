@@ -1,45 +1,46 @@
 import argparse
 import glob
 import json
-import bigjson
 import os
 
 from tqdm import tqdm
 
-import pdb
+# import pdb
 # from memory_profiler import profile
+
 
 # @profile
 def rewrite_anno_json(args):
 
     anno_bp = args.dataset_path
+    anno_bp = os.path.join(anno_bp, 'anno*5*', '*', '*test*data.json')
 
-    anno_ps = glob.glob(os.path.join(anno_bp, 'anno*30*', '*', '*data.json'))
+    anno_ps = glob.glob(anno_bp)
+    print(anno_ps)
 
     for annop in anno_ps:
 
         with open(annop, 'r') as f:
-            anno_data = bigjson.load(f)
+            anno_data = json.load(f)
 
-        # pdb.set_trace()
+        image_data = {}
+        for idx in tqdm(range(len(anno_data['images']))):
 
-            image_data = {}
-            for idx in range(len(anno_data['images'])):
+            info_slice = anno_data['images'][idx]
+            anno_slice = anno_data['annotations'][idx]
 
-                info_slice = anno_data['images'][idx]
-                anno_slice = anno_data['annotations'][idx]
+            assert anno_slice['image_id'] == info_slice['id']
 
-                assert anno_slice['image_id'] == info_slice['id']
+            imgp = info_slice['file_name']
 
-                imgp = info_slice['file_name']
+            del info_slice['file_name']
+            del anno_slice['id']
 
-                del info_slice['file_name']
-                del anno_slice['id']
-
-                image_data[imgp] = info_slice | anno_slice
+            image_data[imgp] = info_slice | anno_slice
 
         # save json
         annop_new = annop.replace('.json', '_reformat.json')
+        json.dump(image_data, open(annop_new, 'w'))
         break
 
         # pdb.set_trace()
