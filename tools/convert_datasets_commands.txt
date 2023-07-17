@@ -8,6 +8,13 @@ python tools/convert_datasets.py  \
     --output_path /mnt/d/behave/output \
     --modes train
 
+# cimi4d-converter
+python tools/convert_datasets.py \
+    --datasets cimi4d \
+    --root_path /mnt/d \
+    --output_path /mnt/d/cimi4d/output \
+    --modes train
+
 # egobody-converter
 python tools/convert_datasets.py \
     --datasets egobody \
