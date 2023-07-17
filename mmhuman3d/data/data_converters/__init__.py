@@ -2,6 +2,7 @@ from .agora import AgoraConverter
 from .amass import AmassConverter
 from .behave import BehaveConverter
 from .builder import build_data_converter
+from .cimi4d import Cimi4dConverter
 from .cliff import CliffConverter
 from .coco import CocoConverter
 from .coco_hybrik import CocoHybrIKConverter
@@ -97,4 +98,5 @@ __all__ = [
     'Interhand26MConverter',
     'HancoConverter',
     'Sloper4dConverter',
+    'Cimi4dConverter',
 ]
