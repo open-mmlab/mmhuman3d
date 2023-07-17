@@ -36,6 +36,7 @@ from .posetrack import PosetrackConverter
 from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .renbody import RenbodyConverter
+from .sgnify import SgnifyConverter
 from .shapy import ShapyConverter
 from .sloper4d import Sloper4dConverter
 from .sminchisescu import ImarDatasetsConverter
@@ -99,4 +100,5 @@ __all__ = [
     'HancoConverter',
     'Sloper4dConverter',
     'Cimi4dConverter',
+    'SgnifyConverter',
 ]

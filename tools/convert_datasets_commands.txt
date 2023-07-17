@@ -82,6 +82,13 @@ python tools/convert_datasets.py  \
     --output_path /mnt/d/sminchisescu-research-datasets/output
     --modes HumanSC3D
 
+# sgnify-converter
+python tools/convert_datasets.py \
+    --datasets sgnify \
+    --root_path /mnt/d \
+    --output_path /mnt/d/sgnify/output \
+    --modes train
+
 # shapy-converter
 python tools/convert_datasets.py \
     --datasets shapy \
