@@ -32,7 +32,7 @@ from .builder import DATA_CONVERTERS
 
 
 @DATA_CONVERTERS.register_module()
-class Cimi4dConverter(BaseModeConverter):
+class SgnifyConverter(BaseModeConverter):
 
     ACCEPTED_MODES = ['train']
 
@@ -62,7 +62,7 @@ class Cimi4dConverter(BaseModeConverter):
             'expression': (-1, 10)
         }
 
-        super(Cimi4dConverter, self).__init__(modes)
+        super(SgnifyConverter, self).__init__(modes)
 
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
