@@ -76,7 +76,7 @@ class HancoConverter(BaseModeConverter):
         avaliable_image_modes = ['rgb', 'rgb_color_auto', 'rgb_color_sample',
                                  'rgb_homo', 'rgb_merged']
 
-        image_mode = 'rgb'
+        image_mode = 'rgb_homo'
 
         # parse sequences
         seqs = glob.glob(os.path.join(dataset_path, image_mode, '*'))
@@ -86,11 +86,11 @@ class HancoConverter(BaseModeConverter):
 
         # adjust by split
         if mode == 'train':
-            seqs_info = [[idx, seq] for idx, seq in enumerate(seqs) 
+            seqs = [seq for idx, seq in enumerate(seqs) 
                     if np.sum(split_meta['is_train'][idx]) > 0]
 
         else:
-            seqs_info = [[idx, seq] for idx, seq in enumerate(seqs) 
+            seqs = [seq for idx, seq in enumerate(seqs) 
                     if np.sum(split_meta['is_train'][idx]) == 0]
     
         # use HumanData to store the data
@@ -113,17 +113,23 @@ class HancoConverter(BaseModeConverter):
         seed = '230711'
         size = 9999
 
-        for [seq_idx, seq] in tqdm(seqs_info, desc=f'Convert {mode}', 
-                                   total=len(seqs_info), leave=False, position=0):
+        for seq in tqdm(seqs, desc=f'Convert {mode}', 
+                                   total=len(seqs), leave=False, position=0):
             # camera views
+            seq_idx = int(os.path.basename(seq))
             camera_views = os.listdir(seq)
             valid_info = split_meta['has_fit'][seq_idx]
-
+            # for cam in camera_views:
             for cam in tqdm(camera_views, desc=f'Sequence ID {os.path.basename(seq)}, 8 views', 
                             total=len(camera_views), leave=False, position=1):
                 cid = int(cam.replace('cam', ''))
                 frames = os.listdir(os.path.join(seq, cam))
+                frames = [frame for i, frame in enumerate(frames) if split_meta['is_train'][seq_idx][i]]
                 frames = [frame for i, frame in enumerate(frames) if valid_info[i]]
+
+                # print(f'seq ID {seq_idx}',np.array(valid_info).shape, len(frames), 
+                #       np.sum(split_meta['is_train'][seq_idx]))
+                # break
 
                 anno_bp = os.path.join(seq, cam).replace(image_mode, 'shape')
                 calib_bp = seq.replace(image_mode, 'calib')
@@ -208,7 +214,7 @@ class HancoConverter(BaseModeConverter):
 
                     # pdb.set_trace()
 
-        size_i = min(size, len(seqs_info))
+        size_i = min(size, len(seqs))
         # pdb.set_trace()
 
         # meta
