@@ -20,7 +20,7 @@ python tools/convert_datasets.py \
     --datasets dynacam \
     --root_path /mnt/e \
     --output_path /mnt/e/dynacam/output \
-    --modes train
+    --modes panorama_train
 
 # egobody-converter
 python tools/convert_datasets.py \
