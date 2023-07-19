@@ -76,7 +76,7 @@ class HancoConverter(BaseModeConverter):
         avaliable_image_modes = ['rgb', 'rgb_color_auto', 'rgb_color_sample',
                                  'rgb_homo', 'rgb_merged']
 
-        image_mode = 'rgb_homo'
+        image_mode = 'rgb'
 
         # parse sequences
         seqs = glob.glob(os.path.join(dataset_path, image_mode, '*'))
@@ -118,13 +118,18 @@ class HancoConverter(BaseModeConverter):
             # camera views
             seq_idx = int(os.path.basename(seq))
             camera_views = os.listdir(seq)
+            
+            # pdb.set_trace()
             valid_info = split_meta['has_fit'][seq_idx]
             # for cam in camera_views:
             for cam in tqdm(camera_views, desc=f'Sequence ID {os.path.basename(seq)}, 8 views', 
                             total=len(camera_views), leave=False, position=1):
                 cid = int(cam.replace('cam', ''))
                 frames = os.listdir(os.path.join(seq, cam))
-                frames = [frame for i, frame in enumerate(frames) if split_meta['is_train'][seq_idx][i]]
+                if mode == 'train':
+                    frames = [frame for i, frame in enumerate(frames) if split_meta['is_train'][seq_idx][i]]
+                else:
+                    frames = [frame for i, frame in enumerate(frames) if not split_meta['is_train'][seq_idx][i]]
                 frames = [frame for i, frame in enumerate(frames) if valid_info[i]]
 
                 # print(f'seq ID {seq_idx}',np.array(valid_info).shape, len(frames), 
@@ -212,7 +217,6 @@ class HancoConverter(BaseModeConverter):
                     # append image path
                     image_path_.append(image_path)
 
-                    # pdb.set_trace()
 
         size_i = min(size, len(seqs))
         # pdb.set_trace()

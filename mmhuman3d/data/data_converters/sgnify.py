@@ -41,7 +41,7 @@ class SgnifyConverter(BaseModeConverter):
         self.device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
         self.misc_config = dict(
-            bbox_source='keypoints2d_smplx',
+            # bbox_source='keypoints2d_smplx',
             smplx_source='original',
             flat_hand_mean=False,
             camera_param_type='perspective',
@@ -56,8 +56,8 @@ class SgnifyConverter(BaseModeConverter):
             'body_pose': (-1, 21, 3),
             'left_hand_pose': (-1, 15, 3),
             'right_hand_pose': (-1, 15, 3),
-            'leye_pose': (-1, 3),
-            'reye_pose': (-1, 3),
+            # 'leye_pose': (-1, 3),
+            # 'reye_pose': (-1, 3),
             'jaw_pose': (-1, 3),
             'expression': (-1, 10)
         }
@@ -68,43 +68,98 @@ class SgnifyConverter(BaseModeConverter):
     def convert_by_mode(self, dataset_path: str, out_path: str,
                     mode: str) -> dict:
         
-        # get target sequences
-        seqs = glob.glob(os.path.join(dataset_path, 'XMU*', '*'))
+        # get target seqs
+        seqs = glob.glob(os.path.join(dataset_path, 'frames', '*'))
 
         # use HumanData to store all data
         human_data = HumanData()
 
+        # random
+        seed, size = '230717', '99'
+        size_i = min(int(size), len(seqs))
+        random.seed(int(seed))
+        # random.shuffle(npzs)
+        seqs = seqs[:int(size_i)]
+
+        # initialize output for human_data
+        smplx_ = {}
+        for keys in self.smplx_shape.keys():
+            smplx_[keys] = []
+        keypoints2d_, keypoints3d_ = [], []
+        bboxs_ = {}
+        for bbox_name in [
+                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                'rhand_bbox_xywh'
+        ]:
+            bboxs_[bbox_name] = []
+        meta_ = {}
+        for meta_key in [
+                'gender', 'character', 'view', 'principal_point',
+                'focal_length'
+        ]:
+            meta_[meta_key] = []
+        image_path_ = []
+
         # parse each sequence
-        for seq in seqs:
+        for sid, seq in enumerate(seqs):
             
-            # load params
-            pickle_p = glob.glob(os.path.join(seq, '*.pkl'))[0]
-            params = dict(np.load(pickle_p, allow_pickle=True))
+            img_ps = glob.glob(os.path.join(seq, '*.png'))
 
-            # get info
-            transl = np.array(params['gt_trans'], dtype=np.float32)
-            betas = np.array(params['beta'], dtype=np.float32)
-            betas = betas.reshape(-1, 10)
+            for imgp in tqdm(img_ps, desc=f'Processing {sid + 1} / total {len(seqs)}',
+                             position=0, leave=False):
 
-            pose = np.array(params['gt_pose_3D'], dtype=np.float32).reshape(-1, 24, 3)
-            body_pose = pose[:, 1:, :]
-            global_orient = pose[:, 0, :].reshape(-1, 3)
+                # image path
+                image_path = imgp.replace(f'{dataset_path}{os.path.sep}', '')
 
-            # repeat betas
-            betas = np.repeat(betas, transl.shape[0], axis=0) 
-            
-            # image paths
-            image_paths = sorted(glob.glob(os.path.join(seq, 'img*', '*.jpg')))
+                # annotation
+                img_bn = os.path.basename(imgp)
+                fid = int(img_bn[4:7])
+                annp = os.path.join(seq, f'{"{:05d}".format(2*fid)}.npz') \
+                    .replace('frames', 'fitted_params')
+                anno = dict(np.load(annp, allow_pickle=True))
+                # pdb.set_trace()
 
-            # translation need for official vis tools
+                # image path
+                image_path_.append(image_path)
 
+                # smplx
+                for key in self.smplx_shape.keys():
+                    smplx_[key].append(anno[key])
 
+        # meta
+        # human_data['meta'] = meta_
 
+        # image path
+        human_data['image_path'] = image_path_
 
-            pdb.set_trace() 
+        # save bbox
+        # for bbox_name in bboxs_.keys():
+        #     bbox_ = np.array(bboxs_[bbox_name]).reshape(-1, 5)
+        #     human_data[bbox_name] = bbox_
 
+        # save smplx
+        # human_data.skip_keys_check = ['smplx']
+        for key in smplx_.keys():
+            smplx_[key] = np.concatenate(
+                smplx_[key], axis=0).reshape(self.smplx_shape[key])
+        human_data['smplx'] = smplx_
 
+        # keypoints2d_smplx
+        # keypoints2d_smplx = np.concatenate(
+        #     keypoints2d_smplx_, axis=0).reshape(-1, 42, 3)
+        # keypoints2d_smplx, keypoints2d_smplx_mask = \
+        #         convert_kps(keypoints2d_smplx, src='mano_hands', dst='human_data')
+        # human_data['keypoints2d_smplx'] = keypoints2d_smplx
+        # human_data['keypoints2d_smplx_mask'] = keypoints2d_smplx_mask
 
+        # misc
+        human_data['misc'] = self.misc_config
+        human_data['config'] = f'sgnify_{mode}'
 
-
-        pass
+        # save
+        human_data.compress_keypoints_by_mask()
+        os.makedirs(out_path, exist_ok=True)
+        size_i = min(len(seqs), int(size))
+        out_file = os.path.join(out_path,
+            f'sgnify_{mode}_{seed}_{"{:02d}".format(size_i)}.npz')
+        human_data.dump(out_file)
