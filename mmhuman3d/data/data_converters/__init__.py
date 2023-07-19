@@ -8,6 +8,7 @@ from .coco import CocoConverter
 from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
 from .crowdpose import CrowdposeConverter
+from .dynacam import DynacamConverter
 from .eft import EftConverter
 from .egobody import EgobodyConverter
 from .ehf import EHFConverter
@@ -101,4 +102,5 @@ __all__ = [
     'Sloper4dConverter',
     'Cimi4dConverter',
     'SgnifyConverter',
+    'DynacamConverter',
 ]

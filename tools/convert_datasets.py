@@ -66,6 +66,13 @@ DATASET_CONFIGS = dict(
         modes=[
             'validation_3840', 'train_3840', 'train_1280', 'validation_1280'
         ]),
+    dynacam=dict(
+        type='DynacamConverter',  # real
+        prefix='dynacam',
+        modes=[
+            'panorama_test', 'panorama_train', 'panorama_val',
+            'translation_test', 'translation_train', 'translation_val'
+        ]),
     egobody=dict(
         type='EgobodyConverter',  # real, egocentric: single
         prefix='egobody',
