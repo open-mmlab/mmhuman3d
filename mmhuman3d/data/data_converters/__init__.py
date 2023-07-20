@@ -1,6 +1,7 @@
 from .agora import AgoraConverter
 from .amass import AmassConverter
 from .behave import BehaveConverter
+from .blurhand import BlurhandConverter
 from .builder import build_data_converter
 from .cimi4d import Cimi4dConverter
 from .cliff import CliffConverter
@@ -103,4 +104,5 @@ __all__ = [
     'Cimi4dConverter',
     'SgnifyConverter',
     'DynacamConverter',
+    'BlurhandConverter',
 ]

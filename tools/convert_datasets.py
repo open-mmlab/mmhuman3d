@@ -127,6 +127,10 @@ DATASET_CONFIGS = dict(
         prefix='ssp-3d'),
 
     # -------------- hand and face dataset (no complete smplx) --------------
+    blurhand=dict(
+        type='BlurhandConverter',  # real, hand only
+        prefix='blurhand',
+        modes=['train', 'test']),
     freihand=dict(  # in progress
         type='FreihandConverter',  # real, hand only
         prefix='freihand',
