@@ -76,7 +76,7 @@ class HancoConverter(BaseModeConverter):
         avaliable_image_modes = ['rgb', 'rgb_color_auto', 'rgb_color_sample',
                                  'rgb_homo', 'rgb_merged']
 
-        image_mode = 'rgb'
+        image_mode = 'rgb_merged'
 
         # parse sequences
         seqs = glob.glob(os.path.join(dataset_path, image_mode, '*'))

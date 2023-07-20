@@ -23,19 +23,6 @@ from .builder import DATA_CONVERTERS
 
 from scipy.spatial.transform import Rotation
 
-smplx_shape = {
-    'betas': (-1, 10),
-    'transl': (-1, 3),
-    'global_orient': (-1, 3),
-    'body_pose': (-1, 21, 3),
-    'left_hand_pose': (-1, 15, 3),
-    'right_hand_pose': (-1, 15, 3),
-    'leye_pose': (-1, 3),
-    'reye_pose': (-1, 3),
-    'jaw_pose': (-1, 3),
-    'expression': (-1, 10)
-}
-
 @DATA_CONVERTERS.register_module()
 class Sloper4dConverter(BaseModeConverter):
 
@@ -47,7 +34,7 @@ class Sloper4dConverter(BaseModeConverter):
             'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         self.misc_config = dict(
-            bbox_source='keypoints2d_smpl',
+            bbox_source='by_dataset',
             smpl_source='original',
             cam_param_type='prespective',
             kps3d_root_aligned=False,
@@ -320,16 +307,16 @@ class Sloper4dConverter(BaseModeConverter):
         human_data['smpl'] = smpl_
 
         # keypoints2d_smplx
-        keypoints2d_smplx = np.concatenate(
+        keypoints2d_smpl = np.concatenate(
             keypoints2d_smpl_, axis=0).reshape(-1, 45, 3)
-        keypoints2d_smplx, keypoints2d_smplx_mask = \
-                convert_kps(keypoints2d_smplx, src='smpl_45', dst='human_data')
-        human_data['keypoints2d_smpl'] = keypoints2d_smplx
-        human_data['keypoints2d_smpl_mask'] = keypoints2d_smplx_mask
+        keypoints2d_smpl, keypoints2d_smpl_mask = \
+                convert_kps(keypoints2d_smpl, src='smpl_45', dst='human_data')
+        human_data['keypoints2d_smpl'] = keypoints2d_smpl
+        human_data['keypoints2d_smpl_mask'] = keypoints2d_smpl_mask
 
         # misc
         human_data['misc'] = self.misc_config
-        human_data['config'] = f'sloper4d_{mode}_'
+        human_data['config'] = f'sloper4d_{mode}'
 
         # save
         human_data.compress_keypoints_by_mask()
