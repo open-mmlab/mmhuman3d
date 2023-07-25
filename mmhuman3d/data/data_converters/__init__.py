@@ -23,6 +23,7 @@ from .h36m import H36mConverter
 from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_smplx import H36mSMPLXConverter
 from .hanco import HancoConverter
+from .hsc4d import Hsc4dConverter
 from .humanart import HumanartConverter
 from .humman import HuMManConverter
 from .insta_vibe import InstaVibeConverter
@@ -105,4 +106,5 @@ __all__ = [
     'SgnifyConverter',
     'DynacamConverter',
     'BlurhandConverter',
+    'Hsc4dConverter',
 ]

@@ -102,6 +102,10 @@ DATASET_CONFIGS = dict(
         type='Cimi4dConverter',  # real
         prefix='cimi4d',
         modes=['train']),
+    hsc4d=dict(
+        type='Hsc4dConverter',  # real, in progress
+        prefix='hsc4d',
+        modes=['train']),
     moyo=dict(
         type='MoyoConverter',  # real
         prefix='moyo',
@@ -128,7 +132,7 @@ DATASET_CONFIGS = dict(
 
     # -------------- hand and face dataset (no complete smplx) --------------
     blurhand=dict(
-        type='BlurhandConverter',  # real, hand only
+        type='BlurhandConverter',  # real, hand only, synthetic from real
         prefix='blurhand',
         modes=['train', 'test']),
     freihand=dict(  # in progress
