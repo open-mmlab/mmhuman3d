@@ -61,6 +61,13 @@ python tools/convert_datasets.py \
     --output_path /mnt/d/hanco/output \
     --modes train
 
+# hsc4d-converter
+python tools/convert_datasets.py \
+    --datasets hsc4d \
+    --root_path /mnt/e \
+    --output_path /mnt/e/hsc4d/output \
+    --modes train
+
 # humanart-converter
 python tools/convert_datasets.py \
     --datasets humanart \
@@ -73,6 +80,13 @@ python tools/convert_datasets.py \
     --datasets interhand26m \
     --root_path /mnt/d \
     --output_path /mnt/d/interhand26m/output \
+    --modes train
+
+# motionx-converter
+python tools/convert_datasets.py \
+    --datasets motionx \
+    --root_path /mnt/d \
+    --output_path /mnt/d/motionx/output \
     --modes train
 
 # moyo-converter

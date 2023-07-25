@@ -30,6 +30,7 @@ from .insta_vibe import InstaVibeConverter
 from .interhand26m import Interhand26MConverter
 from .lsp import LspConverter
 from .lsp_extended import LspExtendedConverter
+from .motionx import MotionXConverter
 from .moyo import MoyoConverter
 from .mpi_inf_3dhp import MpiInf3dhpConverter
 from .mpi_inf_3dhp_hybrik import MpiInf3dhpHybrIKConverter
@@ -107,4 +108,5 @@ __all__ = [
     'DynacamConverter',
     'BlurhandConverter',
     'Hsc4dConverter',
+    'MotionXConverter',
 ]
