@@ -13,7 +13,12 @@ from tqdm import tqdm
 def rewrite_anno_json(args):
 
     anno_bp = args.dataset_path
-    anno_bp = os.path.join(anno_bp, 'anno*5*', '*', '*test*data.json')
+    # for interhand2.6m
+    # anno_bp = os.path.join(anno_bp, 'anno*5*', '*', '*test*data.json')
+    # for blurhand
+    anno_bp = os.path.join(anno_bp, 'annotations', '*', '*data.json')
+
+    # pdb.set_trace()
 
     anno_ps = glob.glob(anno_bp)
     print(anno_ps)
@@ -41,7 +46,7 @@ def rewrite_anno_json(args):
         # save json
         annop_new = annop.replace('.json', '_reformat.json')
         json.dump(image_data, open(annop_new, 'w'))
-        break
+        # break
 
         # pdb.set_trace()
 

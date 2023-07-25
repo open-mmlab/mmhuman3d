@@ -82,30 +82,6 @@ class BlurhandConverter(BaseModeConverter):
 
     #     return img_patch, trans, inv_trans
 
-    def _get_aug_config(self):
-        trans_factor = 0.15
-        scale_factor = 0.25
-        rot_factor = 45
-        color_factor = 0.2
-
-        trans = [
-            np.random.uniform(-trans_factor, trans_factor),
-            np.random.uniform(-trans_factor, trans_factor)
-        ]
-        scale = np.clip(np.random.randn(), -1.0, 1.0) * scale_factor + 1.0
-        rot = np.clip(np.random.randn(), -2.0,
-                      2.0) * rot_factor if random.random() <= 0.6 else 0
-        do_flip = random.random() <= 0.5
-        c_up = 1.0 + color_factor
-        c_low = 1.0 - color_factor
-        color_scale = np.array([
-            random.uniform(c_low, c_up),
-            random.uniform(c_low, c_up),
-            random.uniform(c_low, c_up)
-        ])
-
-        return trans, scale, rot, do_flip, color_scale
-
     def _get_bbox_from_joints(self, joint_img, joint_valid):
 
         original_image_shape = self.misc_config['image_shape']
@@ -149,21 +125,18 @@ class BlurhandConverter(BaseModeConverter):
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:
-        print('Converting Interhand26M dataset...')
-
-        fps = 5
-        fps_mode = f'{fps}fps'
+        print('Converting Blurhand dataset...')
 
         # annotation dir
-        anno_dir = os.path.join(dataset_path, f'annotations{fps_mode}', mode)
+        anno_dir = os.path.join(dataset_path, 'annotations', mode)
         anno_mano_path = os.path.join(
-            anno_dir, f'InterHand2.6M_{mode}_MANO_NeuralAnnot.json')
+            anno_dir, f'BlurHand_{mode}_MANO_NeuralAnnot.json')
         anno_j3d_path = os.path.join(anno_dir,
-                                     f'InterHand2.6M_{mode}_joint_3d.json')
+                                     f'BlurHand_{mode}_joint_3d.json')
         anno_cam_path = os.path.join(anno_dir,
-                                     f'InterHand2.6M_{mode}_camera.json')
+                                     f'BlurHand_{mode}_camera.json')
         anno_data_path = os.path.join(
-            anno_dir, f'InterHand2.6M_{mode}_data_reformat.json')
+            anno_dir, f'BlurHand_{mode}_data_reformat.json')
 
         # load annotations
         with open(anno_mano_path, 'r') as f:
@@ -177,13 +150,13 @@ class BlurhandConverter(BaseModeConverter):
 
         # parse sequences
         seqs = glob.glob(
-            os.path.join(dataset_path, f'images{fps_mode}', mode, 'Capture*',
+            os.path.join(dataset_path, f'images', mode, 'Capture*',
                          '*', 'cam*'))
 
         # use HumanData to store the data
         human_data = HumanData()
 
-        seed = '230705'
+        seed = '230721'
         size = 999999
 
         # initialize
@@ -201,7 +174,7 @@ class BlurhandConverter(BaseModeConverter):
         mano_ = []
 
         # pdb.set_trace()
-
+        # seqs = seqs[:100]
         # sort by image path
         for seq in tqdm(
                 seqs,
@@ -214,7 +187,7 @@ class BlurhandConverter(BaseModeConverter):
             camera_id = seq.split(os.path.sep)[-1][3:]
             capture_id = seq.split(os.path.sep)[-3][7:]
 
-            img_path_list = glob.glob(os.path.join(seq, '*.jpg'))
+            img_path_list = glob.glob(os.path.join(seq, '*.png'))
 
             # assume image shape is same in a sequence
             # img = cv2.imread(img_path_list[0])
@@ -235,7 +208,7 @@ class BlurhandConverter(BaseModeConverter):
                 image_path = image_path.replace(dataset_path + os.path.sep, '')
 
                 anno_info = anno_data[image_path.replace(
-                    f'images{fps_mode}/{mode}/', '')]
+                    f'images{os.path.sep}{mode}{os.path.sep}', '')]
 
                 hand_param = {}
                 for hand_type in ['left', 'right']:
@@ -327,7 +300,7 @@ class BlurhandConverter(BaseModeConverter):
                 # append mano params
                 mano_.append(hand_param)
 
-                # test overlay j2d
+                # # test overlay j2d
                 # img = cv2.imread(f'{dataset_path}/{image_path}')
                 # for i in range(len(j2d_orig)):
                 #     cv2.circle(img, (int(j2d_orig[i,0]), int(j2d_orig[i,1])), 3, (0,0,255), -1)
@@ -369,14 +342,12 @@ class BlurhandConverter(BaseModeConverter):
 
         # misc
         human_data['misc'] = self.misc_config
-        human_data['config'] = f'interhand26m_{mode}_{fps_mode}'
+        human_data['config'] = f'blurhand_{mode}'
 
         # save
         human_data.compress_keypoints_by_mask()
         os.makedirs(out_path, exist_ok=True)
         size_i = min(len(seqs), int(size))
-        out_file = os.path.join(
-            out_path,
-            f'interhand26m_{mode}_{fps_mode}_{seed}_{"{:06d}".format(size_i)}.npz'
-        )
+        out_file = os.path.join(out_path,
+            f'blurhand_{mode}_{seed}_{"{:06d}".format(size_i)}.npz')
         human_data.dump(out_file)
