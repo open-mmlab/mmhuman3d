@@ -9,7 +9,6 @@ matplotlib
 numpy
 opencv-python
 pandas
-pickle5
 plyfile
 rtree
 scikit-image

@@ -38,14 +38,7 @@ class Hsc4dConverter(BaseModeConverter):
             cam_param_type='prespective',
             kps3d_root_aligned=False,
         )
-        INTRINSICS = [599.628, 599.466, 971.613, 540.258]
-        DIST       = [0.003, -0.003, -0.001, 0.004, 0.0]
-        LIDAR2CAM  = [[[-0.0355545576, -0.999323133, -0.0094419378, -0.00330376451], 
-                    [0.00117895777, 0.00940596282, -0.999955068, -0.0498469479], 
-                    [0.999367041, -0.0355640917, 0.00084373493, -0.0994979365], 
-                    [0.0, 0.0, 0.0, 1.0]]]
-        self.default_camera = {'fps':20, 'width': 1920, 'height':1080, 
-                'intrinsics':INTRINSICS, 'lidar2cam':LIDAR2CAM, 'dist':DIST}
+
         self.smpl_shape = {
             'body_pose': (-1, 69),
             'betas': (-1, 10),
