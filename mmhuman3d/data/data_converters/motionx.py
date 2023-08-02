@@ -18,8 +18,6 @@ from mmhuman3d.core.cameras import build_cameras
 # from mmhuman3d.core.conventions.keypoints_mapping import smplx
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
-    get_keypoint_idx,
-    get_keypoint_idxs_by_part,
 )
 from mmhuman3d.data.data_structures.human_data import HumanData
 # import mmcv
