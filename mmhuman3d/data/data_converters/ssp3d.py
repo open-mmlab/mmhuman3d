@@ -221,8 +221,10 @@ class Ssp3dConverter(BaseConverter):
             gender = anno['genders'][idx]
             if gender == 'f':
                 output = female_model(**smpl_params)
+                gender = 'female'
             elif gender == 'm':
                 output = male_model(**smpl_params)
+                gender = 'male'
             keypoints_3d = output['joints']
             keypoints_2d_xyd = camera.transform_points_screen(keypoints_3d)
             vertices = output['vertices']
@@ -315,6 +317,7 @@ class Ssp3dConverter(BaseConverter):
 
         # meta
         human_data['meta'] = meta_
+        human_data['misc'] = self.misc
         print('MetaData finished at',
               time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
