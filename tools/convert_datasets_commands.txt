@@ -133,9 +133,9 @@ python tools/convert_datasets.py \
 
 # ssp3d-converter
 python tools/convert_datasets.py \
-    --datasets ssp-3d \
+    --datasets ssp3d \
     --root_path /mnt/e \
-    --output_path /mnt/e/ssp-3d/output
+    --output_path /mnt/e/ssp3d/output
 
 # synbody-converter
 python tools/convert_datasets.py \
@@ -173,15 +173,16 @@ python tools/convert_datasets.py \
 # synbody
 srun -p Zoetrope python tools/convert_datasets.py \
     --datasets synbody \
-    --root_path /mnt/cache/weichen1/share_data_lustre/synbody \
-    --output_path /mnt/lustre/share_data/weichen1/converted_humandata
+    --root_path /mnt/lustre/share_data/weichen1/datasets \
+    --output_path /mnt/lustre/share_data/weichen1/converted_humandata \
+    --modes v1_train
 
 python tools/preprocess/synbody_preprocess.py \
-    --seq /lustre/share_data/meihaiyi/shared_data/SynBody/20230526-renew_0220/BrooklynAlley/LS_0220_153913_087 \
-    --output_path /mnt/lustre/share_data/weichen1/synbody/preprocessed_0220_renew \
-    --prefix SynBody
+    --seq /mnt/lustre/share_data/weichen1/datasets/synbody/Synbody_v1_1/20230727/BrooklynAlley/LS_0727_091456_044 \
+    --output_path /mnt/lustre/share_data/weichen1/datasets/synbody/preprocess \
+    --prefix Synbody_v1_1
 
 python tools/preprocess/synbody_preprocess_mp.py \
-    --root_path /mnt/lustre/share_data/meihaiyi/shared_data \
-    --output_path /mnt/lustre/share_data/weichen1/synbody/preprocessed \
-    --prefix SynBody --num_proc 5
+    --root_path /mnt/lustre/share_data/weichen1/datasets/synbody \
+    --output_path /mnt/lustre/share_data/weichen1/datasets/synbody/preprocess \
+    --prefix Synbody_v0 --num_proc 1

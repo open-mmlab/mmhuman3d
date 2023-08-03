@@ -132,7 +132,7 @@ DATASET_CONFIGS = dict(
         modes=['FIT3D', 'CHI3D', 'HumanSC3D']),
     ssp3d=dict(
         type='Ssp3dConverter',  # real
-        prefix='ssp-3d'),
+        prefix='ssp3d'),
 
     # -------------- hand and face dataset (no complete smplx) --------------
     blurhand=dict(
