@@ -94,9 +94,11 @@ class Cimi4dConverter(BaseModeConverter):
             betas = np.repeat(betas, transl.shape[0], axis=0) 
             
             # image paths
-            image_paths = sorted(glob.glob(os.path.join(seq, 'img*', '*.jpg')))
+            image_paths = sorted(glob.glob(os.path.join(seq, '**', '*.jpg'), recursive=True))
 
             # translation need for official vis tools
+
+        
 
 
 

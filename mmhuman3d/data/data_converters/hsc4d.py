@@ -35,7 +35,7 @@ class Hsc4dConverter(BaseModeConverter):
         self.misc_config = dict(
             bbox_source='by_dataset',
             smpl_source='original',
-            cam_param_type='prespective',
+            cam_param_type='perspective',
             kps3d_root_aligned=False,
         )
 

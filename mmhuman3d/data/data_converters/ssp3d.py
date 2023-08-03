@@ -40,9 +40,10 @@ class Ssp3dConverter(BaseConverter):
             bbox_body_scale=1.2,
             bbox_facehand_scale=1.0,
             bbox_source='keypoints2d_smpl',
+            cam_param_type='prespective',
             cam_param_source='estimated',
             smpl_source='original',
-            focal_length=5000,
+            focal_length=(5000, 5000),
             principal_point=(256, 256),
             image_size=512,
         )
@@ -54,6 +55,7 @@ class Ssp3dConverter(BaseConverter):
         }
 
         super(Ssp3dConverter, self).__init__()
+        
 
     def _keypoints_to_scaled_bbox_bfh(self,
                                       keypoints,
@@ -136,7 +138,7 @@ class Ssp3dConverter(BaseConverter):
         # initialize
         image_path_, keypoints2d_, bbox_xywh_ = [], [], []
 
-        seed, size = '230525', '999'
+        seed, size = '230803', '999'
         random.seed(int(seed))
 
         anno = dict(np.load(os.path.join(dataset_path, 'labels.npz')))
