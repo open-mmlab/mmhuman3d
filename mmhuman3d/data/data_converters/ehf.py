@@ -12,7 +12,7 @@ from .base_converter import BaseModeConverter
 
 
 @DATA_CONVERTERS.register_module()
-class EHFConverter(BaseModeConverter):
+class EhfConverter(BaseModeConverter):
     """EHF dataset 'Expressive Hands and Face' More details can be found on the
     website:
 

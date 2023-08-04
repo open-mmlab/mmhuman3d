@@ -12,7 +12,7 @@ from .crowdpose import CrowdposeConverter
 from .dynacam import DynacamConverter
 from .eft import EftConverter
 from .egobody import EgobodyConverter
-from .ehf import EHFConverter
+from .ehf import EhfConverter
 from .expose_curated_fits import ExposeCuratedFitsConverter
 from .expose_spin_smplx import ExposeSPINSMPLXConverter
 from .ffhq_flame import FFHQFlameConverter
@@ -88,7 +88,7 @@ __all__ = [
     'ExposeSPINSMPLXConverter',
     'FreihandConverter',
     'StirlingConverter',
-    'EHFConverter',
+    'EhfConverter',
     'CliffConverter',
     'SynbodyConverter',
     'RenbodyConverter',
