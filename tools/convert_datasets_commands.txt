@@ -40,6 +40,13 @@ python release_vis_kinect_scene.py
 python release_renderer_kinect.py
 python release_renderer_fpv_gaze.py --release_data_root D:\egobody  --save_root D:\egobody\output --recording_name recording_20220318_S31_S32_01 --scene_name seminar_d78_0318 --model_folder C:\Users\12595\Desktop\MTA\python\body_models
 
+# ehf-converter
+python tools/convert_datasets.py \
+    --datasets ehf \
+    --root_path /mnt/e \
+    --output_path /mnt/e/ehf/output \
+    --modes val
+
 # freihand-converter
 python tools/convert_datasets.py \
     --datasets freihand \
