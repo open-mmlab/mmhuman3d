@@ -188,7 +188,7 @@ def main(args):
     basedir = osp.basename(load_dir)
 
     # prepare mesh type
-    SUPPORTED_MESH_TYPES = ['obj', 'npy']
+    SUPPORTED_MESH_TYPES = ['obj', 'npy', 'ply']
     assert mesh_type in SUPPORTED_MESH_TYPES, \
         f'mesh type {mesh_type} not supported'
 
@@ -234,12 +234,13 @@ def main(args):
             target_verts = trimesh.load(fp).vertices.reshape(1, 10475, 3)
         if mesh_type == 'npy':
             target_verts = np.load(fp).reshape(1, 10475, 3)
+        if mesh_type == 'ply':
+            target_verts = trimesh.load(fp).vertices.reshape(1, 10475, 3)
 
         # fit parameters
         params = fit_params(target_verts, body_model=smplx_model, args=args)
         stem, _ = osp.splitext(osp.basename(fp))
-        save_path = osp.join(fp).replace('.obj', '.npz').replace(
-            basedir, 'fitted_params')
+        save_path = osp.join(load_dir, 'fitted_params', osp.basename(fp)).replace(f'.{args.mesh_type}', '.npz')
         os.makedirs(osp.dirname(save_path), exist_ok=True)
 
         # pdb.set_trace()

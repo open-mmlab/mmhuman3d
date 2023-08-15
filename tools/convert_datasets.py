@@ -11,7 +11,7 @@ DATASET_CONFIGS = dict(
     crowdpose=dict(
         type='CrowdposeConverter', modes=['train', 'val', 'test', 'trainval']),
     pw3d=dict(type='Pw3dConverter', modes=['train', 'test']),
-    mpii=dict(type='MpiiConverter'),
+
     h36m_p1=dict(
         type='H36mConverter',
         modes=['train', 'valid'],
@@ -110,6 +110,10 @@ DATASET_CONFIGS = dict(
         type='Hsc4dConverter',  # real, in progress
         prefix='hsc4d',
         modes=['train']),
+    h36m=dict(
+        type='H36mConverter',
+        modes=['train', 'val'],
+        prefix='h36m'),
     motionx=dict(
         type='MotionXConverter',  # real, in progress
         prefix='motionx',
@@ -118,6 +122,10 @@ DATASET_CONFIGS = dict(
         type='MoyoConverter',  # real
         prefix='moyo',
         modes=['train', 'val']),
+    mpii=dict(
+        type='MpiiConverter', # real multi-human?
+        prefix='mpii',
+        modes=['train', 'test'],),
     renbody=dict(
         type='RenbodyConverter',  # real
         prefix='renbody',

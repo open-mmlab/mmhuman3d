@@ -4,22 +4,22 @@
 # behave-converter
 python tools/convert_datasets.py  \
     --datasets behave  \
-    --root_path /mnt/d \
-    --output_path /mnt/d/behave/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/behave/output \
     --modes train
 
 # blurhand-converter
 python tools/convert_datasets.py \
     --datasets blurhand \
-    --root_path /mnt/d \
-    --output_path /mnt/d/blurhand/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/blurhand/output \
     --modes train
 
 # cimi4d-converter
 python tools/convert_datasets.py \
     --datasets cimi4d \
-    --root_path /mnt/d \
-    --output_path /mnt/d/cimi4d/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/cimi4d/output \
     --modes train
 
 # dynacam-converter
@@ -32,8 +32,8 @@ python tools/convert_datasets.py \
 # egobody-converter
 python tools/convert_datasets.py \
     --datasets egobody \
-    --root_path /mnt/d \
-    --output_path /mnt/d/egobody/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/egobody/output \
     --modes egocentric_train
 
 python release_vis_kinect_scene.py
@@ -50,8 +50,8 @@ python tools/convert_datasets.py \
 # freihand-converter
 python tools/convert_datasets.py \
     --datasets freihand \
-    --root_path /mnt/d \
-    --output_path /mnt/d/freihand/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/freihand/output \
     --modes train
 
 # gta-converter
@@ -64,8 +64,8 @@ python tools/convert_datasets.py \
 # hanco-converter
 python tools/convert_datasets.py \
     --datasets hanco \
-    --root_path /mnt/d \
-    --output_path /mnt/d/hanco/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/hanco/output \
     --modes train
 
 # hsc4d-converter
@@ -75,53 +75,67 @@ python tools/convert_datasets.py \
     --output_path /mnt/e/hsc4d/output \
     --modes train
 
+# human36m-neural-converter
+python tools/convert_datasets.py \
+    --datasets h36m\
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/h36m/output \
+    --modes train
+
 # humanart-converter
 python tools/convert_datasets.py \
     --datasets humanart \
-    --root_path /mnt/d \
-    --output_path /mnt/d/humanart/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/humanart/output \
     --modes cosplay
 
 # interhand-converter
 python tools/convert_datasets.py \
     --datasets interhand26m \
-    --root_path /mnt/d \
-    --output_path /mnt/d/interhand26m/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/interhand26m/output \
     --modes train
 
 # motionx-converter
 python tools/convert_datasets.py \
     --datasets motionx \
-    --root_path /mnt/d \
-    --output_path /mnt/d/motionx/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/motionx/output \
     --modes train
 
 # moyo-converter
 python tools/convert_datasets.py \
     --datasets moyo \
-    --root_path /mnt/d \
-    --output_path /mnt/d/moyo/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/moyo/output \
     --modes train
+
+# mpii-converter
+python tools/convert_datasets.py \
+    --datasets mpii \
+    --root_path /mnt/e \
+    --output_path /mnt/e/mpii/output \
+    --modes test
 
 # renbody-converter
 python tools/convert_datasets.py \
     --datasets renbody \
-    --root_path /mnt/d \
-    --output_path /mnt/d/renbody/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/renbody/output \
     --modes train
 
 # rmar-converter
 python tools/convert_datasets.py  \
     --datasets sminchisescu \
-    --root_path /mnt/d \
-    --output_path /mnt/d/sminchisescu-research-datasets/output
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/sminchisescu-research-datasets/output
     --modes HumanSC3D
 
 # sgnify-converter
 python tools/convert_datasets.py \
     --datasets sgnify \
-    --root_path /mnt/d \
-    --output_path /mnt/d/sgnify/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/sgnify/output \
     --modes train
 
 # shapy-converter
@@ -134,8 +148,8 @@ python tools/convert_datasets.py \
 # sloper4d-converter
 python tools/convert_datasets.py \
     --datasets sloper4d \
-    --root_path /mnt/d \
-    --output_path /mnt/d/sloper4d/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/sloper4d/output \
     --modes train
 
 # ssp3d-converter
@@ -153,8 +167,8 @@ python tools/convert_datasets.py \
 # ubody-converter
 python tools/convert_datasets.py \
     --datasets ubody \
-    --root_path /mnt/d \
-    --output_path /mnt/d/ubody/output \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/ubody/output \
     --modes inter intra
 
 
@@ -181,7 +195,7 @@ python tools/convert_datasets.py \
 srun -p Zoetrope python tools/convert_datasets.py \
     --datasets synbody \
     --root_path /mnt/lustre/share_data/weichen1/datasets \
-    --output_path /mnt/lustre/share_data/weichen1/converted_humandata \
+    --output_path /mnt/lustre/share_data/weichen1/converted_humandata_new \
     --modes v1_train
 
 python tools/preprocess/synbody_preprocess.py \
