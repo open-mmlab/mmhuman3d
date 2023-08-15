@@ -11,7 +11,6 @@ DATASET_CONFIGS = dict(
     crowdpose=dict(
         type='CrowdposeConverter', modes=['train', 'val', 'test', 'trainval']),
     pw3d=dict(type='Pw3dConverter', modes=['train', 'test']),
-
     h36m_p1=dict(
         type='H36mConverter',
         modes=['train', 'valid'],
@@ -87,7 +86,10 @@ DATASET_CONFIGS = dict(
     synbody=dict(
         type='SynbodyConverter',  # synthetic
         prefix='synbody',
-        modes=['train']),
+        modes=[
+            'v0_train', 'v0_ehf', 'v0_amass', 'v0_agora', 'v0_renew',
+            'v1_train'
+        ]),
     ubody=dict(
         type='UbodyConverter',  # real, has some single
         prefix='ubody',
@@ -110,10 +112,7 @@ DATASET_CONFIGS = dict(
         type='Hsc4dConverter',  # real, in progress
         prefix='hsc4d',
         modes=['train']),
-    h36m=dict(
-        type='H36mConverter',
-        modes=['train', 'val'],
-        prefix='h36m'),
+    h36m=dict(type='H36mConverter', modes=['train', 'val'], prefix='h36m'),
     motionx=dict(
         type='MotionXConverter',  # real, in progress
         prefix='motionx',
@@ -123,9 +122,9 @@ DATASET_CONFIGS = dict(
         prefix='moyo',
         modes=['train', 'val']),
     mpii=dict(
-        type='MpiiConverter', # real multi-human?
+        type='MpiiConverter',  # real multi-human?
         prefix='mpii',
-        modes=['train', 'test'],),
+        modes=['train', 'test']),
     renbody=dict(
         type='RenbodyConverter',  # real
         prefix='renbody',
