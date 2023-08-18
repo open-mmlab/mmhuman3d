@@ -41,7 +41,7 @@ class H36mNeuralConverter(BaseModeConverter):
         folder. Default: False.
         mosh_dir (str, optional): Path to directory containing mosh files.
     """
-    ACCEPTED_MODES = ['valid', 'train']
+    ACCEPTED_MODES = ['val', 'train']
 
     def __init__(self, modes: List = []) -> None:
 
@@ -108,14 +108,14 @@ class H36mNeuralConverter(BaseModeConverter):
         if mode == 'train':
             user_list = [1, 5, 6, 7, 8]
         elif mode == 'val':
-            user_list = [9, 11]
+            user_list = [11]
         subject_ids = list(set(subject_ids) & set(user_list))
 
         # calculate size
         seqs_len = 0
         for key in subject_seq_dict:
             seqs_len += len(subject_seq_dict[key])
-        size_i = min(size_i, seqs_len)
+
 
         # parse seqs
         for s, sid in enumerate(subject_ids):
@@ -125,9 +125,9 @@ class H36mNeuralConverter(BaseModeConverter):
 
             # init seed and size
             seed, size = '230811', '999'
-            size_i = min(int(size), len(targeted_seqs))
+            size_i = min(int(size), seqs_len)
             random.seed(int(seed))
-            targeted_seqs = targeted_seqs[:size_i]
+            # targeted_seqs = targeted_seqs[:size_i]
             # random.shuffle(npzs)
 
             # initialize output for human_data
@@ -167,7 +167,7 @@ class H36mNeuralConverter(BaseModeConverter):
             with open(os.path.join(anno_base_path, cam_param)) as f:
                 cam_params = json.load(f)
 
-            # load data annotations
+            # load data annotations 
             data_an = f'{anno_base_name}_data.json'
             with open(os.path.join(anno_base_path, data_an)) as f:
                 data_annos = json.load(f)
@@ -202,7 +202,10 @@ class H36mNeuralConverter(BaseModeConverter):
                 data_anno_seq = [data_annos['annotations'][idx] | data_annos['images'][idx]
                                  for idx, finfo in enumerate(data_annos['images']) if 
                                  os.path.basename(finfo['file_name'])[:-11] == seqn]
-                assert len(data_anno_seq) == len(frames)
+                # pdb.set_trace()
+                if len(data_anno_seq) != len(frames):
+                    print(f'Warning: {seqn} has different length of frames and annotations')
+                    continue
 
                 # get joints 3d annotations
                 j3d_anno_seq = j3d_annos[action_id][subaction_id]
