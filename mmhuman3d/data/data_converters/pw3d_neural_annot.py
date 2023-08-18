@@ -13,7 +13,7 @@ from .base_converter import BaseModeConverter
 
 
 @DATA_CONVERTERS.register_module()
-class Pw3dConverter(BaseModeConverter):
+class Pw3dNeuralConverter(BaseModeConverter):
     """3D Poses in the Wild dataset `Recovering Accurate 3D Human Pose in The
     Wild Using IMUs and a Moving Camera' ECCV'2018 More details can be found in
     the `paper.
@@ -28,7 +28,7 @@ class Pw3dConverter(BaseModeConverter):
     ACCEPTED_MODES = ['train', 'test']
 
     def __init__(self, modes: List = []) -> None:
-        super(Pw3dConverter, self).__init__(modes)
+        super(Pw3dNeuralConverter, self).__init__(modes)
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:
