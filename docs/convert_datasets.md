@@ -12,7 +12,8 @@
     image_path = HumanData['image_path'][100]  # for example
     image_real_path = os.path.join(your_path_to_dataset, dataset_name, image_path)
     image = cv2.imread(image_real_path)
-    ``` 
+    ```
+    
 2. For using HumanData only (not including converting), you just need to do several changes to the file structues on the originally downloaded datasets. The converting process and file included will be marked **"Converter"**.
 3. Ideal size of HumanData file is less than 2GB, given loading it uses 10x memory, therefore some huge datasets are split in several files.
 4. (For convert only) Install "convertors" branch and set the working directory as below.
@@ -63,18 +64,18 @@ Download and rearrange the file structure as below:
 **Step 2 (Converter) - Preprocess coco annotations**
 
 This process converts the coco annotation json to faciliate sorting ids.
+   ```
+   python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mscoco
+   ```
 
-    python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mscoco
-
-    
 **Step 3 (Converter) - Convert Dataset**
-```
-python tools/convert_datasets.py \
-    --datasets mscoco \
-    --root_path /mnt/d/datasets \
-    --output_path /mnt/d/datasets/mscoco/output \
-    --modes train
-```
+   ```
+   python tools/convert_datasets.py \
+       --datasets mscoco \
+       --root_path /mnt/d/datasets \
+       --output_path /mnt/d/datasets/mscoco/output \
+       --modes train
+   ```
 </details>
 
 <details>
