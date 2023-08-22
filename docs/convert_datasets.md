@@ -89,7 +89,7 @@ python tools/convert_datasets.py \
 **Step 1 - Only Step for using HumanData** 
 
 Download and rearrange the file structure as below:
-  
+Note: Rename "*validation*" as "*val*"
 ```
 D:\datasets\pw3d\
 │
@@ -117,6 +117,6 @@ python tools/convert_datasets.py \
  --datasets pw3d \
  --root_path /mnt/d/datasets \
  --output_path /mnt/d/datasets/pw3d/output \
- --modes train
+ --modes train test val
 ```
 </details>
