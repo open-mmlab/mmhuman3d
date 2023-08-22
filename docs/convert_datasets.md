@@ -63,9 +63,9 @@ Download and rearrange the file structure as below:
 **Step 2 (Converter) - Preprocess coco annotations**
 
 This process converts the coco annotation json to faciliate sorting ids.
-    ```
+
     python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mscoco
-    ```
+
     
 **Step 3 (Converter) - Convert Dataset**
 ```
