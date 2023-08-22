@@ -35,10 +35,81 @@
      ``` 
 
 ## Overview - Current Supported Datasets
+- GTA-Human++
+- H36M (Neural Annot)
+- MPII (Neural Annot)
 - MSCOCO (Neural Annot)
+- PW3D (Neural Annot)
 
 ## Subsection 1 - Neural Annot Datasets
 Overall: Download from [Nerual Annot Homepage](https://github.com/mks0601/NeuralAnnot_RELEASE/blob/main/README.md)
+
+<details>
+<summary>H36M</summary>
+
+**Step 1 - Only Step for using HumanData** 
+
+Download the original data and SMPLX annotation and rearrange the file structure as below:
+
+```
+D:\datasets\h36m\
+│
+├── annotations\
+│   ├──Human36M_subject11_SMPLX_NeuralAnnot.json
+│   ├──Human36M_subject11_camera.json
+│   ├──Human36M_subject11_data.json
+│   ├──Human36M_subject11_joint_3d.json
+│
+├── images\
+│   ├── s_01_act_02_subact_01_ca_01\
+│   ├── s_01_act_02_subact_01_ca_02\
+```
+
+**Step 2 (Converter) - Convert Dataset**
+```
+python tools/convert_datasets.py \
+ --datasets h36m\
+ --root_path /mnt/d/datasets \
+ --output_path /mnt/d/datasets/h36m/output \
+ --modes train
+```
+</details>
+
+<details>
+<summary>MPII</summary>
+   
+**Step 1 - Only Step for using HumanData** 
+
+Download and rearrange the file structure as below:
+  
+```
+E:\mpii\
+│
+├── annotations\
+│   ├──MPII_train_SMPLX_NeuralAnnot.json
+│   ├──test.json
+│   ├──train.json
+│   └──train_reformat.json  # Not required in HumanData
+│
+├── images\
+```
+**Step 2 (Converter) - Preprocess coco annotations**
+
+This process converts the coco annotation json to faciliate sorting ids.
+```
+python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mpii
+```
+
+**Step 3 (Converter) - Convert Dataset**
+```
+python tools/convert_datasets.py \
+ --datasets mpii \
+ --root_path /mnt/d/datasets \
+ --output_path /mnt/d/datasets/mpii/output \
+ --modes train
+```
+</details>
+
 <details>
 <summary>MSCOCO</summary>
   
@@ -57,9 +128,7 @@ D:\datasets\mscoco\
 │   └──coco_wholebody_val_v1.0.json
 │
 ├── images\
-│   │
 │   ├── train2017\
-│   │
 │   └── val2017\
 ```
 **Step 2 (Converter) - Preprocess coco annotations**
@@ -77,10 +146,6 @@ python tools/convert_datasets.py \
  --output_path /mnt/d/datasets/mscoco/output \
  --modes train
 ```
-</details>
-
-<details>
-<summary>MPII</summary>
 </details>
 
 <details>
@@ -120,4 +185,11 @@ python tools/convert_datasets.py \
  --output_path /mnt/d/datasets/pw3d/output \
  --modes train test val
 ```
+</details>
+
+## Subsection 2 - Synthetic Datasets
+
+<details>
+<summary>GTA-Human++</summary>
+
 </details>
