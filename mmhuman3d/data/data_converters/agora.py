@@ -45,7 +45,9 @@ class AgoraConverter(BaseModeConverter):
             bbox_facehand_scale=1.0,
             bbox_source='keypoints2d_smplx',
             cam_param_source='original',
-            smplx_source='original')
+            smplx_source='original',
+            has_betas_extra=True,
+        )
 
         self.smplx_shape = {
             'betas': (-1, 10),
@@ -57,7 +59,8 @@ class AgoraConverter(BaseModeConverter):
             'leye_pose': (-1, 3),
             'reye_pose': (-1, 3),
             'jaw_pose': (-1, 3),
-            'expression': (-1, 10)
+            'expression': (-1, 10),
+            'betas_extra': (-1, 1),  # how close to kid template
         }
 
         super(AgoraConverter, self).__init__(modes)
@@ -123,7 +126,7 @@ class AgoraConverter(BaseModeConverter):
             meta_[meta_key] = []
         image_path_ = []
 
-        seed, size = '230815', '999999'
+        seed, size = '230816', '999999'
 
         # build smplx model
         smplx_model = {}
@@ -151,12 +154,13 @@ class AgoraConverter(BaseModeConverter):
         image_param = param['images']
         anno_param = param['annotations']
 
+        print('Converting...')
         for anno_info in tqdm(anno_param, desc=f'Processing Agora {mode}'):
 
             # pdb.set_trace()
 
             image_id = anno_info['image_id']
-            print(anno_info['gender'])
+            # print(anno_info['gender'])
 
             # get image details
             image_info = image_param[image_id]
@@ -173,6 +177,11 @@ class AgoraConverter(BaseModeConverter):
                                       anno_info['smplx_param_path'])
             smplx_param = pickle.load(open(smplx_path, 'rb'))
 
+            if smplx_param['betas'].shape[1] != 10:
+                smplx_param['betas_extra'] = smplx_param['betas'][:, 10:]
+                smplx_param['betas'] = smplx_param['betas'][:, :10]
+            else:
+                smplx_param['betas_extra'] = np.zeros([1, 1])
             for key in self.smplx_shape.keys():
                 smplx_[key].append(smplx_param[key])
 
@@ -180,7 +189,7 @@ class AgoraConverter(BaseModeConverter):
             # smplx_joints_2d_path = os.path.join(dataset_path, anno_info['smplx_joints_2d_path'])
             # smplx_joints_2d = json.load(open(smplx_joints_2d_path, 'rb'), encoding='latin1')
             # keypoints2d_.append(smplx_joints_2d)
-
+            #
             # smplx_joints_3d_path = os.path.join(dataset_path, anno_info['smplx_joints_3d_path'])
             # smplx_joints_3d = json.load(open(smplx_joints_3d_path, 'rb'), encoding='latin1')
             # keypoints3d_.append(smplx_joints_3d)
@@ -197,6 +206,8 @@ class AgoraConverter(BaseModeConverter):
             meta_['gender'].append(anno_info['gender'])
             meta_['principal_point'].append(principal_point)
             meta_['focal_length'].append(focal_length)
+
+            # print(smplx_param['betas'].shape)
 
             # pdb.set_trace()
             # build camera
@@ -218,14 +229,21 @@ class AgoraConverter(BaseModeConverter):
                             if len(smplx_param[key]) > 0}
             output = smplx_model[gender](**body_model_param_tensor, return_verts=True)
             smplx_joints = output['joints']
+            kps3d = smplx_joints.detach().cpu().numpy()
             kps2d = camera.transform_points_screen(smplx_joints)[..., :2].detach().cpu().numpy()
 
-            pdb.set_trace()
+            keypoints2d_.append(kps2d)
+            keypoints3d_.append(kps3d)
+            image_path_.append(image_path)
+            # pdb.set_trace()
+            pass
 
         # prepare for output
         # smplx
+        # pdb.set_trace()
         for key in smplx_.keys():
-            smplx_[key] = np.array(smplx_[key]).reshape(self.smplx_shape[key])
+            # print('doing', key)
+            smplx_[key] = np.concatenate(smplx_[key], axis=0).reshape(self.smplx_shape[key])
         human_data['smplx'] = smplx_
         print('Smpl and/or Smplx finished at',
               time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
@@ -269,11 +287,12 @@ class AgoraConverter(BaseModeConverter):
         human_data['config'] = f'agora_{mode}'
         human_data['misc'] = self.misc_config
 
-        size_i = str(max(int(size), len(anno_param)))
+        size_i = str(min(int(size), len(anno_param)))
 
         human_data.compress_keypoints_by_mask()
         os.makedirs(out_path, exist_ok=True)
         out_file = os.path.join(
             out_path,
-            f'agora_{mode}_{seed}_{"{:06d}".format(int(size_i))}_.npz')
+            f'agora_{mode}_{seed}_{"{:06d}".format(int(size_i))}.npz')
+        # pdb.set_trace()
         human_data.dump(out_file)

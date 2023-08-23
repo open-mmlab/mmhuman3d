@@ -11,9 +11,6 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-# import mmcv
-# from mmhuman3d.models.body_models.builder import build_body_model
-# from mmhuman3d.core.conventions.keypoints_mapping import smplx
 from mmhuman3d.core.conventions.keypoints_mapping import (
     convert_kps,
     get_keypoint_idxs_by_part,
@@ -36,21 +33,24 @@ def process_npz_multiprocessing(args):
     # if not os.path.basename(root_path).endswith('synbody'):
     #     root_path = os.path.join(root_path, 'synbody')
     # ple = [p for p in ple if '.' not in p]
+
+    SUPPORTED_BATCH = ['Synbody_v0', 'Synbody_v1']
+    assert args.prefix in SUPPORTED_BATCH, f'prefix {args.prefix} not supported'
+
     dataset_path = os.path.join(args.root_path, args.prefix)
     batch_paths = [
-        os.path.join(args.root_path, p) for p in os.listdir(dataset_path)
-    ]
+        os.path.join(dataset_path, p) for p in os.listdir(dataset_path)
+        if os.path.isdir(os.path.join(dataset_path, p))]
 
     seqs_targeted = glob.glob(
-        os.path.join(args.root_path, args.prefix, '*renew_0220', '*', 'LS*'))
+        os.path.join(args.root_path, args.prefix, '*', '*', '*_*'))
+    seqs_targeted = sorted(seqs_targeted)
     # pdb.set_trace()
     print(
         f'There are {len(batch_paths)} batches and {len(seqs_targeted)} sequences'
     )
 
-    # print(ple)
     os.makedirs(args.output_path, exist_ok=True)
-    # failed = []
 
     with mp.Pool(args.num_proc) as p:
         r = list(
@@ -66,14 +66,15 @@ def parse_args():
     parser.add_argument(
         '--root_path',
         type=str,
-        required=True,
+        required=False,
+        default='/mnt/lustre/weichen1/datasets/synbody',
         help='the root path of original dataset')
 
     parser.add_argument(
         '--output_path',
         type=str,
         required=False,
-        default='/mnt/lustre/weichen1/synbody_preprocess',
+        default='/mnt/lustre/weichen1/datasets/synbody/preprocess',
         help='the high level store folder of the preprocessed npz files')
 
     parser.add_argument(
