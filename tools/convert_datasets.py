@@ -10,7 +10,6 @@ DATASET_CONFIGS = dict(
         type='CocoWholebodyConverter', modes=['train', 'val'], prefix='coco'),
     crowdpose=dict(
         type='CrowdposeConverter', modes=['train', 'val', 'test', 'trainval']),
-    pw3d=dict(type='Pw3dConverter', modes=['train', 'test']),
     h36m_p1=dict(
         type='H36mConverter',
         modes=['train', 'valid'],
@@ -83,6 +82,8 @@ DATASET_CONFIGS = dict(
         type='GTAHuman2Converter',  # synthetic
         prefix='gta_human2',
         modes=['single', 'multiple']),
+    pw3d=dict(
+        type='Pw3dNeuralConverter', prefix='pw3d', modes=['train', 'test']),
     synbody=dict(
         type='SynbodyConverter',  # synthetic
         prefix='synbody',
@@ -105,14 +106,17 @@ DATASET_CONFIGS = dict(
         prefix='cimi4d',
         modes=['train']),
     ehf=dict(
-        type='EhfConverter',  # real'
+        type='EhfConverter',  # real
         prefix='ehf',
         modes=['val']),
     hsc4d=dict(
         type='Hsc4dConverter',  # real, in progress
         prefix='hsc4d',
         modes=['train']),
-    h36m=dict(type='H36mConverter', modes=['train', 'val'], prefix='h36m'),
+    h36m=dict(
+        type='H36mNeuralConverter',  # real, studio
+        prefix='h36m',
+        modes=['val', 'train']),
     motionx=dict(
         type='MotionXConverter',  # real, in progress
         prefix='motionx',
@@ -125,6 +129,10 @@ DATASET_CONFIGS = dict(
         type='MpiiConverter',  # real multi-human?
         prefix='mpii',
         modes=['train', 'test']),
+    mscoco=dict(
+        type='MscocoNeuralConverter',  # real, have some multihuman
+        prefix='mscoco',
+        modes=['train']),
     renbody=dict(
         type='RenbodyConverter',  # real
         prefix='renbody',
@@ -236,7 +244,7 @@ def main():
 
         if ('modes' in cfg.keys()) and (args.modes != []):
             assert all(x in cfg['modes'] for x in args.modes), \
-                f'Unsupported mode found, supported mode for' \
+                f'Unsupported mode found, supported mode for ' \
                 f'{cfg["prefix"]} is {cfg["modes"]}'
             cfg['modes'] = args.modes
         elif ('modes' in cfg.keys()) and (args.modes == []):

@@ -110,12 +110,26 @@ python tools/convert_datasets.py \
     --output_path /mnt/d/datasets/moyo/output \
     --modes train
 
+# mscoco-converter
+python tools/convert_datasets.py \
+    --datasets mscoco \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/mscoco/output \
+    --modes train
+
 # mpii-converter
 python tools/convert_datasets.py \
     --datasets mpii \
     --root_path /mnt/e \
     --output_path /mnt/e/mpii/output \
     --modes test
+
+# pw3d-converter
+python tools/convert_datasets.py \
+    --datasets pw3d \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/pw3d/output \
+    --modes train
 
 # renbody-converter
 python tools/convert_datasets.py \
@@ -175,13 +189,11 @@ python tools/convert_datasets.py \
 # ------------------------------server--------------------------------
 
 # agora
-python tools/convert_datasets.py
+python tools/convert_datasets.py \
     --datasets agora \
     --root_path /mnt/lustrenew/share_data/caizhongang/data/datasets \
-    --output_path /mnt/lustre/share_data/weichen1/converted_humandata \
+    --output_path /mnt/lustre/share_data/weichen1/converted_humandata_new \
     --modes train_3840
-
-
 
 
 # renbody
@@ -207,3 +219,8 @@ python tools/preprocess/synbody_preprocess_mp.py \
     --root_path /mnt/lustre/share_data/weichen1/datasets/synbody \
     --output_path /mnt/lustre/share_data/weichen1/datasets/synbody/preprocess \
     --prefix Synbody_v0 --num_proc 1
+
+
+
+mirror -R -c -v moyo moyo --parallel=5
+python tools/postprocess/humandata_sample.py

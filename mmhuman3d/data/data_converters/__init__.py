@@ -19,8 +19,8 @@ from .ffhq_flame import FFHQFlameConverter
 from .freihand import FreihandConverter
 from .gta_human import GTAHumanConverter
 from .gta_human2 import GTAHuman2Converter
-from .h36m_neural_annot import H36mNeuralConverter
 from .h36m_hybrik import H36mHybrIKConverter
+from .h36m_neural_annot import H36mNeuralConverter
 from .h36m_smplx import H36mSMPLXConverter
 from .hanco import HancoConverter
 from .hsc4d import Hsc4dConverter
@@ -35,10 +35,11 @@ from .moyo import MoyoConverter
 from .mpi_inf_3dhp import MpiInf3dhpConverter
 from .mpi_inf_3dhp_hybrik import MpiInf3dhpHybrIKConverter
 from .mpii_neural_annot import MpiiNeuralConverter
+from .mscoco_neural_annot import MscocoNeuralConverter
 from .penn_action import PennActionConverter
 from .posetrack import PosetrackConverter
-from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
+from .pw3d_neural_annot import Pw3dNeuralConverter
 from .renbody import RenbodyConverter
 from .sgnify import SgnifyConverter
 from .shapy import ShapyConverter
@@ -67,7 +68,7 @@ __all__ = [
     'MpiInf3dhpConverter',
     'PennActionConverter',
     'PosetrackConverter',
-    'Pw3dConverter',
+    'Pw3dNeuralConverter',
     'Up3dConverter',
     'CrowdposeConverter',
     'EftConverter',
@@ -109,4 +110,5 @@ __all__ = [
     'BlurhandConverter',
     'Hsc4dConverter',
     'MotionXConverter',
+    'MscocoNeuralConverter',
 ]
