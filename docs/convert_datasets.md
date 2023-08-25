@@ -1,4 +1,4 @@
-# Convert Datasets to HumanData and Use in Training
+# Convert Datasets to HumanData and Preparation Before Training
 **This page describes how to use the various HumanData flies** as well as (only if you are interested) how to process various datasets to current HumanData.
 
 ## Introduction & Settings
@@ -23,7 +23,7 @@
      git clone -b convertors https://github.com/open-mmlab/mmhuman3d.git
      cd /Your_path_to_mmhuman3d/mmhuman3d  # e.g. /mnt/d/zoehuman/mmhuman3d
      ```
-6. (For convert only) The usage of convert_datasets.py (Example)
+6. (For convert only) The usage of convert_datasets.py (Example), if "--modes" is not specified, all avalilable modes (all data) will be processed.
      ```
      python tools/convert_datasets.py \
       --datasets <dataset name/perfix> \ 
@@ -32,9 +32,11 @@
       --modes train
      # dataset folder should be os.path.join(root_path, datasets)
      # output path is the folder which sotres output HumanData
-     ``` 
+     ```
+7. (For convert only) For discussing processing speed or time, hardware config is RTX3090 + i9-12900 + 64GB RAM + Cuda11.8 & Python3.9. The most resource-consuming processes are calling SMPL/SMPLX models and camera projection.   
 
 ## Overview - Current Supported Datasets
+- EgoBody
 - GTA-Human++
 - H36M (Neural Annot)
 - MPII (Neural Annot)
@@ -66,6 +68,9 @@ D:\datasets\h36m\
 ```
 
 **Step 2 (Converter) - Convert Dataset**
+
+Due to size considerations, "train" and "val" set is separated in to 5 and 2 files (depends on subject id). HumanData file ranges from 900MB to 1.5GB. Processing speed is ~40item/s, total time is about **12 hours**.
+
 ```
 python tools/convert_datasets.py \
  --datasets h36m\
@@ -101,6 +106,8 @@ python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mpii
 ```
 
 **Step 3 (Converter) - Convert Dataset**
+
+Process speed is ~60item/s, totally ~17k item, and takes several minutes.
 ```
 python tools/convert_datasets.py \
  --datasets mpii \
@@ -138,7 +145,9 @@ This process converts the coco annotation json to faciliate sorting ids.
 python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mscoco
 ```
 
-**Step 3 (Converter) - Convert Dataset**
+**Step 3 (Converter) - Convert Dataset**/
+
+Processing speed is ~50item/s, total ~260k item.
 ```
 python tools/convert_datasets.py \
  --datasets mscoco \
@@ -178,6 +187,8 @@ python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/pw3d
 ```
 
 **Step 3 (Converter) - Convert Dataset**
+
+3DPW datasets contains 3 modes ("train", "test" and "val"), processing speed is ~40item/s, total 60k item.
 ```
 python tools/convert_datasets.py \
  --datasets pw3d \
@@ -190,6 +201,68 @@ python tools/convert_datasets.py \
 ## Subsection 2 - Synthetic Datasets
 
 <details>
-<summary>GTA-Human++</summary>
+<summary>AGORA (IP)</summary>
 
 </details>
+
+
+<details>
+<summary>GTA-Human++ (IP)</summary>
+
+</details>
+
+## Subsection 3 - Real Multi-Human Datasets
+<details>
+<summary>EgoBody</summary>
+
+**Step 1 - Only Step for using HumanData**
+
+For Egobody dataset, please download as instructed in [HomePage](https://github.com/sanweiliti/EgoBody).
+Egobody dataset can be split as two distinct subset, "egocentric" which denotes the views from human-wear kinect (single view, single person) and "kinect" which denotes the the fixed various kinect (multi-view, two person).
+
+**Step 2 (Converter) - Convert Dataset**
+
+There are 6 HumanData set, seperated by "train, test and val", and "egocentric and kinect". For example, "egocentric_train" & "kinect_train" comprise the train set as mentioned in the paper. 
+
+```
+available_modes=['egocentric_train', 'egocentric_test', 'egocentric_val',
+                 'kinect_train', 'kinect_test', 'kinect_val']
+```
+
+Kinect set conducts sequence-level processing whereas egocentric set only processes image-level and is much slower (due to changing camera parameters). Total processing time should be **1-3 days**. 
+
+```
+python tools/convert_datasets.py \
+    --datasets egobody \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/egobody/output \
+    #  --modes egocentric_train
+```
+</details>
+
+<details>
+<summary>Ubody (IP)</summary>
+
+</details>
+
+
+
+## Subsection 4 - Real Single-Human Datasets
+<details>
+<summary>SSP3D</summary>
+   
+**Step 1 - Only Step for using HumanData** 
+
+Download dataset from [HomePage](https://github.com/akashsengupta1997/SSP-3D)
+
+**Step 2 (Converter) - Convert Dataset**
+
+This is a very small dataset which should finish in a gilmpse.
+```
+python tools/convert_datasets.py \
+    --datasets ssp3d \
+    --root_path /mnt/e \
+    --output_path /mnt/e/ssp3d/output
+```
+</details>
+
