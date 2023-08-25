@@ -254,12 +254,69 @@ python tools/convert_datasets.py \
 ## Subsection 4 - Real Single-Human Datasets
 
 <details>
-<summary>EHF (IP)</summary>
+<summary>Behave</summary>
 </details>
+
+**Data Split**
+
+We follow the same split ("train" and "test") as in Paper.
 
 **Step 1 - Only Step for using HumanData**
 
-Download dataset from [SMPLX HomePage](https://smpl-x.is.tue.mpg.de/), the exstracted dataset should be like this:
+Download as instructed in [Github HomePage](https://github.com/xiexh20/behave-dataset). the extracted dataset should be like this:
+```
+E:\behave\
+├── behave-30fps-params-v1\
+│   ├── Date01_Sub01_backpack_back\
+│   │   ├──info.json
+│   │   ├──object_fit_all.npz
+│   │   └──smpl_fit_all.npz
+│   ├── Date01_Sub01_backpack_hand\
+├── calibs\
+│   ├── Date01\
+│   │   ├── background\
+│   │   │   ├── t0002.000\
+│   │   │   └──background.ply
+│   │   └── config\
+│   │       ├── 0\
+│   │       ├── 1\
+│   │       ├── 2\
+│   │       └── 3\
+│   ├── Date02\
+├── objects\
+│   ├── backpack\
+│   │   ├──backpack.obj
+│   │   ├──backpack.obj.mtl
+│   │   ├──backpack.png
+│   │   ├──backpack_f1000.ply
+│   ├── basketball\
+├── sequences\
+│   ├── Date01_Sub01_backpack_back\
+│   │   ├── t0005.000\
+│   │   │   ├── backpack\
+│   │   │   ├── person\
+│   │   │   ├──k0.color.json
+│   │   ├── t0006.000\
+│   ├── Date01_Sub01_backpack_hand\
+└──split.json
+```
+
+**Step 2 (Converter) - Convert Datasets**
+
+```
+python tools/convert_datasets.py  \
+    --datasets behave  \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/behave/output \
+    --modes train test
+```
+
+<details>
+<summary>EHF</summary>
+
+**Step 1 - Only Step for using HumanData**
+
+Download dataset from [SMPLX HomePage](https://smpl-x.is.tue.mpg.de/), the extracted dataset should be like this:
 ```
 E:\ehf\
 ├──01_2Djnt.json
@@ -274,19 +331,26 @@ E:\ehf\
 ├──02_scan.obj
 ```
 
-**Step 2 (Converter) - Convert Dataset**
+**Step 2 (Converter) - Preprocess: Fit SMPLX Parameters from Mesh**
 
+In Ehf datasets, data of smplx instances are provided in "xx_align.ply" mesh format. This step fits the smplx parameters from the mesh and save the parameters in "xx_align.npz" format, which is an optimization process and takes ~20sec/instance. Final error MSE is ~0.1mm.
 
+```
+python tools/preprocess/fit_shape2smplx.py --load_dir <ehf dataset path> --mesh_type ply
+```
 
+**Step 3 (Converter) - Convert Datasets**
 
+The convert process should finish in several seconds.
+```
+python tools/convert_datasets.py \
+    --datasets ehf \
+    --root_path /mnt/e \
+    --output_path /mnt/e/ehf/output \
+    --modes val
+```
 
-
-
-
-
-
-
-
+</details>
 
 
 <details>
