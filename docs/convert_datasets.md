@@ -3,9 +3,9 @@
 
 ## Introduction & Settings
 1. How can I read image from HumanData image path?
-   
+
    In HumanData file, image path denotes the relative path within the dataset. In this example:
-   
+
     ```
     your_path_to_dataset = '/mnt/d'
     dataset_name = 'egobody'
@@ -13,12 +13,12 @@
     image_real_path = os.path.join(your_path_to_dataset, dataset_name, image_path)
     image = cv2.imread(image_real_path)
     ```
-    
-2. For using HumanData only (not including converting), you just need to do several changes to the file structues on the originally downloaded datasets. The converting process and file included will be marked **"Converter"**.
+
+2. For using HumanData only (not including converting), you just need to do several changes to the file structures on the originally downloaded datasets. The converting process and file included will be marked **"Converter"**.
 3. Ideal size of HumanData file is less than 2GB, given loading it uses 10x memory, therefore some huge datasets are split in several files.
 4. All the middle-stage pre-process files are **not required** when using HumanData annotations.
 5. (For convert only) Install "convertors" branch and set the working directory as below.
-    
+
      ```
      git clone -b convertors https://github.com/open-mmlab/mmhuman3d.git
      cd /Your_path_to_mmhuman3d/mmhuman3d  # e.g. /mnt/d/zoehuman/mmhuman3d
@@ -26,14 +26,14 @@
 6. (For convert only) The usage of convert_datasets.py (Example), if "--modes" is not specified, all avalilable modes (all data) will be processed.
      ```
      python tools/convert_datasets.py \
-      --datasets <dataset name/perfix> \ 
+      --datasets <dataset name/prefix> \
       --root_path <data root dir> \
       --output_path <output dir> \
       --modes train
      # dataset folder should be os.path.join(root_path, datasets)
      # output path is the folder which sotres output HumanData
      ```
-7. (For convert only) For discussing processing speed or time, hardware config is RTX3090 + i9-12900 + 64GB RAM + Cuda11.8 & Python3.9. The most resource-consuming processes are calling SMPL/SMPLX models and camera projection.   
+7. (For convert only) For discussing processing speed or time, hardware config is RTX3090 + i9-12900 + 64GB RAM + Cuda11.8 & Python3.9. The most resource-consuming processes are calling SMPL/SMPLX models and camera projection.  
 
 ## Overview - Current Supported Datasets
 - EgoBody
@@ -49,7 +49,7 @@ Overall: Download from [Nerual Annot Homepage](https://github.com/mks0601/Neural
 <details>
 <summary>H36M</summary>
 
-**Step 1 - Only Step for using HumanData** 
+**Step 1 - Only Step for using HumanData**
 
 Download the original data and SMPLX annotation and rearrange the file structure as below:
 
@@ -82,11 +82,11 @@ python tools/convert_datasets.py \
 
 <details>
 <summary>MPII</summary>
-   
-**Step 1 - Only Step for using HumanData** 
+
+**Step 1 - Only Step for using HumanData**
 
 Download and rearrange the file structure as below:
-  
+
 ```
 E:\mpii\
 │
@@ -100,7 +100,7 @@ E:\mpii\
 ```
 **Step 2 (Converter) - Preprocess coco annotations**
 
-This process converts the coco annotation json to faciliate sorting ids.
+This process converts the coco annotation json to facilitate sorting ids.
 ```
 python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mpii
 ```
@@ -119,11 +119,11 @@ python tools/convert_datasets.py \
 
 <details>
 <summary>MSCOCO</summary>
-  
-**Step 1 - Only Step for using HumanData** 
+
+**Step 1 - Only Step for using HumanData**
 
 Download and rearrange the file structure as below:
-  
+
 ```
 D:\datasets\mscoco\
 │
@@ -140,7 +140,7 @@ D:\datasets\mscoco\
 ```
 **Step 2 (Converter) - Preprocess coco annotations**
 
-This process converts the coco annotation json to faciliate sorting ids.
+This process converts the coco annotation json to facilitate sorting ids.
 ```
 python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mscoco
 ```
@@ -160,7 +160,7 @@ python tools/convert_datasets.py \
 <details>
 <summary>PW3D</summary>
 
-**Step 1 - Only Step for using HumanData** 
+**Step 1 - Only Step for using HumanData**
 
 Download and rearrange the file structure as below:
 
@@ -181,7 +181,7 @@ D:\datasets\pw3d\
 ```
 **Step 2 (Converter) - Preprocess coco annotations**
 
-This process converts the coco annotation json to faciliate sorting ids.
+This process converts the coco annotation json to facilitate sorting ids.
 ```
 python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/pw3d
 ```
@@ -215,6 +215,15 @@ python tools/convert_datasets.py \
 <details>
 <summary>EgoBody</summary>
 
+**Dataset Split**
+There are 6 HumanData set, separated by "train, test and val", and "egocentric and kinect". For example, "egocentric_train" & "kinect_train" comprise the train set as mentioned in the paper.
+
+```
+available_modes=['egocentric_train', 'egocentric_test', 'egocentric_val',
+                 'kinect_train', 'kinect_test', 'kinect_val']
+# HumanData Name is "egobody_<mode>_<some other index>.npz"
+```
+
 **Step 1 - Only Step for using HumanData**
 
 For Egobody dataset, please download as instructed in [HomePage](https://github.com/sanweiliti/EgoBody).
@@ -222,14 +231,9 @@ Egobody dataset can be split as two distinct subset, "egocentric" which denotes 
 
 **Step 2 (Converter) - Convert Dataset**
 
-There are 6 HumanData set, seperated by "train, test and val", and "egocentric and kinect". For example, "egocentric_train" & "kinect_train" comprise the train set as mentioned in the paper. 
 
-```
-available_modes=['egocentric_train', 'egocentric_test', 'egocentric_val',
-                 'kinect_train', 'kinect_test', 'kinect_val']
-```
 
-Kinect set conducts sequence-level processing whereas egocentric set only processes image-level and is much slower (due to changing camera parameters). Total processing time should be **1-3 days**. 
+Kinect set conducts sequence-level processing whereas egocentric set only processes image-level and is much slower (due to changing camera parameters). Total processing time should be **1-3 days**.
 
 ```
 python tools/convert_datasets.py \
@@ -248,10 +252,47 @@ python tools/convert_datasets.py \
 
 
 ## Subsection 4 - Real Single-Human Datasets
+
+<details>
+<summary>EHF (IP)</summary>
+</details>
+
+**Step 1 - Only Step for using HumanData**
+
+Download dataset from [SMPLX HomePage](https://smpl-x.is.tue.mpg.de/), the exstracted dataset should be like this:
+```
+E:\ehf\
+├──01_2Djnt.json
+├──01_2Djnt.png
+├──01_align.ply
+├──01_img.png
+├──01_scan.obj
+├──02_2Djnt.json
+├──02_2Djnt.png
+├──02_align.ply
+├──02_img.png
+├──02_scan.obj
+```
+
+**Step 2 (Converter) - Convert Dataset**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <details>
 <summary>SSP3D</summary>
-   
-**Step 1 - Only Step for using HumanData** 
+
+**Step 1 - Only Step for using HumanData**
 
 Download dataset from [HomePage](https://github.com/akashsengupta1997/SSP-3D)
 
@@ -265,4 +306,3 @@ python tools/convert_datasets.py \
     --output_path /mnt/e/ssp3d/output
 ```
 </details>
-
