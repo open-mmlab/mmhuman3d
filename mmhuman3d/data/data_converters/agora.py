@@ -168,10 +168,17 @@ class AgoraConverter(BaseModeConverter):
                 f"file_name_{self.misc_config['image_size'][0]}x"
                 f"{self.misc_config['image_size'][1]}"]
 
-            # collect bbox
-            for key in ['bbox', 'face_bbox', 'lhand_bbox', 'rhand_bbox']:
-                bboxs_[f'{key}_xywh'].append(np.array(anno_info[key] + [1]))
+            # collect bbox and resize bbox for 1280
+            if res_info == '1280':
+                scale = 3840 / int(res_info)
+                for key in ['bbox', 'face_bbox', 'lhand_bbox', 'rhand_bbox']:
+                    bboxs_[f'{key}_xywh'].append(
+                        np.array(anno_info[key] + [scale]) / scale)
+            else:
+                for key in ['bbox', 'face_bbox', 'lhand_bbox', 'rhand_bbox']:
+                    bboxs_[f'{key}_xywh'].append(np.array(anno_info[key] + [1]))
 
+            pdb.set_trace()
             # collect smplx_params
             smplx_path = os.path.join(dataset_path,
                                       anno_info['smplx_param_path'])
