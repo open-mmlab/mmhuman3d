@@ -603,6 +603,8 @@ class HumanData(dict):
         """
         ret_human_data = \
             HumanData.new(key_strict=self.get_key_strict())
+        if hasattr(self, 'skip_keys_check'):
+            ret_human_data.skip_keys_check = self.skip_keys_check
         if arg_1 is None:
             start = 0
             stop = arg_0
