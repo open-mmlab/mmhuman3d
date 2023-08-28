@@ -178,7 +178,6 @@ class AgoraConverter(BaseModeConverter):
                 for key in ['bbox', 'face_bbox', 'lhand_bbox', 'rhand_bbox']:
                     bboxs_[f'{key}_xywh'].append(np.array(anno_info[key] + [1]))
 
-            pdb.set_trace()
             # collect smplx_params
             smplx_path = os.path.join(dataset_path,
                                       anno_info['smplx_param_path'])
