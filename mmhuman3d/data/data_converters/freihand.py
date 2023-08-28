@@ -2,6 +2,8 @@ import json
 import os
 import os.path as osp
 import pickle as pk
+from typing import List
+import torch
 
 import numpy as np
 
@@ -31,9 +33,35 @@ class FreihandConverter(BaseModeConverter):
     Args:
         modes (list): 'train / val / test' for accepted modes
     """
+
     NUM_BETAS = 10
     NUM_EXPRESSION = 10
     ACCEPTED_MODES = ['val', 'train', 'test']
+    
+    def __init__(self, modes: List = []) -> None:
+        # check pytorch device
+        self.device = torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
+        self.misc = dict(
+            bbox_source='original',
+            smplx_source='original',
+            flat_hand_mean=False,
+            camera_param_type='perspective',
+            kps3d_root_aligned=False,
+            image_shape=(224, 224),  # height, width
+        )
+        self.smplx_shape = {
+            'right_hand_pose': (-1, 15, 3),
+        }
+        self.mano_shape = {
+            'pose': (-1, 15, 3),
+            'betas': (-1, 10),
+            'global_orient': (-1, 3),
+            'transl': (-1, 3),
+        }
+
+        super(FreihandConverter, self).__init__(modes)
+
 
     def convert_by_mode(self,
                         dataset_path: str,
@@ -53,16 +81,16 @@ class FreihandConverter(BaseModeConverter):
                 stored in HumanData() format
         """
 
-        seed = '230703'
+        seed = '230828'
 
 
         # use HumanData to store all data
         human_data = HumanData()
         # structs we use
-        image_path_, bbox_xywh_ = [], []
+        image_path_, bbox_xywh_, rhand_bbox_xywh_ = [], [], []
         smplx = {}
-        smplx['global_orient'] = []
-        smplx['betas'] = []
+        # smplx['global_orient'] = []
+        # smplx['betas'] = []
         smplx['right_hand_pose'] = []
         keypoints2d = []
         keypoints3d = []
@@ -102,15 +130,17 @@ class FreihandConverter(BaseModeConverter):
                 mean_poses_dict = pk.load(f)
                 right_hand_mean = mean_poses_dict['right_hand_pose'][
                     'aa'].squeeze()
+                
+            pdb.set_trace() 
         if right_hand_mean is not None:
             right_hand_pose += right_hand_mean[np.newaxis]
         q = 1
         if mode != 'test':
             q = 4
         for index in range(q * num_green_bg):
-            smplx['global_orient'].append(global_pose[index %
-                                                      num_green_bg].copy())
-            smplx['betas'].append(betas[index % num_green_bg].copy())
+            # smplx['global_orient'].append(global_pose[index %
+            #                                           num_green_bg].copy())
+            # smplx['betas'].append(betas[index % num_green_bg].copy())
             smplx['right_hand_pose'].append(
                 right_hand_pose[index % num_green_bg].copy())
             img_path = osp.join(key, 'rgb', f'{index:08d}.jpg')
@@ -118,6 +148,12 @@ class FreihandConverter(BaseModeConverter):
             bbox_xywh_.append(np.array([0, 0, 224, 224], dtype=np.float32))
             kps2d = project_points(intrinsics[index % num_green_bg],
                                    xyz[index % num_green_bg])
+            
+            # get rhand bbox
+            rhand_box = self._keypoints_to_scaled_bbox(kps2d)
+            rhand_box = self._xyxy2xywh(rhand_box) + [1]
+            rhand_bbox_xywh_.append(rhand_box)
+
             kps2d = np.array(kps2d)
             kps2d = np.hstack([kps2d, np.ones([kps2d.shape[0], 1])])
             keypoints2d.append(kps2d)
@@ -132,32 +168,41 @@ class FreihandConverter(BaseModeConverter):
         keypoints3d, keypoints3d_mask = convert_kps(
             keypoints3d, src='mano', dst='human_data')
 
-        smplx['global_orient'] = np.array(smplx['global_orient']).reshape(
-            -1, 3)
-        smplx['betas'] = np.array(smplx['betas'])
+        # smplx['global_orient'] = np.array(smplx['global_orient']).reshape(-1, 3)
+        # smplx['betas'] = np.array(smplx['betas'])
         smplx['right_hand_pose'] = np.array(smplx['right_hand_pose'])
         bbox_xywh_ = np.array(bbox_xywh_).reshape((-1, 4))
         bbox_xywh_ = np.hstack([bbox_xywh_, np.ones([bbox_xywh_.shape[0], 1])])
+        rhand_bbox_xywh_ = np.array(rhand_bbox_xywh_).reshape((-1, 5))
         human_data['keypoints2d_smplx'] = keypoints2d
         human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
         human_data['keypoints3d_smplx'] = keypoints3d
         human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
-
+        # pdb.set_trace()
         human_data['image_path'] = image_path_
         human_data['bbox_xywh'] = bbox_xywh_
+        human_data['rhand_bbox_xywh'] = rhand_bbox_xywh_
+
+        human_data.skip_keys_check = ['smplx']
+        for key in smplx.keys():
+            smplx[key] = np.concatenate(
+                smplx[key], axis=0).reshape(self.smplx_shape[key])
         human_data['smplx'] = smplx
         human_data['config'] = 'freihand'
+        human_data['misc'] = self.misc
 
         # store data
         if not os.path.isdir(out_path):
             os.makedirs(out_path)
 
+        human_data_mode = HumanData()
+        human_data_mode.skip_keys_check = ['smplx']
         if mode == 'train':
-            human_data = human_data.get_slice(0, int(0.8 * len(image_path_)))
+            human_data_mode = human_data.get_slice(0, int(0.8 * len(image_path_)))
         elif mode == 'val':
-            human_data = human_data.get_slice(
+            human_data_mode = human_data.get_slice(
                 int(0.8 * len(image_path_)), len(image_path_))
 
         file_name = f'freihand_{mode}_{seed}.npz'
         out_file = os.path.join(out_path, file_name)
-        human_data.dump(out_file)
+        human_data_mode.dump(out_file)

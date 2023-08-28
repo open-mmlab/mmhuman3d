@@ -47,7 +47,7 @@ class Interhand26MConverter(BaseModeConverter):
             flat_hand_mean=False,
             camera_param_type='perspective',
             kps3d_root_aligned=False,
-            image_shape=(512, 334),  # height, width
+            image_shape=(334, 512),  # height, width
         )
         self.smplx_shape = {
             'left_hand_pose': (-1, 15, 3),
@@ -183,7 +183,7 @@ class Interhand26MConverter(BaseModeConverter):
         # use HumanData to store the data
         human_data = HumanData()
 
-        seed = '230705'
+        seed = '230828'
         size = 999999
 
         # initialize
@@ -193,6 +193,7 @@ class Interhand26MConverter(BaseModeConverter):
         bboxs_ = {}
         for hand_type in ['left', 'right']:
             bboxs_[f'{hand_type[0]}hand_bbox_xywh'] = []
+        bboxs_['bbox_xywh'] = []
         image_path_, keypoints2d_smplx_ = [], []
         meta_ = {}
         for meta_key in ['principal_point', 'focal_length']:
@@ -320,6 +321,8 @@ class Interhand26MConverter(BaseModeConverter):
                             np.zeros((45)).tolist())
                         bboxs_[f'{hand_type[0]}hand_bbox_xywh'].append(
                             bbox_xywh + [0])
+                bboxs_['bbox_xywh'].append([0, 0, 334, 512, 1])        
+                
 
                 meta_['focal_length'].append(focal)
                 meta_['principal_point'].append(princpt)
