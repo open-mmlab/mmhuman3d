@@ -10,8 +10,6 @@ import time
 
 from mmhuman3d.data.data_structures.human_data import HumanData
 
-from numba import jit
-
 
 def get_slice(human_data, index):
     # pdb.set_trace()
