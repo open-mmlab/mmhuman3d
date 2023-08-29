@@ -76,7 +76,7 @@ class HancoConverter(BaseModeConverter):
         avaliable_image_modes = ['rgb', 'rgb_color_auto', 'rgb_color_sample',
                                  'rgb_homo', 'rgb_merged']
 
-        image_mode = 'rgb_merged'
+        image_mode = 'rgb'
 
         # parse sequences
         seqs = glob.glob(os.path.join(dataset_path, image_mode, '*'))
@@ -103,6 +103,7 @@ class HancoConverter(BaseModeConverter):
         bboxs_ = {}
         for hand_type in ['right']:  
             bboxs_[f'{hand_type[0]}hand_bbox_xywh'] = []
+        bboxs_['bbox_xywh'] = []
         image_path_, keypoints2d_smplx_ = [], []
         meta_ = {}
         for meta_key in ['principal_point', 'focal_length']:
@@ -110,7 +111,7 @@ class HancoConverter(BaseModeConverter):
         # save mano params for vis purpose
         mano_ = []
 
-        seed = '230711'
+        seed = '230828'
         size = 9999
 
         for seq in tqdm(seqs, desc=f'Convert {mode}', 
@@ -203,7 +204,8 @@ class HancoConverter(BaseModeConverter):
                     bbox_rh_xywh = self._xyxy2xywh(bbox_rh)
                     bbox_rh_xywh += [1] # add confidence
                     bboxs_['rhand_bbox_xywh'].append(bbox_rh_xywh)
-
+                    bbox_xywh = [0, 0, 224, 224, 1]
+                    bboxs_['bbox_xywh'].append(bbox_xywh)
                     # append smplx
                     smplx_['right_hand_pose'].append(pose_cam.reshape(1, -1, 3))
 

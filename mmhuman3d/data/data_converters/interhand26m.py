@@ -254,8 +254,9 @@ class Interhand26MConverter(BaseModeConverter):
                 joints3d_world = anno_j3d[capture_id][frame_idx]['world_coord']
 
                 # get bbox
-                bbox_xyxy = anno_info['bbox']
-                bbox_xywh = self._xyxy2xywh(bbox_xyxy)
+                # bbox_xyxy = anno_info['bbox']
+                # bbox_xywh = self._xyxy2xywh(bbox_xyxy)
+                bbox_xywh = anno_info['bbox']
 
                 # bug exist in projection
 

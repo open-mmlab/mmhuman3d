@@ -156,7 +156,7 @@ class BlurhandConverter(BaseModeConverter):
         # use HumanData to store the data
         human_data = HumanData()
 
-        seed = '230721'
+        seed = '230828'
         size = 999999
 
         # initialize
@@ -166,6 +166,7 @@ class BlurhandConverter(BaseModeConverter):
         bboxs_ = {}
         for hand_type in ['left', 'right']:
             bboxs_[f'{hand_type[0]}hand_bbox_xywh'] = []
+        bboxs_['bbox_xywh'] = []
         image_path_, keypoints2d_smplx_ = [], []
         meta_ = {}
         for meta_key in ['principal_point', 'focal_length']:
@@ -226,8 +227,10 @@ class BlurhandConverter(BaseModeConverter):
                 joints3d_world = anno_j3d[capture_id][frame_idx]['world_coord']
 
                 # get bbox
-                bbox_xyxy = anno_info['bbox']
-                bbox_xywh = self._xyxy2xywh(bbox_xyxy)
+                # pdb.set_trace()
+                # bbox_xyxy = anno_info['bbox']
+                # bbox_xywh = self._xyxy2xywh(bbox_xyxy)
+                bbox_xywh = anno_info['bbox']
 
                 # bug exist in projection
 
@@ -293,6 +296,7 @@ class BlurhandConverter(BaseModeConverter):
                             np.zeros((45)).tolist())
                         bboxs_[f'{hand_type[0]}hand_bbox_xywh'].append(
                             bbox_xywh + [0])
+                bboxs_['bbox_xywh'].append([0, 0, width, height, 1])
 
                 meta_['focal_length'].append(focal)
                 meta_['principal_point'].append(princpt)

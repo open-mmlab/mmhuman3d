@@ -202,6 +202,8 @@ class FreihandConverter(BaseModeConverter):
         elif mode == 'val':
             human_data_mode = human_data.get_slice(
                 int(0.8 * len(image_path_)), len(image_path_))
+        else:
+            human_data_mode = human_data
 
         file_name = f'freihand_{mode}_{seed}.npz'
         out_file = os.path.join(out_path, file_name)
