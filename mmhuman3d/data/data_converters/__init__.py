@@ -13,6 +13,7 @@ from .dynacam import DynacamConverter
 from .eft import EftConverter
 from .egobody import EgobodyConverter
 from .ehf import EhfConverter
+from .emdb import EmdbConverter
 from .expose_curated_fits import ExposeCuratedFitsConverter
 from .expose_spin_smplx import ExposeSPINSMPLXConverter
 from .ffhq_flame import FFHQFlameConverter
@@ -113,4 +114,5 @@ __all__ = [
     'MotionXConverter',
     'MscocoNeuralConverter',
     'TalkshowConverter',
+    'EmdbConverter',
 ]

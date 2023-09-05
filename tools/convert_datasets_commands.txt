@@ -47,6 +47,13 @@ python tools/convert_datasets.py \
     --output_path /mnt/e/ehf/output \
     --modes val
 
+# emdb-converter
+python tools/convert_datasets.py \
+    --datasets emdb \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/emdb/output \
+    --modes train
+
 # freihand-converter
 python tools/convert_datasets.py \
     --datasets freihand \
