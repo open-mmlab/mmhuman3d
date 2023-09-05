@@ -178,6 +178,13 @@ python tools/convert_datasets.py \
     --root_path /mnt/c/Users/12595/Desktop/synbody_sample \
     --output_path /mnt/c/Users/12595/Desktop/synbody_sample/output
 
+# talkshow-converter
+python tools/convert_datasets.py \
+    --datasets talkshow \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/talkshow/output \
+    --modes train
+
 # ubody-converter
 python tools/convert_datasets.py \
     --datasets ubody \

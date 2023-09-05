@@ -50,6 +50,7 @@ from .ssp3d import Ssp3dConverter
 from .stirling import StirlingConverter
 from .surreal import SurrealConverter
 from .synbody import SynbodyConverter
+from .talkshow import TalkshowConverter
 from .ubody import UbodyConverter
 from .up3d import Up3dConverter
 from .vibe import VibeConverter
@@ -111,4 +112,5 @@ __all__ = [
     'Hsc4dConverter',
     'MotionXConverter',
     'MscocoNeuralConverter',
+    'TalkshowConverter',
 ]
