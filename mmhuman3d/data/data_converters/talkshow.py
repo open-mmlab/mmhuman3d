@@ -1,10 +1,8 @@
 import os
 from tqdm import tqdm
-import shutil
 import torch
 import numpy as np
 import random
-import subprocess
 import os
 from typing import List, Tuple
 import torch
@@ -19,56 +17,58 @@ from mmhuman3d.models.body_models.builder import build_body_model
 from smplx.lbs import transform_mat
 from mmhuman3d.models.body_models.utils import batch_transform_to_camera_frame
 
-# from mmhuman3d.core.visualization.visualize_smpl import render_smpl
 import cv2
 from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idxs_by_part,get_keypoint_idx
 
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
+import pdb
+
 @DATA_CONVERTERS.register_module()
 class TalkshowConverter(BaseModeConverter):
 
     ACCEPTED_MODES = ['train']
 
-
-    def __init__(self, modes=[], *args, **kwargs):
+    def __init__(self, modes: List = []) -> None:
 
         self.device = torch.device(
             'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
         super(TalkshowConverter, self).__init__(modes)
 
+
     def _cam2pixel(self, cam_coord, f, c):
         x = cam_coord[:,:,0] / cam_coord[:,:,2] * f + c[0]
         y = cam_coord[:,:,1] / cam_coord[:,:,2] * f + c[1]
         z = cam_coord[:,:,2]
+
         return np.stack((x,y,z),2)
 
 
     def _revert_smplx_hands_pca(self, param_dict, num_pca_comps, gender='neutral', gendered_model=None):
             
-            hl_pca = param_dict['left_hand_pose']
-            hr_pca = param_dict['right_hand_pose']
+        hl_pca = param_dict['left_hand_pose']
+        hr_pca = param_dict['right_hand_pose']
 
-            if gendered_model != None:
-                smplx_model = gendered_model
-            else:
-                smplx_model = dict(np.load(f'data/body_models/smplx/SMPLX_{gender.upper()}.npz', allow_pickle=True))
+        if gendered_model != None:
+            smplx_model = gendered_model
+        else:
+            smplx_model = dict(np.load(f'data/body_models/smplx/SMPLX_{gender.upper()}.npz', allow_pickle=True))
 
-            hl = smplx_model['hands_componentsl'] # 45, 45
-            hr = smplx_model['hands_componentsr'] # 45, 45
+        hl = smplx_model['hands_componentsl'] # 45, 45
+        hr = smplx_model['hands_componentsr'] # 45, 45
 
-            hl_pca = np.concatenate((hl_pca, np.zeros((len(hl_pca), 45 - num_pca_comps))), axis=1)
-            hr_pca = np.concatenate((hr_pca, np.zeros((len(hr_pca), 45 - num_pca_comps))), axis=1)
-            # import ipdb;ipdb.set_trace()
-            hl_reverted = np.einsum('ij, jk -> ik', hl_pca, hl).astype(np.float32)
-            hr_reverted = np.einsum('ij, jk -> ik', hr_pca, hr).astype(np.float32)
+        hl_pca = np.concatenate((hl_pca, np.zeros((len(hl_pca), 45 - num_pca_comps))), axis=1)
+        hr_pca = np.concatenate((hr_pca, np.zeros((len(hr_pca), 45 - num_pca_comps))), axis=1)
+        # import pdb;pdb.set_trace()
+        hl_reverted = np.einsum('ij, jk -> ik', hl_pca, hl).astype(np.float32)
+        hr_reverted = np.einsum('ij, jk -> ik', hr_pca, hr).astype(np.float32)
 
-            param_dict['left_hand_pose'] = hl_reverted
-            param_dict['right_hand_pose'] = hr_reverted
+        param_dict['left_hand_pose'] = hl_reverted
+        param_dict['right_hand_pose'] = hr_reverted
 
-            return param_dict
+        return param_dict
 
     def _split_list(self, full_list,shuffle=False,ratio=0.2):
         n_total = len(full_list)
@@ -104,6 +104,7 @@ class TalkshowConverter(BaseModeConverter):
             return 1
         else:
             return 0
+        
     def _modify_pose(self, speaker, data):
         global_orient = data['global_orient'].copy()
         transl = data['transl'].copy()
@@ -145,91 +146,87 @@ class TalkshowConverter(BaseModeConverter):
         # data['transl']=transl
         # data['global_orient']=global_orient
         data['body_pose_axis']=body_pose
-        # return data
+        return data
         
     def _keypoints_to_scaled_bbox_bfh(self, keypoints_input, occ=None, body_scale=1.0, fh_scale=1.0, convention='smplx',thr=0.005):
-            '''Obtain scaled bbox in xyxy format given keypoints
-            Args:
-                keypoints (np.ndarray): Keypoints
-                scale (float): Bounding Box scale
-            Returns:
-                bbox_xyxy (np.ndarray): Bounding box in xyxy format
-            '''
-            bboxs = []
-            keypoints_conf=None
-            # supported kps.shape: (1, n, k) or (n, k), k = 2 or 3
-            if keypoints_input.ndim == 3:
-                keypoints = keypoints_input[0]
-            keypoints = keypoints_input[:, :2]
-            if keypoints_input.shape[-1] != 2:
-                
-                keypoints_conf = keypoints_input[:, 2]
+        '''Obtain scaled bbox in xyxy format given keypoints
+        Args:
+            keypoints (np.ndarray): Keypoints
+            scale (float): Bounding Box scale
+        Returns:
+            bbox_xyxy (np.ndarray): Bounding box in xyxy format
+        '''
+        bboxs = []
+        keypoints_conf=None
+        # supported kps.shape: (1, n, k) or (n, k), k = 2 or 3
+        if keypoints_input.ndim == 3:
+            keypoints = keypoints_input[0]
+        keypoints = keypoints_input[:, :2]
+        if keypoints_input.shape[-1] != 2:
             
-            for body_part in ['body', 'head', 'left_hand', 'right_hand']:
-                if body_part == 'body':
-                    scale = body_scale
-                    kps = keypoints
-                    if keypoints_conf is not None:
-                        kps_conf = keypoints_conf
-                        if not (kps_conf>thr).sum()<=1:
-                            kps = kps[kps_conf>thr]
-                else:
-                    scale = fh_scale
-                    kp_id = get_keypoint_idxs_by_part(body_part, convention=convention)
-                    kps = keypoints[kp_id]
-                    if keypoints_conf is not None:
-                        kps_conf = keypoints_conf[kp_id]
-                        if not (kps_conf>thr).sum()<=1:
-                            kps = kps[kps_conf>thr]
-                if keypoints_conf is not None and body_part != 'body':
+            keypoints_conf = keypoints_input[:, 2]
+        
+        for body_part in ['body', 'head', 'left_hand', 'right_hand']:
+            if body_part == 'body':
+                scale = body_scale
+                kps = keypoints
+                if keypoints_conf is not None:
+                    kps_conf = keypoints_conf
+                    if not (kps_conf>thr).sum()<=1:
+                        kps = kps[kps_conf>thr]
+            else:
+                scale = fh_scale
+                kp_id = get_keypoint_idxs_by_part(body_part, convention=convention)
+                kps = keypoints[kp_id]
+                if keypoints_conf is not None:
+                    kps_conf = keypoints_conf[kp_id]
+                    if not (kps_conf>thr).sum()<=1:
+                        kps = kps[kps_conf>thr]
+            if keypoints_conf is not None and body_part != 'body':
 
-                    occ_p = kps_conf<thr
-                
-
-                    
-                    if np.sum(occ_p) / len(kp_id) >= 0.1:
-                        conf = 0
-                        # print(f'{body_part} occluded, occlusion: {np.sum(occ_p) / len(kp_id)}, skip')
-                    else:
-                        # print(f'{body_part} good, {np.sum(self_occ_p + occ_p) / len(kp_id)}')
-                        conf = 1
-                else:
-                    conf = 1
-                if body_part == 'body':
-                    conf = 1
-
-                xmin, ymin = np.amin(kps, axis=0)
-                xmax, ymax = np.amax(kps, axis=0)
-
-                width = (xmax - xmin) * scale
-                height = (ymax - ymin) * scale
-
-                x_center = 0.5 * (xmax + xmin)
-                y_center = 0.5 * (ymax + ymin)
-                xmin = x_center - 0.5 * width
-                xmax = x_center + 0.5 * width
-                ymin = y_center - 0.5 * height
-                ymax = y_center + 0.5 * height
-
-                bbox = np.stack([xmin, ymin, xmax, ymax, conf], axis=0).astype(np.float32)
-                bboxs.append(bbox)
+                occ_p = kps_conf<thr
             
-            return bboxs
+
+                
+                if np.sum(occ_p) / len(kp_id) >= 0.1:
+                    conf = 0
+                    # print(f'{body_part} occluded, occlusion: {np.sum(occ_p) / len(kp_id)}, skip')
+                else:
+                    # print(f'{body_part} good, {np.sum(self_occ_p + occ_p) / len(kp_id)}')
+                    conf = 1
+            else:
+                conf = 1
+            if body_part == 'body':
+                conf = 1
+
+            xmin, ymin = np.amin(kps, axis=0)
+            xmax, ymax = np.amax(kps, axis=0)
+
+            width = (xmax - xmin) * scale
+            height = (ymax - ymin) * scale
+
+            x_center = 0.5 * (xmax + xmin)
+            y_center = 0.5 * (ymax + ymin)
+            xmin = x_center - 0.5 * width
+            xmax = x_center + 0.5 * width
+            ymin = y_center - 0.5 * height
+            ymax = y_center + 0.5 * height
+
+            bbox = np.stack([xmin, ymin, xmax, ymax, conf], axis=0).astype(np.float32)
+            bboxs.append(bbox)
+        
+        return bboxs
     
     def _world2cam(self, world_coord, R, t):
         cam_coord = np.dot(R, world_coord.transpose(1,0)).transpose(1,0) + t.reshape(1,3)
         return cam_coord
 
 
-    # srun -u -p Zoetrope /mnt/lustre/share_data/weichen1/7zip a renbody.zip renbody/image/20220924/wangkexin_f/wangkexin_yf1_dz6/image/21/*.jpg -v20g
-
-
-
+        # srun -u -p Zoetrope /mnt/lustre/share_data/weichen1/7zip a renbody.zip renbody/image/20220924/wangkexin_f/wangkexin_yf1_dz6/image/21/*.jpg -v20g
 
 
     def convert_by_mode(self, dataset_path: str, out_path: str,
                         mode: str) -> dict:
-
         # parse data
         speakers = ['seth','conan','oliver','chemistry']
         # speakers = ['conan']
@@ -239,22 +236,19 @@ class TalkshowConverter(BaseModeConverter):
         img_root = '/mnt/lustre/share_data/weichen1/talkshow_frames'
         root = '/mnt/lustre/share_data/weichen1'
 
-
         # build smplx model
-        smplx_config = dict(
-            type='SMPLX',
-            keypoint_src='smplx',
-            keypoint_dst='smplx',
-            model_path='/mnt/cache/share_data/zoetrope/body_models/smplx',
-            gender='neutral',
-            # num_betas=10,
-            # num_pca_comps=12,
-            use_face_contour=True,
-            flat_hand_mean=True,
-            use_pca=False,
-            num_betas= 300,
-            num_expression_coeffs=100)
-        smplx_model = build_body_model(smplx_config).to(self.device)
+        smplx_model = build_body_model(
+            dict(
+                type='SMPLX',
+                keypoint_src='smplx',
+                keypoint_dst='smplx',
+                model_path='data/body_models/smplx',
+                gender='neutral',
+                use_face_contour=True,
+                flat_hand_mean=True,
+                use_pca=False,
+                num_betas= 300,
+                num_expression_coeffs=100)).to(self.device)
 
         # use HumanData to store the data
         human_data = HumanData()
@@ -371,22 +365,22 @@ class TalkshowConverter(BaseModeConverter):
                         continue
                     # import ipdb;ipdb.set_trace()
                     data = self._revert_smplx_hands_pca(data,12)
-                    modify_pose(speaker_name,data)
+                    self._modify_pose(speaker_name,data)
                     # ipdb.set_trace()
                     # import ipdb;ipdb.set_trace()
-                    jaw_pose = torch.Tensor(data['jaw_pose']).to(device)
+                    jaw_pose = torch.Tensor(data['jaw_pose']).to(self.device)
 
                     batch_size = len(jaw_pose)
-                    betas = torch.Tensor(data['betas']).to(device).repeat(batch_size,1)
+                    betas = torch.Tensor(data['betas']).to(self.device).repeat(batch_size,1)
                     
-                    leye_pose = torch.Tensor(data['leye_pose']).to(device)
-                    reye_pose = torch.Tensor(data['reye_pose']).to(device)
-                    global_orient = torch.Tensor(data['global_orient']).squeeze().to(device)
-                    body_pose = torch.Tensor(data['body_pose_axis']).to(device)
-                    left_hand_pose = torch.Tensor(data['left_hand_pose']).to(device).reshape(-1,15,3)
-                    right_hand_pose = torch.Tensor(data['right_hand_pose']).to(device).reshape(-1,15,3)
-                    transl = torch.Tensor(data['transl']).to(device)
-                    expression = torch.Tensor(data['expression']).to(device) #B 100
+                    leye_pose = torch.Tensor(data['leye_pose']).to(self.device)
+                    reye_pose = torch.Tensor(data['reye_pose']).to(self.device)
+                    global_orient = torch.Tensor(data['global_orient']).squeeze().to(self.device)
+                    body_pose = torch.Tensor(data['body_pose_axis']).to(self.device)
+                    left_hand_pose = torch.Tensor(data['left_hand_pose']).to(self.device).reshape(-1,15,3)
+                    right_hand_pose = torch.Tensor(data['right_hand_pose']).to(self.device).reshape(-1,15,3)
+                    transl = torch.Tensor(data['transl']).to(self.device)
+                    expression = torch.Tensor(data['expression']).to(self.device) #B 100
                     # full_body = np.concatenate(
                     #     (jaw_pose, leye_pose, reye_pose, global_orient, body_pose, left_hand_pose, right_hand_pose), axis=1)
                     focal  = data['focal_length']
@@ -424,12 +418,11 @@ class TalkshowConverter(BaseModeConverter):
                                                                             data['transl'], 
                                                                             smplx_res['joints'][:,0,:].cpu().detach().numpy(), (camera_transform[0]).cpu().numpy())
                     # import ipdb;ipdb.set_trace()
-                    # import ipdb;ipdb.set_trace()
                     smplx_res_new = smplx_model(
                                     betas=betas, 
                                     body_pose=body_pose,  
-                                    global_orient=torch.Tensor(new_smplx_global_orient).to(device), 
-                                    transl=torch.Tensor(new_smplx_transl).to(device), 
+                                    global_orient=torch.Tensor(new_smplx_global_orient).to(self.device), 
+                                    transl=torch.Tensor(new_smplx_transl).to(self.device), 
                                     left_hand_pose=left_hand_pose,
                                     right_hand_pose=right_hand_pose,
                                     jaw_pose=jaw_pose,
@@ -473,7 +466,7 @@ class TalkshowConverter(BaseModeConverter):
                             bbox_xyxy = np.array(bbox_xywh[:4].copy())
                             # bbox_xyxy = np.array(ann['bbox'])
                             bbox_xyxy[2:4] += bbox_xyxy[:2]
-                            cam2pixel(smplx_res_new['joints'].detach().cpu(),5000,[360.0, 640.0])             
+                            self._cam2pixel(smplx_res_new['joints'].detach().cpu(),5000,[360.0, 640.0])             
                             # img_ = mmcv.imshow_bboxes((img*255).astype(np.uint8).copy(),bbox_xyxy[None],show=False)
                             # cv2.imwrite('test%s.png'%bbox_name,img_)
                             
@@ -485,15 +478,15 @@ class TalkshowConverter(BaseModeConverter):
                         image_path_.append(os.path.join(*img.split('/')[-4:]))
                     keypoints2d_smplx_.append(smplx_keypoints2d)
                     keypoints3d_smplx_.append(smplx_keypoints3d_root.detach().cpu().numpy())
-                    # jaw_pose = torch.Tensor(data['jaw_pose']).to(device)
-                    # leye_pose = torch.Tensor(data['leye_pose']).to(device)
-                    # reye_pose = torch.Tensor(data['reye_pose']).to(device)
-                    # global_orient = torch.Tensor(data['global_orient']).squeeze().to(device)
-                    # body_pose = torch.Tensor(data['body_pose_axis']).to(device)
-                    # left_hand_pose = torch.Tensor(data['left_hand_pose']).to(device)
-                    # right_hand_pose = torch.Tensor(data['right_hand_pose']).to(device)
-                    # transl = torch.Tensor(data['transl']).to(device)
-                    # expression = torch.Tensor(data['expression']).to(device) #B 100
+                    # jaw_pose = torch.Tensor(data['jaw_pose']).to(self.device)
+                    # leye_pose = torch.Tensor(data['leye_pose']).to(self.device)
+                    # reye_pose = torch.Tensor(data['reye_pose']).to(self.device)
+                    # global_orient = torch.Tensor(data['global_orient']).squeeze().to(self.device)
+                    # body_pose = torch.Tensor(data['body_pose_axis']).to(self.device)
+                    # left_hand_pose = torch.Tensor(data['left_hand_pose']).to(self.device)
+                    # right_hand_pose = torch.Tensor(data['right_hand_pose']).to(self.device)
+                    # transl = torch.Tensor(data['transl']).to(self.device)
+                    # expression = torch.Tensor(data['expression']).to(self.device) #B 100
                     # import ipdb;ipdb.set_trace()
 
                     meta['focal_length'].append(np.ones([batch_size])*focal)
@@ -567,20 +560,6 @@ class TalkshowConverter(BaseModeConverter):
 
 
 
-print('immmmmmmmmmmm')
-
-
-
-
-device = torch.device('cuda')
-
-
-
-# def cam2pixel(cam_coord, f, c):
-#     x = cam_coord[:,0] / cam_coord[:,2] * f[0] + c[0]
-#     y = cam_coord[:,1] / cam_coord[:,2] * f[1] + c[1]
-#     z = cam_coord[:,2]
-#     return np.stack((x,y,z),1)
 
 
 
@@ -590,53 +569,54 @@ device = torch.device('cuda')
 
 
 
-def moveto(list, file):
-    for f in list:
-        before, after = '/'.join(f.split('/')[:-1]), f.split('/')[-1]
-        new_path = os.path.join(before, file)
-        new_path = os.path.join(new_path, after)
-        # os.makedirs(new_path)
-        # os.path.isdir(new_path)
-        # shutil.move(f, new_path)
 
-        #转移到新目录
-        shutil.copytree(f, new_path)
-        #删除原train里的文件
-        shutil.rmtree(f)
-    return None
+    # def moveto(list, file):
+    #     for f in list:
+    #         before, after = '/'.join(f.split('/')[:-1]), f.split('/')[-1]
+    #         new_path = os.path.join(before, file)
+    #         new_path = os.path.join(new_path, after)
+    #         # os.makedirs(new_path)
+    #         # os.path.isdir(new_path)
+    #         # shutil.move(f, new_path)
 
-def video_to_images(
-    vid_file,
-    prefix='',
-    start='00:00',
-    end='00:00',
-    img_folder=None,
-    return_info=False,
-    fps=30
-):
-    '''
-    From https://github.com/mkocabas/VIBE/blob/master/lib/utils/demo_utils.py
+    #         #转移到新目录
+    #         shutil.copytree(f, new_path)
+    #         #删除原train里的文件
+    #         shutil.rmtree(f)
+    #     return None
 
-    fps will sample the video to this rate.
-    '''
-    if img_folder is None:
-        img_folder = osp.join('/tmp', osp.basename(vid_file).replace('.', '_'))
+    # def video_to_images(
+    #     vid_file,
+    #     prefix='',
+    #     start='00:00',
+    #     end='00:00',
+    #     img_folder=None,
+    #     return_info=False,
+    #     fps=30
+    # ):
+    #     '''
+    #     From https://github.com/mkocabas/VIBE/blob/master/lib/utils/demo_utils.py
 
-    os.makedirs(img_folder, exist_ok=True)
+    #     fps will sample the video to this rate.
+    #     '''
+    #     if img_folder is None:
+    #         img_folder = os.path.join('/tmp', os.path.basename(vid_file).replace('.', '_'))
 
-    command = ['ffmpeg',
-               '-i', vid_file,
-               '-r', str(fps),
-               '-ss', str(start),
-               '-to', str(end),
-               '-f', 'image2',
-               '-v', 'error',
-               f'{img_folder}/{prefix}%06d.jpg']
-    print(f'Running \"{" ".join(command)}\"')
-    subprocess.call(command)
+    #     os.makedirs(img_folder, exist_ok=True)
 
-    print(f'Images saved to \"{img_folder}\"')
+    #     command = ['ffmpeg',
+    #             '-i', vid_file,
+    #             '-r', str(fps),
+    #             '-ss', str(start),
+    #             '-to', str(end),
+    #             '-f', 'image2',
+    #             '-v', 'error',
+    #             f'{img_folder}/{prefix}%06d.jpg']
+    #     print(f'Running \"{" ".join(command)}\"')
+    #     subprocess.call(command)
+
+    #     print(f'Images saved to \"{img_folder}\"')
 
 
-# import ipdb;ipdb.set_trace()
+
 
