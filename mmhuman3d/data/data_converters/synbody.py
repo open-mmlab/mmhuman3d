@@ -25,8 +25,8 @@ from .builder import DATA_CONVERTERS
 @DATA_CONVERTERS.register_module()
 class SynbodyConverter(BaseModeConverter):
     """Synbody dataset."""
-    ACCEPTED_MODES = ['v0_train', 'v0_ehf', 'v0_amass',
-                      'v0_agora', 'v0_renew', 'v1_train']
+    ACCEPTED_MODES = ['v1_0_train', 'v1_0_ehf', 'v1_0_amass',
+                      'v1_0_agora', 'v1_0_renew', 'v1_1_train']
 
     def __init__(self, modes: List = []) -> None:
 
@@ -126,7 +126,12 @@ class SynbodyConverter(BaseModeConverter):
         npzs = glob.glob(os.path.join(preprocessed_dir, '*', '*', '*.npz'))
 
         # init random seed
-        slice_num = 18
+
+        if mode in ['v1_0_train', 'v1_1_train']:
+            slice_num = 10
+        else:
+            slice_num = 1
+        # slice_num = 18
         seed, size = '230804', '94000'
         random.seed(int(seed))
         random.shuffle(npzs)
@@ -134,6 +139,7 @@ class SynbodyConverter(BaseModeConverter):
         npzs = npzs[:int(size)]
 
         # pdb.set_trace()
+
 
         size_n = min(int(size), len(npzs))
 

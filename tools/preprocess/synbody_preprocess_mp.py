@@ -34,7 +34,7 @@ def process_npz_multiprocessing(args):
     #     root_path = os.path.join(root_path, 'synbody')
     # ple = [p for p in ple if '.' not in p]
 
-    SUPPORTED_BATCH = ['Synbody_v0', 'Synbody_v1']
+    SUPPORTED_BATCH = ['Synbody_v1_0', 'Synbody_v1_1']
     assert args.prefix in SUPPORTED_BATCH, f'prefix {args.prefix} not supported'
 
     dataset_path = os.path.join(args.root_path, args.prefix)

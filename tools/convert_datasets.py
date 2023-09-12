@@ -90,8 +90,8 @@ DATASET_CONFIGS = dict(
         type='SynbodyConverter',  # synthetic
         prefix='synbody',
         modes=[
-            'v0_train', 'v0_ehf', 'v0_amass', 'v0_agora', 'v0_renew',
-            'v1_train'
+            'v1_0_train', 'v1_0_ehf', 'v1_0_amass', 'v1_0_agora', 'v1_0_renew',
+            'v1_1_train'
         ]),
     ubody=dict(
         type='UbodyConverter',  # real, has some single
