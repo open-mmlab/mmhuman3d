@@ -135,16 +135,16 @@ def process_npz(args):
 
     # batch name mapping
     batch_name_map = {
-        '20230113': 'v0_train',
-        '20230204': 'v0_train',
-        '20230209': 'v0_train',
-        '20230220': 'v0_train',
-        '20230306_efh': 'v0_ehf',  # name change efh -> ehf
-        '20230307_ehf': 'v0_ehf',
-        '20230327_amass': 'v0_amass',
-        '20230421_agora': 'v0_agora',
-        '20230526_renew': 'v0_renew',
-        '20230727': 'v1_train',
+        '20230113': 'v1_0_train',
+        '20230204': 'v1_0_train',
+        '20230209': 'v1_0_train',
+        '20230220': 'v1_0_train',
+        '20230306_efh': 'v1_0_ehf',  # name change efh -> ehf
+        '20230307_ehf': 'v1_0_ehf',
+        '20230327_amass': 'v1_0_amass',
+        '20230421_agora': 'v1_0_agora',
+        '20230526_renew': 'v1_0_renew',
+        '20230727': 'v1_1_train',
     }
     if not batch_name in batch_name_map.keys():
         return

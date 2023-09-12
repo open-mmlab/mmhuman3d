@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
+from pycocotools.coco import COCO
 from mmhuman3d.core.cameras import build_cameras
 from mmhuman3d.core.conventions.keypoints_mapping import convert_kps
 from mmhuman3d.data.data_structures.human_data import HumanData
@@ -61,6 +62,7 @@ class AgoraConverter(BaseModeConverter):
             'jaw_pose': (-1, 3),
             'expression': (-1, 10),
             'betas_extra': (-1, 1),  # how close to kid template
+            'betas_fixed': (-1, 10),  # gender neutral betas
         }
 
         super(AgoraConverter, self).__init__(modes)
@@ -117,8 +119,8 @@ class AgoraConverter(BaseModeConverter):
         keypoints2d_, keypoints3d_, = [], []
         bboxs_ = {}
         for bbox_name in [
-                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                'rhand_bbox_xywh'
+            'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+            'rhand_bbox_xywh'
         ]:
             bboxs_[bbox_name] = []
         meta_ = {}
@@ -144,26 +146,38 @@ class AgoraConverter(BaseModeConverter):
                     use_pca=False,
                     batch_size=1)).to(device)
 
-        # data info path
+        # data info path and bf (betas fixed)
         data_info_path = os.path.join(dataset_path,
-                                      f'AGORA_{batch_info}_fix_betas.json')
+                                      f'AGORA_{batch_info}.json')
+        data_info_path_bf = os.path.join(dataset_path,
+                                         f'AGORA_{batch_info}_fix_betas.json')
 
         # read data info
         with open(data_info_path, 'r') as f:
             param = json.load(f)
-        image_param = param['images']
-        anno_param = param['annotations']
+        with open(data_info_path_bf, 'r') as f:
+            param_bf = json.load(f)
+        # image_param = param['images']
+        # anno_param = param['annotations']
+        # anno_param_bf = param_bf['annotations']
+
+        db = COCO(data_info_path)
+        db_bf = COCO(data_info_path_bf)
 
         print('Converting...')
-        for anno_info in tqdm(anno_param, desc=f'Processing Agora {mode}'):
+        for aid in tqdm(db.anns.keys(), desc=f'Processing Agora {mode}'):
+            anno_info = db.anns[aid]
+            anno_info_bf = db_bf.anns[aid]
 
-            # pdb.set_trace()
-
+        # for aid, anno_info in enumerate(tqdm(anno_param, desc=f'Processing Agora {mode}')):
             image_id = anno_info['image_id']
+            # anno_info_bf = anno_param_bf[aid]
+
             # print(anno_info['gender'])
 
             # get image details
-            image_info = image_param[image_id]
+            image_info = db.loadImgs(image_id)[0]
+            # image_info = image_param[image_id]
             image_path = image_info[
                 f"file_name_{self.misc_config['image_size'][0]}x"
                 f"{self.misc_config['image_size'][1]}"]
@@ -182,6 +196,9 @@ class AgoraConverter(BaseModeConverter):
             smplx_path = os.path.join(dataset_path,
                                       anno_info['smplx_param_path'])
             smplx_param = pickle.load(open(smplx_path, 'rb'))
+            smplx_param_bf = pickle.load(open(
+                os.path.join(dataset_path, anno_info_bf['smplx_param_path']), 'rb'))
+            smplx_param['betas_fixed'] = smplx_param_bf['betas'][:, :10]
 
             if smplx_param['betas'].shape[1] != 10:
                 smplx_param['betas_extra'] = smplx_param['betas'][:, 10:]
@@ -218,21 +235,21 @@ class AgoraConverter(BaseModeConverter):
             # pdb.set_trace()
             # build camera
             camera = build_cameras(
-            dict(
-                type='PerspectiveCameras',
-                convention='opencv',
-                in_ndc=False,
-                focal_length=focal_length,
-                image_size=(self.misc_config['image_size'][0], self.misc_config['image_size'][1]),
-                principal_point=np.array(principal_point).reshape(-1, 2))).to(device)
+                dict(
+                    type='PerspectiveCameras',
+                    convention='opencv',
+                    in_ndc=False,
+                    focal_length=focal_length,
+                    image_size=(self.misc_config['image_size'][0], self.misc_config['image_size'][1]),
+                    principal_point=np.array(principal_point).reshape(-1, 2))).to(device)
 
             # # test smplx
             intersect_key = list(set(smplx_param.keys()) & set(self.smplx_shape.keys()))
             body_model_param_tensor = {key: torch.tensor(
-                    np.array(smplx_param[key]).reshape(self.smplx_shape[key]),
-                            device=device, dtype=torch.float32)
-                            for key in intersect_key
-                            if len(smplx_param[key]) > 0}
+                np.array(smplx_param[key]).reshape(self.smplx_shape[key]),
+                device=device, dtype=torch.float32)
+                for key in intersect_key
+                if len(smplx_param[key]) > 0}
             output = smplx_model[gender](**body_model_param_tensor, return_verts=True)
             smplx_joints = output['joints']
             kps3d = smplx_joints.detach().cpu().numpy()
@@ -293,7 +310,7 @@ class AgoraConverter(BaseModeConverter):
         human_data['config'] = f'agora_{mode}'
         human_data['misc'] = self.misc_config
 
-        size_i = str(min(int(size), len(anno_param)))
+        size_i = str(min(int(size), len(db.anns.keys())))
 
         human_data.compress_keypoints_by_mask()
         os.makedirs(out_path, exist_ok=True)
