@@ -168,6 +168,7 @@ class BlurhandConverter(BaseModeConverter):
             bboxs_[f'{hand_type[0]}hand_bbox_xywh'] = []
         bboxs_['bbox_xywh'] = []
         image_path_, keypoints2d_smplx_ = [], []
+        keypoints3d_smplx_ = []
         meta_ = {}
         for meta_key in ['principal_point', 'focal_length']:
             meta_[meta_key] = []
@@ -275,7 +276,10 @@ class BlurhandConverter(BaseModeConverter):
                 # append keypoints
                 j2d_orig = np.concatenate(
                     [j2d_orig, j2d_conf.reshape(-1, 1)], axis=-1)
+                j3d_orig = np.concatenate(
+                    [j3d_c, j2d_conf.reshape(-1, 1)], axis=-1)
                 keypoints2d_smplx_.append(j2d_orig)
+                keypoints3d_smplx_.append(j3d_orig)
 
                 # append
                 image_path_.append(image_path)
@@ -343,6 +347,14 @@ class BlurhandConverter(BaseModeConverter):
                 convert_kps(keypoints2d_smplx, src='mano_hands', dst='human_data')
         human_data['keypoints2d_smplx'] = keypoints2d_smplx
         human_data['keypoints2d_smplx_mask'] = keypoints2d_smplx_mask
+
+        # keypoints3d_smplx
+        keypoints3d_smplx = np.concatenate(
+            keypoints3d_smplx_, axis=0).reshape(-1, 42, 4)
+        keypoints3d_smplx, keypoints3d_smplx_mask = \
+                convert_kps(keypoints3d_smplx, src='mano_hands', dst='human_data')
+        human_data['keypoints3d_smplx'] = keypoints3d_smplx
+        human_data['keypoints3d_smplx_mask'] = keypoints3d_smplx_mask
 
         # misc
         human_data['misc'] = self.misc_config
