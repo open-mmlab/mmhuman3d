@@ -74,7 +74,7 @@ class DynacamConverter(BaseModeConverter):
             meta_[meta_key] = []
 
         seed = 230720
-        size = 99
+        size = 999
 
         # prepare batch
         batch_name, batch_mode = mode.split('_')
@@ -288,5 +288,5 @@ class DynacamConverter(BaseModeConverter):
         os.makedirs(out_path, exist_ok=True)
         out_file = os.path.join(
             out_path,
-            f'dynacam_{mode}_{seed}_{"{:02d}".format(size_i)}.npz')
+            f'dynacam_{mode}_{seed}_{"{:03d}".format(size_i)}.npz')
         human_data.dump(out_file)

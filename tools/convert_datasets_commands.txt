@@ -222,7 +222,7 @@ srun -p Zoetrope python tools/convert_datasets.py \
     --datasets synbody \
     --root_path /mnt/lustre/share_data/weichen1/datasets \
     --output_path /mnt/lustre/share_data/weichen1/converted_humandata_new \
-    --modes v1_train
+    --modes v1_1_train
 
 python tools/preprocess/synbody_preprocess.py \
     --seq /mnt/lustre/share_data/weichen1/datasets/synbody/Synbody_v1_1/20230727/BrooklynAlley/LS_0727_091456_044 \
