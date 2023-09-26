@@ -64,6 +64,10 @@ DATASET_CONFIGS = dict(
         modes=[
             'validation_3840', 'train_3840', 'train_1280', 'validation_1280'
         ]),
+    crowd3d=dict(
+        type='Crowd3dConverter',  # real, large-image
+        prefix='crowd3d',
+        modes=['train']),
     dynacam=dict(
         type='DynacamConverter',  # real
         prefix='dynacam',
@@ -115,6 +119,10 @@ DATASET_CONFIGS = dict(
         type='EmdbConverter',  # real
         prefix='emdb',
         modes=['train', 'test']),
+    flag3d=dict(
+        type='Flag3dConverter',  # real
+        prefix='flag3d',
+        modes=['train', 'val']),
     hsc4d=dict(
         type='Hsc4dConverter',  # real, in progress
         prefix='hsc4d',

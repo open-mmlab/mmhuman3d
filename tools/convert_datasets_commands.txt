@@ -54,6 +54,15 @@ python tools/convert_datasets.py \
     --output_path /mnt/d/datasets/emdb/output \
     --modes train
 
+# flag3d-converter
+python tools/convert_datasets.py \
+    --datasets flag3d \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/flag3d/output \
+    --modes subset
+
+python tools/preprocess/flag3d_split.py
+
 # freihand-converter
 python tools/convert_datasets.py \
     --datasets freihand \

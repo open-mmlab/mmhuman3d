@@ -8,6 +8,7 @@ from .cliff import CliffConverter
 from .coco import CocoConverter
 from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
+from .crowd3d import Crowd3dConverter
 from .crowdpose import CrowdposeConverter
 from .dynacam import DynacamConverter
 from .eft import EftConverter
@@ -17,6 +18,7 @@ from .emdb import EmdbConverter
 from .expose_curated_fits import ExposeCuratedFitsConverter
 from .expose_spin_smplx import ExposeSPINSMPLXConverter
 from .ffhq_flame import FFHQFlameConverter
+from .flag3d import Flag3dConverter
 from .freihand import FreihandConverter
 from .gta_human import GTAHumanConverter
 from .gta_human2 import GTAHuman2Converter
@@ -57,62 +59,23 @@ from .up3d import Up3dConverter
 from .vibe import VibeConverter
 
 __all__ = [
-    'build_data_converter',
-    'AgoraConverter',
-    'MpiiNeuralConverter',
-    'H36mNeuralConverter',
-    'AmassConverter',
-    'CocoConverter',
-    'CocoWholebodyConverter',
-    'H36mConverter',
-    'LspExtendedConverter',
-    'LspConverter',
-    'MpiInf3dhpConverter',
-    'PennActionConverter',
-    'PosetrackConverter',
-    'Pw3dNeuralConverter',
-    'Up3dConverter',
-    'CrowdposeConverter',
-    'EftConverter',
-    'GTAHumanConverter',
-    'GTAHuman2Converter',
-    'CocoHybrIKConverter',
-    'H36mHybrIKConverter',
-    'H36mSMPLXConverter',
-    'MpiInf3dhpHybrIKConverter',
-    'Pw3dHybrIKConverter',
-    'SurrealConverter',
-    'InstaVibeConverter',
-    'SpinConverter',
-    'VibeConverter',
-    'HuMManConverter',
-    'FFHQFlameConverter',
-    'ExposeCuratedFitsConverter',
-    'ExposeSPINSMPLXConverter',
-    'FreihandConverter',
-    'StirlingConverter',
-    'EhfConverter',
-    'CliffConverter',
-    'SynbodyConverter',
-    'RenbodyConverter',
-    'EgobodyConverter',
-    'HumanartConverter',
-    'UbodyConverter',
-    'ShapyConverter',
-    'Ssp3dConverter',
-    'ImarDatasetsConverter',
-    'BehaveConverter',
-    'MoyoConverter',
-    'Interhand26MConverter',
-    'HancoConverter',
-    'Sloper4dConverter',
-    'Cimi4dConverter',
-    'SgnifyConverter',
-    'DynacamConverter',
-    'BlurhandConverter',
-    'Hsc4dConverter',
-    'MotionXConverter',
-    'MscocoNeuralConverter',
-    'TalkshowConverter',
-    'EmdbConverter',
+    'build_data_converter', 'AgoraConverter', 'MpiiNeuralConverter',
+    'H36mNeuralConverter', 'AmassConverter', 'CocoConverter',
+    'CocoWholebodyConverter', 'H36mConverter', 'LspExtendedConverter',
+    'LspConverter', 'MpiInf3dhpConverter', 'PennActionConverter',
+    'PosetrackConverter', 'Pw3dNeuralConverter', 'Up3dConverter',
+    'CrowdposeConverter', 'EftConverter', 'GTAHumanConverter',
+    'GTAHuman2Converter', 'CocoHybrIKConverter', 'H36mHybrIKConverter',
+    'H36mSMPLXConverter', 'MpiInf3dhpHybrIKConverter', 'Pw3dHybrIKConverter',
+    'SurrealConverter', 'InstaVibeConverter', 'SpinConverter', 'VibeConverter',
+    'HuMManConverter', 'FFHQFlameConverter', 'ExposeCuratedFitsConverter',
+    'ExposeSPINSMPLXConverter', 'FreihandConverter', 'StirlingConverter',
+    'EhfConverter', 'CliffConverter', 'SynbodyConverter', 'RenbodyConverter',
+    'EgobodyConverter', 'HumanartConverter', 'UbodyConverter',
+    'ShapyConverter', 'Ssp3dConverter', 'ImarDatasetsConverter',
+    'BehaveConverter', 'MoyoConverter', 'Interhand26MConverter',
+    'HancoConverter', 'Sloper4dConverter', 'Cimi4dConverter',
+    'SgnifyConverter', 'DynacamConverter', 'BlurhandConverter',
+    'Hsc4dConverter', 'MotionXConverter', 'MscocoNeuralConverter',
+    'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter', 'Crowd3dConverter'
 ]
