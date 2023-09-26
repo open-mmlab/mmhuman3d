@@ -36,12 +36,18 @@
 7. (For convert only) For discussing processing speed or time, hardware config is RTX3090 + i9-12900 + 64GB RAM + Cuda11.8 & Python3.9. The most resource-consuming processes are calling SMPL/SMPLX models and camera projection.  
 
 ## Overview - Current Supported Datasets
+- Behave
+- CHI3D
 - EgoBody
+- FIT3D
+- EMDB
 - GTA-Human++
 - H36M (Neural Annot)
+- HumanSC3D
 - MPII (Neural Annot)
 - MSCOCO (Neural Annot)
 - PW3D (Neural Annot)
+- Slpoer4D
 
 ## Subsection 1 - Neural Annot Datasets
 Overall: Download from [Nerual Annot Homepage](https://github.com/mks0601/NeuralAnnot_RELEASE/blob/main/README.md)
@@ -108,13 +114,7 @@ python tools/preprocess/neural_annot.py --dataset_path /YOUR_PATH/mpii
 **Step 3 (Converter) - Convert Dataset**
 
 Process speed is ~60item/s, totally ~17k item, and takes several minutes.
-```
-python tools/convert_datasets.py \
- --datasets mpii \
- --root_path /mnt/d/datasets \
- --output_path /mnt/d/datasets/mpii/output \
- --modes train
-```
+
 </details>
 
 <details>
@@ -198,6 +198,26 @@ python tools/convert_datasets.py \
 ```
 </details>
 
+<details>
+<summary>Reference of Neural Annot</summary>
+
+```
+@InProceedings{Moon_2022_CVPRW_NeuralAnnot,  
+author = {Moon, Gyeongsik and Choi, Hongsuk and Lee, Kyoung Mu},  
+title = {NeuralAnnot: Neural Annotator for 3D Human Mesh Training Sets},  
+booktitle = {Computer Vision and Pattern Recognition Workshop (CVPRW)},  
+year = {2022}  
+}  
+
+@InProceedings{Moon_2023_CVPRW_3Dpseudpgts,  
+author = {Moon, Gyeongsik and Choi, Hongsuk and Chun, Sanghyuk and Lee, Jiyoung and Yun, Sangdoo},  
+title = {Three Recipes for Better 3D Pseudo-GTs of 3D Human Mesh Estimation in the Wild},  
+booktitle = {Computer Vision and Pattern Recognition Workshop (CVPRW)},  
+year = {2023}  
+}  
+```
+</details>
+
 ## Subsection 2 - Synthetic Datasets
 
 <details>
@@ -211,11 +231,28 @@ python tools/convert_datasets.py \
 
 </details>
 
+<details>
+<summary>SPEC (IP)</summary>
+
+</details>
+
+## SPEC (Code not added yet)
+
+
+
+<details>
+<summary>SynBody (IP)</summary>
+
+</details>
+
 ## Subsection 3 - Real Multi-Human Datasets
 <details>
 <summary>EgoBody</summary>
 
+## EgoBody: Human Body Shape and Motion of Interacting People from Head-Mounted Devices
+
 **Dataset Split**
+
 There are 6 HumanData set, separated by "train, test and val", and "egocentric and kinect". For example, "egocentric_train" & "kinect_train" comprise the train set as mentioned in the paper.
 
 ```
@@ -231,8 +268,6 @@ Egobody dataset can be split as two distinct subset, "egocentric" which denotes 
 
 **Step 2 (Converter) - Convert Dataset**
 
-
-
 Kinect set conducts sequence-level processing whereas egocentric set only processes image-level and is much slower (due to changing camera parameters). Total processing time should be **1-3 days**.
 
 ```
@@ -242,20 +277,89 @@ python tools/convert_datasets.py \
     --output_path /mnt/d/datasets/egobody/output \
     #  --modes egocentric_train
 ```
+
+**Citations**
+```
+@inproceedings{Zhang:ECCV:2022,
+   title = {EgoBody: Human Body Shape and Motion of Interacting People from Head-Mounted Devices},
+   author = {Zhang, Siwei and Ma, Qianli and Zhang, Yan and Qian, Zhiyin and Kwon, Taein and Pollefeys, Marc and Bogo, Federica and Tang, Siyu},
+   booktitle = {European conference on computer vision (ECCV)},
+   month = oct,
+   year = {2022}
+}
+```
+
 </details>
 
 <details>
-<summary>Ubody (IP)</summary>
+<summary>Ubody</summary>
+
+
+## Ubody
+
+**Dataset Split**
+
+Ubody dataset splits the train/test sets from two protocols as follow:
+```
+Intra-scene: in each scene, the former 70% of the
+    videos are the training set, and the last 30% are the test set.
+Inter-scene: we use ten scenes of the videos as the
+    training set and the other five scenes as the test set.
+```
+Therefore, there are 4 HumanData files, with name "intra_scene_train", "intra_scene_test", "inter_scene_train" and "inter_scene_test".
+Note that "train" & "test" from each protocol comprises the whole dataset, please do not mix use.
+
+
+**Step 1 - Split Videos and arrange files**
+
+For Ubody dataset, please request data and download as instructed in [GitHub HomePage](https://github.com/IDEA-Research/OSX).
+
+Git clone the repo and run code to split videos, this process usually takes **12hours-1day**.
+
+```
+python video2image.py --video_folder <your path to ubody dataset>
+```
+After that, the file structure should be like this:
+```
+|-- UBody
+|   |-- images
+|   |-- videos
+|   |-- annotations
+|   |-- splits
+|   |   |-- inter_scene_test_list.npy
+|   |   |-- intra_scene_test_list.npy
+```
+
+**Step 2 (Converter) - Convert Dataset**
+
+Note there will be some middle files generated in the root_path, which can be deleted after conversion. Total process time should be about **1day**.
+
+```
+python tools/convert_datasets.py \
+    --datasets ubody \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/ubody/output \
+    --modes inter intra
+```
+
+**Citations**
+```
+@article{lin2023one,
+  title={One-Stage 3D Whole-Body Mesh Recovery with Component Aware Transformer},
+  author={Lin, Jing and Zeng, Ailing and Wang, Haoqian and Zhang, Lei and Li, Yu},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  year={2023},
+}
+```
 
 </details>
-
-
 
 ## Subsection 4 - Real Single-Human Datasets
 
 <details>
 <summary>Behave</summary>
-</details>
+
+## BEHAVE dataset
 
 **Data Split**
 
@@ -303,6 +407,7 @@ E:\behave\
 
 **Step 2 (Converter) - Convert Datasets**
 
+The data processing speed is ~2item/s, total take taken would be **2~3hours**.
 ```
 python tools/convert_datasets.py  \
     --datasets behave  \
@@ -311,8 +416,24 @@ python tools/convert_datasets.py  \
     --modes train test
 ```
 
+**Citations**
+```bibtex
+@inproceedings{bhatnagar22behave,
+  title={Behave: Dataset and method for tracking human object interactions},
+  author={Bhatnagar, Bharat Lal and Xie, Xianghui and Petrov, Ilya A and Sminchisescu, Cristian and Theobalt, Christian and Pons-Moll, Gerard},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={15935--15946},
+  year={2022}
+}
+```
+
+</details>
+
+
 <details>
 <summary>EHF</summary>
+
+## EHF Dataset
 
 **Step 1 - Only Step for using HumanData**
 
@@ -350,11 +471,85 @@ python tools/convert_datasets.py \
     --modes val
 ```
 
+**Citations**
+```
+@inproceedings{SMPL-X:2019,
+  title = {Expressive Body Capture: {3D} Hands, Face, and Body from a Single Image},
+  author = {Pavlakos, Georgios and Choutas, Vasileios and Ghorbani, Nima and Bolkart, Timo and Osman, Ahmed A. A. and Tzionas, Dimitrios and Black, Michael J.},
+  booktitle = {Proceedings IEEE Conf. on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {10975--10985},
+  year = {2019}
+}
+```
+
+
 </details>
 
 
 <details>
+<summary>EMDB</summary>
+
+## EMDB: The Electromagnetic Database of Global 3D Human Pose and Shape in the Wild
+
+**Data Split**
+
+This dataset is not specified in paper, so all data is used for training.
+
+**Step 1 - Only Step for using HumanData**
+
+Request and download dataset from [HomePage](https://eth-ait.github.io/emdb/).
+Extarct ZIP files and the extracted dataset should be like this:
+```
+D:\datasets\emdb\
+├── P0\
+│   ├── 00_mvs_a\
+│   ├── 01_mvs_b\
+│   ├── 02_mvs_c\
+│   ├── 03_mvs_d\
+│   ├── 04_mvs_e\
+├── P1\
+├── P2\
+├── P3\
+├── P4\
+├── P5\
+├── P6\
+├── P7\
+├── P8\
+├── P9\
+```
+
+**Step 2 (Converter) - Convert Datasets**
+
+The convert process should finish in **<1hour**.
+
+```
+python tools/convert_datasets.py \
+    --datasets emdb \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/emdb/output \
+    --modes train
+```
+
+**Citations**
+```bibtex
+@inproceedings{kaufmann2023emdb,
+  author = {Kaufmann, Manuel and Song, Jie and Guo, Chen and Shen, Kaiyue and Jiang, Tianjian and Tang, Chengcheng and Z{\'a}rate, Juan Jos{\'e} and Hilliges, Otmar},
+  title = {{EMDB}: The {E}lectromagnetic {D}atabase of {G}lobal 3{D} {H}uman {P}ose and {S}hape in the {W}ild},
+  booktitle = {International Conference on Computer Vision (ICCV)},
+  year = {2023}
+}
+```
+
+</details>
+
+
+
+
+
+<details>
 <summary>SSP3D</summary>
+
+## SSP3D
 
 **Step 1 - Only Step for using HumanData**
 
@@ -369,4 +564,16 @@ python tools/convert_datasets.py \
     --root_path /mnt/e \
     --output_path /mnt/e/ssp3d/output
 ```
+
+**Citations**
+```
+@InProceedings{STRAPS2018BMVC,
+               author = {Sengupta, Akash and Budvytis, Ignas and Cipolla, Roberto},
+               title = {Synthetic Training for Accurate 3D Human Pose and Shape Estimation in the Wild},
+               booktitle = {British Machine Vision Conference (BMVC)},
+               month = {September},
+               year = {2020}  
+}
+```
+
 </details>
