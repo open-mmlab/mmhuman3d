@@ -8,6 +8,7 @@ from .expressive_mesh_estimator import SMPLXImageBodyModelEstimator
 from .hybrik import HybrIK_trainer
 from .mesh_estimator import ImageBodyModelEstimator, VideoBodyModelEstimator
 from .pymafx import PyMAFX
+from .SMPLer_X import SMPLer_X
 
 
 def build_from_cfg(cfg, registry, default_args=None):
@@ -29,6 +30,7 @@ ARCHITECTURES.register_module(
 ARCHITECTURES.register_module(
     name='CliffImageBodyModelEstimator', module=CliffImageBodyModelEstimator)
 ARCHITECTURES.register_module(name='PyMAFX', module=PyMAFX)
+ARCHITECTURES.register_module(name='SMPLer_X', module=SMPLer_X)
 
 
 def build_architecture(cfg):

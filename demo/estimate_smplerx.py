@@ -23,12 +23,21 @@ from mmhuman3d.utils.demo_utils import (
 )
 from mmhuman3d.utils.ffmpeg_utils import array_to_images
 
-try:
-    from mmdet.apis import inference_detector, init_detector
-    has_mmdet = True
-except (ImportError, ModuleNotFoundError):
-    has_mmdet = False
+# try:
+from mmdet.apis import inference_detector, init_detector
+has_mmdet = True
+# except (ImportError, ModuleNotFoundError):
+#     has_mmdet = False
 
+
+
+
+
+
+import pdb
+
+logger = mmcv.utils.get_logger('mmdet')
+logger.setLevel('WARNING')
 
 
 def get_detection_result(args, frames_iter):
@@ -81,6 +90,7 @@ def single_person_with_mmdet(args, frames_iter):
         device=args.device.lower())
 
     ckpt = torch.load(args.mesh_reg_checkpoint)
+    
     new_state_dict = OrderedDict()
     for k, v in ckpt['network'].items():
         k = k.replace('module.', '').replace('backbone', 'encoder').replace('body_rotation_net', 'body_regressor').replace(
@@ -90,6 +100,8 @@ def single_person_with_mmdet(args, frames_iter):
 
     for i, result in enumerate(mmcv.track_iter_progress(result_list)):
         frame_id = frame_id_list[i]
+        # pdb.set_trace()
+        
         mesh_results = inference_image_based_model(
             mesh_model,
             frames_iter[frame_id],
@@ -103,6 +115,7 @@ def single_person_with_mmdet(args, frames_iter):
         smplx_results['right_hand_pose'].append(mesh_results[0]['smplx_rhand_pose'].reshape(-1,3).cpu().numpy())
         smplx_results['jaw_pose'].append(mesh_results[0]['smplx_jaw_pose'].reshape(-1,3).cpu().numpy())
         smplx_results['expression'].append(mesh_results[0]['smplx_expr'].reshape(-1,10).cpu().numpy())
+        smplx_results['transl'].append(mesh_results[0]['cam_trans'].reshape(-1,3).cpu().numpy())
 
         pred_cams.append(mesh_results[0]['cam_trans'].reshape(-1,3).cpu().numpy())
         bboxes_xyxy.append(mesh_results[0]['bbox'])
@@ -136,35 +149,45 @@ def single_person_with_mmdet(args, frames_iter):
         human_data['smplx'] = smplx
         human_data['pred_cams'] = pred_cams
         human_data.dump(osp.join(args.output, 'inference_result.npz'))
+    pdb.set_trace()
+    # if args.show_path is not None:
+    #     frames_folder = osp.join(args.show_path, 'images')
+    #     os.makedirs(frames_folder, exist_ok=True)
+    #     array_to_images(
+    #         np.array(frames_iter)[frame_id_list], output_folder=frames_folder)
+    #     # create body model
+    #     body_model_config = dict(
+    #         type='smplx',
+    #         num_betas=10,
+    #         use_face_contour=True,
+    #         use_pca=False,
+    #         flat_hand_mean=True,
+    #         model_path=args.body_model_dir,
+    #         keypoint_src='smplx',
+    #         keypoint_dst='smplx',
+    #     )
+    #     visualize_smpl_hmr(
+    #         poses=fullpose.reshape(-1, 1, 165),
+    #         betas=smplx_results['betas'],
+    #         cam_transl=pred_cams,
+    #         bbox=bboxes_xyxy,
+    #         output_path=os.path.join(args.show_path, 'smplx.mp4'),
+    #         render_choice=args.render_choice,
+    #         resolution=frames_iter[0].shape[:2],
+    #         origin_frames=frames_folder,
+    #         body_model_config=body_model_config,
+    #         overwrite=True)
+    #     shutil.rmtree(frames_folder)
 
-    if args.show_path is not None:
-        frames_folder = osp.join(args.show_path, 'images')
-        os.makedirs(frames_folder, exist_ok=True)
-        array_to_images(
-            np.array(frames_iter)[frame_id_list], output_folder=frames_folder)
-        # create body model
-        body_model_config = dict(
-            type='smplx',
-            num_betas=10,
-            use_face_contour=True,
-            use_pca=False,
-            flat_hand_mean=True,
-            model_path=args.body_model_dir,
-            keypoint_src='smplx',
-            keypoint_dst='smplx',
-        )
-        visualize_smpl_hmr(
-            poses=fullpose.reshape(-1, 1, 165),
-            betas=smplx_results['betas'],
-            cam_transl=pred_cams,
-            bbox=bboxes_xyxy,
-            output_path=os.path.join(args.show_path, 'smplx.mp4'),
-            render_choice=args.render_choice,
-            resolution=frames_iter[0].shape[:2],
-            origin_frames=frames_folder,
-            body_model_config=body_model_config,
-            overwrite=True)
-        shutil.rmtree(frames_folder)
+    # visualize
+
+
+
+
+
+
+
+
 
 def main(args):
 
@@ -181,12 +204,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--mesh_reg_config',
         type=str,
-        default='configs/expose/expose.py',
+        default='configs/smpler_x/config_ft_3dpw.py',
         help='Config file for mesh regression')
     parser.add_argument(
         '--mesh_reg_checkpoint',
         type=str,
-        default='data/pretrained_models/expose-d9d5dbf7_20220708.pth',
+        default='../smplerx/checkpoints/smpler_x_h32.pth.tar',
         help='Checkpoint file for mesh regression')
     parser.add_argument(
         '--single_person_demo',
@@ -198,8 +221,7 @@ if __name__ == '__main__':
         help='Config file for detection')
     parser.add_argument(
         '--det_checkpoint',
-        default='https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/'
-        'faster_rcnn_r50_fpn_1x_coco/'
+        default='data/pretrained_models/'
         'faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth',
         help='Checkpoint file for detection')
     parser.add_argument(
@@ -216,17 +238,17 @@ if __name__ == '__main__':
     parser.add_argument(
         '--input_path',
         type=str,
-        default='demo/resources/single_person_demo.mp4',
+        default='../vid_input/ma.mp4',
         help='Input path')
     parser.add_argument(
         '--output',
         type=str,
-        default='demo_result',
+        default='../vid_output',
         help='directory to save output result file')
     parser.add_argument(
         '--show_path',
         type=str,
-        default='demo_result',
+        default='../vid_output',
         help='directory to save rendered images or video')
     parser.add_argument(
         '--render_choice',

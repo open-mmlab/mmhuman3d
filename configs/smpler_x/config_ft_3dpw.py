@@ -90,7 +90,7 @@ inference_pipeline = [
     dict(type='ImageToTensor', keys=['img', 'ori_img']),
     dict(
         type='Collect',
-        keys=['img', 'sample_idSx'],
+        keys=['img', 'sample_idx'],
         meta_keys=[
             'image_path', 'center', 'scale', 'rotation', 'ori_img',
             'crop_transform'

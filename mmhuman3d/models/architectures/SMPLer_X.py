@@ -1,5 +1,6 @@
 from abc import ABCMeta
 from typing import Optional, Tuple, Union
+import torchgeometry as tgm
 
 import torch
 import torch.nn as nn
@@ -7,7 +8,7 @@ from torch.nn import functional as F
 from ..heads.smplerx_head import PositionNet, HandRotationNet, FaceRegressor, BoxNet, HandRoI, BodyRotationNet
 
 from mmhuman3d.models.utils.human_models import smpl_x
-from mmhuman3d.utils.transforms import rot6d_to_aa
+from mmhuman3d.utils.transforms import rot6d_to_aa, rotmat_to_aa
 import math
 import mmcv
 import copy
@@ -208,6 +209,8 @@ class SMPLer_X(BaseArchitecture, metaclass=ABCMeta):
         body_img = F.interpolate(img, self.input_body_shape)
 
         # 1. Encoder
+        # import pdb; pdb.set_trace()
+        body_img = body_img.float()
         img_feat, task_tokens = self.encoder(body_img)  # task_token:[bs, N, c]
         shape_token, cam_token, expr_token, jaw_pose_token, hand_token, body_pose_token = \
             task_tokens[:, 0], task_tokens[:, 1], task_tokens[:, 2], task_tokens[:, 3], task_tokens[:, 4:6], task_tokens[:, 6:]
@@ -339,6 +342,8 @@ def rot6d_to_axis_angle(x):
 
     rot_mat = torch.cat([rot_mat, torch.zeros((batch_size, 3, 1)).cuda().float()], 2)  # 3x4 rotation matrix
     axis_angle = tgm.rotation_matrix_to_angle_axis(rot_mat).reshape(-1, 3)  # axis-angle
+    # import pdb; pdb.set_trace()
+    # axis_angle = rotmat_to_aa(rot_mat[...,:3, :3]).reshape(-1, 3)  # axis-angle
     axis_angle[torch.isnan(axis_angle)] = 0.0
     return axis_angle
 
