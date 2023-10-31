@@ -128,7 +128,7 @@ class AgoraConverter(BaseModeConverter):
             meta_[meta_key] = []
         image_path_ = []
 
-        seed, size = '230816', '999999'
+        seed, size = '231031', '999999'
 
         # build smplx model
         smplx_model = {}
@@ -171,6 +171,8 @@ class AgoraConverter(BaseModeConverter):
 
         # for aid, anno_info in enumerate(tqdm(anno_param, desc=f'Processing Agora {mode}')):
             image_id = anno_info['image_id']
+
+            pdb.set_trace()
             # anno_info_bf = anno_param_bf[aid]
 
             # print(anno_info['gender'])
