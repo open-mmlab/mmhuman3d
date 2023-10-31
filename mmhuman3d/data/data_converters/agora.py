@@ -198,6 +198,7 @@ class AgoraConverter(BaseModeConverter):
             smplx_param = pickle.load(open(smplx_path, 'rb'))
             smplx_param_bf = pickle.load(open(
                 os.path.join(dataset_path, anno_info_bf['smplx_param_path']), 'rb'))
+            smplx_param = smplx_param_bf
             smplx_param['betas_fixed'] = smplx_param_bf['betas'][:, :10]
 
             if smplx_param['betas'].shape[1] != 10:
