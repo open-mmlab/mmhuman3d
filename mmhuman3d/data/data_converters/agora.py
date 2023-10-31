@@ -196,7 +196,8 @@ class AgoraConverter(BaseModeConverter):
             # collect smplx_params
             smplx_path = os.path.join(dataset_path,
                                       anno_info['smplx_param_path'])
-            smplx_param = pickle.load(open(smplx_path, 'rb'))
+            
+            # smplx_param = pickle.load(open(smplx_path, 'rb'))
             smplx_param_bf = pickle.load(open(
                 os.path.join(dataset_path, anno_info_bf['smplx_param_path']), 'rb'))
             smplx_param = smplx_param_bf
