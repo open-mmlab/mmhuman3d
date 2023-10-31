@@ -183,6 +183,13 @@ class AgoraConverter(BaseModeConverter):
                 f"file_name_{self.misc_config['image_size'][0]}x"
                 f"{self.misc_config['image_size'][1]}"]
 
+            try:
+                smplx_param_bf = pickle.load(open(
+                    os.path.join(dataset_path, anno_info_bf['smplx_param_path']), 'rb'))
+            except:
+                print(f'{anno_info_bf["smplx_param_path"]}, not found')
+                continue
+
             # collect bbox and resize bbox for 1280
             if res_info == '1280':
                 scale = 3840 / int(res_info)
@@ -198,12 +205,7 @@ class AgoraConverter(BaseModeConverter):
                                       anno_info['smplx_param_path'])
             
             # smplx_param = pickle.load(open(smplx_path, 'rb'))
-            try:
-                smplx_param_bf = pickle.load(open(
-                    os.path.join(dataset_path, anno_info_bf['smplx_param_path']), 'rb'))
-            except:
-                print(f'{anno_info_bf["smplx_param_path"]}, not found')
-                continue
+
             smplx_param = smplx_param_bf
             smplx_param['betas_fixed'] = smplx_param_bf['betas'][:, :10]
 
