@@ -124,7 +124,7 @@ class AgoraConverter(BaseModeConverter):
         ]:
             bboxs_[bbox_name] = []
         meta_ = {}
-        for meta_key in ['principal_point', 'focal_length', 'gender']:
+        for meta_key in ['principal_point', 'focal_length', 'gender', 'annot_valid']:
             meta_[meta_key] = []
         image_path_ = []
 
@@ -172,7 +172,6 @@ class AgoraConverter(BaseModeConverter):
         # for aid, anno_info in enumerate(tqdm(anno_param, desc=f'Processing Agora {mode}')):
             image_id = anno_info['image_id']
 
-            pdb.set_trace()
             # anno_info_bf = anno_param_bf[aid]
 
             # print(anno_info['gender'])
@@ -232,6 +231,7 @@ class AgoraConverter(BaseModeConverter):
             meta_['gender'].append(anno_info['gender'])
             meta_['principal_point'].append(principal_point)
             meta_['focal_length'].append(focal_length)
+            meta_['annot_valid'].append(anno_info['is_valid'])
 
             # print(smplx_param['betas'].shape)
 
