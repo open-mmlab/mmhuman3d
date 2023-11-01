@@ -1,5 +1,6 @@
 from .agora import AgoraConverter
 from .amass import AmassConverter
+from .bedlam import BedlamConverter
 from .behave import BehaveConverter
 from .blurhand import BlurhandConverter
 from .builder import build_data_converter
@@ -77,5 +78,6 @@ __all__ = [
     'HancoConverter', 'Sloper4dConverter', 'Cimi4dConverter',
     'SgnifyConverter', 'DynacamConverter', 'BlurhandConverter',
     'Hsc4dConverter', 'MotionXConverter', 'MscocoNeuralConverter',
-    'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter', 'Crowd3dConverter'
+    'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter', 'Crowd3dConverter',
+    'BedlamConverter'
 ]

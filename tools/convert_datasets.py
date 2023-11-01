@@ -55,6 +55,12 @@ DATASET_CONFIGS = dict(
         type='HuMManConverter', modes=['train', 'test'], prefix='humman'),
     cliff=dict(type='CliffConverter', modes=['coco', 'mpii']),
 
+    # -------------- datasets done by colleague --------------
+    bedlam=dict(
+        type='BedlamConverter',  # real, large-image
+        prefix='bedlam',
+        modes=['train', 'test']),
+
     # -------------- below datasets are done by WC --------------
 
     # -------------- multi-human dataset --------------
