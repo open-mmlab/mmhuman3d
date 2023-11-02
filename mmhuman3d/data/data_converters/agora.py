@@ -212,7 +212,8 @@ class AgoraConverter(BaseModeConverter):
 
             if smplx_param['betas'].shape[1] != 10:
                 smplx_param['betas_extra'] = smplx_param['betas'][:, 10:]
-                smplx_param['betas'] = smplx_param['betas_neutral'][:, :10]
+                smplx_param['betas'] = smplx_param['betas'][:, :10]
+                smplx_param['betas_neutral'] = smplx_param['betas_neutral'][:, :10]
             else:
                 smplx_param['betas_extra'] = np.zeros([1, 1])
             for key in self.smplx_shape.keys():
