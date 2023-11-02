@@ -235,8 +235,8 @@ class AgoraConverter(BaseModeConverter):
                 self._get_focal_length(image_path), principal_point)
 
             # collect meta
-            meta_['gender'].append(anno_info['gender'])
-            pdb.set_trace()
+            # meta_['gender'].append(anno_info['gender'])
+            meta_['gender'].append(anno_info['neutral'])
             meta_['principal_point'].append(principal_point)
             meta_['focal_length'].append(focal_length)
             meta_['annot_valid'].append(anno_info['is_valid'])
