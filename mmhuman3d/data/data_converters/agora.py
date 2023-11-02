@@ -62,7 +62,8 @@ class AgoraConverter(BaseModeConverter):
             'jaw_pose': (-1, 3),
             'expression': (-1, 10),
             'betas_extra': (-1, 1),  # how close to kid template
-            'betas_fixed': (-1, 10),  # gender neutral betas
+            'betas_fixed': (-1, 10),  # fixed gendered betas
+            'betas_neutral': (-1, 10),  # neutral betas
         }
 
         super(AgoraConverter, self).__init__(modes)
@@ -211,10 +212,10 @@ class AgoraConverter(BaseModeConverter):
 
             if smplx_param['betas'].shape[1] != 10:
                 smplx_param['betas_extra'] = smplx_param['betas'][:, 10:]
-                smplx_param['betas'] = smplx_param['betas'][:, :10]
+                smplx_param['betas'] = smplx_param['betas_neutral'][:, :10]
             else:
                 smplx_param['betas_extra'] = np.zeros([1, 1])
-            for key in self.smplx_shape.keys():
+            for key in smplx_param.keys():
                 smplx_[key].append(smplx_param[key])
 
             # # collect keypoints
@@ -235,8 +236,8 @@ class AgoraConverter(BaseModeConverter):
                 self._get_focal_length(image_path), principal_point)
 
             # collect meta
-            # meta_['gender'].append(anno_info['gender'])
-            meta_['gender'].append('neutral')
+            meta_['gender'].append(anno_info['gender'])
+            # meta_['gender'].append('neutral')
             meta_['principal_point'].append(principal_point)
             meta_['focal_length'].append(focal_length)
             meta_['annot_valid'].append(anno_info['is_valid'])
