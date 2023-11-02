@@ -236,7 +236,7 @@ class AgoraConverter(BaseModeConverter):
 
             # collect meta
             # meta_['gender'].append(anno_info['gender'])
-            meta_['gender'].append(anno_info['neutral'])
+            meta_['gender'].append('neutral')
             meta_['principal_point'].append(principal_point)
             meta_['focal_length'].append(focal_length)
             meta_['annot_valid'].append(anno_info['is_valid'])
