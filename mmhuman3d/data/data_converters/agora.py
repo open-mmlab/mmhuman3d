@@ -62,7 +62,7 @@ class AgoraConverter(BaseModeConverter):
             'jaw_pose': (-1, 3),
             'expression': (-1, 10),
             'betas_extra': (-1, 1),  # how close to kid template
-            'betas_fixed': (-1, 10),  # fixed gendered betas
+            # 'betas_fixed': (-1, 10),  # fixed gendered betas
             'betas_neutral': (-1, 10),  # neutral betas
         }
 
