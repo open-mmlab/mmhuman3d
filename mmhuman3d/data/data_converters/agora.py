@@ -215,7 +215,7 @@ class AgoraConverter(BaseModeConverter):
                 smplx_param['betas'] = smplx_param['betas_neutral'][:, :10]
             else:
                 smplx_param['betas_extra'] = np.zeros([1, 1])
-            for key in smplx_param.keys():
+            for key in self.smplx_shape.keys():
                 smplx_[key].append(smplx_param[key])
 
             # # collect keypoints
