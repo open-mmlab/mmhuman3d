@@ -243,7 +243,7 @@ class AgoraConverter(BaseModeConverter):
 
             # print(smplx_param['betas'].shape)
 
-            # pdb.set_trace()
+            pdb.set_trace()
             # build camera
             camera = build_cameras(
                 dict(
