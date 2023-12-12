@@ -30,6 +30,8 @@ from mmhuman3d.models.body_models.utils import transform_to_camera_frame
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
+from pycocotools.coco import COCO
+
 
 @DATA_CONVERTERS.register_module()
 class UbodyConverter(BaseModeConverter):
@@ -140,7 +142,30 @@ class UbodyConverter(BaseModeConverter):
             bboxs.append(bbox)
 
         return bboxs
+    
 
+    def _cal_trunc_mask(self, keypoints2d, meta):
+        
+        trunc_mask = np.zeros((keypoints2d.shape[0], 
+                               keypoints2d.shape[1], 1))
+        
+        # check if keypoints2d is inside image
+        for idx in range(keypoints2d.shape[0]):
+            kps2d = keypoints2d[idx]
+            height, width = meta['height'][idx], meta['width'][idx]
+
+            mask_h1 = kps2d[:, 1] > 0
+            mask_h2 = kps2d[:, 1] < height
+            mask_w1 = kps2d[:, 0] > 0
+            mask_w2 = kps2d[:, 0] < width
+
+            mask = mask_h1 * mask_h2 * mask_w1 * mask_w2
+
+            trunc_mask[idx] = mask.reshape(-1, 1)
+
+        return trunc_mask
+
+        
     def preprocess_ubody(self, vid_p):
 
         cmd = f'python tools/preprocess/ubody_preprocess.py --vid_p {vid_p}'
@@ -209,27 +234,64 @@ class UbodyConverter(BaseModeConverter):
 
         # vid_ps = vid_ps[:1]
 
-        for batch, vid_ps_batch in zip(['train', 'test'],
-                                       [train_vids, test_vids]):
+        for batch, vid_ps_batch in zip(['test', 'train'],
+                                       [test_vids, train_vids]):
 
-            num_proc = 4
-            with Pool(num_proc) as p:
-                r = list(
-                    tqdm(
-                        p.imap(self.preprocess_ubody, vid_ps_batch),
-                        total=len(vid_ps_batch),
-                        desc=f'Scene: {mode} {batch}',
-                        leave=False,
-                        position=1))
+            # num_proc = 4
+            # with Pool(num_proc) as p:
+            #     r = list(
+            #         tqdm(
+            #             p.imap(self.preprocess_ubody, vid_ps_batch),
+            #             total=len(vid_ps_batch),
+            #             desc=f'Scene: {mode} {batch}',
+            #             leave=False,
+            #             position=1))
 
-            processed_vids = vid_ps_batch
+            from tools.preprocess.ubody_preprocess import process_vid, process_vid_COCO
+            smplx_model = build_body_model(
+                dict(
+                    type='SMPLX',
+                    keypoint_src='smplx',
+                    keypoint_dst='smplx',
+                    model_path='data/body_models/smplx',
+                    gender='neutral',
+                    num_betas=10,
+                    use_face_contour=True,
+                    flat_hand_mean=True,
+                    use_pca=False,
+                    batch_size=1)).to(self.device)
+            
+            vid_batches = ['ConductMusic', 'Entertainment', 'Fitness', 'Interview', 
+                           'LiveVlog', 'Magic_show', 'Movie', 'Olympic', 'Online_class', 
+                           'SignLanguage', 'Singing', 'Speech', 'TalkShow', 'TVShow', 
+                           'VideoConference']
+            dst = os.path.join(dataset_path, 'preprocess_db', f'{mode}_{batch}')
 
-            seed, size = '230508', '99999'
+            for bid, vscene in enumerate(vid_batches):
+
+                anno_folder = os.path.join(dataset_path, 'annotations', vscene)
+                # load seq kp annotation
+                # with open(os.path.join(anno_folder, 'keypoint_annotation.json')) as f:
+                #     anno_param = json.load(f)
+                db = COCO(os.path.join(anno_folder, 'keypoint_annotation.json'))
+                # load seq smplx annotation
+                with open(os.path.join(anno_folder, 'smplx_annotation.json')) as f:
+                    smplx_param = json.load(f)
+                vid_ps_scene = [v for v in vid_ps_batch if vscene in v]
+                # for vid_p in tqdm(vid_ps_scene, desc=f'Preprocessing scene {bid+1}/{len(vid_batches)}', 
+                #                   position=0, leave=False):
+                # process_vid(vid_p, smplx_model, anno_param, smplx_param)
+
+                process_vid_COCO(smplx_model, vscene, vid_ps_batch, db, smplx_param, dst)
+
+                # pdb.set_trace()
+
+            processed_npzs = glob.glob(os.path.join(dst, '*.npz')) 
+            seed, size = '231027', '99'
 
             random.seed(int(seed))
-            random.shuffle(processed_vids)
 
-            size_i = min(int(size), len(processed_vids))
+            size_i = len(processed_npzs)
 
             slices = 1
             if batch == 'train':
@@ -238,7 +300,7 @@ class UbodyConverter(BaseModeConverter):
                 slices = 3
             print(f'Seperate in to {slices} files')
 
-            slice_vids = int(int(size_i) / slices) + 1
+            slice_npzs = int(len(processed_npzs) / slices) + 1
 
             for slice_idx in range(slices):
                 # use HumanData to store all data
@@ -257,29 +319,27 @@ class UbodyConverter(BaseModeConverter):
                     bboxs_[bbox_name] = []
                 meta_ = {}
                 for meta_key in [
-                        'principal_point', 'focal_length', 'height', 'width'
+                        'principal_point', 'focal_length', 'height', 'width',
+                        'iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
+                        'righthand_valid', 'face_valid',
                 ]:
                     meta_[meta_key] = []
                 image_path_ = []
 
-                for vid in processed_vids[slice_vids * slice_idx:slice_vids *
-                                          (slice_idx + 1)]:
-                    seq = os.path.basename(vid)[:-4]
-                    root_idx = vid.split(os.path.sep).index('ubody')
-                    preprocess_folder = os.path.sep.join(
-                        vid.split(os.path.sep)[:root_idx + 3]).replace(
-                            'videos', 'preprocess')
+                # pdb.set_trace()
+                for npzp in tqdm(processed_npzs[slice_npzs * slice_idx:slice_npzs *
+                                          (slice_idx + 1)]):
 
                     # load param dict
                     try:
-                        param_dict = dict(
-                            np.load(
-                                os.path.join(preprocess_folder, f'{seq}.npz'),
-                                allow_pickle=True))
+                        param_dict = dict(np.load(npzp, allow_pickle=True))
                     except:
                         print(
-                            f'Error in loading {preprocess_folder}, {seq}.npz')
+                            f'Error in loading {npzp}')
                         continue
+                    
+                    image_path = param_dict['image_path'].tolist()
+                    image_path_ += image_path
 
                     # append to humandata
                     # bbox
@@ -306,8 +366,15 @@ class UbodyConverter(BaseModeConverter):
                     )
                     meta_['principal_point'] += param_dict[
                         'principal_point'].tolist()
-
-                    image_path_ += param_dict['image_path'].tolist()
+                    
+                    for key in ['iscrowd', 'num_keypoints', 'valid_label', 
+                                'lefthand_valid', 'righthand_valid', 'face_valid']:
+                        meta_[key] += param_dict[key].tolist()
+                    
+                    size_i += len(image_path)
+                        
+                    # del param_dict
+                    # pdb.set_trace()
 
                 # prepare for output
                 # smplx
@@ -332,8 +399,12 @@ class UbodyConverter(BaseModeConverter):
                                              axis=-1)
                 keypoints2d, keypoints2d_mask = \
                         convert_kps(keypoints2d, src='smplx', dst='human_data')
-                human_data['keypoints2d'] = keypoints2d
-                human_data['keypoints2d_mask'] = keypoints2d_mask
+                human_data['keypoints2d_smplx'] = keypoints2d
+                human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
+
+                # get keypoints2d trunc mask
+                keypoints2d_smplx_trunc_mask = self._cal_trunc_mask(keypoints2d, meta_)
+                human_data['keypoints2d_smplx_trunc_mask'] = keypoints2d_smplx_trunc_mask
 
                 # keypoints 3d
                 keypoints3d = np.array(keypoints3d_).reshape(-1, 144, 3)
@@ -342,8 +413,8 @@ class UbodyConverter(BaseModeConverter):
                                              axis=-1)
                 keypoints3d, keypoints3d_mask = \
                         convert_kps(keypoints3d, src='smplx', dst='human_data')
-                human_data['keypoints3d'] = keypoints3d
-                human_data['keypoints3d_mask'] = keypoints3d_mask
+                human_data['keypoints3d_smplx'] = keypoints3d
+                human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
 
                 # keypoints 2d ubody
                 keypoints2d_ubody = np.array(keypoints2d_ubody_).reshape(
@@ -375,6 +446,9 @@ class UbodyConverter(BaseModeConverter):
                 os.makedirs(out_path, exist_ok=True)
                 out_file = os.path.join(
                     out_path,
-                    f'ubody_{mode}_{batch}_{seed}_{"{:05d}".format(size_i)}_{slice_idx}.npz'
+                    f'ubody_{mode}_{batch}_{seed}_{"{:02d}".format(size_i)}_{slice_idx}.npz'
                 )
                 human_data.dump(out_file)
+
+
+
