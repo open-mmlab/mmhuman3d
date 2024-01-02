@@ -29,6 +29,13 @@ python tools/convert_datasets.py \
     --output_path /mnt/d/datasets/crowd3d/output \
     --modes train
 
+# deco-converter
+python tools/convert_datasets.py \
+    --datasets deco \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/deco/output \
+    --modes train
+
 # dynacam-converter
 python tools/convert_datasets.py \
     --datasets dynacam \
@@ -66,7 +73,7 @@ python tools/convert_datasets.py \
     --datasets flag3d \
     --root_path /mnt/d/datasets \
     --output_path /mnt/d/datasets/flag3d/output \
-    --modes subset
+    --modes train
 
 python tools/preprocess/flag3d_split.py
 
@@ -80,8 +87,8 @@ python tools/convert_datasets.py \
 # gta-converter
 python tools/convert_datasets.py \
     --datasets gta_human2 \
-    --root_path /mnt/e/  \
-    --output_path /mnt/e/gta_human2/output \
+    --root_path /mnt/e/datasets  \
+    --output_path /mnt/e/datasets/gta_human2/output \
     --modes multiple
 
 # hanco-converter
@@ -143,9 +150,9 @@ python tools/convert_datasets.py \
 # mpii-converter
 python tools/convert_datasets.py \
     --datasets mpii \
-    --root_path /mnt/e \
-    --output_path /mnt/e/mpii/output \
-    --modes test
+    --root_path /mnt/e/datasets \
+    --output_path /mnt/e/datasets/mpii/output \
+    --modes train
 
 # pw3d-converter
 python tools/convert_datasets.py \
@@ -213,7 +220,7 @@ python tools/convert_datasets.py \
     --datasets ubody \
     --root_path /mnt/d/datasets \
     --output_path /mnt/d/datasets/ubody/output \
-    --modes inter intra
+    --modes intra inter 
 
 
 # ------------------------------server--------------------------------
@@ -254,3 +261,5 @@ python tools/preprocess/synbody_preprocess_mp.py \
 
 mirror -R -c -v moyo moyo --parallel=5
 python tools/postprocess/humandata_sample.py
+
+

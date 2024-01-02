@@ -11,6 +11,7 @@ from .coco_hybrik import CocoHybrIKConverter
 from .coco_wholebody import CocoWholebodyConverter
 from .crowd3d import Crowd3dConverter
 from .crowdpose import CrowdposeConverter
+from .deco import DecoConverter
 from .dynacam import DynacamConverter
 from .eft import EftConverter
 from .egobody import EgobodyConverter
@@ -42,6 +43,7 @@ from .mpii_neural_annot import MpiiNeuralConverter
 from .mscoco_neural_annot import MscocoNeuralConverter
 from .penn_action import PennActionConverter
 from .posetrack import PosetrackConverter
+from .pw3d import Pw3dConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .pw3d_neural_annot import Pw3dNeuralConverter
 from .renbody import RenbodyConverter
@@ -78,6 +80,6 @@ __all__ = [
     'HancoConverter', 'Sloper4dConverter', 'Cimi4dConverter',
     'SgnifyConverter', 'DynacamConverter', 'BlurhandConverter',
     'Hsc4dConverter', 'MotionXConverter', 'MscocoNeuralConverter',
-    'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter', 'Crowd3dConverter',
-    'BedlamConverter'
+    'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter',
+    'Crowd3dConverter', 'BedlamConverter','Pw3dConverter', 'DecoConverter'
 ]
