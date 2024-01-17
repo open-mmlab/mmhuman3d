@@ -28,9 +28,11 @@ from .h36m_hybrik import H36mHybrIKConverter
 from .h36m_neural_annot import H36mNeuralConverter
 from .h36m_smplx import H36mSMPLXConverter
 from .hanco import HancoConverter
+from .hi4d import Hi4dConverter
 from .hsc4d import Hsc4dConverter
 from .humanart import HumanartConverter
 from .humman import HuMManConverter
+from .idea400 import Idea400Converter
 from .insta_vibe import InstaVibeConverter
 from .interhand26m import Interhand26MConverter
 from .lsp import LspConverter
@@ -44,6 +46,7 @@ from .mscoco_neural_annot import MscocoNeuralConverter
 from .penn_action import PennActionConverter
 from .posetrack import PosetrackConverter
 from .pw3d import Pw3dConverter
+from .pw3d_bedlam import Pw3dBedlamConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .pw3d_neural_annot import Pw3dNeuralConverter
 from .renbody import RenbodyConverter
@@ -81,5 +84,6 @@ __all__ = [
     'SgnifyConverter', 'DynacamConverter', 'BlurhandConverter',
     'Hsc4dConverter', 'MotionXConverter', 'MscocoNeuralConverter',
     'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter',
-    'Crowd3dConverter', 'BedlamConverter','Pw3dConverter', 'DecoConverter'
+    'Crowd3dConverter', 'BedlamConverter','Pw3dConverter', 'DecoConverter',
+    'Hi4dConverter', 'Idea400Converter', 'Pw3dBedlamConverter'
 ]
