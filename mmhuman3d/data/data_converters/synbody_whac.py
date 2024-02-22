@@ -196,7 +196,12 @@ class SynbodyWhacConverter(BaseModeConverter):
         for contact_key in self.misc_config['contact_label']:
             contact_[contact_key] = []
 
-        for seq in seqs_targeted:
+        # load contact region
+        from tools.utils.convert_contact_label import vertex2part_smplx_dict
+        left_foot_idxs = np.array(vertex2part_smplx_dict['left_foot'])
+        right_foot_idxs = np.array(vertex2part_smplx_dict['right_foot'])
+
+        for seq in tqdm(seqs_targeted, desc=f'Processing {mode}', leave=False, position=0):
             
             # preprocess sequence
 
@@ -216,8 +221,35 @@ class SynbodyWhacConverter(BaseModeConverter):
             # parse camera params and image
             seq_base = os.path.dirname(os.path.dirname(seq))
 
+            # prepare smplx tensor
+            smplx_param_tensor = {}
+            for key in self.smplx_shape.keys():
+                smplx_param_tensor[key] = torch.tensor(smplx_param[key]
+                                                        .reshape(self.smplx_shape[key])).to(self.device)
+                
+            # get output
+            output = gendered_smplx[gender](**smplx_param_tensor, return_verts=True)
+                
+            kps3d = output['joints'].detach().cpu().numpy()
+            pelvis_world = kps3d[:, get_keypoint_idx('pelvis', 'smplx'), :]
+
+            # get vertices and contact
+            vertices = output['vertices'].detach().cpu().numpy()
+
+            # height is -y, get lowest from frame 0
+            left_foot_y_lowest = np.sort(vertices[1, left_foot_idxs, 1])[-1]
+            right_foot_y_lowest = np.sort(vertices[1, right_foot_idxs, 1])[-1]
+
+            left_foot_contact = np.zeros([datalen])
+            right_foot_contact = np.zeros([datalen])
+
+            threshold = 0.01
+            for i in range(datalen):
+                left_foot_contact[i] = 1 if (vertices[i, left_foot_idxs, 1].max() > (left_foot_y_lowest - threshold)) else 0
+                right_foot_contact[i] = 1 if (vertices[i, right_foot_idxs, 1].max() > (right_foot_y_lowest - threshold)) else 0
+
             # cids
-            cids = os.listdir(os.path.join(seq_base, 'img')) 
+            cids = sorted(os.listdir(os.path.join(seq_base, 'img')))
 
             for cid in cids:
 
@@ -238,20 +270,10 @@ class SynbodyWhacConverter(BaseModeConverter):
                 valid_idxs = np.intersect1d(valid_idxs_img, valid_idex_cam)
                 # valid_idxs = valid_idxs[valid_idxs > 0]
 
-
-                # prepare smplx tensor
-                smplx_param_tensor = {}
-                for key in self.smplx_shape.keys():
-                    smplx_param_tensor[key] = torch.tensor(smplx_param[key][valid_idxs]
-                                                           .reshape(self.smplx_shape[key])).to(self.device)
-                    
-                # get output
-                output = gendered_smplx[gender](**smplx_param_tensor, return_verts=True)
-                    
-                kps3d = output['joints'].detach().cpu().numpy()
-                pelvis_world = kps3d[:, get_keypoint_idx('pelvis', 'smplx'), :]
-
-                for vid in valid_idxs:
+                for vid in tqdm(valid_idxs, desc=f'Processing {sequence_name}, {cid} / {cids[-1]}', 
+                                leave=False, position=1):
+                    if vid == 0:
+                        continue
                     # get image path
                     img_p = os.path.join(img_f, f'{vid:04d}.jpeg')
                     image_path = img_p.replace(dataset_path + '/', '')
@@ -270,7 +292,7 @@ class SynbodyWhacConverter(BaseModeConverter):
                             [0, 0, 1, 0],
                             [0, 0, 0, 1]])
                     
-                    Rt = (Rt.T @ ue2opencv).T
+                    # Rt = (Rt.T @ ue2opencv).T
 
                     # transform to cam space
                     global_orient, transl = transform_to_camera_frame(
@@ -303,12 +325,8 @@ class SynbodyWhacConverter(BaseModeConverter):
                     kps2d = camera.transform_points(kps3d_c).detach().cpu().numpy().squeeze()[:, :2]
                     kps3d_c = kps3d_c.detach().cpu().numpy().squeeze()
 
-                    # test overlay
-                    # img = cv2.imread(img_p)
-                    # for kp in kps2d:
-                    #     cv2.circle(img, (int(kp[0]), int(kp[1])), 5, (0, 255, 0), -1)
-                    # cv2.imwrite(f'{out_path}/{os.path.basename(seq_base)}_{cid}_{vid}.jpg', img)
-                    
+                    kps2d = [1920, 1080] - kps2d
+
                     # get bbox from 2d keypoints
                     bboxs = self._keypoints_to_scaled_bbox_bfh(
                         kps2d,
@@ -328,6 +346,20 @@ class SynbodyWhacConverter(BaseModeConverter):
                         bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
                         bbox_xywh.append(conf)  # (5,)
                         bboxs_[bbox_name].append(bbox_xywh)
+
+                    # append contact
+                    contact_['part_segmentation'].append([left_foot_contact[vid], 
+                                                          right_foot_contact[vid]])
+                    # if 0 in [left_foot_contact[vid], right_foot_contact[vid]]:
+                    #     # test overlay
+                    #     img = cv2.imread(img_p)
+                    #     for kp in kps2d:
+                    #         cv2.circle(img, (int(kp[0]), int(kp[1])), 5, (0, 255, 0), -1)
+                    #     if left_foot_contact[vid] == 0:
+                    #         cv2.putText(img, 'left foot', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    #     if right_foot_contact[vid] == 0:
+                    #         cv2.putText(img, 'right foot', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    #     cv2.imwrite(f'{out_path}/{os.path.basename(seq_base)}_{cid}_{vid}.jpg', img)
 
                     # append image path
                     image_path_.append(image_path)

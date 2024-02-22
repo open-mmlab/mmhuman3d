@@ -3,6 +3,7 @@ from typing import List
 
 import numpy as np
 
+from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idxs_by_part
 
 class BaseConverter(metaclass=ABCMeta):
     """Base dataset.
@@ -98,6 +99,70 @@ class BaseConverter(metaclass=ABCMeta):
 
         bbox = np.stack([xmin, ymin, xmax, ymax], axis=0).astype(np.float32)
         return bbox
+
+
+    def _keypoints_to_scaled_bbox_bfh(self,
+                                    keypoints,
+                                    occ=None,
+                                    body_scale=1.0,
+                                    fh_scale=1.0,
+                                    convention='smplx'):
+        '''Obtain scaled bbox in xyxy format given keypoints
+        Args:
+            keypoints (np.ndarray): Keypoints
+            scale (float): Bounding Box scale
+        Returns:
+            bbox_xyxy (np.ndarray): Bounding box in xyxy format
+        '''
+        bboxs = []
+
+        # supported kps.shape: (1, n, k) or (n, k), k = 2 or 3
+        if keypoints.ndim == 3:
+            keypoints = keypoints[0]
+        if keypoints.shape[-1] != 2:
+            keypoints = keypoints[:, :2]
+
+        for body_part in ['body', 'head', 'left_hand', 'right_hand']:
+            if body_part == 'body':
+                scale = body_scale
+                kps = keypoints
+            else:
+                scale = fh_scale
+                kp_id = get_keypoint_idxs_by_part(
+                    body_part, convention=convention)
+                kps = keypoints[kp_id]
+
+            if not occ is None:
+                occ_p = occ[kp_id]
+                if np.sum(occ_p) / len(kp_id) >= 0.1:
+                    conf = 0
+                    # print(f'{body_part} occluded, occlusion: {np.sum(occ_p) / len(kp_id)}, skip')
+                else:
+                    # print(f'{body_part} good, {np.sum(self_occ_p + occ_p) / len(kp_id)}')
+                    conf = 1
+            else:
+                conf = 1
+            if body_part == 'body':
+                conf = 1
+
+            xmin, ymin = np.amin(kps, axis=0)
+            xmax, ymax = np.amax(kps, axis=0)
+
+            width = (xmax - xmin) * scale
+            height = (ymax - ymin) * scale
+
+            x_center = 0.5 * (xmax + xmin)
+            y_center = 0.5 * (ymax + ymin)
+            xmin = x_center - 0.5 * width
+            xmax = x_center + 0.5 * width
+            ymin = y_center - 0.5 * height
+            ymax = y_center + 0.5 * height
+
+            bbox = np.stack([xmin, ymin, xmax, ymax, conf],
+                            axis=0).astype(np.float32)
+            bboxs.append(bbox)
+
+        return bboxs
 
 
 class BaseModeConverter(BaseConverter):
