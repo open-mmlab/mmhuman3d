@@ -50,6 +50,7 @@ from .pw3d_bedlam import Pw3dBedlamConverter
 from .pw3d_hybrik import Pw3dHybrIKConverter
 from .pw3d_neural_annot import Pw3dNeuralConverter
 from .renbody import RenbodyConverter
+from .rich import RichConverter
 from .sgnify import SgnifyConverter
 from .shapy import ShapyConverter
 from .sloper4d import Sloper4dConverter
@@ -59,6 +60,7 @@ from .ssp3d import Ssp3dConverter
 from .stirling import StirlingConverter
 from .surreal import SurrealConverter
 from .synbody import SynbodyConverter
+from .synbody_whac import SynbodyWhacConverter
 from .talkshow import TalkshowConverter
 from .ubody import UbodyConverter
 from .up3d import Up3dConverter
@@ -85,5 +87,6 @@ __all__ = [
     'Hsc4dConverter', 'MotionXConverter', 'MscocoNeuralConverter',
     'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter',
     'Crowd3dConverter', 'BedlamConverter','Pw3dConverter', 'DecoConverter',
-    'Hi4dConverter', 'Idea400Converter', 'Pw3dBedlamConverter'
+    'Hi4dConverter', 'Idea400Converter', 'Pw3dBedlamConverter',
+    'RichConverter', 'SynbodyWhacConverter',
 ]

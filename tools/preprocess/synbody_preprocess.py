@@ -129,9 +129,9 @@ def process_npz(args):
     root_path = os.path.sep.join(seq.split(os.path.sep)[:root_folder_id])
 
     dataset_path = os.path.join(root_path, args.prefix)
-
-    batch_name, place, seq_name = seq.split(os.path.sep)[root_folder_id + 1:]
     # pdb.set_trace()
+    batch_name, place, seq_name = seq.split(os.path.sep)[root_folder_id + 1:]
+
 
     # batch name mapping
     batch_name_map = {
@@ -145,6 +145,7 @@ def process_npz(args):
         '20230421_agora': 'v1_0_agora',
         '20230526_renew': 'v1_0_renew',
         '20230727': 'v1_1_train',
+        '20240221': 'whac',
     }
     if not batch_name in batch_name_map.keys():
         return
