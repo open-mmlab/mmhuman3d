@@ -272,8 +272,6 @@ class SynbodyWhacConverter(BaseModeConverter):
                 valid_idxs = np.intersect1d(valid_idxs_img, valid_idex_cam)
                 # valid_idxs = valid_idxs[valid_idxs > 0]
 
-                pdb.set_trace()
-
                 for vid in tqdm(valid_idxs, desc=f'Processing {sequence_name}, {cid} / {cids[-1]}', 
                                 leave=False, position=1):
                     if vid == 0:
