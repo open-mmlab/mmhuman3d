@@ -30,7 +30,7 @@ from mmhuman3d.core.cameras import build_cameras
 @DATA_CONVERTERS.register_module()
 class SynbodyWhacConverter(BaseModeConverter):
     """Synbody dataset."""
-    ACCEPTED_MODES = ['train']
+    ACCEPTED_MODES = ['AMASS_tracking', 'DuetDance']
 
     def __init__(self, modes: List = []) -> None:
 
@@ -131,9 +131,9 @@ class SynbodyWhacConverter(BaseModeConverter):
        
         # get target sequences
         seqs_targeted = glob.glob(os.path.join(dataset_path, 'Synbody_whac', 
-                                               '*', '*', 
+                                               f'{mode}*', '*', 
                                                '*_*', 'smplx_adjusted', '*.npz'))
-        
+
         # bulid smplx model
         gendered_smplx = {}
         for gender in ['male', 'female', 'neutral']:
@@ -258,17 +258,21 @@ class SynbodyWhacConverter(BaseModeConverter):
 
                 # retrieve images
                 img_f = os.path.join(seq_base, 'img', cid)
-                img_ps = glob.glob(os.path.join(img_f, '*.jpeg'))
+                img_ps = [os.path.join(img_f, ip) for ip in
+                            os.listdir(img_f) if ip.endswith('.jpeg')]
 
                 # retrieve smplx
                 cam_f = os.path.join(seq_base, 'camera_params', cid)
-                cam_ps = glob.glob(os.path.join(cam_f, '*.json'))
+                cam_ps = [os.path.join(cam_f, cp) for cp in 
+                            os.listdir(cam_f) if cp.endswith('.json')]
 
                 # get valid index array & remove frame 0
                 valid_idxs_img = np.array([int(os.path.basename(img_p).split('.')[0]) for img_p in img_ps])
                 valid_idex_cam = np.array([int(os.path.basename(cam_p).split('.')[0]) for cam_p in cam_ps])
                 valid_idxs = np.intersect1d(valid_idxs_img, valid_idex_cam)
                 # valid_idxs = valid_idxs[valid_idxs > 0]
+
+                pdb.set_trace()
 
                 for vid in tqdm(valid_idxs, desc=f'Processing {sequence_name}, {cid} / {cids[-1]}', 
                                 leave=False, position=1):
