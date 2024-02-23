@@ -131,8 +131,8 @@ class SynbodyWhacConverter(BaseModeConverter):
        
         # get target sequences
         seqs_targeted = glob.glob(os.path.join(dataset_path, 'Synbody_whac', 
-                                               '**', 
-                                               '*_*', 'smplx_adjusted', '*.npz'), recursive=True)
+                                               '*', '*', 
+                                               '*_*', 'smplx_adjusted', '*.npz'))
         
         # bulid smplx model
         gendered_smplx = {}
