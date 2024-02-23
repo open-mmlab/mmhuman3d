@@ -180,7 +180,7 @@ class SynbodyWhacConverter(BaseModeConverter):
 
         for i in range(slices):
             seqs = seqs_targeted[i * len(seqs_targeted) // slices: (i + 1) * len(seqs_targeted) // slices]
-
+            print(f'Processing {mode} slice {i + 1} / {slices} with {len(seqs)} sequences')
             # initialize output for human_data
             smplx_ = {}
             for key in self.smplx_shape.keys():
