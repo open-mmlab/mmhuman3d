@@ -276,6 +276,8 @@ class SynbodyWhacConverter(BaseModeConverter):
                                 leave=False, position=1):
                     if vid == 0:
                         continue
+                    if vid >= datalen:
+                        continue
                     # get image path
                     img_p = os.path.join(img_f, f'{vid:04d}.jpeg')
                     image_path = img_p.replace(dataset_path + '/', '')
