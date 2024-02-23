@@ -176,265 +176,270 @@ class SynbodyWhacConverter(BaseModeConverter):
         
         seqs_targeted = seqs_targeted[:size_i]
 
-        # initialize output for human_data
-        smplx_ = {}
-        for key in self.smplx_shape.keys():
-            smplx_[key] = []
-        keypoints2d_, keypoints3d_ = [], []
-        bboxs_ = {}
-        for bbox_name in [
-                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                'rhand_bbox_xywh'
-        ]:
-            bboxs_[bbox_name] = []
-        meta_ = {}
-        for meta_name in ['principal_point', 'focal_length', 'height', 'width', 'RT',
-                          'sequence_name', 'track_id', 'gender']:
-            meta_[meta_name] = []
-        image_path_ = []
-        contact_ = {}
-        for contact_key in self.misc_config['contact_label']:
-            contact_[contact_key] = []
+        slices = 2
 
-        # load contact region
-        from tools.utils.convert_contact_label import vertex2part_smplx_dict
-        left_foot_idxs = np.array(vertex2part_smplx_dict['left_foot'])
-        right_foot_idxs = np.array(vertex2part_smplx_dict['right_foot'])
+        for i in range(slices):
+            seqs = seqs_targeted[i * len(seqs_targeted) // slices: (i + 1) * len(seqs_targeted) // slices]
 
-        for seq in tqdm(seqs_targeted, desc=f'Processing {mode}', leave=False, position=0):
-            
-            # preprocess sequence
-
-            # get track id
-            track_id = random_ids[used_id_num]
-            used_id_num += 1
-
-            # load smplx
-            param = dict(np.load(seq, allow_pickle=True))
-            smplx_param = param['smplx'].item()
-            datalen = param['__data_len__']
-            gender = param['meta'].item()['gender']
-
-            # expend betas
-            smplx_param['betas'] = np.tile(smplx_param['betas'], (datalen, 1))
-
-            # parse camera params and image
-            seq_base = os.path.dirname(os.path.dirname(seq))
-
-            # prepare smplx tensor
-            smplx_param_tensor = {}
+            # initialize output for human_data
+            smplx_ = {}
             for key in self.smplx_shape.keys():
-                smplx_param_tensor[key] = torch.tensor(smplx_param[key]
-                                                        .reshape(self.smplx_shape[key])).to(self.device)
+                smplx_[key] = []
+            keypoints2d_, keypoints3d_ = [], []
+            bboxs_ = {}
+            for bbox_name in [
+                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                    'rhand_bbox_xywh'
+            ]:
+                bboxs_[bbox_name] = []
+            meta_ = {}
+            for meta_name in ['principal_point', 'focal_length', 'height', 'width', 'RT',
+                            'sequence_name', 'track_id', 'gender']:
+                meta_[meta_name] = []
+            image_path_ = []
+            contact_ = {}
+            for contact_key in self.misc_config['contact_label']:
+                contact_[contact_key] = []
+
+            # load contact region
+            from tools.utils.convert_contact_label import vertex2part_smplx_dict
+            left_foot_idxs = np.array(vertex2part_smplx_dict['left_foot'])
+            right_foot_idxs = np.array(vertex2part_smplx_dict['right_foot'])
+
+            for seq in tqdm(seqs, desc=f'Processing {mode}', leave=False, position=0):
                 
-            # get output
-            output = gendered_smplx[gender](**smplx_param_tensor, return_verts=True)
-                
-            kps3d = output['joints'].detach().cpu().numpy()
-            pelvis_world = kps3d[:, get_keypoint_idx('pelvis', 'smplx'), :]
+                # preprocess sequence
 
-            # get vertices and contact
-            vertices = output['vertices'].detach().cpu().numpy()
+                # get track id
+                track_id = random_ids[used_id_num]
+                used_id_num += 1
 
-            # height is -y, get lowest from frame 0
-            left_foot_y_lowest = np.sort(vertices[1, left_foot_idxs, 1])[-1]
-            right_foot_y_lowest = np.sort(vertices[1, right_foot_idxs, 1])[-1]
+                # load smplx
+                param = dict(np.load(seq, allow_pickle=True))
+                smplx_param = param['smplx'].item()
+                datalen = param['__data_len__']
+                gender = param['meta'].item()['gender']
 
-            left_foot_contact = np.zeros([datalen])
-            right_foot_contact = np.zeros([datalen])
+                # expend betas
+                smplx_param['betas'] = np.tile(smplx_param['betas'], (datalen, 1))
 
-            threshold = 0.01
-            for i in range(datalen):
-                left_foot_contact[i] = 1 if (vertices[i, left_foot_idxs, 1].max() > (left_foot_y_lowest - threshold)) else 0
-                right_foot_contact[i] = 1 if (vertices[i, right_foot_idxs, 1].max() > (right_foot_y_lowest - threshold)) else 0
+                # parse camera params and image
+                seq_base = os.path.dirname(os.path.dirname(seq))
 
-            # cids
-            cids = sorted(os.listdir(os.path.join(seq_base, 'img')))
-
-            for cid in cids:
-
-                # prepare sequence name
-                sequence_name = f'{os.path.basename(seq_base)}_{cid}'
-
-                # retrieve images
-                img_f = os.path.join(seq_base, 'img', cid)
-                img_ps = [os.path.join(img_f, ip) for ip in
-                            os.listdir(img_f) if ip.endswith('.jpeg')]
-
-                # retrieve smplx
-                cam_f = os.path.join(seq_base, 'camera_params', cid)
-                cam_ps = [os.path.join(cam_f, cp) for cp in 
-                            os.listdir(cam_f) if cp.endswith('.json')]
-
-                # get valid index array & remove frame 0
-                valid_idxs_img = np.array([int(os.path.basename(img_p).split('.')[0]) for img_p in img_ps])
-                valid_idex_cam = np.array([int(os.path.basename(cam_p).split('.')[0]) for cam_p in cam_ps])
-                valid_idxs = np.intersect1d(valid_idxs_img, valid_idex_cam)
-                # valid_idxs = valid_idxs[valid_idxs > 0]
-
-                for vid in tqdm(valid_idxs, desc=f'Processing {sequence_name}, {cid} / {cids[-1]}', 
-                                leave=False, position=1):
-                    if vid == 0:
-                        continue
-                    if vid >= datalen:
-                        continue
-                    # get image path
-                    img_p = os.path.join(img_f, f'{vid:04d}.jpeg')
-                    image_path = img_p.replace(dataset_path + '/', '')
-
-                    # get camera path
-                    cam_p = os.path.join(cam_f, f'{vid:04d}.json')
-                    with open(cam_p, 'r') as f:
-                        cam_param = json.load(f)
-
-                    Rt = np.eye(4)
-                    Rt[:3, :3] = np.array(cam_param['extrinsic_r'])
-                    Rt[:3, 3] = np.array(cam_param['extrinsic_t'])
-
-                    ue2opencv = np.array([[-1.0, 0, 0, 0],
-                            [0, -1, 0, 0],
-                            [0, 0, 1, 0],
-                            [0, 0, 0, 1]])
+                # prepare smplx tensor
+                smplx_param_tensor = {}
+                for key in self.smplx_shape.keys():
+                    smplx_param_tensor[key] = torch.tensor(smplx_param[key]
+                                                            .reshape(self.smplx_shape[key])).to(self.device)
                     
-                    # Rt = (Rt.T @ ue2opencv).T
-
-                    # transform to cam space
-                    global_orient, transl = transform_to_camera_frame(
-                        global_orient=smplx_param['global_orient'][vid].reshape(-1, 3),
-                        transl=smplx_param['transl'][vid].reshape(-1, 3),
-                        pelvis=pelvis_world[vid].reshape(-1, 3),
-                        extrinsic=Rt)
+                # get output
+                output = gendered_smplx[gender](**smplx_param_tensor, return_verts=True)
                     
-                    smplx_param_frame = {k: v[vid] for k, v in smplx_param.items()}
-                    smplx_param_frame['global_orient'] = global_orient
-                    smplx_param_frame['transl'] = transl
+                kps3d = output['joints'].detach().cpu().numpy()
+                pelvis_world = kps3d[:, get_keypoint_idx('pelvis', 'smplx'), :]
 
-                    # tensor 
-                    smplx_param_frame_tensor = {
-                        k: torch.tensor(v.reshape(self.smplx_shape[k])).to(self.device)
-                          for k, v in smplx_param_frame.items()}
-                    
-                    # get output
-                    output = gendered_smplx[gender](**smplx_param_frame_tensor)
+                # get vertices and contact
+                vertices = output['vertices'].detach().cpu().numpy()
 
-                    # # build intrinsics camera
-                    # intrinsics = np.array(cam_param['intrinsic'])
-                    # height, width = cam_param['height'], cam_param['width']
+                # height is -y, get lowest from frame 0
+                left_foot_y_lowest = np.sort(vertices[1, left_foot_idxs, 1])[-1]
+                right_foot_y_lowest = np.sort(vertices[1, right_foot_idxs, 1])[-1]
 
-                    # focal_length = [intrinsics[0, 0], intrinsics[1, 1]]
-                    # principal_point = [intrinsics[0, 2], intrinsics[1, 2]]
+                left_foot_contact = np.zeros([datalen])
+                right_foot_contact = np.zeros([datalen])
 
-                    # project 3d to 2d
-                    kps3d_c = output['joints']
-                    kps2d = camera.transform_points(kps3d_c).detach().cpu().numpy().squeeze()[:, :2]
-                    kps3d_c = kps3d_c.detach().cpu().numpy().squeeze()
+                threshold = 0.01
+                for i in range(datalen):
+                    left_foot_contact[i] = 1 if (vertices[i, left_foot_idxs, 1].max() > (left_foot_y_lowest - threshold)) else 0
+                    right_foot_contact[i] = 1 if (vertices[i, right_foot_idxs, 1].max() > (right_foot_y_lowest - threshold)) else 0
 
-                    kps2d = [1920, 1080] - kps2d
+                # cids
+                cids = sorted(os.listdir(os.path.join(seq_base, 'img')))
 
-                    # get bbox from 2d keypoints
-                    bboxs = self._keypoints_to_scaled_bbox_bfh(
-                        kps2d,
-                        body_scale=self.misc_config['bbox_body_scale'],
-                        fh_scale=self.misc_config['bbox_facehand_scale'])
-                    for i, bbox_name in enumerate([
-                            'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                            'rhand_bbox_xywh'
-                    ]):
-                        xmin, ymin, xmax, ymax, conf = bboxs[i]
-                        bbox = np.array([
-                            max(0, xmin),
-                            max(0, ymin),
-                            min(width, xmax),
-                            min(height, ymax)
-                        ])
-                        bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
-                        bbox_xywh.append(conf)  # (5,)
-                        bboxs_[bbox_name].append(bbox_xywh)
+                for cid in cids:
 
-                    # append contact
-                    contact_['part_segmentation'].append([left_foot_contact[vid], 
-                                                          right_foot_contact[vid]])
-                    # if 0 in [left_foot_contact[vid], right_foot_contact[vid]]:
-                    #     # test overlay
-                    #     img = cv2.imread(img_p)
-                    #     for kp in kps2d:
-                    #         cv2.circle(img, (int(kp[0]), int(kp[1])), 5, (0, 255, 0), -1)
-                    #     if left_foot_contact[vid] == 0:
-                    #         cv2.putText(img, 'left foot', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    #     if right_foot_contact[vid] == 0:
-                    #         cv2.putText(img, 'right foot', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                    #     cv2.imwrite(f'{out_path}/{os.path.basename(seq_base)}_{cid}_{vid}.jpg', img)
+                    # prepare sequence name
+                    sequence_name = f'{os.path.basename(seq_base)}_{cid}'
 
-                    # append image path
-                    image_path_.append(image_path)
+                    # retrieve images
+                    img_f = os.path.join(seq_base, 'img', cid)
+                    img_ps = [os.path.join(img_f, ip) for ip in
+                                os.listdir(img_f) if ip.endswith('.jpeg')]
 
-                    # append keypoints
-                    keypoints2d_.append(kps2d)
-                    keypoints3d_.append(kps3d_c)
+                    # retrieve smplx
+                    cam_f = os.path.join(seq_base, 'camera_params', cid)
+                    cam_ps = [os.path.join(cam_f, cp) for cp in 
+                                os.listdir(cam_f) if cp.endswith('.json')]
 
-                    # append smplx
-                    for key in self.smplx_shape.keys():
-                        smplx_[key].append(smplx_param_frame[key])
+                    # get valid index array & remove frame 0
+                    valid_idxs_img = np.array([int(os.path.basename(img_p).split('.')[0]) for img_p in img_ps])
+                    valid_idex_cam = np.array([int(os.path.basename(cam_p).split('.')[0]) for cam_p in cam_ps])
+                    valid_idxs = np.intersect1d(valid_idxs_img, valid_idex_cam)
+                    # valid_idxs = valid_idxs[valid_idxs > 0]
 
-                    # append meta
-                    meta_['principal_point'].append(principal_point)
-                    meta_['focal_length'].append(focal_length)
-                    meta_['height'].append(height)
-                    meta_['width'].append(width)
-                    meta_['RT'].append(Rt)
-                    meta_['sequence_name'].append(sequence_name)
-                    meta_['track_id'].append(track_id)
-                    meta_['gender'].append(gender)
+                    for vid in tqdm(valid_idxs, desc=f'Processing {sequence_name}, {cid} / {cids[-1]}', 
+                                    leave=False, position=1):
+                        if vid == 0:
+                            continue
+                        if vid >= datalen:
+                            continue
+                        # get image path
+                        img_p = os.path.join(img_f, f'{vid:04d}.jpeg')
+                        image_path = img_p.replace(dataset_path + '/', '')
 
-        # get size
-        size_i = min(int(size), len(seqs_targeted))
+                        # get camera path
+                        cam_p = os.path.join(cam_f, f'{vid:04d}.json')
+                        with open(cam_p, 'r') as f:
+                            cam_param = json.load(f)
 
-        # save keypoints 2d smplx
-        keypoints2d = np.concatenate(keypoints2d_, axis=0).reshape(-1, 144, 2)
-        keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
-        keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
-        keypoints2d, keypoints2d_mask = convert_kps(
-            keypoints2d, src='smplx', dst='human_data')
-        human_data['keypoints2d_smplx'] = keypoints2d
-        human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
+                        Rt = np.eye(4)
+                        Rt[:3, :3] = np.array(cam_param['extrinsic_r'])
+                        Rt[:3, 3] = np.array(cam_param['extrinsic_t'])
 
-        # save keypoints 3d smplx
-        keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
-        keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
-        keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
-        keypoints3d, keypoints3d_mask = convert_kps(
-            keypoints3d, src='smplx', dst='human_data')
-        human_data['keypoints3d_smplx'] = keypoints3d
-        human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
+                        ue2opencv = np.array([[-1.0, 0, 0, 0],
+                                [0, -1, 0, 0],
+                                [0, 0, 1, 0],
+                                [0, 0, 0, 1]])
+                        
+                        # Rt = (Rt.T @ ue2opencv).T
 
-        # pdb.set_trace()
-        # save bbox
-        for bbox_name in [
-                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                'rhand_bbox_xywh'
-        ]:
-            bbox_xywh_ = np.array(bboxs_[bbox_name]).reshape((-1, 5))
-            human_data[bbox_name] = bbox_xywh_
+                        # transform to cam space
+                        global_orient, transl = transform_to_camera_frame(
+                            global_orient=smplx_param['global_orient'][vid].reshape(-1, 3),
+                            transl=smplx_param['transl'][vid].reshape(-1, 3),
+                            pelvis=pelvis_world[vid].reshape(-1, 3),
+                            extrinsic=Rt)
+                        
+                        smplx_param_frame = {k: v[vid] for k, v in smplx_param.items()}
+                        smplx_param_frame['global_orient'] = global_orient
+                        smplx_param_frame['transl'] = transl
 
-        # save smplx
-        for key in smplx_.keys():
-            smplx_[key] = np.concatenate(
-                smplx_[key], axis=0).reshape(self.smplx_shape[key])
-        human_data['smplx'] = smplx_
+                        # tensor 
+                        smplx_param_frame_tensor = {
+                            k: torch.tensor(v.reshape(self.smplx_shape[k])).to(self.device)
+                            for k, v in smplx_param_frame.items()}
+                        
+                        # get output
+                        output = gendered_smplx[gender](**smplx_param_frame_tensor)
 
-        # save image path
-        human_data['image_path'] = image_path_
+                        # # build intrinsics camera
+                        # intrinsics = np.array(cam_param['intrinsic'])
+                        # height, width = cam_param['height'], cam_param['width']
 
-        # save contact
-        human_data['contact'] = contact_
+                        # focal_length = [intrinsics[0, 0], intrinsics[1, 1]]
+                        # principal_point = [intrinsics[0, 2], intrinsics[1, 2]]
 
-        # save meta and misc
-        human_data['config'] = 'synbody_whac'
-        human_data['misc'] = self.misc_config
-        human_data['meta'] = meta_
+                        # project 3d to 2d
+                        kps3d_c = output['joints']
+                        kps2d = camera.transform_points(kps3d_c).detach().cpu().numpy().squeeze()[:, :2]
+                        kps3d_c = kps3d_c.detach().cpu().numpy().squeeze()
 
-        os.makedirs(out_path, exist_ok=True)
-        out_file = os.path.join(
-            # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
-            out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}.npz')
-        human_data.dump(out_file)
+                        kps2d = [1920, 1080] - kps2d
+
+                        # get bbox from 2d keypoints
+                        bboxs = self._keypoints_to_scaled_bbox_bfh(
+                            kps2d,
+                            body_scale=self.misc_config['bbox_body_scale'],
+                            fh_scale=self.misc_config['bbox_facehand_scale'])
+                        for i, bbox_name in enumerate([
+                                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                                'rhand_bbox_xywh'
+                        ]):
+                            xmin, ymin, xmax, ymax, conf = bboxs[i]
+                            bbox = np.array([
+                                max(0, xmin),
+                                max(0, ymin),
+                                min(width, xmax),
+                                min(height, ymax)
+                            ])
+                            bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
+                            bbox_xywh.append(conf)  # (5,)
+                            bboxs_[bbox_name].append(bbox_xywh)
+
+                        # append contact
+                        contact_['part_segmentation'].append([left_foot_contact[vid], 
+                                                            right_foot_contact[vid]])
+                        # if 0 in [left_foot_contact[vid], right_foot_contact[vid]]:
+                        #     # test overlay
+                        #     img = cv2.imread(img_p)
+                        #     for kp in kps2d:
+                        #         cv2.circle(img, (int(kp[0]), int(kp[1])), 5, (0, 255, 0), -1)
+                        #     if left_foot_contact[vid] == 0:
+                        #         cv2.putText(img, 'left foot', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                        #     if right_foot_contact[vid] == 0:
+                        #         cv2.putText(img, 'right foot', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                        #     cv2.imwrite(f'{out_path}/{os.path.basename(seq_base)}_{cid}_{vid}.jpg', img)
+
+                        # append image path
+                        image_path_.append(image_path)
+
+                        # append keypoints
+                        keypoints2d_.append(kps2d)
+                        keypoints3d_.append(kps3d_c)
+
+                        # append smplx
+                        for key in self.smplx_shape.keys():
+                            smplx_[key].append(smplx_param_frame[key])
+
+                        # append meta
+                        meta_['principal_point'].append(principal_point)
+                        meta_['focal_length'].append(focal_length)
+                        meta_['height'].append(height)
+                        meta_['width'].append(width)
+                        meta_['RT'].append(Rt)
+                        meta_['sequence_name'].append(sequence_name)
+                        meta_['track_id'].append(track_id)
+                        meta_['gender'].append(gender)
+
+            # get size
+            size_i = min(int(size), len(seqs_targeted))
+
+            # save keypoints 2d smplx
+            keypoints2d = np.concatenate(keypoints2d_, axis=0).reshape(-1, 144, 2)
+            keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
+            keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
+            keypoints2d, keypoints2d_mask = convert_kps(
+                keypoints2d, src='smplx', dst='human_data')
+            human_data['keypoints2d_smplx'] = keypoints2d
+            human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
+
+            # save keypoints 3d smplx
+            keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
+            keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
+            keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
+            keypoints3d, keypoints3d_mask = convert_kps(
+                keypoints3d, src='smplx', dst='human_data')
+            human_data['keypoints3d_smplx'] = keypoints3d
+            human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
+
+            # pdb.set_trace()
+            # save bbox
+            for bbox_name in [
+                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                    'rhand_bbox_xywh'
+            ]:
+                bbox_xywh_ = np.array(bboxs_[bbox_name]).reshape((-1, 5))
+                human_data[bbox_name] = bbox_xywh_
+
+            # save smplx
+            for key in smplx_.keys():
+                smplx_[key] = np.concatenate(
+                    smplx_[key], axis=0).reshape(self.smplx_shape[key])
+            human_data['smplx'] = smplx_
+
+            # save image path
+            human_data['image_path'] = image_path_
+
+            # save contact
+            human_data['contact'] = contact_
+
+            # save meta and misc
+            human_data['config'] = 'synbody_whac'
+            human_data['misc'] = self.misc_config
+            human_data['meta'] = meta_
+
+            os.makedirs(out_path, exist_ok=True)
+            out_file = os.path.join(
+                # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
+                out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}_{slice}.npz')
+            human_data.dump(out_file)
