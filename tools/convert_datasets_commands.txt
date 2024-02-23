@@ -182,6 +182,13 @@ python tools/convert_datasets.py \
     --output_path /mnt/d/datasets/renbody/output \
     --modes train
 
+# rich-converter
+python tools/convert_datasets.py \
+    --datasets rich \
+    --root_path /mnt/e/datasets \
+    --output_path /mnt/e/datasets/rich/output \
+    --modes test
+
 # rmar-converter
 python tools/convert_datasets.py  \
     --datasets sminchisescu \
@@ -221,6 +228,13 @@ python tools/convert_datasets.py \
     --datasets synbody \
     --root_path /mnt/c/Users/12595/Desktop/synbody_sample \
     --output_path /mnt/c/Users/12595/Desktop/synbody_sample/output
+
+# synbody_whac-converter
+python tools/convert_datasets.py \
+    --datasets synbody_whac \
+    --root_path /mnt/d/datasets \
+    --output_path /mnt/d/datasets/synbody_whac/output \
+    --modes train
 
 # talkshow-converter
 python tools/convert_datasets.py \

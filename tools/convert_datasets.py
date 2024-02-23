@@ -115,6 +115,10 @@ DATASET_CONFIGS = dict(
             'v1_0_train', 'v1_0_ehf', 'v1_0_amass', 'v1_0_agora', 'v1_0_renew',
             'v1_1_train'
         ]),
+    synbody_whac=dict(
+        type='SynbodyWhacConverter',  # synthetic
+        prefix='synbody',
+        modes=['train']),
     ubody=dict(
         type='UbodyConverter',  # real, has some single
         prefix='ubody',
@@ -177,6 +181,10 @@ DATASET_CONFIGS = dict(
         type='RenbodyConverter',  # real
         prefix='renbody',
         modes=['train', 'train_highrescam', 'test', 'test_highrescam']),
+    rich=dict(
+        type='RichConverter',  # real
+        prefix='rich',
+        modes=['train', 'test', 'val']),
     sgnify=dict(
         type='SgnifyConverter',  # real
         prefix='sgnify',
