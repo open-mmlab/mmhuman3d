@@ -180,7 +180,7 @@ class SynbodyWhacConverter(BaseModeConverter):
             # use HumanData to store all data
             human_data = HumanData()
 
-            seqs = seqs_targeted[i * len(seqs_targeted) // slices: (i + 1) * len(seqs_targeted) // slices]
+            seqs = seqs_targeted[slid * len(seqs_targeted) // slices: (slid + 1) * len(seqs_targeted) // slices]
             print(f'Processing {mode} slice {i + 1} / {slices} with {len(seqs)} sequences')
             # initialize output for human_data
             smplx_ = {}
