@@ -163,9 +163,6 @@ class SynbodyWhacConverter(BaseModeConverter):
                     image_size=(width, height),
                     principal_point=principal_point)).to(self.device)
         
-        # use HumanData to store all data
-        human_data = HumanData()
-
         # init seed and size
         seed, size = '240222', '999'
         size_i = min(int(size), len(seqs_targeted))
@@ -178,7 +175,11 @@ class SynbodyWhacConverter(BaseModeConverter):
 
         slices = 2
 
-        for i in range(slices):
+        for slid in range(slices):
+
+            # use HumanData to store all data
+            human_data = HumanData()
+
             seqs = seqs_targeted[i * len(seqs_targeted) // slices: (i + 1) * len(seqs_targeted) // slices]
             print(f'Processing {mode} slice {i + 1} / {slices} with {len(seqs)} sequences')
             # initialize output for human_data
@@ -441,5 +442,5 @@ class SynbodyWhacConverter(BaseModeConverter):
             os.makedirs(out_path, exist_ok=True)
             out_file = os.path.join(
                 # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
-                out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}_{slice}.npz')
+                out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}_{slid}.npz')
             human_data.dump(out_file)
