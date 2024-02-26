@@ -175,12 +175,33 @@ class SynbodyWhacConverter(BaseModeConverter):
 
         slices = 2
 
-        for slid in range(slices):
+        slice_seq_dict = {}
 
+        if mode == 'AMASS_tracking':
+            for slid in range(slices):
+                seqs = seqs_targeted[slid * len(seqs_targeted) // slices: (slid + 1) * len(seqs_targeted) // slices]
+                slice_seq_dict[slid] = seqs
+        elif mode == 'DuetDance':
+            seq_ns = list(set([os.path.dirname(os.path.dirname(seq)) for seq in seqs_targeted]))
+            seq_ns = [os.path.basename(seq_n) for seq_n in seq_ns]
+            random.shuffle(seq_ns)
+
+            slice_seq_dict['train_0'] = []
+            for seq_n in seq_ns[:int(len(seq_ns) * 0.4)]:
+                slice_seq_dict['train_0'] += [seq for seq in seqs_targeted if seq_n in seq]
+            slice_seq_dict['train_1'] = []
+            for seq_n in seq_ns[int(len(seq_ns) * 0.4):int(len(seq_ns) * 0.8)]:
+                slice_seq_dict['train_1'] += [seq for seq in seqs_targeted if seq_n in seq]
+            slice_seq_dict['test'] = []
+            for seq_n in seq_ns[int(len(seq_ns) * 0.8):]:
+                slice_seq_dict['test'] += [seq for seq in seqs_targeted if seq_n in seq]       
+
+        for slid, batch in enumerate(slice_seq_dict.keys()):
+
+            seqs = slice_seq_dict[batch]
             # use HumanData to store all data
             human_data = HumanData()
 
-            seqs = seqs_targeted[slid * len(seqs_targeted) // slices: (slid + 1) * len(seqs_targeted) // slices]
             print(f'Processing {mode} slice {slid + 1} / {slices} with {len(seqs)} sequences')
             # initialize output for human_data
             smplx_ = {}
@@ -442,5 +463,5 @@ class SynbodyWhacConverter(BaseModeConverter):
             os.makedirs(out_path, exist_ok=True)
             out_file = os.path.join(
                 # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
-                out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}_{slid}.npz')
+                out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}_{batch}.npz')
             human_data.dump(out_file)
