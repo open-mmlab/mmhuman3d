@@ -30,7 +30,8 @@ from mmhuman3d.core.cameras import build_cameras
 @DATA_CONVERTERS.register_module()
 class SynbodyWhacConverter(BaseModeConverter):
     """Synbody dataset."""
-    ACCEPTED_MODES = ['AMASS_tracking', 'DuetDance']
+    ACCEPTED_MODES = ['AMASS_tracking-20240221', 'AMASS_tracking-20240229', 
+                      'DuetDance-20240218']
 
     def __init__(self, modes: List = []) -> None:
 
@@ -131,7 +132,7 @@ class SynbodyWhacConverter(BaseModeConverter):
        
         # get target sequences
         seqs_targeted = glob.glob(os.path.join(dataset_path, 'Synbody_whac', 
-                                               f'{mode}*', '*', 
+                                               f'{mode}', '*', 
                                                '*_*', 'smplx_adjusted', '*.npz'))
 
         # bulid smplx model
