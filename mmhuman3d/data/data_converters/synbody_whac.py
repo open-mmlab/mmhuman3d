@@ -174,6 +174,8 @@ class SynbodyWhacConverter(BaseModeConverter):
         
         seqs_targeted = seqs_targeted[:size_i]
 
+        print('Total sequences:', len(seqs_targeted))
+
         slices = 2
 
         slice_seq_dict = {}
