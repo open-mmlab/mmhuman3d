@@ -178,11 +178,11 @@ class SynbodyWhacConverter(BaseModeConverter):
 
         slice_seq_dict = {}
 
-        if mode == 'AMASS_tracking':
+        if 'AMASS_tracking' in mode:
             for slid in range(slices):
                 seqs = seqs_targeted[slid * len(seqs_targeted) // slices: (slid + 1) * len(seqs_targeted) // slices]
                 slice_seq_dict[slid] = seqs
-        elif mode == 'DuetDance':
+        elif 'DuetDance' in mode:
             seq_ns = list(set([os.path.dirname(os.path.dirname(seq)) for seq in seqs_targeted]))
             seq_ns = [os.path.basename(seq_n) for seq_n in seq_ns]
             random.shuffle(seq_ns)
