@@ -119,7 +119,8 @@ DATASET_CONFIGS = dict(
         type='SynbodyWhacConverter',  # synthetic
         prefix='synbody',
         modes=['AMASS_tracking-20240221', 'AMASS_tracking-20240229',  
-               'AMASS_tracking-20240301', 'DuetDance-20240218']),
+               'AMASS_tracking-20240301', 'DuetDance-20240218',
+               'DLP-20240228']),
     ubody=dict(
         type='UbodyConverter',  # real, has some single
         prefix='ubody',

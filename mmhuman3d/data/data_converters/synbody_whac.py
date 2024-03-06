@@ -31,7 +31,8 @@ from mmhuman3d.core.cameras import build_cameras
 class SynbodyWhacConverter(BaseModeConverter):
     """Synbody dataset."""
     ACCEPTED_MODES = ['AMASS_tracking-20240221', 'AMASS_tracking-20240229', 
-                      'AMASS_tracking-20240301', 'DuetDance-20240218']
+                      'AMASS_tracking-20240301', 'DuetDance-20240218',
+                      'DLP-20240228']
 
     def __init__(self, modes: List = []) -> None:
 
@@ -196,6 +197,8 @@ class SynbodyWhacConverter(BaseModeConverter):
             slice_seq_dict['test'] = []
             for seq_n in seq_ns[int(len(seq_ns) * 0.8):]:
                 slice_seq_dict['test'] += [seq for seq in seqs_targeted if seq_n in seq]       
+        elif 'DLP' in mode:
+            slice_seq_dict[0] = seqs_targeted
 
         for slid, batch in enumerate(slice_seq_dict.keys()):
 
