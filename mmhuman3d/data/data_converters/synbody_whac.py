@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 import torch
+from scipy.spatial.distance import cdist
 
 # import mmcv
 # from mmhuman3d.models.body_models.builder import build_body_model
@@ -27,12 +28,15 @@ from .builder import DATA_CONVERTERS
 from mmhuman3d.models.body_models.builder import build_body_model
 from mmhuman3d.core.cameras import build_cameras
 
+from tools.utils.convert_contact_label import vertex2part_smplx_dict
+from tools.utils.convert_contact_label import smplx_vert2region
+
 @DATA_CONVERTERS.register_module()
 class SynbodyWhacConverter(BaseModeConverter):
     """Synbody dataset."""
     ACCEPTED_MODES = ['AMASS_tracking-20240221', 'AMASS_tracking-20240229', 
                       'AMASS_tracking-20240301', 'DuetDance-20240218',
-                      'DLP-20240228']
+                      'DLP-20240228', 'demo']
 
     def __init__(self, modes: List = []) -> None:
 
@@ -45,7 +49,7 @@ class SynbodyWhacConverter(BaseModeConverter):
             cam_param_type='prespective',
             cam_param_source='original',
             smplx_source='original',
-            contact_label=['part_segmentation'],
+            contact_label=['part_segmentation', 'contact_region'],
             part_segmentation=['left_foot', 'right_foot'],
         )
 
@@ -63,6 +67,64 @@ class SynbodyWhacConverter(BaseModeConverter):
         }
 
         super(SynbodyWhacConverter, self).__init__(modes)
+
+    def _calculate_contact(self, vertices, vertices_co, threshold=0.01):
+        """
+        vertices1: numpy array of shape (fn, n, 3)
+        vertices2: numpy array of shape (fn, m, 3)
+        threshold: float, the distance threshold to check against
+
+        Returns numpy array of shape (fn, part_num), where non zero indicates that the minimum
+        distance between any pair of vertices in that frame is less than the threshold.
+        If many part are close, the index of the closest part is returned.
+        """
+        fn = vertices.shape[0]  # number of frames
+        close_frames = []
+
+        part_num = 75   
+        contact_region = np.zeros((fn, part_num))
+        for i in tqdm(range(part_num), desc=f'Processing part contact', leave=False, position=1):
+            vertices_p = vertices[:, smplx_vert2region.T[i].astype(bool), :]
+
+            dist_mat = np.zeros((fn, part_num))
+            for coi in range(part_num):
+                vertices_p_co = vertices_co[:, smplx_vert2region.T[coi].astype(bool), :]
+
+                close_frames = np.zeros((fn))
+                for fid in range(fn):
+
+                    # Compute all pairwise distances for the current frame
+                    dists = cdist(vertices_p[fid], vertices_p_co[fid])
+
+                    # Check if the minimum distance in this frame is less than the threshold
+                    if np.any(dists < threshold):
+                        close_frames[fid] = np.min(dists)
+
+                    # select 5% minimum distance
+                    # dists_vert = np.sort(np.min(dists, axis=1))
+                    # mid = int(np.ceil(len(dists_vert) * 0.05)) - 1
+                    # if dists_vert[mid] < threshold:
+                    #     close_frames[fid] = dists_vert[mid]
+                        
+                        
+                    # pdb.set_trace()
+                
+                dist_mat[:, coi] = close_frames
+
+            # Find the indices of the smallest non-zero values in each row
+            indices = np.where(dist_mat != 0, np.arange(dist_mat.shape[1]), np.inf)
+            # add 1 to none-zero indices
+            indices += 1
+
+            # Find the minimum index in each row
+            min_indices = np.argmin(indices, axis=1)
+
+            # Replace infinity with 0
+            min_indices[min_indices == np.inf] = 0    
+
+            contact_region[:, i] = min_indices
+        
+        return contact_region
 
     def _keypoints_to_scaled_bbox_fh(self,
                                      keypoints,
@@ -166,7 +228,7 @@ class SynbodyWhacConverter(BaseModeConverter):
                     principal_point=principal_point)).to(self.device)
         
         # init seed and size
-        seed, size = '240222', '999'
+        seed, size = '240426', '099'
         size_i = min(int(size), len(seqs_targeted))
         random.seed(int(seed))
         np.set_printoptions(suppress=True)
@@ -199,6 +261,12 @@ class SynbodyWhacConverter(BaseModeConverter):
                 slice_seq_dict['test'] += [seq for seq in seqs_targeted if seq_n in seq]       
         elif 'DLP' in mode:
             slice_seq_dict[0] = seqs_targeted
+        elif 'demo' in mode:
+            slice_seq_dict[0] = seqs_targeted
+        
+        slices = len(slice_seq_dict.keys())
+
+        # slice_seq_dict = {'train_0': seqs_targeted}
 
         for slid, batch in enumerate(slice_seq_dict.keys()):
 
@@ -206,6 +274,8 @@ class SynbodyWhacConverter(BaseModeConverter):
             # use HumanData to store all data
             human_data = HumanData()
 
+            if len(seqs) == 0:
+                continue
             print(f'Processing {mode} slice {slid + 1} / {slices} with {len(seqs)} sequences')
             # initialize output for human_data
             smplx_ = {}
@@ -228,13 +298,10 @@ class SynbodyWhacConverter(BaseModeConverter):
                 contact_[contact_key] = []
 
             # load contact region
-            from tools.utils.convert_contact_label import vertex2part_smplx_dict
             left_foot_idxs = np.array(vertex2part_smplx_dict['left_foot'])
             right_foot_idxs = np.array(vertex2part_smplx_dict['right_foot'])
 
             for seq in tqdm(seqs, desc=f'Processing {mode}', leave=False, position=0):
-                
-                # preprocess sequence
 
                 # get track id
                 track_id = random_ids[used_id_num]
@@ -247,6 +314,7 @@ class SynbodyWhacConverter(BaseModeConverter):
                 gender = param['meta'].item()['gender']
 
                 # expend betas
+                smplx_param['betas'] = smplx_param['betas'][..., :10]
                 smplx_param['betas'] = np.tile(smplx_param['betas'], (datalen, 1))
 
                 # parse camera params and image
@@ -264,8 +332,45 @@ class SynbodyWhacConverter(BaseModeConverter):
                 kps3d = output['joints'].detach().cpu().numpy()
                 pelvis_world = kps3d[:, get_keypoint_idx('pelvis', 'smplx'), :]
 
-                # get vertices and contact
+                # get vertices for contact
                 vertices = output['vertices'].detach().cpu().numpy()
+
+                # get curresponding seq vertices
+                if 'DuetDance' in mode:
+                    if '00.npz' in seq:
+                        seq_co = seq.replace('00.npz', '01.npz')
+                    else:
+                        seq_co = seq.replace('01.npz', '00.npz')
+
+                    vert_threshold = 0.01
+
+                    # load smplx
+                    param_co = dict(np.load(seq_co, allow_pickle=True))
+                    smplx_param_co = param_co['smplx'].item()
+                    datalen_co = param_co['__data_len__']
+                    gender_co = param_co['meta'].item()['gender']
+
+                    # expend betas
+                    smplx_param_co['betas'] = smplx_param_co['betas'][..., :10]
+                    smplx_param_co['betas'] = np.tile(smplx_param_co['betas'], (datalen_co, 1))
+
+                    # prepare smplx tensor
+                    smplx_param_tensor_co = {}
+                    for key in self.smplx_shape.keys():
+                        smplx_param_tensor_co[key] = torch.tensor(smplx_param_co[key]
+                                                                .reshape(self.smplx_shape[key])).to(self.device)
+                    
+                    # get output
+                    output_co = gendered_smplx[gender_co](**smplx_param_tensor_co, return_verts=True)
+
+                    kps3d_co = output_co['joints'].detach().cpu().numpy()
+                    pelvis_world_co = kps3d_co[:, get_keypoint_idx('pelvis', 'smplx'), :]
+
+                    # get vertices
+                    vertices_co = output_co['vertices'].detach().cpu().numpy()
+
+                    # calculate contact
+                    contact_pair = self._calculate_contact(vertices, vertices_co, threshold=vert_threshold)
 
                 # height is -y, get lowest from frame 0
                 left_foot_y_lowest = np.sort(vertices[1, left_foot_idxs, 1])[-1]
@@ -281,6 +386,7 @@ class SynbodyWhacConverter(BaseModeConverter):
 
                 # cids
                 cids = sorted(os.listdir(os.path.join(seq_base, 'img')))
+                cids = [cid for cid in cids if 'overview' not in cid]
 
                 for cid in cids:
 
@@ -290,7 +396,8 @@ class SynbodyWhacConverter(BaseModeConverter):
                     # retrieve images
                     img_f = os.path.join(seq_base, 'img', cid)
                     img_ps = [os.path.join(img_f, ip) for ip in
-                                os.listdir(img_f) if ip.endswith('.jpeg')]
+                                os.listdir(img_f) if ip.endswith('.jpeg') or ip.endswith('.png')]
+                    suffix = img_ps[0].split('.')[-1]
 
                     # retrieve smplx
                     cam_f = os.path.join(seq_base, 'camera_params', cid)
@@ -310,7 +417,7 @@ class SynbodyWhacConverter(BaseModeConverter):
                         if vid >= datalen:
                             continue
                         # get image path
-                        img_p = os.path.join(img_f, f'{vid:04d}.jpeg')
+                        img_p = os.path.join(img_f, f'{vid:04d}.{suffix}')
                         image_path = img_p.replace(dataset_path + '/', '')
 
                         # get camera path
@@ -385,6 +492,7 @@ class SynbodyWhacConverter(BaseModeConverter):
                         # append contact
                         contact_['part_segmentation'].append([left_foot_contact[vid], 
                                                             right_foot_contact[vid]])
+                        contact_['contact_region'].append(contact_pair[vid])
                         # if 0 in [left_foot_contact[vid], right_foot_contact[vid]]:
                         #     # test overlay
                         #     img = cv2.imread(img_p)
@@ -468,4 +576,7 @@ class SynbodyWhacConverter(BaseModeConverter):
             out_file = os.path.join(
                 # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
                 out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}_{batch}.npz')
+            if 'DuetDance' in mode:
+                out_file = out_file.replace('.npz', f'_{vert_threshold:.2f}.npz')
+
             human_data.dump(out_file)
