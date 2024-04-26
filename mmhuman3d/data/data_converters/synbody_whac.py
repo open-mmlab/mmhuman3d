@@ -228,7 +228,7 @@ class SynbodyWhacConverter(BaseModeConverter):
                     principal_point=principal_point)).to(self.device)
         
         # init seed and size
-        seed, size = '240426', '099'
+        seed, size = '240426', '999'
         size_i = min(int(size), len(seqs_targeted))
         random.seed(int(seed))
         np.set_printoptions(suppress=True)
