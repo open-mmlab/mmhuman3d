@@ -26,7 +26,7 @@ from .builder import DATA_CONVERTERS
 @DATA_CONVERTERS.register_module()
 class EmdbConverter(BaseModeConverter):
 
-    ACCEPTED_MODES = ['train']
+    ACCEPTED_MODES = ['emdb1', 'emdb2', 'else']
 
     def __init__(self, modes=[], *args, **kwargs):
 
@@ -90,20 +90,53 @@ class EmdbConverter(BaseModeConverter):
         keypoints2d_smpl_, keypoints3d_smpl_ = [], []
         meta_ = {}
         for meta_key in ['principal_point', 'focal_length', 'height', 'width', 
-                         'gender']:
+                         'gender', 'track_id', 'frame_id', 'sequence_name', 'RT']:
             meta_[meta_key] = []
 
-        seed = '230905'
+        seed = '240110'
         size = 99
+        random_ids = np.random.RandomState(seed=int(seed)).permutation(999999)
+        used_id_num = 0
 
-        # sort by seq
-        for seq in tqdm(seqs, position=0, leave=False, desc='Processing sequences'):
+        skip_count = 0
+        # sort by se
+        target_seqs = []
+
+        for seq in seqs:
+            # track_id = random_ids[used_id_num]
+            # seq_name = os.path.basename(seq)
+            # used_id_num += 1
             
             # load sequence annotation
             data_file = glob.glob(os.path.join(seq, "*_data.pkl"))[0]
             with open(data_file, "rb") as f:
                 seq_anno = pickle.load(f)
 
+            if mode == 'else':
+                if seq_anno['emdb1'] == 1 or seq_anno['emdb2'] == 1:
+                    skip_count += 1
+                    continue
+            elif not seq_anno[mode]:
+                skip_count += 1
+                continue
+
+            target_seqs.append(seq)
+        #     continue
+        # pdb.set_trace()
+
+        # return
+
+        for seq in tqdm(target_seqs, position=0, leave=False, desc='Processing sequences'):
+        # for seq in target_seqs:
+
+            track_id = random_ids[used_id_num]
+            seq_name = os.path.basename(seq)
+            used_id_num += 1
+            
+            # load sequence annotation
+            data_file = glob.glob(os.path.join(seq, "*_data.pkl"))[0]
+            with open(data_file, "rb") as f:
+                seq_anno = pickle.load(f)
             # load keypoints (N, 24, 2)
             j2d_seq = seq_anno['kp2d']  
             frame_length = len(j2d_seq)
@@ -145,12 +178,16 @@ class EmdbConverter(BaseModeConverter):
             smpl_params = {}
             for key in self.smpl_mapping.keys():
                 smpl_params[key] = seq_smpl[self.smpl_mapping[key]] 
-            smpl_params['betas'] = smpl_params['betas'].repeat(frame_length).reshape(-1, 10)
-
+            # pdb.set_trace()
+            smpl_params['betas'] = smpl_params['betas'].reshape(-1,10).repeat(frame_length, axis=0)
+            
+            passed = 0
             # parse through frames
+            # for fid in range(frame_length):
             for fid in tqdm(range(frame_length), position=1, 
                             leave=False, desc='Processing frames'):
                 if frame_mask[fid] == 0:
+                    passed+=1
                     continue
 
                 # prepare image path
@@ -233,9 +270,14 @@ class EmdbConverter(BaseModeConverter):
                 meta_['width'].append(width)
                 meta_['height'].append(height)
                 meta_['gender'].append(seq_gender)
+                meta_['track_id'].append(track_id)
+                meta_['frame_id'].append(fid)   
+                meta_['sequence_name'].append(seq_name)
+                meta_['RT'].append(extrinsics[fid])
 
-                size_i = min(size, len(seqs))
-        # pdb.set_trace()
+                size_i = min(size, len(target_seqs))
+
+            # print(os.path.basename(seq), passed, frame_length)
 
         # meta
         human_data['meta'] = meta_
