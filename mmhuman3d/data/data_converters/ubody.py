@@ -223,19 +223,19 @@ class UbodyConverter(BaseModeConverter):
         #         test_vids += vid_ps[int((len(vid_ps)+1)*.70):]
         # processed_vids += vid_ps
         # processed_vids = list(dict.fromkeys(processed_vids))
-        for scene in scene_split:
-            if not '_' in scene:
-                continue
-            vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
-            test_vids += vid_ps
-        test_vids = list(dict.fromkeys(test_vids))
-        train_vids = [vid_p for vid_p in vid_ps_all if vid_p not in test_vids]
-        # pdb.set_trace()
+
+
+        # for scene in scene_split:
+        #     if not '_' in scene:
+        #         continue
+        #     vid_ps = [vid_p for vid_p in vid_ps_all if scene in vid_p]
+        #     test_vids += vid_ps
+        # test_vids = list(dict.fromkeys(test_vids))
+        # train_vids = [vid_p for vid_p in vid_ps_all if vid_p not in test_vids]
 
         # vid_ps = vid_ps[:1]
 
-        for batch, vid_ps_batch in zip(['test', 'train'],
-                                       [test_vids, train_vids]):
+        for batch in ['test', 'train']:
 
             # num_proc = 4
             # with Pool(num_proc) as p:
@@ -277,17 +277,16 @@ class UbodyConverter(BaseModeConverter):
                 # load seq smplx annotation
                 with open(os.path.join(anno_folder, 'smplx_annotation.json')) as f:
                     smplx_param = json.load(f)
-                vid_ps_scene = [v for v in vid_ps_batch if vscene in v]
                 # for vid_p in tqdm(vid_ps_scene, desc=f'Preprocessing scene {bid+1}/{len(vid_batches)}', 
                 #                   position=0, leave=False):
                 # process_vid(vid_p, smplx_model, anno_param, smplx_param)
 
-                process_vid_COCO(smplx_model, vscene, vid_ps_batch, db, smplx_param, dst)
+                process_vid_COCO(smplx_model, vscene, scene_split, batch, db, smplx_param, dst)
 
                 # pdb.set_trace()
 
             processed_npzs = glob.glob(os.path.join(dst, '*.npz')) 
-            seed, size = '231027', '99'
+            seed, size = '240409', '99'
 
             random.seed(int(seed))
 
@@ -439,7 +438,7 @@ class UbodyConverter(BaseModeConverter):
                       time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
                 # store
-                human_data['config'] = f'egobody_{mode}'
+                human_data['config'] = f'ubody_{mode}'
                 human_data['misc'] = self.misc_config
 
                 human_data.compress_keypoints_by_mask()

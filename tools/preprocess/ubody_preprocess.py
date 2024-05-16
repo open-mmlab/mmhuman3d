@@ -322,7 +322,7 @@ def process_vid(vid, smplx_model, anno_param, smplx_param):
     #     meta_['principal_point'].append(principal_point)
 
 
-def process_vid_COCO(smplx_model, vscene, vid_ps_batch, db, smplx_param, dst):
+def process_vid_COCO(smplx_model, vscene, scene_split, batch, db, smplx_param, dst):
     # vid = args.vid_p
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -373,9 +373,10 @@ def process_vid_COCO(smplx_model, vscene, vid_ps_batch, db, smplx_param, dst):
     aids = list(db.anns.keys())
 
     # prepare vid list 
-    vid_list = [vid_p.split('/')[-2] for vid_p in vid_ps_batch]
+    # vid_list = [vid_p.split('/')[-2] for vid_p in vid_ps_batch]
     dataset_path = os.path.sep.join(dst.split('/')[:-2])
 
+    valid_count = 0
     for bid in range(blocks):
 
         param_dict = {}
@@ -403,10 +404,26 @@ def process_vid_COCO(smplx_model, vscene, vid_ps_batch, db, smplx_param, dst):
             image_info = db.loadImgs(ann['image_id'])[0]
             video_name = image_info['file_name'].split('/')[-2]
 
-            if not video_name in vid_list:
-                continue
+            if image_info['file_name'].startswith('/'):
+                file_name = image_info['file_name'][1:]  # [1:] means delete '/'
+            else:
+                file_name = image_info['file_name']
+
+            video_name = file_name.split('/')[-2]
+            if 'Trim' in video_name:
+                video_name = video_name.split('_Trim')[0]
+
+            if batch == 'train':
+                if video_name in scene_split:
+                    continue
+            elif batch == 'test':
+                if video_name not in scene_split:
+                    continue       
+
             imgp = os.path.join(dataset_path, 'images', 
                                 vscene, image_info['file_name'])
+            if ann['iscrowd'] or (ann['num_keypoints']==0): continue
+            if ann['valid_label'] == 0: continue
             if not os.path.exists(imgp): 
                 continue
             if str(aid) not in smplx_param: 
@@ -518,11 +535,13 @@ def process_vid_COCO(smplx_model, vscene, vid_ps_batch, db, smplx_param, dst):
             for key in ['iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
                 'righthand_valid', 'face_valid']:
                 param_dict[key].append(kp_param[key])
+            valid_count += 1
             # pdb.set_trace()
 
         os.makedirs(os.path.dirname(preprocess_file), exist_ok=True)
         np.savez(preprocess_file, **param_dict)
 
+    print(f'{vscene}: Valid count: {valid_count}')
 
 
 if __name__ == '__main__':
