@@ -41,7 +41,7 @@ https://user-images.githubusercontent.com/62529255/144362861-e794b404-c48f-4ebe-
 
 - **Versatile visualization toolbox**
 
-  A suite of differentiale visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
+  A suite of differential visualization tools for human parametric model rendering (including part segmentation, depth map and point clouds) and conventional 2D/3D keypoints are available.
 
 ## News
 - 2023-04-05: MMHuman3D [v0.11.0](https://github.com/open-mmlab/mmhuman3d/releases/tag/v0.11.0) is released. Major updates include:
@@ -141,7 +141,7 @@ This project is released under the [Apache 2.0 license](LICENSE). Some supported
 
 ## Citation
 
-If you find this project useful in your research, please consider cite:
+If you find this project useful in your research, please consider citing:
 
 ```bibtex
 @misc{mmhuman3d,
@@ -159,7 +159,7 @@ We appreciate all contributions to improve MMHuman3D. Please refer to [CONTRIBUT
 ## Acknowledgement
 
 MMHuman3D is an open source project that is contributed by researchers and engineers from both the academia and the industry.
-We appreciate all the contributors who implement their methods or add new features, as well as users who give valuable feedbacks.
+We appreciate all the contributors who implement their methods or add new features, as well as users who give valuable feedback.
 We wish that the toolbox and benchmark could serve the growing research community by providing a flexible toolkit to reimplement existing methods and develop their own new models.
 
 ## Projects in OpenMMLab
