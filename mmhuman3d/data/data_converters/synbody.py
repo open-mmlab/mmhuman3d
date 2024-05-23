@@ -312,7 +312,8 @@ class SynbodyConverter(BaseModeConverter):
                 track_ids = []
                 for idx, meta_tmp in enumerate(npfile['meta'][valid_id]):
                     gender.append(meta_tmp['gender'])
-                    track_ids.append(track_id * 100 + meta_tmp['track_id'])
+                for track_id_seq in np.array(npfile['track_id'])[valid_id]:
+                    track_ids.append(track_id * 100 + track_id_seq)
 
                 _meta['gender'] += gender
                 _meta['track_id'] += track_ids

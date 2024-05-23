@@ -165,7 +165,7 @@ def process_npz(args):
     # for key in ['image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d', 'keypoints3d', 'occlusion']:
     for key in [
         'image_path', 'mask_path', 'npz_name', 'meta', 'keypoints2d',
-        'keypoints3d'
+        'keypoints3d', 'track_id'
     ]:
         merged[key] = []
     merged['smpl'] = {}
@@ -284,7 +284,7 @@ def process_npz(args):
                         merged['smplx'][key].append(
                             npfile_tmp['smplx'].item()[key]
                             [1:valid_frame_number + 1])
-            merged['meta']['track_id'] += [random_ids[used_id_num]] * len(imgname)     
+            merged['track_id'] += [random_ids[used_id_num]] * len(imgname)     
             
         if has_smpl:
             for k in merged['smpl'].keys():
