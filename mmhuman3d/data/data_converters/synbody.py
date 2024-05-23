@@ -309,11 +309,13 @@ class SynbodyConverter(BaseModeConverter):
                             self.smplx_shape[k]))
                 # pdb.set_trace()
                 gender = []
+                track_ids = []
                 for idx, meta_tmp in enumerate(npfile['meta'][valid_id]):
                     gender.append(meta_tmp['gender'])
+                    track_ids.append(track_id * 100 + meta_tmp['track_id'])
 
                 _meta['gender'] += gender
-                _meta['track_id'] += [track_id] * len(gender)
+                _meta['track_id'] += track_ids
                 if len(list(set(gender))) != 1:
                     print(f'{npzf} has more than 1 gender, please check')
                 # pdb.set_trace()
