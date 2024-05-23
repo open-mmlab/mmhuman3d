@@ -132,11 +132,13 @@ class SynbodyConverter(BaseModeConverter):
         else:
             slice_num = 1
         # slice_num = 18
-        seed, size = '230804', '94000'
+        seed, size = '240523', '94000'
         random.seed(int(seed))
         random.shuffle(npzs)
         # npzs = sorted(npzs)
         npzs = npzs[:int(size)]
+        random_ids = np.random.RandomState(seed=int(seed)).permutation(999999)
+        used_id_num = 0
 
         # pdb.set_trace()
 
@@ -161,6 +163,7 @@ class SynbodyConverter(BaseModeConverter):
             _bboxs = {}
             _meta = {}
             _meta['gender'] = []
+            _meta['track_id'] = []
             for bbox_name in [
                 'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
                 'rhand_bbox_xywh'
@@ -185,6 +188,8 @@ class SynbodyConverter(BaseModeConverter):
             for npzf in tqdm(npzs[slice * s:slice * (s + 1)], desc='Npzfiles concating'):
                 try:
                     npfile = dict(np.load(npzf, allow_pickle=True))
+                    track_id = random_ids[used_id_num]
+                    used_id_num += 1
 
                     # (width, height) = npfile['shape']
                     if 'shape' in npfile.keys():
@@ -308,6 +313,9 @@ class SynbodyConverter(BaseModeConverter):
                     gender.append(meta_tmp['gender'])
 
                 _meta['gender'] += gender
+                _meta['track_id'] += [track_id] * len(gender)
+                if len(list(set(gender))) != 1:
+                    print(f'{npzf} has more than 1 gender, please check')
                 # pdb.set_trace()
 
                 # _meta['gender'].append(np.array(gender)[valid_id].tolist())
