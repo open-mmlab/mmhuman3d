@@ -19,8 +19,12 @@ from mmhuman3d.data.data_structures.human_data import HumanData
 
 
 def process_npz_one(seq):
-    cmd = f'srun -p Zoetrope --gres=gpu:0 --cpus-per-task=4 -x SH-IDC1-10-198-8-[51,56,68,72,78,100,116,123] -N 1 ' \
-        f'python tools/preprocess/synbody_preprocess.py --seq {seq} ' \
+    # cmd = f'srun -p Zoetrope --gres=gpu:0 --cpus-per-task=4 -x SH-IDC1-10-198-8-[51,56,68,72,78,100,116,123] -N 1 ' \
+    #     f'python tools/preprocess/synbody_preprocess.py --seq {seq} ' \
+    #     f'--output_path {output_path} ' \
+    #     f'--prefix {prefix}'
+
+    cmd = f'python tools/preprocess/synbody_preprocess.py --seq {seq} ' \
         f'--output_path {output_path} ' \
         f'--prefix {prefix}'
 
@@ -88,7 +92,7 @@ def parse_args():
         '--num_proc',
         required=False,
         type=int,
-        default=1,
+        default=4,
         help='num of processes')
 
     # parser.add_argument(
