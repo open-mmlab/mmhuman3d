@@ -132,6 +132,10 @@ def process_npz(args):
     # pdb.set_trace()
     batch_name, place, seq_name = seq.split(os.path.sep)[root_folder_id + 1:]
 
+    seed = 240523
+    random_ids = np.random.RandomState(seed=int(seed)).permutation(99)
+    used_id_num = 0
+
 
     # batch name mapping
     batch_name_map = {
@@ -280,6 +284,8 @@ def process_npz(args):
                         merged['smplx'][key].append(
                             npfile_tmp['smplx'].item()[key]
                             [1:valid_frame_number + 1])
+            merged['meta']['track_id'] += [random_ids[used_id_num]] * len(imgname)     
+            
         if has_smpl:
             for k in merged['smpl'].keys():
                 merged['smpl'][k] = np.vstack(merged['smpl'][k])
