@@ -292,9 +292,10 @@ class ImarDatasetsConverter(BaseModeConverter):
                     ]:
                         bboxs_[bbox_name] = []
                     meta_ = {}
-                    for meta_key in ['focal_length', 'principal_point']:
+                    for meta_key in ['RT', 'focal_length', 'principal_point', 'sequence_name']:
                         meta_[meta_key] = []
                     image_path_ = []
+                    sids = []
 
                     for vid_p in tqdm(
                             vid_ps[slice_vids * slice_idx:slice_vids *
@@ -307,6 +308,9 @@ class ImarDatasetsConverter(BaseModeConverter):
                             subj_ids = [0, 1]
                         else:
                             subj_ids = [0]
+
+                        # if 'hug 6' not in vid_p:
+                        #     continue
 
                         for subj_id in subj_ids:
 
@@ -472,6 +476,9 @@ class ImarDatasetsConverter(BaseModeConverter):
                                 keypoints_2d_original)
                             keypoints_3d_original_.append(
                                 keypoints_3d_original)
+                            
+                            sids += [subj_id] * len(image_path)
+
 
                             # write meta
                             meta_['focal_length'] += cam_params[
@@ -480,6 +487,8 @@ class ImarDatasetsConverter(BaseModeConverter):
                             meta_['principal_point'] += cam_params[
                                 'intrinsics_w_distortion']['c'].repeat(
                                     len(image_path)).tolist()
+                            meta_['sequence_name'] += [os.path.basename(vid_p) + f'_{subj_id}'] * len(image_path)
+                            meta_['RT'] += [extrinsics] * len(image_path)
 
                             # write image path
                             image_path_ += image_path
@@ -554,6 +563,7 @@ class ImarDatasetsConverter(BaseModeConverter):
                         'keypoints3d_original_mask'] = keypoints_3d_original_mask
 
                     # meta
+                    meta_['subject_id'] = sids
                     human_data['meta'] = meta_
 
                     # image path
