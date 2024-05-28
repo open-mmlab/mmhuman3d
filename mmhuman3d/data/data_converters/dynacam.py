@@ -68,13 +68,16 @@ class DynacamConverter(BaseModeConverter):
         bboxs_ = {}
         for key in ['bbox_xywh']:
             bboxs_[key] = []
-        image_path_, keypoints2d_smpl_ = [], []
+        image_path_, keypoints2d_smpl_, keypoints3d_smpl_ = [], [], []
         meta_ = {}
-        for meta_key in ['principal_point', 'focal_length', 'height', 'width']:
+        for meta_key in ['principal_point', 'focal_length', 'height', 'width', 'track_id']:
             meta_[meta_key] = []
 
-        seed = 230720
+        seed = 240429
         size = 999
+
+        random_ids = np.random.RandomState(seed).permutation(999999)
+        used_id_num = 0
 
         # prepare batch
         batch_name, batch_mode = mode.split('_')
@@ -150,6 +153,9 @@ class DynacamConverter(BaseModeConverter):
 
             for sid in range(subject_num):
 
+                track_id = random_ids[used_id_num]
+                used_id_num += 1
+
                 for fid, fname in tqdm(enumerate(frame_names), desc=f'Subject {sid+1}/{subject_num}',
                                         total=len(frame_names), position=1, leave=False):
 
@@ -212,7 +218,8 @@ class DynacamConverter(BaseModeConverter):
                     keypoints_3d = output['joints']
                     keypoints_2d_xyd = camera.transform_points_screen(keypoints_3d)
                     keypoints_2d = keypoints_2d_xyd[..., :2].detach().cpu().numpy()
-
+                    keypoints_3d = keypoints_3d.detach().cpu().numpy()
+                    
                     # get bbox_xywh
                     bbox_xyxy = self._keypoints_to_scaled_bbox(keypoints_2d, scale=1.2)
                     xmin, ymin, xmax, ymax = bbox_xyxy
@@ -224,6 +231,7 @@ class DynacamConverter(BaseModeConverter):
 
                     # append keypoints2d
                     keypoints2d_smpl_.append(keypoints_2d)
+                    keypoints3d_smpl_.append(keypoints_3d)
 
                     # append bbox
                     bboxs_['bbox_xywh'].append(bbox)
@@ -239,6 +247,7 @@ class DynacamConverter(BaseModeConverter):
                     meta_['focal_length'].append((intrinsic[0, 0], intrinsic[1, 1]))
                     meta_['height'].append(height)
                     meta_['width'].append(width)
+                    meta_['track_id'].append(track_id)
 
                 # visulize
                 # img = cv2.imread(img_path)
@@ -268,7 +277,7 @@ class DynacamConverter(BaseModeConverter):
                 smpl_[key], axis=0).reshape(self.smpl_shape[key])
         human_data['smpl'] = smpl_
 
-        # keypoints2d_smplx
+        # keypoints2d_smpl
         keypoints2d_smpl = np.concatenate(
             keypoints2d_smpl_, axis=0).reshape(-1, 45, 2)
         keypoints2d_smpl_conf = np.ones([keypoints2d_smpl.shape[0], 45, 1])
@@ -278,6 +287,17 @@ class DynacamConverter(BaseModeConverter):
                 convert_kps(keypoints2d_smpl, src='smpl_45', dst='human_data')
         human_data['keypoints2d_smpl'] = keypoints2d_smpl
         human_data['keypoints2d_smpl_mask'] = keypoints2d_smpl_mask
+
+        # keypoints3d_smpl
+        keypoints3d_smpl = np.concatenate(
+            keypoints3d_smpl_, axis=0).reshape(-1, 45, 3)
+        keypoints3d_smpl_conf = np.ones([keypoints3d_smpl.shape[0], 45, 1])
+        keypoints3d_smpl = np.concatenate(
+            [keypoints3d_smpl, keypoints3d_smpl_conf], axis=-1)
+        keypoints3d_smpl, keypoints3d_smpl_mask = \
+                convert_kps(keypoints3d_smpl, src='smpl_45', dst='human_data')
+        human_data['keypoints3d_smpl'] = keypoints3d_smpl
+        human_data['keypoints3d_smpl_mask'] = keypoints3d_smpl_mask
 
         # misc
         human_data['misc'] = self.misc_config
