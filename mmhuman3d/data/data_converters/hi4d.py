@@ -18,6 +18,8 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
 from mmhuman3d.models.body_models.utils import transform_to_camera_frame
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.models.body_models.builder import build_body_model
+
+from tools.utils.convert_contact_label import get_contact_region_label_from_smpl_vertex 
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
@@ -40,7 +42,7 @@ class Hi4dConverter(BaseModeConverter):
             bbox_facehand_scale=1.0,
             kps3d_root_aligned=False,
             has_gender=True,
-            contact_label=['smpl_vertex_correspondence', 'has_contact'],
+            contact_label=['smpl_vertex_correspondence', 'has_contact', 'contact_region'],
         )
 
         self.smpl_shape = {
@@ -153,7 +155,7 @@ class Hi4dConverter(BaseModeConverter):
         seqs = [s for s in seqs if '.' not in s]
         seqs = [s for s in seqs if 'output' not in s]
 
-        seed, size = '240104', '999'
+        seed, size = '240205', '999'
         size_i = min(int(size), len(seqs))
         random_ids = np.random.RandomState(seed=int(seed)).permutation(999999)
         used_id_num = 0
@@ -204,10 +206,10 @@ class Hi4dConverter(BaseModeConverter):
                     # prepare image
                     imgp = os.path.join(dataset_path, 'data', seq, 'images', str(cid), f'{fid:06d}.jpg')
                     image_path = imgp.replace(f'{dataset_path}/', '')
-                    # image = cv2.imread(imgp)
+                    image = cv2.imread(imgp)
 
-                    # # get height and width
-                    # height, width = image.shape[:2]
+                    # get height and width
+                    height, width = image.shape[:2]
 
                     # get load smpl
                     smplp = os.path.join(dataset_path, 'data', seq, 'smpl',  f'{fid:06d}.npz')                    
@@ -261,7 +263,9 @@ class Hi4dConverter(BaseModeConverter):
                         # for key in body_model_param_tensor.keys():
                         #     print(key, body_model_param_tensor[key].shape)
                         # pdb.set_trace()
-                        output = gendered_smpl[gender](**body_model_param_tensor)
+                        output = gendered_smpl[gender](**body_model_param_tensor, return_verts=True, 
+                                                       return_full_pose=True, return_pose=True, 
+                                                       return_shape=True, return_joints=True)
 
                         # project 3d keypoints to 2d
                         kps3d_c = output['joints']
@@ -312,6 +316,8 @@ class Hi4dConverter(BaseModeConverter):
                         meta_['track_id'].append(track_id)
                         meta_['frame_id'].append(fid)
                         meta_['seq'].append(seq)
+                        meta_['height'].append(height)
+                        meta_['width'].append(width)
 
                         # append contact
                         if fid in meta['contact_ids']:
@@ -319,6 +325,32 @@ class Hi4dConverter(BaseModeConverter):
                         else:
                             contact_['has_contact'].append(0)
                         contact_['smpl_vertex_correspondence'].append(smpl_param['contact'][pid])
+                        # pdb.set_trace()
+
+                        contactR = get_contact_region_label_from_smpl_vertex(
+                            smpl_param['contact'][pid].reshape(-1, 1))
+                        contact_['contact_region'].append(contactR)
+                        
+                        # test render contact
+                        smplx_vert2region = np.load('tools/utils/smplx_vert2region.npy')
+                        smpl_vert2region = np.load('tools/utils/smpl_vert2region.npy')
+
+                        vertices = camera.transform_points_screen(output['vertices'])[..., :2].detach().cpu().numpy()[0]
+                        image = cv2.imread(imgp)
+                        for vi, v in enumerate(smpl_vert2region):
+                            if np.sum(smpl_vert2region[vi] * contactR) > 0.5:
+                                cv2.circle(image, (int(vertices[vi][0]), int(vertices[vi][1])), 1, (255,0,0), 2)
+                            else:
+                                cv2.circle(image, (int(vertices[vi][0]), int(vertices[vi][1])), 1, (0,0,255), 2)
+                        cv2.imwrite(f'{out_path}/{os.path.basename(imgp)}', image)
+                        continue
+                    continue
+                # pdb.set_trace()
+
+
+
+
+                        # pdb.set_trace()
 
                         # write kps2d on image
                     #     for kp in kps2d[0]:
@@ -330,6 +362,9 @@ class Hi4dConverter(BaseModeConverter):
         # meta
         human_data = HumanData()
         human_data['meta'] = meta_
+
+        # contact
+        human_data['contact'] = contact_
 
         # image path
         human_data['image_path'] = image_path_
