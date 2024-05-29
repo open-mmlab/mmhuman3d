@@ -200,6 +200,11 @@ class Hi4dConverter(BaseModeConverter):
                         focal_length=focal_length,
                         image_size=(width, height),
                         principal_point=principal_point)).to(self.device)
+                
+                track_dict = {}
+                for pid in range(5):
+                    track_dict[pid] = random_ids[used_id_num]
+                    used_id_num += 1
 
                 for fid in tqdm(frame_idxs, desc=f'Camera views {cidx+1}/{len(cids)}', position=1, leave=False):
 
@@ -212,7 +217,7 @@ class Hi4dConverter(BaseModeConverter):
                     height, width = image.shape[:2]
 
                     # get load smpl
-                    smplp = os.path.join(dataset_path, 'data', seq, 'smpl',  f'{fid:06d}.npz')                    
+                    smplp = os.path.join(dataset_path, 'data', seq, 'smpl', f'{fid:06d}.npz')                    
                     smpl_param = dict(np.load(smplp, allow_pickle=True))
 
                     # load smpl params
@@ -226,10 +231,7 @@ class Hi4dConverter(BaseModeConverter):
                     
                     # write track dict
                     pids = [pid for pid in range(ped_num)]
-                    track_dict = {}
-                    for pid in pids:
-                        track_dict[pid] = random_ids[used_id_num]
-                        used_id_num += 1
+
 
                     for pid in pids:
 
@@ -331,18 +333,18 @@ class Hi4dConverter(BaseModeConverter):
                             smpl_param['contact'][pid].reshape(-1, 1))
                         contact_['contact_region'].append(contactR)
                         
-                        # test render contact
-                        smplx_vert2region = np.load('tools/utils/smplx_vert2region.npy')
-                        smpl_vert2region = np.load('tools/utils/smpl_vert2region.npy')
+                        # # test render contact
+                        # smplx_vert2region = np.load('tools/utils/smplx_vert2region.npy')
+                        # smpl_vert2region = np.load('tools/utils/smpl_vert2region.npy')
 
-                        vertices = camera.transform_points_screen(output['vertices'])[..., :2].detach().cpu().numpy()[0]
-                        image = cv2.imread(imgp)
-                        for vi, v in enumerate(smpl_vert2region):
-                            if np.sum(smpl_vert2region[vi] * contactR) > 0.5:
-                                cv2.circle(image, (int(vertices[vi][0]), int(vertices[vi][1])), 1, (255,0,0), 2)
-                            else:
-                                cv2.circle(image, (int(vertices[vi][0]), int(vertices[vi][1])), 1, (0,0,255), 2)
-                        cv2.imwrite(f'{out_path}/{os.path.basename(imgp)}', image)
+                        # vertices = camera.transform_points_screen(output['vertices'])[..., :2].detach().cpu().numpy()[0]
+                        # image = cv2.imread(imgp)
+                        # for vi, v in enumerate(smpl_vert2region):
+                        #     if np.sum(smpl_vert2region[vi] * contactR) > 0.5:
+                        #         cv2.circle(image, (int(vertices[vi][0]), int(vertices[vi][1])), 1, (255,0,0), 2)
+                        #     else:
+                        #         cv2.circle(image, (int(vertices[vi][0]), int(vertices[vi][1])), 1, (0,0,255), 2)
+                        # cv2.imwrite(f'{out_path}/{os.path.basename(imgp)}', image)
                         continue
                     continue
                 # pdb.set_trace()
