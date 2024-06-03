@@ -206,6 +206,7 @@ class Hi4dConverter(BaseModeConverter):
                     track_dict[pid] = random_ids[used_id_num]
                     used_id_num += 1
 
+
                 for fid in tqdm(frame_idxs, desc=f'Camera views {cidx+1}/{len(cids)}', position=1, leave=False):
 
                     # prepare image
@@ -236,6 +237,7 @@ class Hi4dConverter(BaseModeConverter):
                     for pid in pids:
 
                         track_id = track_dict[pid]
+                        print(used_id_num, track_id)
                         gender = meta['genders'][pid]
 
                         # get smpl output
