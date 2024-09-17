@@ -184,9 +184,9 @@ def _prepare_body_model(body_model, body_model_config):
             model_path = body_model_config.get('model_path', None)
 
             model_type = body_model_config.get('type').lower()
-            if model_type not in ['smpl', 'smplx']:
+            if model_type not in ['smpl', 'smplx', 'star']:
                 raise ValueError(f'Do not support {model_type}, please choose'
-                                 f' in `smpl` or `smplx.')
+                                 f' in `smpl`, `smplx` or `star`.')
 
             if model_path and osp.isdir(model_path):
                 model_path = osp.join(model_path, model_type)
@@ -481,8 +481,8 @@ def render_smpl(
         mask: Optional[Union[np.ndarray, List[int]]] = None,
         vis_kp_index: bool = False,
         verbose: bool = False) -> Union[None, torch.Tensor]:
-    """Render SMPL or SMPL-X mesh or silhouette into differentiable tensors,
-    and export video or images.
+    """Render SMPL, SMPL-X or STAR mesh or silhouette into differentiable
+    tensors, and export video or images.
 
     Args:
         # smpl parameters:
@@ -748,10 +748,16 @@ def render_smpl(
 
     body_model = _prepare_body_model(body_model, body_model_config)
     model_type = body_model.name().replace('-', '').lower()
-    assert model_type in ['smpl', 'smplx']
+    assert model_type in ['smpl', 'smplx', 'star']
 
-    vertices, joints, num_frames, num_person = _prepare_mesh(
-        poses, betas, transl, verts, start, end, body_model)
+    if model_type in ['smpl', 'smplx']:
+        vertices, joints, num_frames, num_person = _prepare_mesh(
+            poses, betas, transl, verts, start, end, body_model)
+    elif model_type == 'star':
+        model_output = body_model(body_pose=poses, betas=betas, transl=transl)
+        vertices = model_output['vertices']
+        num_frames = poses.shape[0]
+        num_person = 1  # star temporarily only support single person
     end = num_frames if end is None else end
     vertices = vertices.view(num_frames, num_person, -1, 3)
     num_verts = vertices.shape[-2]

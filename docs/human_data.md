@@ -6,19 +6,69 @@ HumanData is a subclass of python built-in class dict, containing single-view, i
 
 ### Key/Value definition
 
-#### The keys and values supported by HumanData are described as below.
+#### Paths:
 
+Image path is included, and optionally path of segmentation map and depth image can be included if provided by dataset.
 - image_path: (N, ), list of str, each element is a relative path from the root folder (exclusive) to the image.
+- segmentation (optional): (N, ), list of str, each element is a relative path from the root folder (exclusive) to the segmentation map.
+- depth_path (optional): (N, ), list of str, each element is a relative path from the root folder (exclusive) to the depth image.
+
+#### Keypoints：
+
+Following keys should be included in `HumanData` if applicable. For each dictionary key of keypoints，a corresponding dictionart key of mask should be included，stating which keypoint is valid. For example `keypoints3d_original` should correspond to `keypoints3d_original_mask`.
+
+In `HumanData`, keypoints are stored as `HUMAN_DATA` format, which includes 190 joints. We provide keypoints format (for both 2d and 3d keypoints) convention for many datasets, please see [keypoints_convention](../docs/keypoints_convention.md).
+
+- keypoints3d_smpl / keypoints3d_smplx: (N, 190, 4), numpy array, `smplx / smplx` 3d joints with confidence, joints from each datasets are mapped to HUMAN_DATA joints.
+- keypoints3d_original: (N, 190, 4), numpy array, 3d joints with confidence which provided by the dataset originally, joints from each datasets are mapped to HUMAN_DATA joints.
+- keypoints2d_smpl / keypoints2d_smplx: (N, 190, 3), numpy array, `smpl / smplx` 2d joints with confidence, joints from each datasets are mapped to HUMAN_DATA joints.
+- keypoints2d_original: (N, 190, 3), numpy array, 2d joints with confidence which provided by the dataset originally, joints from each datasets are mapped to HUMAN_DATA joints.
+- (mask sample) keypoints2d_smpl_mask: (190, ), numpy array, mask for which keypoint is valid in `keypoints2d_smpl`. 0 means that the joint in this position cannot be found in original dataset.
+
+#### Bounding Box：
+
+Bounding box of body (smpl), face and hand (smplx), which data type is `[x_min, y_min, width, height, confidence]`，and should not exceed the image boundary.
 - bbox_xywh: (N, 5), numpy array, bounding box with confidence, coordinates of bottom-left point x, y, width w and height h of bbox, score at last.
+- face_bbox_xywh, lhand_bbox_xywh, rhand_bbox_xywh (optional): (N, 5), numpy array, should be included if `smplx` data is provided, and is derived from smplx2d keypoints. Have the same srtucture as above.
+
+#### Human Pose and Shape Parameters：
+
+Normally saved as smpl/smplx.
+- smpl: (1, ), dict, keys are `['body_pose': numpy array, (N, 23, 3), 'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3)]`.
+- smplx: (1, ), dict, keys are `['body_pose': numpy array, (N, 21, 3),'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3), 'left_hand_pose': numpy array, (N, 15, 3), 'right_hand_pose': numpy array, (N, 15, 3), 'expression': numpy array (N, 10), 'leye_pose': numpy array (N, 3), 'reye_pose': (N, 3), 'jaw_pose': numpy array (N, 3)]`.
+
+
+#### Other keys
+
 - config: (), str, the flag name of config for individual dataset.
-- keypoints2d: (N, 190, 3), numpy array, 2d joints of smplx model with confidence, joints from each datasets are mapped to HUMAN_DATA joints.
-- keypoints3d: (N, 190, 4), numpy array, 3d joints of smplx model with confidence. Same as above.
-- smpl: (1, ), dict, keys are ['body_pose': numpy array, (N, 23, 3), 'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3)].
-- smplx: (1, ), dict, keys are ['body_pose': numpy array, (N, 21, 3),'global_orient': numpy array, (N, 3), 'betas': numpy array, (N, 10), 'transl': numpy array, (N, 3), 'left_hand_pose': numpy array, (N, 15, 3), 'right_hand_pose': numpy array, (N, 15, 3), 'expression': numpy array (N, 10), 'leye_pose': numpy array (N, 3), 'reye_pose': (N, 3), 'jaw_pose': numpy array (N, 3)].
 - meta: (1, ), dict, its keys are meta data from dataset like 'gender'.
-- keypoints2d_mask: (190, ), numpy array, mask for which keypoint is valid in keypoints2d. 0 means that the joint in this position cannot be found in original dataset.
-- keypoints3d_mask: (190, ), numpy array, mask for which keypoint is valid in keypoints3d. 0 means that the joint in this position cannot be found in original dataset.
-- misc: (1, ), dict, keys and values are defined by user. The space misc takes(sys.getsizeof(misc)) shall be no more than 6MB.
+- misc: (1, ), dict, keys and values are designed to describe the different settings for each dataset. Can also be defined by user. The space misc takes (sys.getsizeof(misc)) shall be no more than 6MB.
+
+#### Suggestion for WHAT to include in `HumanData['misc']`:
+
+Miscellaneous contains the info of different settings for each dataset, including camaera type, source of keypoints annotation, bounding box etc. Aims to faclitate different usage of data.
+`HumanData['misc']` is a dictionary and its keys are described as following:
+- kps3d_root_aligned： Bool, stating that if keypoints3d is root-aligned，root_alignment is not preferred for HumanData. If this key does not exist, root_aligenment is by default to be `False`.
+- flat_hand_mean：Bool, applicable for smplx data，for most datasets `flat_hand_mean=False`.
+- bbox_source：source of bounding box，`bbox_soruce='keypoints2d_smpl' or 'keypoints2d_smplx' or 'keypoints2d_original'`，describing which type of keypoints are used to derive the bounding box，OR `bbox_source='provide_by_dataset'` shows that bounding box if provided by dataset. (For example, from some detection module rather than keypoints)
+- bbox_body_scale: applicable if bounding box is derived by keypoints，stating the zoom-in scale of bounding scale from smpl/smplx/2d_gt keypoints，we suggest `bbox_body_scale=1.2`.
+- bbox_hand_scale, bbox_face_scale: applicable if bounding box is derived by smplx keypoints，stating the zoom-in scale of bounding scale from smplx/2d_gt keypoints，we suggest `bbox_hand_scale=1.0, bbox_face_scale=1.0`
+- smpl_source / smplx_source: describing the source of smpl/smplx annotations，`'original', 'nerual_annot', 'eft', 'osx_annot', 'cliff_annot'`.
+- cam_param_type: describing the type of camera parameters，`cam_param_type='prespective' or 'predicted_camera' or 'eft_camera'`
+- principal_point, focal_length: (1, 2), numpy array，applicable if camera parameters are same across the whole dataset, which is the case for some synthetic datasets.
+- image_shape: (1, 2), numpy array，applicable if image shape are same across the whole dataset.
+
+#### Suggestion for WHAT to include in `HumanData['meta']`:
+
+- gender: (N, ), list of str, each element represents the gender for an smpl/smplx instance. (key not required if dataset use gender-neutral model)
+- height (width)：(N, )， list of str, each element represents the height (width) of an image, `image_shape=(width, height): (N, 2)` is not suggested as width and height might need to be referenced in different orders. (keys should be in `HumanData['misc']` if image shape are same across the dataset)
+- other keys，applicable if the key value is different，and have some impact on keypoints or smpl/smplx (2d and 3d)，For example, `focal_length` and `principal_point`, focal_length = (N, 2), principal_point = (N, 2)
+
+#### Some other info of HumanData
+
+- All annotations are transformed from world space to opencv camera space, for space transformation we use:
+
+    ```from mmhuman3d.models.body_models.utils import transform_to_camera_frame, batch_transform_to_camera_frame```
 
 #### Key check in HumanData.
 
