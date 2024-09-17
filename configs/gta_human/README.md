@@ -5,6 +5,7 @@
 We provide the config files for GTA-Human: Playing for 3D Human Recovery.
 [[Homepage]](https://caizhongang.github.io/projects/GTA-Human/)
 [[Preprint]](https://arxiv.org/abs/2110.07588)
+[[Toolbox]](https://github.com/caizhongang/gta-human_toolbox/tree/main/gta-human)
 
 Notes:
 - the pretrained models for HMR, SPIN and PARE baselines are currently available.
@@ -29,9 +30,7 @@ Notes:
 
 ## Downloads and Data Preparation
 
-| Google Drive | OneDrive (CN) |
-|:------:|:-------:|
-|[Download](https://drive.google.com/drive/folders/1-vaWuFkYRNyFj1ONaCrYr009KNitHAqA?usp=sharing)|[Download](https://pjlab-my.sharepoint.cn/:f:/g/personal/openmmlab_pjlab_org_cn/EjT3W_PHhApGvDB0geyC_g0BoBPK0tZfLVATnecU_bJl1A?e=rm3tSe)|
+The dataset can be downloaded from [here](https://github.com/caizhongang/gta-human_toolbox/tree/main/gta-human).
 
 The downloaded compressed .zip files consist of:
 - 31 image files (total ~280 GB)
@@ -63,11 +62,6 @@ Hence, `gta_human_4x.npz` is used as the training, it may be obtained in two way
    See [preprocess_dataset.md](../../docs/preprocess_dataset.md) for details.
 
 Please refer to [getting_started.md](../../docs/getting_started.md) for training and evaluation on MMHuman3D.
-
-## Visualization
-
-We prepared a script with a sample sequence that should help you with the SMPL overlay. 
-You may download it from [here](https://drive.google.com/file/d/11osPM67KiQN6NbdJo3plcgNoPNxfJ_j7/view?usp=share_link).
 
 ## Notes
 
