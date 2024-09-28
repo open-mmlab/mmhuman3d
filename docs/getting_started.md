@@ -5,8 +5,8 @@
   - [Data Preparation](#data-preparation)
   - [Body Model Preparation](#body-model-preparation)
   - [Inference / Demo](#inference--demo)
-    - [Offline Demo](#Offline-Demo)
-    - [Online Demo](#Online-Demo)
+    - [Offline Demo](#offline-demo)
+    - [Online Demo](#online-demo)
   - [Evaluation](#evaluation)
     - [Evaluate with a single GPU / multiple GPUs](#evaluate-with-a-single-gpu--multiple-gpus)
     - [Evaluate with slurm](#evaluate-with-slurm)
@@ -17,7 +17,7 @@
 
 ## Installation
 
-Please refer to [install.md](./install.md) for installation.
+Please refer to [install.md](./install.md) for installation or [install_by_docker.md](./install_by_docker.md) for installation through docker.
 
 ## Data Preparation
 
