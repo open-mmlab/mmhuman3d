@@ -18,6 +18,7 @@ from mmhuman3d.apis import (
 from mmhuman3d.core.visualization.visualize_smpl import visualize_smpl_hmr
 from mmhuman3d.data.data_structures.human_data import HumanData
 from mmhuman3d.utils.demo_utils import (
+    batch_array_to_images,
     extract_feature_sequence,
     get_speed_up_interval,
     prepare_frames,
@@ -27,7 +28,6 @@ from mmhuman3d.utils.demo_utils import (
     speed_up_interpolate,
     speed_up_process,
 )
-from mmhuman3d.utils.ffmpeg_utils import array_to_images
 from mmhuman3d.utils.transforms import rotmat_to_aa
 
 try:
@@ -238,8 +238,7 @@ def single_person_with_mmdet(args, frames_iter):
         human_data = HumanData()
         frames_folder = osp.join(args.output, 'images')
         os.makedirs(frames_folder, exist_ok=True)
-        array_to_images(
-            np.array(frames_iter)[frame_id_list], output_folder=frames_folder)
+        batch_array_to_images(frames_iter, frame_id_list, frames_folder)
 
         for i, img_i in enumerate(sorted(os.listdir(frames_folder))):
             body_pose_.append(smpl_poses[i][1:])
@@ -271,9 +270,7 @@ def single_person_with_mmdet(args, frames_iter):
         else:
             frames_folder = osp.join(Path(args.show_path).parent, 'images')
             os.makedirs(frames_folder, exist_ok=True)
-            array_to_images(
-                np.array(frames_iter)[frame_id_list],
-                output_folder=frames_folder)
+            batch_array_to_images(frames_iter, frame_id_list, frames_folder)
 
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_hmr(
@@ -412,8 +409,7 @@ def multi_person_with_mmtracking(args, frames_iter):
         human_data = HumanData()
         frames_folder = osp.join(args.output, 'images')
         os.makedirs(frames_folder, exist_ok=True)
-        array_to_images(
-            np.array(frames_iter)[frame_id_list], output_folder=frames_folder)
+        batch_array_to_images(frames_iter, frame_id_list, frames_folder)
 
         for i, img_i in enumerate(sorted(os.listdir(frames_folder))):
             for person_i in track_ids_lists[i]:
@@ -463,9 +459,7 @@ def multi_person_with_mmtracking(args, frames_iter):
         else:
             frames_folder = osp.join(Path(args.show_path).parent, 'images')
             os.makedirs(frames_folder, exist_ok=True)
-            array_to_images(
-                np.array(frames_iter)[frame_id_list],
-                output_folder=frames_folder)
+            batch_array_to_images(frames_iter, frame_id_list, frames_folder)
         body_model_config = dict(model_path=args.body_model_dir, type='smpl')
         visualize_smpl_hmr(
             poses=compressed_poses.reshape(-1, max_instance, 24 * 3),
