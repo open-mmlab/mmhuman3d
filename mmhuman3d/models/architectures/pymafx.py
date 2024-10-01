@@ -90,6 +90,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                  extra_joints_regressor: str,
                  smplx_to_smpl: str,
                  smplx_model_dir: str,
+                 partial_mesh_path: str,
+                 mmhuman3d_data_path: str,
                  mesh_model: dict,
                  bhf_mode: str,
                  maf_on: bool,
@@ -112,6 +114,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         self.use_iwp_cam = use_iwp_cam
         self.backbone = backbone
         self.smplx_model_dir = smplx_model_dir
+        self.partial_mesh_path = partial_mesh_path
+        self.mmhuman3d_data_path = mmhuman3d_data_path
         self.smplx_to_smpl = smplx_to_smpl
         self.hf_model_cfg = hf_model_cfg
         self.mesh_model = mesh_model
@@ -183,7 +187,7 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
         if 'body' in self.bhf_names and self.backbone is not None:
             self.encoders['body'] = build_backbone(self.backbone)
 
-            self.mesh_sampler = Mesh_Sampler(type='smpl')
+            self.mesh_sampler = Mesh_Sampler(type='smpl', data_path=self.mmhuman3d_data_path)
             if not self.grid_feat:
                 self.ma_feat_dim = self.mesh_sampler.Dmap.shape[
                     0] * self.mlp_dim[-1]
@@ -225,7 +229,8 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
             hidden_feat_dim = self.mlp_dim[self.att_feat_dim_idx]
             self.bhf_att_feat_dim.update({'body': 2048})
         if 'hand' in self.bhf_names:
-            self.mano_sampler = Mesh_Sampler(type='mano', level=1)
+            self.mano_sampler = Mesh_Sampler(type='mano', level=1, 
+                data_path=self.mmhuman3d_data_path)
             self.mano_ds_len = self.mano_sampler.Dmap.shape[0]
 
             self.bhf_ma_feat_dim.update(
@@ -353,12 +358,14 @@ class PyMAFX(BaseArchitecture, metaclass=ABCMeta):
                         MAF_Extractor(
                             filter_channels=filter_channels_default[
                                 self.att_feat_dim_idx:],
-                            iwp_cam_mode=self.use_iwp_cam))
+                            iwp_cam_mode=self.use_iwp_cam, 
+                            data_path=self.mmhuman3d_data_path))
                 else:
                     self.maf_extractor[part].append(
                         MAF_Extractor(
                             filter_channels=filter_channels,
-                            iwp_cam_mode=self.use_iwp_cam))
+                            iwp_cam_mode=self.use_iwp_cam, 
+                            data_path=self.mmhuman3d_data_path))
 
     def forward_train(self, **kwargs):
         """Forward function for general training.
