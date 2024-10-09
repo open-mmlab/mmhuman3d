@@ -16,17 +16,155 @@ from mmhuman3d.core.conventions.keypoints_mapping import get_keypoint_idx, get_k
 from tools.convert_datasets import DATASET_CONFIGS
 from mmhuman3d.models.body_models.builder import build_body_model
 from tools.utils.request_files_server import request_files, request_files_name
-from tools.vis.visualize_humandata_qp import render_pose as render_pose_qp
 import pdb
 
+import smplx
+
+
 smpl_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 'body_pose': (-1, 69)}
-smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
-        'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
-        'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3), 'expression': (-1, 10)}
-smplx_shape_except_expression = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
+# smplx_shape = {'betas': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
+#         'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
+#         'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3), 'expression': (-1, 10)}
+smplx_shape_except_expression = {'betas_neutral': (-1, 10), 'transl': (-1, 3), 'global_orient': (-1, 3), 
         'body_pose': (-1, 21, 3), 'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 
         'leye_pose': (-1, 3), 'reye_pose': (-1, 3), 'jaw_pose': (-1, 3)}
 smplx_shape = smplx_shape_except_expression
+mano_shape = {'left_hand_pose': (-1, 15, 3), 'right_hand_pose': (-1, 15, 3), 'betas': (-1, 10),
+               'global_orient': (-1, 3), 'transl': (-1, 3)}
+
+humandata_datasets = [ # name, glob pattern, exclude pattern
+    # ('agora', 'agora*3840*231031*.npz', ''),
+    ('agora', 'agora*3840*231031*fix_betas.npz', ''),
+    ('arctic', 'arctic_p1_*.npz', ''),
+    ('bedlam', 'bedlam_train.npz', ''),
+    ('behave', 'behave_train_230516_231_downsampled.npz', ''),
+    ('chi3d', 'CHI3D_train_230511_1492_*.npz', ''),
+    ('crowdpose', 'crowdpose_neural_annot_train_new.npz', ''),
+    ('dynacam', 'dynacam*.npz', ''),
+    ('deco', 'deco_train*.npz', ''),
+    ('hi4d', 'hi4d*.npz', ''),
+    ('lspet', 'eft_lspet*.npz', ''),
+    ('ochuman', 'eft_ochuman*.npz', ''),
+    ('posetrack', 'eft_posetrack*.npz', ''),
+    ('egobody', 'egobody_*_230425_065_fix_betas.npz', ''),
+    ('egobody_ego', 'egobody_egocentric_train_230425_065_fix_betas.npz', ''),
+    ('egobody_kinect', 'egobody_kinect_train_230503_065_fix_betas.npz', ''),
+    ('emdb', 'emdb*.npz', ''),
+    ('fit3d', 'FIT3D_train_230511_1504_*.npz', ''),
+    ('gta', 'gta_human2multiple_230406_04000_0.npz', ''),
+    ('ehf', 'ehf_val_23*_100.npz', ''),  # use humandata ehf to get bbox
+    ('h36m', 'h36m*', ''),
+    ('hanco', 'hanco*', ''), 
+    ('humansc3d', 'HumanSC3D_train_230511_2752_*.npz', ''),
+    ('idea400', 'idea400*', ''),
+    ('instavariety', 'insta_variety_neural_annot_train.npz', ''),
+    ('moyo', 'moyo*.npz', ''),
+    ('mpii', 'mpii*.npz', ''),
+    ('mpi_inf_3dhp', 'mpi_inf_3dhp_neural_annot_train.npz', ''),
+    ('mscoco', 'mscoco*.npz', ''),
+    ('mtp', 'mtp_smplx_train.npz', ''),
+    ('muco3dhp', 'muco3dhp_train.npz', ''),
+    ('prox', 'prox_train_smplx_new.npz', ''),
+    ('pw3d', 'pw3d*0116*.npz', ''),
+    ('pw3d_neural', 'pw3d_neural*', ''),  
+    ('pw3d_bedlam', 'pw3d_bedlam*', ''),  
+    ('renbody', 'renbody_train_230525_399_*.npz', ''),
+    ('renbody_highres', 'renbody_train_highrescam_230517_399_*_fix_betas.npz', ''),
+    ('rich', 'rich*.npz', ''),
+    ('sloper4d', 'sloper4d*.npz', ''), 
+    ('spec', 'spec_train_smpl.npz', ''),
+    ('ssp3d', 'ssp3d_230525_311.npz', ''),
+    ('synbody_magic1', 'synbody_amass_230328_02172.npz', ''),
+    ('synbody', 'synbody_train_230521_04000_fix_betas.npz', ''),
+    ('synbody_whac', 'synbody_whac_demo*.npz', ''),
+    ('talkshow', 'talkshow_smplx_*.npz', 'path'),
+    ('ubody', 'ubody*.npz', ''),
+    ('up3d', 'up3d*.npz', ''),
+    ('laoyouji', 'smplx.npz', ''),
+]
+
+dataset_path_dict = {
+    'agora': '/mnt/AFS_datasets/datasets/agora',
+    'arctic': '/lustre/share_data/weichen1/datasets/',
+    'behave': '/lustre/share_data/weichen1/datasets/behave',
+    'bedlam': '/lustre/share_data/weichen1/datasets/bedlam/train_images',
+    'CHI3D': '/mnt/d/datasets/sminchisescu-research-datasets',
+    'crowdpose': '/lustrenew/share_data/zoetrope/data/datasets/crowdpose',
+    'dynacam': '/mnt/AFS_datasets/datasets/dynacam',
+    'lspet': '/lustrenew/share_data/zoetrope/data/datasets/hr-lspet',
+    'ochuman': '/lustrenew/share_data/zoetrope/data/datasets/ochuman',
+    'deco': '/mnt/d/datasets/deco',
+    'egobody': '/mnt/d/datasets/egobody',
+    'emdb': '/mnt/d/datasets/emdb',
+    'FIT3D': '/mnt/d/datasets/sminchisescu-research-datasets',
+    'gta_human2': '/mnt/e/datasets/gta_human2',
+    'ehf': '/mnt/e/datasets/ehf',
+    'HumanSC3D': '/mnt/d/datasets/sminchisescu-research-datasets',
+    'h36m': '/mnt/d/datasets/h36m',
+    'hanco': '/mnt/d/datasets/hanco', 
+    'hi4d': '/mnt/d/datasets/hi4d',
+    'idea400': '/mnt/e/datasets/idea400',
+    'instavariety': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/insta_variety/',
+    'moyo': '/mnt/AFS_datasets/datasets/moyo',
+    'mpii': '/mnt/e/datasets/mpii',
+    'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/osx/data/MPI_INF_3DHP_folder/data/',
+    'mscoco': '/mnt/d/datasets/mscoco',
+    'mtp': '/lustre/share_data/weichen1/mtp',
+    'muco3dhp': '/lustre/share_data/weichen1/MuCo',
+    'posetrack': 'lustrenew/share_data/zoetrope/data/datasets/posetrack/data/images',
+    'prox': '/lustre/share_data/weichen1/PROXFlip',
+    'pw3d': '/mnt/d/datasets/pw3d',
+    'pw3d_bedlam': '/mnt/d/datasets/pw3d',
+    'pw3d_neural': '/mnt/d/datasets/pw3d',
+    'renbody': '/lustre/share_data/weichen1/renbody',
+    'renbody_highres': '/lustre/share_data/weichen1/renbody',
+    'rich': '/mnt/e/datasets/rich',
+    'sloper4d': '/mnt/d/datasets/sloper4d',
+    'spec': '/lustre/share_data/weichen1/spec/',
+    'ssp3d': '/mnt/e/datasets/ssp-3d',
+    'synbody': '/lustre/share_data/meihaiyi/shared_data/SynBody',
+    'synbody_magic1': '/lustre/share_data/weichen1/synbody',
+    'synbody_whac': '/mnt/d/datasets/synbody',
+    'talkshow': '/lustre/share_data/weichen1/talkshow_frames',
+    'ubody': '/mnt/AFS_datasets/datasets/ubody',
+    'up3d': '/lustrenew/share_data/zoetrope/data/datasets/up3d/up-3d/up-3d',
+    'laoyouji': '/home/weichen/wc_workspace/laoyouji',}
+
+anno_path = {
+    'shapy': 'output',
+    'gta_human2': 'output',
+    'egobody': 'output',
+    'ubody': 'output',
+    'ehf': 'output',
+    'ssp3d': 'output',
+    'FIT3D': 'output',
+    'CHI3D': 'output',
+    'HumanSC3D': 'output',
+    'pw3d': 'output',
+    'behave': 'output',
+    'sloper4d': 'output',
+    'hanco': 'output',
+    'ehf': 'output', 
+    'dynacam': 'output',
+    'h36m': 'output',
+    'mpii': 'output',
+    'emdb': 'output',
+    'deco': 'output',
+    'rich': 'output',
+    'moyo': 'output',
+    'idea400': 'output',
+    'ubody': 'output',
+    'synbody_whac': 'output',
+    'hi4d': 'output',
+    'laoyouji': 'output',}
+
+camera_params_dict = {
+    'gta_human2': {'principal_point': [960, 540], 'focal_length': [1158.0337, 1158.0337]},
+    'ssp3d': {'focal_length': [5000, 5000], 'principal_point': [256, 256]},
+    'synbody': {'focal_length': [640, 640], 'principal_point': [640, 360]},
+    'ehf': {'focal_length': [1498.224, 1498.224], 'principal_point': [790.263706, 578.90334]},
+}
+
 
 def get_cam_params(camera_params_dict, dataset_name, param, idx):
 
@@ -93,6 +231,9 @@ def get_cam_params(camera_params_dict, dataset_name, param, idx):
 
 def render_pose(img, body_model_param, body_model, camera, return_mask=False,
                  R=None, T=None, dataset_name=None, camera_opencv=None):
+    
+    if 'betas_neutral' in body_model_param.keys():
+        body_model_param['betas'] = body_model_param['betas_neutral']
 
     # the inverse is same
     pyrender2opencv = np.array([[1.0, 0, 0, 0],
@@ -135,12 +276,13 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False,
             alphaMode='OPAQUE',
             baseColorFactor=base_color)
     
-    # get body mesh
+    # get body  mesh
     body_trimesh = trimesh.Trimesh(vertices, faces, process=False)
     body_mesh = pyrender.Mesh.from_trimesh(body_trimesh, material=material)
 
     # prepare camera and light
     light = pyrender.DirectionalLight(color=np.ones(3), intensity=2.0)
+    # cam_pose = np.eye(4)
     cam_pose = pyrender2opencv @ np.eye(4)
     
     # build scene
@@ -157,7 +299,22 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False,
                                     point_size=1.0)
     
     color, _ = r.render(scene, flags=pyrender.RenderFlags.RGBA)
+    # depth = r.render(scene, flags=pyrender.RenderFlags.DEPTH_ONLY)
+    # normal, _ = r.render(scene, flags=pyrender.RenderFlags.FACE_NORMALS)
     color = color.astype(np.float32) / 255.0
+    # depth = np.asarray(depth, dtype=np.float32)
+    # normal = np.asarray(normal, dtype=np.float32)
+    
+    # save render
+    base_path = '/mnt/d/datasets'
+
+    # cv2.imwrite(os.path.join(base_path,'color.png'), color[:, :, :3][:, :, ::-1] * 255)
+    # cv2.imwrite(os.path.join(base_path,'depth.png'), depth / np.max(depth) * 255)
+    # cv2.imwrite(os.path.join(base_path,'normal.png'), normal[:, :, :3][:, :, ::-1])
+
+    # pdb.set_trace()
+
+
     # alpha = 1.0  # set transparency in [0.0, 1.0]
     # color[:, :, -1] = color[:, :, -1] * alpha
     valid_mask = (color[:, :, -1] > 0)[:, :, np.newaxis]
@@ -168,8 +325,9 @@ def render_pose(img, body_model_param, body_model, camera, return_mask=False,
     # output_img = color
 
     img = (output_img * 255).astype(np.uint8)
+    # pdb.set_trace()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
+    
     if return_mask:
         return img, valid_mask, (color * 255).astype(np.uint8)
 
@@ -214,140 +372,46 @@ def render_multi_pose(img, body_model_params, body_models, genders, cameras,
 
 def visualize_humandata(args, local_datasets, server_datasets):
     
-    humandata_datasets = [ # name, glob pattern, exclude pattern
-        ('agora', 'agora*forvis*.npz', ''),
-        ('arctic', 'p1_train.npz', ''),
-        ('bedlam', 'bedlam_train.npz', ''),
-        ('behave', 'behave_train_230516_231_downsampled.npz', ''),
-        ('chi3d', 'CHI3D_train_230511_1492_*.npz', ''),
-        ('crowdpose', 'crowdpose_neural_annot_train_new.npz', ''),
-        ('lspet', 'eft_lspet*.npz', ''),
-        ('ochuman', 'eft_ochuman*.npz', ''),
-        ('posetrack', 'eft_posetrack*.npz', ''),
-        ('egobody_ego', 'egobody_egocentric_train_230425_065_fix_betas.npz', ''),
-        ('egobody_kinect', 'egobody_kinect_train_230503_065_fix_betas.npz', ''),
-        ('fit3d', 'FIT3D_train_230511_1504_*.npz', ''),
-        ('gta', 'gta_human2multiple_230406_04000_0.npz', ''),
-        ('ehf', 'h4w_ehf_val_updated_v2.npz', ''),  # use humandata ehf to get bbox
-        ('h36m', 'h36m*', ''),
-        ('humansc3d', 'HumanSC3D_train_230511_2752_*.npz', ''),
-        ('instavariety', 'insta_variety_neural_annot_train.npz', ''),
-        ('mpii', 'mpii*.npz', ''),
-        ('mpi_inf_3dhp', 'mpi_inf_3dhp_neural_annot_train.npz', ''),
-        ('mscoco', '*coco2017*.npz', ''),
-        ('mtp', 'mtp_smplx_train.npz', ''),
-        ('muco3dhp', 'muco3dhp_train.npz', ''),
-        ('prox', 'prox_train_smplx_new.npz', ''),
-        ('pw3d', 'pw3d*.npz', ''),
-        ('renbody', 'renbody_train_230525_399_*.npz', ''),
-        ('renbody_highres', 'renbody_train_highrescam_230517_399_*_fix_betas.npz', ''),
-        ('rich', 'rich_train_fix_betas.npz', ''),
-        ('spec', 'spec_train_smpl.npz', ''),
-        ('ssp3d', 'ssp3d_230525_311.npz', ''),
-        ('synbody_magic1', 'synbody_amass_230328_02172.npz', ''),
-        ('synbody', 'synbody_train_230521_04000_fix_betas.npz', ''),
-        ('talkshow', 'talkshow_smplx_*.npz', 'path'),
-        ('up3d', 'up3d*.npz', ''),
-    ]
-
-    dataset_path_dict = {
-        'agora': '/lustrenew/share_data/caizhongang/data/datasets/agora',
-        'arctic': '/lustre/share_data/weichen1/arctic/unpack/arctic_data/data/images',
-        'behave': '/mnt/e/behave',
-        'bedlam': '/lustre/share_data/weichen1/bedlam/train_images',
-        'CHI3D': '/mnt/d/sminchisescu-research-datasets',
-        'crowdpose': '/lustrenew/share_data/zoetrope/data/datasets/crowdpose',
-        'lspet': '/lustrenew/share_data/zoetrope/data/datasets/hr-lspet',
-        'ochuman': '/lustrenew/share_data/zoetrope/data/datasets/ochuman',
-        'egobody': '/mnt/d/egobody',
-        'FIT3D': '/mnt/d/sminchisescu-research-datasets',
-        'gta_human2': '/mnt/e/gta_human2',
-        'ehf': '/mnt/e/ehf',
-        'HumanSC3D': '/mnt/d/sminchisescu-research-datasets',
-        'h36m': '/lustrenew/share_data/zoetrope/osx/data/Human36M',
-        'instavariety': '/lustrenew/share_data/zoetrope/data/datasets/neural_annot_data/insta_variety/',
-        'mpii': '/lustrenew/share_data/zoetrope/data/datasets/mpii',
-        'mpi_inf_3dhp': '/lustrenew/share_data/zoetrope/osx/data/MPI_INF_3DHP_folder/data/',
-        'mscoco': '/lustrenew/share_data/zoetrope/data/datasets/coco/train_2017',
-        'mtp': '/lustre/share_data/weichen1/mtp',
-        'muco3dhp': '/lustre/share_data/weichen1/MuCo',
-        'posetrack': 'lustrenew/share_data/zoetrope/data/datasets/posetrack/data/images',
-        'prox': '/lustre/share_data/weichen1/PROXFlip',
-        'pw3d': '',
-        'renbody': '/lustre/share_data/weichen1/renbody',
-        'renbody_highres': '/lustre/share_data/weichen1/renbody',
-        'rich': '/lustrenew/share_data/zoetrope/data/datasets/rich/images/train',
-        'spec': '/lustre/share_data/weichen1/spec/',
-        'ssp3d': '/mnt/e/ssp-3d',
-        'synbody': '/lustre/share_data/meihaiyi/shared_data/SynBody',
-        'synbody_magic1': '/lustre/share_data/weichen1/synbody',
-        'talkshow': '/lustre/share_data/weichen1/talkshow_frames',
-        'ubody': '/mnt/d/ubody',
-        'up3d': '/lustrenew/share_data/zoetrope/data/datasets/up3d/up-3d/up-3d',
-
-        }
-    
-    anno_path = {
-        'shapy': 'output',
-        'gta_human2': 'output',
-        'egobody': 'output',
-        'ubody': 'output',
-        'ssp3d': 'output',
-        'FIT3D': 'output',
-        'CHI3D': 'output',
-        'HumanSC3D': 'output',
-        'behave': 'output',
-        'ehf': 'output'}
-    
-    camera_params_dict = {
-        'gta_human2': {'principal_point': [960, 540], 'focal_length': [1158.0337, 1158.0337]},
-        'ssp3d': {'focal_length': [5000, 5000], 'principal_point': [256, 256]},
-        'synbody': {'focal_length': [640, 640], 'principal_point': [640, 360]},
-        'ehf': {'focal_length': [1498.224, 1498.224], 'principal_point': [790.263706, 578.90334],
-                'T': np.array([-0.03609917, 0.43416458, 2.37101226]),
-                'R': np.array([[ 0.9992447 , -0.00488005,  0.03855169],
-                            [-0.01071995, -0.98820424,  0.15276562],
-                            [ 0.03735144, -0.15306349, -0.9875102 ]]),},
-    }
-
     # load humandata
     dataset_name = args.dataset_name
     flat_hand_mean = args.flat_hand_mean
 
+    data_info = [info for info in humandata_datasets if info[0] == dataset_name][0]
+    _, filename, exclude = data_info
+
     if dataset_name not in server_datasets:
         param_ps = glob.glob(os.path.join(dataset_path_dict[dataset_name], 
-                                            anno_path[dataset_name], f'*{dataset_name}*.npz'))
-        param_ps = [p for p in param_ps if 'test' not in p]
+                                            'output', filename))
+        
+        # param_ps = [p for p in param_ps if 'test' not in p]
         # param_ps = [p for p in param_ps if 'val' not in p]
     else:
-        data_info = [info for info in humandata_datasets if info[0] == dataset_name][0]
-        _, filename, exclude = data_info
+        # data_info = [info for info in humandata_datasets if info[0] == dataset_name][0]
+        # _, filename, exclude = data_info
+        param_ps = glob.glob(os.path.join(args.server_local_path, '**',  filename), recursive=True)
+    param_ps = glob.glob(os.path.join('/mnt/d/datasets', filename))
+    if exclude != '':
+        param_ps = [p for p in param_ps if exclude not in p]
 
-        param_ps = glob.glob(os.path.join(args.server_local_path, filename))
-        if exclude != '':
-            param_ps = [p for p in param_ps if exclude not in p]
-    
+    # pdb.set_trace()
+
     # render
     # for npz_id, param_p in enumerate(tqdm(param_ps, desc=f'Processing npzs',
     #                     position=0, leave=False)):
     for npz_id, param_p in enumerate(param_ps):
         param = dict(np.load(param_p, allow_pickle=True))
-
+        # pdb.set_trace()
         # check for params
         has_smplx, has_smpl, has_gender = False, False, False
-        if 'smplx' in param.keys():
-            has_smplx = True
-        elif 'smpl' in param.keys():
+        has_mano, has_smplh = False, False
+        if 'smpl' in param.keys():
             has_smpl = True
-        elif 'smplh' in param.keys():
+        elif 'smplx' in param.keys():
+            has_smplx = True
+        if 'smplh' in param.keys():
             has_smplh = True
-
-        # check for params
-        has_smplx, has_smpl, has_gender = False, False, False
-        if 'smplx' in param.keys():
-            has_smplx = True
-        elif 'smpl' in param.keys():
-            has_smpl = True
+        if 'mano' in param.keys():
+            has_mano = True
 
         # load params
         if has_smpl:
@@ -365,6 +429,8 @@ def visualize_humandata(args, local_datasets, server_datasets):
                                                np.array([0, 0, 0], dtype=np.float32).reshape(-1, 1, 3).repeat(data_len, axis=0),], axis=1)
             # pdb.set_trace()
             has_smpl = True
+        if has_mano:
+            body_model_param_mano = param['mano'].item()
 
         if 'meta' in param.keys():
             if 'gender' in param['meta'].item().keys():
@@ -374,6 +440,11 @@ def visualize_humandata(args, local_datasets, server_datasets):
             has_smpl = False
 
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+        if 'misc' in param.keys():
+            if 'flat_hand_mean' in param['misc'].item().keys():
+                flat_hand_mean = param['misc'].item()['flat_hand_mean']
+        # pdb.set_trace()
 
         # build smpl model
         if has_smpl:
@@ -401,13 +472,27 @@ def visualize_humandata(args, local_datasets, server_datasets):
                         keypoint_src='smplx',
                         keypoint_dst='smplx',
                         model_path='data/body_models/smplx',
-                        gender=gender,
+                        gender='neutral',
                         num_betas=10,
                         use_face_contour=True,
                         flat_hand_mean=flat_hand_mean,
                         use_pca=False,
                         batch_size=1
                     )).to(device)
+        print('Flat hand mean:', flat_hand_mean)
+        # build mano model
+        if has_mano:
+            mano_model = build_body_model(dict(
+                type='MANO',
+                keypoint_src='mano',
+                keypoint_dst='mano',
+                model_path='data/body_models/mano',
+                num_betas=10,
+                use_face_contour=True,
+                flat_hand_mean=flat_hand_mean,
+                use_pca=False,
+                batch_size=1
+            )).to(device)
         
         # for idx in idx_list:
         sample_size =  args.sample_size
@@ -415,7 +500,7 @@ def visualize_humandata(args, local_datasets, server_datasets):
             idxs = range(len(param['image_path']))
         else:
             idxs = random.sample(range(len(param['image_path'])), sample_size)
-
+        # idxs = [i for i in range(10)]
         # idxs = [340, 139181]
         # prepare for server request if datasets on server
         # pdb.set_trace()
@@ -428,7 +513,7 @@ def visualize_humandata(args, local_datasets, server_datasets):
             request_files(files, 
                         server_path=dataset_path_dict[dataset_name], 
                         local_path=local_image_folder, 
-                        server_name='1988')
+                        server_name='sensecore')
             # print('done')
         else:
             local_image_folder = dataset_path_dict[dataset_name]
@@ -437,7 +522,8 @@ def visualize_humandata(args, local_datasets, server_datasets):
                         position=0, leave=False):
 
             image_p = param['image_path'][idx]
-            image_path = os.path.join(local_image_folder, image_p)
+            image_path = os.path.join(local_image_folder, image_p) 
+
             image = cv2.imread(image_path)
             # convert to BGR
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -447,8 +533,6 @@ def visualize_humandata(args, local_datasets, server_datasets):
             img_idxs = [img_i for img_i, imgp in enumerate(
                         # param['image_path'].tolist()[range_min:idx+3000]) if imgp == image_p]
                         param['image_path'].tolist()) if imgp == image_p]
-
-
             # temporal fix for betas and gender
             if dataset_name in ['bedlam']:
                 has_gender = False
@@ -486,6 +570,16 @@ def visualize_humandata(args, local_datasets, server_datasets):
                     #                 image_size=(image.shape[0], image.shape[1]))).to(device)
                     
                     # read smpl smplx params and build body model
+                    if has_mano:
+                        has_smpl, has_smplx = False, False
+                        intersect_key = list(set(body_model_param_mano.keys()) & set(mano_shape.keys()))
+
+
+
+
+
+
+
                     if has_smpl:
                         intersect_key = list(set(body_model_param_smpl.keys()) & set(smpl_shape.keys()))
                         body_model_param_tensor = {key: torch.tensor(
@@ -611,14 +705,27 @@ def visualize_humandata(args, local_datasets, server_datasets):
             line_sickness = int(image.shape[1] / 1000) + 1
             front_location_y = int(image.shape[1] / 10)
             front_location_x = int(image.shape[0] / 10)
-
+            
+            # draw bbox
+            for key in ['bbox_xywh', 'face_bbox_xywh', 'rhand_bbox_xywh', 'lhand_bbox_xywh']:
+                if key not in param.keys():
+                    continue
+                bbox = param[key][idx]
+                rendered_image = cv2.rectangle(rendered_image, (int(bbox[0]), int(bbox[1])), (int(bbox[0]+bbox[2]), int(bbox[1]+bbox[3])), (255, 0, 0), 2)
+            # for key in ['keypoints2d_smpl', 'keypoints2d_smplx']:
+            #     if key not in param.keys():
+            #         continue
+            #     kps = param[key][idx]
+            #     for kp in kps:
+            #         rendered_image = cv2.circle(rendered_image, (int(kp[0]), int(kp[1])), 3, (0, 0, 255), -1)
+                    
             if args.save_pose:
                 out_image_path = os.path.join(args.out_path, args.dataset_name,
                                             f'{os.path.basename(param_ps[npz_id])[:-4]}_{idx}.png')
                 # print(f'Saving image to {out_image_path}')
                 cv2.imwrite(out_image_path, rendered_image)
             
-            if args.save_original_img:
+            if args.save_original_image:
                 out_image_path_org = os.path.join(args.out_path, args.dataset_name,
                                             f'{os.path.basename(param_ps[npz_id])[:-4]}_{idx}_original.png')
                 # convert to RGB
@@ -645,15 +752,15 @@ if __name__ == '__main__':
                         default='/mnt/d/image_cache_1988')
 
     # optional args
-    parser.add_argument('--save_original_img', type=bool, required=False,
+    parser.add_argument('--save_original_image', type=bool, required=False,
                         help='save original images',
-                        default=True)
+                        default=False)
     parser.add_argument('--save_pose', type=bool, required=False,
                         help='save rendered smpl/smplx pose images',
                         default=True)
     parser.add_argument('--sample_size', type=int, required=False,
                         help='number of samples to visualize',
-                        default=1000)
+                        default=100)
     parser.add_argument('--render_all_smpl', type=bool, required=False,
                         help='render all smpl/smplx models (works for multipeople datasets)',
                         default=True)
@@ -663,23 +770,26 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # dataset status
-    local_datasets = ['gta_human2', 'egobody', 'ubody', 'ssp3d', 
-                          'FIT3D', 'CHI3D', 'HumanSC3D']
+    local_datasets = ['gta_human2', 'egobody', 'ubody', 'ssp3d', 'sloper4d' 
+                          'FIT3D', 'CHI3D', 'HumanSC3D', 'hanco', 
+                          'ehf', 'h36m', 'mpii', 'mscoco', 'pw3d', 'emdb']
     # some datasets are on 1988
     server_datasets = ['agora', 'arctic', 'bedlam', 'crowdpose', 'lspet', 'ochuman',
                        'posetrack', 'instavariety', 'mpi_inf_3dhp',
-                       'mtp', 'muco3dhp', 'prox', 'renbody', 'rich', 'spec',
-                       'synbody','talkshow', 'up3d', 'renbody_highres',
-                       'mscoco', 'mpii', 'h36m']
-    
+                       'mtp', 'muco3dhp', 'prox', 'renbody', 'spec', 'moyo', 'ubody',
+                       'synbody','talkshow', 'up3d', 'renbody_highres', 'behave', 'dynacam',]
+
     if args.dataset_name != '':
         visualize_humandata(args, local_datasets, server_datasets)
     else:
-        for dataset_to_vis in server_datasets:
+        dsv = [d[0] for d in humandata_datasets]
+        for dataset_to_vis in dsv:
             args.dataset_name = dataset_to_vis
             try:
                 print(f'processing dataset: {args.dataset_name}')
                 visualize_humandata(args, local_datasets, server_datasets)
-            except:
+            except Exception as e:
+                print(f'Error {e} processing dataset: {args.dataset_name}')
+
                 pass
     
