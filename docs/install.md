@@ -2,10 +2,11 @@
 
 <!-- TOC -->
 
-- [Requirements](#requirements)
-- [Prepare environment](#prepare-environment)
-- [Install MMHuman3D](#install-mmhuman3d)
-- [A from-scratch setup script](#a-from-scratch-setup-script)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Prepare environment](#prepare-environment)
+  - [Install MMHuman3D](#install-mmhuman3d)
+  - [A from-scratch setup script](#a-from-scratch-setup-script)
 
 <!-- TOC -->
 
@@ -54,6 +55,12 @@ conda install pytorch=1.8.0 torchvision cudatoolkit=10.2 -c pytorch
 
 **Important:** Make sure that your compilation CUDA version and runtime CUDA version match.
 Besides, for RTX 30 series GPU, cudatoolkit>=11.0 is required.
+To make sure that your installed the right pytorch version, you should check if you get `True` when running the following commands:
+```
+import torch
+torch.cuda.is_available()
+```
+If you get `False`, you should choose to install other pytorch versions.
 
 d. Install PyTorch3D from source.
 
@@ -150,6 +157,11 @@ cd mmdetection
 pip install -r requirements/build.txt
 pip install -v -e .
 ```
+Here, to check that your mmdet is compatible with pytorch, check if you have problems with running the following command:
+```
+from mmdet.apis import inference_detector, init_detector
+```
+If you meet errors, please check your pytorch and mmcv versions and install other versions of pytorch.
 
 - mmpose (optional)
 ```shell
