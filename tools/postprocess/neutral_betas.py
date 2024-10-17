@@ -86,7 +86,7 @@ if __name__ == '__main__':
     smplx_female_to_smplx_neutral.load_state_dict(torch.load(smplx_female_to_smplx_neutral_path, map_location=device))
     smplx_female_to_smplx_neutral.to(device)
 
-    work_dir = '/mnt/d/datasets/moyo/output'
+    work_dir = '/mnt/AFS_weichen/temp'
 
     # # egobody
     # load_paths = sorted(glob.glob(osp.join(work_dir, 'egobody_*.npz')))
@@ -101,7 +101,8 @@ if __name__ == '__main__':
     #     fix_humandata(load_path)
 
     # renbody
-    load_paths = sorted(glob.glob(osp.join(work_dir, '*.npz')))
+    # load_paths = sorted(glob.glob(osp.join(work_dir, 'synbody*.npz')))
+    load_paths = sorted(glob.glob(osp.join('/mnt/AFS_datasets/converted_humandata_new/', 'agora*.npz')))
     load_paths = [p for p in load_paths if 'fix_betas' not in p]
     for load_path in load_paths:
         fix_humandata(load_path)

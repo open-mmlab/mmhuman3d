@@ -12,8 +12,8 @@ from mmhuman3d.models.body_models.builder import build_body_model
 
 import pdb
 
-def xyxy2xywh(bbox_xyxy):
 
+def xyxy2xywh(bbox_xyxy):
     x1, y1, x2, y2 = bbox_xyxy
     return [x1, y1, x2 - x1, y2 - y1]
 
@@ -31,7 +31,7 @@ def process_vid(vid, smplx_model, anno_param, smplx_param):
     seq = os.path.basename(vid)[:-4]
     image_base_path = os.path.sep.join(
         vid.split(os.path.sep)[root_idx + 1:root_idx + 3]).replace(
-            'videos', 'images')
+        'videos', 'images')
 
     preprocess_folder = os.path.sep.join(
         vid.split(os.path.sep)[:root_idx + 3]).replace('videos', 'preprocess')
@@ -72,20 +72,20 @@ def process_vid(vid, smplx_model, anno_param, smplx_param):
 
     param_dict = {}
     for key in [
-            'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-            'rhand_bbox_xywh', 'betas', 'transl', 'global_orient', 'body_pose',
-            'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'expression',
-            'keypoints2d', 'keypoints3d', 'keypoints2d_ubody', 'image_path',
-            'height', 'width', 'principal_point', 'focal_length',
-            'iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
-            'righthand_valid', 'face_valid',
+        'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+        'rhand_bbox_xywh', 'betas', 'transl', 'global_orient', 'body_pose',
+        'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'expression',
+        'keypoints2d', 'keypoints3d', 'keypoints2d_ubody', 'image_path',
+        'height', 'width', 'principal_point', 'focal_length',
+        'iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
+        'righthand_valid', 'face_valid',
     ]:
         param_dict[key] = []
 
     ids = [
         image_info['id'] for image_info in anno_param['images']
         if seq in image_info['file_name']
-        and str(image_info['id']) in smplx_param.keys()
+           and str(image_info['id']) in smplx_param.keys()
     ]
     idxs_match = [
         (idx, anno['image_id'], anno['id']) for idx, anno in enumerate(anno_param['annotations'])
@@ -94,7 +94,7 @@ def process_vid(vid, smplx_model, anno_param, smplx_param):
 
     for (aid, iid, idx) in tqdm(
             idxs_match, desc=f'Video frams: {seq}', leave=False, position=1):
-    # for (aid, iid, idx) in idxs_match:
+        # for (aid, iid, idx) in idxs_match:
         kp_param = anno_param['annotations'][aid]
         image_id = kp_param['image_id']
         image_info = anno_param['images'][iid]
@@ -103,7 +103,7 @@ def process_vid(vid, smplx_model, anno_param, smplx_param):
         id = kp_param['id']
         if str(id) not in smplx_param.keys():
             continue
-        if '/'.join( vid.split('/')[-3:-1]) not in image_path:
+        if '/'.join(vid.split('/')[-3:-1]) not in image_path:
             print(f'Wrong image_path found in {vid}')
             continue
 
@@ -122,8 +122,8 @@ def process_vid(vid, smplx_model, anno_param, smplx_param):
 
         # collect bbox
         for bbox_name in [
-                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                'rhand_bbox_xywh'
+            'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+            'rhand_bbox_xywh'
         ]:
             xmin, ymin, w, h = kp_param[bbox_mapping[bbox_name]]
             bbox = np.array([
@@ -203,7 +203,7 @@ def process_vid(vid, smplx_model, anno_param, smplx_param):
         param_dict['principal_point'].append(principal_point)
 
         for key in ['iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
-            'righthand_valid', 'face_valid']:
+                    'righthand_valid', 'face_valid']:
             param_dict[key].append(kp_param[key])
         # pdb.set_trace()
 
@@ -358,13 +358,13 @@ def process_vid_COCO(smplx_model, vscene, scene_split, batch, db, smplx_param, d
 
     param_dict = {}
     for key in [
-            'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-            'rhand_bbox_xywh', 'betas', 'transl', 'global_orient', 'body_pose',
-            'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'expression',
-            'keypoints2d', 'keypoints3d', 'keypoints2d_ubody', 'image_path',
-            'height', 'width', 'principal_point', 'focal_length',
-            'iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
-            'righthand_valid', 'face_valid',
+        'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+        'rhand_bbox_xywh', 'betas', 'transl', 'global_orient', 'body_pose',
+        'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'expression',
+        'keypoints2d', 'keypoints3d', 'keypoints2d_ubody', 'image_path',
+        'height', 'width', 'principal_point', 'focal_length',
+        'iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
+        'righthand_valid', 'face_valid',
     ]:
         param_dict[key] = []
 
@@ -381,25 +381,25 @@ def process_vid_COCO(smplx_model, vscene, scene_split, batch, db, smplx_param, d
 
         param_dict = {}
         for key in [
-                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                'rhand_bbox_xywh', 'betas', 'transl', 'global_orient', 'body_pose',
-                'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'expression',
-                'keypoints2d', 'keypoints3d', 'keypoints2d_ubody', 'image_path',
-                'height', 'width', 'principal_point', 'focal_length',
-                'iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
-                'righthand_valid', 'face_valid',
+            'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+            'rhand_bbox_xywh', 'betas', 'transl', 'global_orient', 'body_pose',
+            'left_hand_pose', 'right_hand_pose', 'jaw_pose', 'expression',
+            'keypoints2d', 'keypoints3d', 'keypoints2d_ubody', 'image_path',
+            'height', 'width', 'principal_point', 'focal_length',
+            'iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
+            'righthand_valid', 'face_valid',
         ]:
             param_dict[key] = []
         preprocess_file = os.path.join(dst, f'{vscene}_{bid}.npz')
         if os.path.exists(preprocess_file):
             continue
 
-        for aid in tqdm(aids[block_size*bid: block_size*(bid+1)], 
-                        desc=f'Processing scene {vscene}, block id {bid+1} / {blocks}', 
+        for aid in tqdm(aids[block_size * bid: block_size * (bid + 1)],
+                        desc=f'Processing scene {vscene}, block id {bid + 1} / {blocks}',
                         leave=False, position=1):
 
-        # for aid in aids[block_size*bid: block_size*(bid+1)]:
-    
+            # for aid in aids[block_size*bid: block_size*(bid+1)]:
+
             ann = db.anns[aid]
             image_info = db.loadImgs(ann['image_id'])[0]
             video_name = image_info['file_name'].split('/')[-2]
@@ -418,17 +418,17 @@ def process_vid_COCO(smplx_model, vscene, scene_split, batch, db, smplx_param, d
                     continue
             elif batch == 'test':
                 if video_name not in scene_split:
-                    continue       
+                    continue
 
-            imgp = os.path.join(dataset_path, 'images', 
+            imgp = os.path.join(dataset_path, 'images',
                                 vscene, image_info['file_name'])
-            if ann['iscrowd'] or (ann['num_keypoints']==0): continue
+            if ann['iscrowd'] or (ann['num_keypoints'] == 0): continue
             if ann['valid_label'] == 0: continue
-            if not os.path.exists(imgp): 
+            if not os.path.exists(imgp):
                 continue
-            if str(aid) not in smplx_param: 
+            if str(aid) not in smplx_param:
                 continue
-            
+
             kp_param = ann
             image_id = kp_param['image_id']
             # generate image info
@@ -448,12 +448,12 @@ def process_vid_COCO(smplx_model, vscene, scene_split, batch, db, smplx_param, d
             rhand_kps = kp_param['righthand_kpts']
 
             keypoints_2d_ubody = np.array(body_kps + foot_kps + face_kps +
-                                        lhand_kps + rhand_kps).reshape(-1, 3)
+                                          lhand_kps + rhand_kps).reshape(-1, 3)
 
             # collect bbox
             for bbox_name in [
-                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                    'rhand_bbox_xywh'
+                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                'rhand_bbox_xywh'
             ]:
                 xmin, ymin, w, h = kp_param[bbox_mapping[bbox_name]]
                 bbox = np.array([
@@ -533,7 +533,7 @@ def process_vid_COCO(smplx_model, vscene, scene_split, batch, db, smplx_param, d
             param_dict['principal_point'].append(principal_point)
 
             for key in ['iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
-                'righthand_valid', 'face_valid']:
+                        'righthand_valid', 'face_valid']:
                 param_dict[key].append(kp_param[key])
             valid_count += 1
             # pdb.set_trace()
@@ -566,6 +566,5 @@ if __name__ == '__main__':
             flat_hand_mean=True,
             use_pca=False,
             batch_size=1)).to(device)
-
 
     process_vid(args.vid_p, smplx_model)
