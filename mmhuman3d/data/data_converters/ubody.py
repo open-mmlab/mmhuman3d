@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import smplx
 import torch
+from pycocotools.coco import COCO
 from tqdm import tqdm
 
 from mmhuman3d.core.cameras import build_cameras
@@ -30,8 +31,6 @@ from mmhuman3d.models.body_models.utils import transform_to_camera_frame
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
-from pycocotools.coco import COCO
-
 
 @DATA_CONVERTERS.register_module()
 class UbodyConverter(BaseModeConverter):
@@ -47,6 +46,7 @@ class UbodyConverter(BaseModeConverter):
             face_bbox='by_dataset',
             hand_bbox='by_dataset',
             bbox='by_dataset',
+            flat_hand_mean=False,
         )
         self.smplx_shape = {
             'betas': (-1, 10),
@@ -142,13 +142,11 @@ class UbodyConverter(BaseModeConverter):
             bboxs.append(bbox)
 
         return bboxs
-    
 
     def _cal_trunc_mask(self, keypoints2d, meta):
-        
-        trunc_mask = np.zeros((keypoints2d.shape[0], 
-                               keypoints2d.shape[1], 1))
-        
+
+        trunc_mask = np.zeros((keypoints2d.shape[0], keypoints2d.shape[1], 1))
+
         # check if keypoints2d is inside image
         for idx in range(keypoints2d.shape[0]):
             kps2d = keypoints2d[idx]
@@ -165,7 +163,6 @@ class UbodyConverter(BaseModeConverter):
 
         return trunc_mask
 
-        
     def preprocess_ubody(self, vid_p):
 
         cmd = f'python tools/preprocess/ubody_preprocess.py --vid_p {vid_p}'
@@ -224,7 +221,6 @@ class UbodyConverter(BaseModeConverter):
         # processed_vids += vid_ps
         # processed_vids = list(dict.fromkeys(processed_vids))
 
-
         # for scene in scene_split:
         #     if not '_' in scene:
         #         continue
@@ -257,15 +253,18 @@ class UbodyConverter(BaseModeConverter):
                     gender='neutral',
                     num_betas=10,
                     use_face_contour=True,
-                    flat_hand_mean=True,
+                    flat_hand_mean=self.misc_config['flat_hand_mean'],
                     use_pca=False,
                     batch_size=1)).to(self.device)
-            
-            vid_batches = ['ConductMusic', 'Entertainment', 'Fitness', 'Interview', 
-                           'LiveVlog', 'Magic_show', 'Movie', 'Olympic', 'Online_class', 
-                           'SignLanguage', 'Singing', 'Speech', 'TalkShow', 'TVShow', 
-                           'VideoConference']
-            dst = os.path.join(dataset_path, 'preprocess_db', f'{mode}_{batch}')
+
+            vid_batches = [
+                'ConductMusic', 'Entertainment', 'Fitness', 'Interview',
+                'LiveVlog', 'Magic_show', 'Movie', 'Olympic', 'Online_class',
+                'SignLanguage', 'Singing', 'Speech', 'TalkShow', 'TVShow',
+                'VideoConference'
+            ]
+            dst = os.path.join(dataset_path, 'preprocess_db',
+                               f'{mode}_{batch}')
 
             for bid, vscene in enumerate(vid_batches):
 
@@ -273,19 +272,22 @@ class UbodyConverter(BaseModeConverter):
                 # load seq kp annotation
                 # with open(os.path.join(anno_folder, 'keypoint_annotation.json')) as f:
                 #     anno_param = json.load(f)
-                db = COCO(os.path.join(anno_folder, 'keypoint_annotation.json'))
+                db = COCO(
+                    os.path.join(anno_folder, 'keypoint_annotation.json'))
                 # load seq smplx annotation
-                with open(os.path.join(anno_folder, 'smplx_annotation.json')) as f:
+                with open(os.path.join(anno_folder,
+                                       'smplx_annotation.json')) as f:
                     smplx_param = json.load(f)
-                # for vid_p in tqdm(vid_ps_scene, desc=f'Preprocessing scene {bid+1}/{len(vid_batches)}', 
+                # for vid_p in tqdm(vid_ps_scene, desc=f'Preprocessing scene {bid+1}/{len(vid_batches)}',
                 #                   position=0, leave=False):
                 # process_vid(vid_p, smplx_model, anno_param, smplx_param)
 
-                process_vid_COCO(smplx_model, vscene, scene_split, batch, db, smplx_param, dst)
+                process_vid_COCO(smplx_model, vscene, scene_split, batch, db,
+                                 smplx_param, dst)
 
                 # pdb.set_trace()
 
-            processed_npzs = glob.glob(os.path.join(dst, '*.npz')) 
+            processed_npzs = glob.glob(os.path.join(dst, '*.npz'))
             seed, size = '240409', '99'
 
             random.seed(int(seed))
@@ -318,25 +320,32 @@ class UbodyConverter(BaseModeConverter):
                     bboxs_[bbox_name] = []
                 meta_ = {}
                 for meta_key in [
-                        'principal_point', 'focal_length', 'height', 'width',
-                        'iscrowd', 'num_keypoints', 'valid_label', 'lefthand_valid',
-                        'righthand_valid', 'face_valid',
+                        'principal_point',
+                        'focal_length',
+                        'height',
+                        'width',
+                        'iscrowd',
+                        'num_keypoints',
+                        'valid_label',
+                        'lefthand_valid',
+                        'righthand_valid',
+                        'face_valid',
                 ]:
                     meta_[meta_key] = []
                 image_path_ = []
 
                 # pdb.set_trace()
-                for npzp in tqdm(processed_npzs[slice_npzs * slice_idx:slice_npzs *
-                                          (slice_idx + 1)]):
+                for npzp in tqdm(
+                        processed_npzs[slice_npzs * slice_idx:slice_npzs *
+                                       (slice_idx + 1)]):
 
                     # load param dict
                     try:
                         param_dict = dict(np.load(npzp, allow_pickle=True))
                     except:
-                        print(
-                            f'Error in loading {npzp}')
+                        print(f'Error in loading {npzp}')
                         continue
-                    
+
                     image_path = param_dict['image_path'].tolist()
                     image_path_ += image_path
 
@@ -365,13 +374,15 @@ class UbodyConverter(BaseModeConverter):
                     )
                     meta_['principal_point'] += param_dict[
                         'principal_point'].tolist()
-                    
-                    for key in ['iscrowd', 'num_keypoints', 'valid_label', 
-                                'lefthand_valid', 'righthand_valid', 'face_valid']:
+
+                    for key in [
+                            'iscrowd', 'num_keypoints', 'valid_label',
+                            'lefthand_valid', 'righthand_valid', 'face_valid'
+                    ]:
                         meta_[key] += param_dict[key].tolist()
-                    
+
                     size_i += len(image_path)
-                        
+
                     # del param_dict
                     # pdb.set_trace()
 
@@ -402,8 +413,10 @@ class UbodyConverter(BaseModeConverter):
                 human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
 
                 # get keypoints2d trunc mask
-                keypoints2d_smplx_trunc_mask = self._cal_trunc_mask(keypoints2d, meta_)
-                human_data['keypoints2d_smplx_trunc_mask'] = keypoints2d_smplx_trunc_mask
+                keypoints2d_smplx_trunc_mask = self._cal_trunc_mask(
+                    keypoints2d, meta_)
+                human_data[
+                    'keypoints2d_smplx_trunc_mask'] = keypoints2d_smplx_trunc_mask
 
                 # keypoints 3d
                 keypoints3d = np.array(keypoints3d_).reshape(-1, 144, 3)
@@ -448,6 +461,3 @@ class UbodyConverter(BaseModeConverter):
                     f'ubody_{mode}_{batch}_{seed}_{"{:02d}".format(size_i)}_{slice_idx}.npz'
                 )
                 human_data.dump(out_file)
-
-
-
