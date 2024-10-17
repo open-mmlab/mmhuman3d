@@ -18,6 +18,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     humanart,
     hybrik,
     instavariety,
+    interhand,
     lsp,
     mano,
     mediapipe,
@@ -80,6 +81,7 @@ KEYPOINTS_FACTORY = {
     'mano_hands_reorder': mano.MANO_HANDS_REORDER_KEYPOINTS,
     'mediapipe_whole_body': mediapipe.MP_WHOLE_BODY_KEYPOINTS,
     'mediapipe_body': mediapipe.MP_BODY_KEYPOINTS,
+    'interhand': interhand.INTERHAND_KEYPOINTS,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)
