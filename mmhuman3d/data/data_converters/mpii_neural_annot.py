@@ -23,6 +23,8 @@ from mmhuman3d.models.body_models.utils import transform_to_camera_frame
 from .base_converter import BaseModeConverter
 from .builder import DATA_CONVERTERS
 
+from pycocotools.coco import COCO
+
 import pdb
 
 
@@ -60,6 +62,68 @@ class MpiiNeuralConverter(BaseModeConverter):
         super(MpiiNeuralConverter, self).__init__(modes)
 
 
+    def _keypoints_to_scaled_bbox_bfh(self,
+                                    keypoints,
+                                    occ=None,
+                                    body_scale=1.0,
+                                    fh_scale=1.0,
+                                    convention='smplx'):
+        '''Obtain scaled bbox in xyxy format given keypoints
+        Args:
+            keypoints (np.ndarray): Keypoints
+            scale (float): Bounding Box scale
+        Returns:
+            bbox_xyxy (np.ndarray): Bounding box in xyxy format
+        '''
+        bboxs = []
+
+        # supported kps.shape: (1, n, k) or (n, k), k = 2 or 3
+        if keypoints.ndim == 3:
+            keypoints = keypoints[0]
+        if keypoints.shape[-1] != 2:
+            keypoints = keypoints[:, :2]
+
+        for body_part in ['body', 'head', 'left_hand', 'right_hand']:
+            if body_part == 'body':
+                scale = body_scale
+                kps = keypoints
+            else:
+                scale = fh_scale
+                kp_id = get_keypoint_idxs_by_part(
+                    body_part, convention=convention)
+                kps = keypoints[kp_id]
+
+            if occ is not None:
+                occ_p = occ[kp_id]
+                if np.sum(occ_p) / len(kp_id) >= 0.1:
+                    conf = 0
+                else:
+                    conf = 1
+            else:
+                conf = 1
+            if body_part == 'body':
+                conf = 1
+
+            xmin, ymin = np.amin(kps, axis=0)
+            xmax, ymax = np.amax(kps, axis=0)
+
+            width = (xmax - xmin) * scale
+            height = (ymax - ymin) * scale
+
+            x_center = 0.5 * (xmax + xmin)
+            y_center = 0.5 * (ymax + ymin)
+            xmin = x_center - 0.5 * width
+            xmax = x_center + 0.5 * width
+            ymin = y_center - 0.5 * height
+            ymax = y_center + 0.5 * height
+
+            bbox = np.stack([xmin, ymin, xmax, ymax, conf],
+                            axis=0).astype(np.float32)
+            bboxs.append(bbox)
+
+        return bboxs
+
+
     def convert_by_mode(self,
                         dataset_path: str,
                         out_path: str,
@@ -86,7 +150,10 @@ class MpiiNeuralConverter(BaseModeConverter):
         keypoints2d_smplx_, keypoints3d_smplx_, = [], []
         keypoints2d_orig_ = [ ]
         bboxs_ = {}
-        for bbox_name in ['bbox_xywh']:
+        for bbox_name in [
+                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                'rhand_bbox_xywh'
+        ]:
             bboxs_[bbox_name] = []
         meta_ = {}
         for key in ['focal_length', 'principal_point', 'height', 'width']:
@@ -94,9 +161,11 @@ class MpiiNeuralConverter(BaseModeConverter):
         image_path_ = []
 
         # load data seperate
-        split_path = os.path.join(dataset_path, 'annotations', f'{mode}_reformat.json')
-        with open(split_path, 'r') as f:
-            image_data = json.load(f)
+        split_path = os.path.join(dataset_path, 'annotations', f'{mode}.json')
+        db = COCO(split_path)
+
+        # with open(split_path, 'r') as f:
+        #     image_data = json.load(f)
 
         # load smplx annot
         smplx_path = os.path.join(dataset_path, 'annotations', f'MPII_train_SMPLX_NeuralAnnot.json')
@@ -104,10 +173,10 @@ class MpiiNeuralConverter(BaseModeConverter):
             smplx_data = json.load(f)
 
         # get targeted frame list
-        image_list = list(image_data.keys())
+        image_list = list(db.anns.keys())
 
         # init seed and size
-        seed, size = '230814', '90999'
+        seed, size = '231016', '90999'
         size_i = min(int(size), len(image_list))
         random.seed(int(seed))
         image_list = image_list[:size_i]
@@ -127,19 +196,25 @@ class MpiiNeuralConverter(BaseModeConverter):
                 use_pca=False,
                 batch_size=1)).to(self.device)
 
-        for fname in tqdm(image_list, desc=f'Converting MPII {mode} data'):
+        for aid in tqdm(db.anns.keys(), desc=f'Converting MPII {mode} data'):
+        # for aid in db.anns.keys():
             
             # get info slice
-            image_info = image_data[fname]
+            ann = db.anns[aid]
+            image_info = ann
+            img = db.loadImgs(ann['image_id'])[0]
+            # pdb.set_trace()
             
             # prepare image path
-            image_path = os.path.join('images', f'{fname}')
+            image_path = img['file_name']
             imgp = os.path.join(dataset_path, image_path)
+            if not os.path.exists(imgp):
+                continue
 
             # access image info
             annot_id = image_info['id']
-            width = image_info['width']
-            height = image_info['height']
+            width = img['width']
+            height = img['height']
 
             # read keypoints2d and bbox
             j2d = np.array(image_info['keypoints']).reshape(-1, 3)
@@ -210,7 +285,24 @@ class MpiiNeuralConverter(BaseModeConverter):
             keypoints2d_orig_.append(j2d)
 
             # append bbox
-            bboxs_['bbox_xywh'].append(bbox_xywh)
+            bboxs = self._keypoints_to_scaled_bbox_bfh(
+                keypoints_2d,
+                body_scale=1.2,
+                fh_scale=1.0)
+            for i, bbox_name in enumerate([
+                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                    'rhand_bbox_xywh'
+            ]):
+                xmin, ymin, xmax, ymax, conf = bboxs[i]
+                bbox = np.array([
+                    max(0, xmin),
+                    max(0, ymin),
+                    min(width, xmax),
+                    min(height, ymax)
+                ])
+                bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
+                bbox_xywh.append(conf)  # (5,)
+                bboxs_[bbox_name].append(bbox_xywh)
 
             # append smpl
             for key in smplx_param.keys():

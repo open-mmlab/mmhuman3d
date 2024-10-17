@@ -50,7 +50,8 @@ class Pw3dBedlamConverter(BaseModeConverter):
             bbox_source='keypoints2d_smplx',
             smpl_source='original',
             cam_param_type='prespective',
-            bbox_scale=1.2,
+            bbox_body_scale=1.2,
+            bbox_facehand_scale=1.0,
             kps3d_root_aligned=False,
             flat_hand_mean=False,
             has_gender=True,
@@ -133,7 +134,7 @@ class Pw3dBedlamConverter(BaseModeConverter):
         keypoints2d_smplx_, keypoints3d_smplx_, = [], []
         keypoints2d_orig_ = []
         bboxs_ = {}
-        for bbox_name in ['bbox_xywh']:
+        for bbox_name in ['bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh', 'rhand_bbox_xywh']:
             bboxs_[bbox_name] = []
         meta_ = {}
         for key in ['focal_length', 'principal_point', 'height', 'width']:
@@ -169,19 +170,21 @@ class Pw3dBedlamConverter(BaseModeConverter):
         random.seed(int(seed))
         targeted_frame_ids = targeted_frame_ids[:size_i]
 
-        # init smplx model
-        smplx_model = build_body_model(
-            dict(
-                type='SMPLX',
-                keypoint_src='smplx',
-                keypoint_dst='smplx',
-                model_path='data/body_models/smplx',
-                gender='neutral',
-                num_betas=10,
-                use_face_contour=True,
-                flat_hand_mean=False,
-                use_pca=False,
-                batch_size=1)).to(self.device)
+        # init gendered smplx model
+        smplx_model_dict = {}
+        for gender in ['male', 'female', 'neutral']:
+            smplx_model_dict[gender] = build_body_model(
+                dict(
+                    type='SMPLX',
+                    keypoint_src='smplx',
+                    keypoint_dst='smplx',
+                    model_path='data/body_models/smplx',
+                    gender=gender,
+                    num_betas=10,
+                    use_face_contour=True,
+                    flat_hand_mean=False,
+                    use_pca=False,
+                    batch_size=1)).to(self.device)
 
         print('Converting...')
         for sid in tqdm(targeted_frame_ids):
@@ -214,6 +217,8 @@ class Pw3dBedlamConverter(BaseModeConverter):
                     
                     bedlam_pose = annot_param['smplx_pose'][aid].reshape(-1, 3)[1:22, :]
 
+                    pdb.set_trace()
+
                     # cal error
                     loss = torch.abs(torch.tensor(aa_to_rotmat(bedlam_pose)) - 
                                      torch.tensor(aa_to_rotmat(neural_pose)))
@@ -228,6 +233,14 @@ class Pw3dBedlamConverter(BaseModeConverter):
 
             # select one with lowest loss
             aid = aids[np.argmin(losses)]
+            gender = annot_param['gender'][aid]
+            if gender == 'm':
+                gender = 'male'
+            elif gender == 'f':
+                gender = 'female'
+            elif gender == 'n':
+                gender = 'neutral'
+
             bedlam_betas = annot_param['smplx_shape'][aid][:10].reshape(1, 10)
             bedlam_global_orient = annot_param['smplx_pose'][aid].reshape(-1, 3)[0:1, :]
             bedlam_pose = annot_param['smplx_pose'][aid].reshape(-1, 3)[1:22, :]
@@ -268,6 +281,7 @@ class Pw3dBedlamConverter(BaseModeConverter):
                     np.array(smplx_param[key]).reshape(self.smplx_shape[key]),
                     device=self.device, dtype=torch.float32)
                 for key in intersect_keys}
+            smplx_model = smplx_model_dict['neutral']
             output = smplx_model(**body_model_param_tensor, return_joints=True)
 
             # get kps2d and 3d
@@ -304,8 +318,30 @@ class Pw3dBedlamConverter(BaseModeConverter):
             keypoints3d_smplx_.append(keypoints_3d)
             keypoints2d_orig_.append(j2d)
 
-            # append bbox
-            bboxs_['bbox_xywh'].append(bbox_xywh)
+            # # append bbox
+            # bboxs_['bbox_xywh'].append(bbox_xywh)
+
+            # get bbox from 2d keypoints
+            bboxs = self._keypoints_to_scaled_bbox_bfh(
+                keypoints_2d,
+                body_scale=self.misc_config['bbox_body_scale'],
+                fh_scale=self.misc_config['bbox_facehand_scale'])
+            ## convert xyxy to xywh
+            for i, bbox_name in enumerate([
+                    'bbox_xywh', 'face_bbox_xywh',
+                    'lhand_bbox_xywh', 'rhand_bbox_xywh'
+            ]):
+                xmin, ymin, xmax, ymax, conf = bboxs[i]
+                bbox = np.array([
+                    max(0, xmin),
+                    max(0, ymin),
+                    min(width, xmax),
+                    min(height, ymax)
+                ])
+                bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
+                bbox_xywh.append(conf)  # (5,)
+                bboxs_[bbox_name].append(bbox_xywh)
+
 
             # append smpl
             for key in smplx_param.keys():

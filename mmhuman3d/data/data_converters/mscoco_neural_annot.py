@@ -113,7 +113,8 @@ class MscocoNeuralConverter(BaseModeConverter):
             bboxs_[bbox_name] = []
         meta_ = {}
         for key in ['focal_length', 'principal_point', 'height', 'width',
-                    'lefthand_valid', 'righthand_valid', 'face_valid']:
+                    'lefthand_valid', 'righthand_valid', 'face_valid',
+                    'iscrowd', 'num_keypoints']:
             meta_[key] = []
         image_path_ = []
 
@@ -265,8 +266,11 @@ class MscocoNeuralConverter(BaseModeConverter):
             # append meta
             meta_['principal_point'].append(principal_point)
             meta_['focal_length'].append(focal_length)
-            meta_['height'].append(height)
-            meta_['width'].append(width)
+
+            for key in ['height', 'width',
+                    'lefthand_valid', 'righthand_valid', 'face_valid',
+                    'iscrowd', 'num_keypoints']:
+                meta_[key].append(info_anno[key])
 
             # extra smplx params
             smplx_extra_['left_hand_valid'].append(lefthand_valid)

@@ -62,6 +62,11 @@ class Pw3dNeuralConverter(BaseModeConverter):
             # 'jaw_pose': (-1, 3),
             # 'expression': (-1, 10)
         }
+        self.smpl_shape = {
+            'body_pose': (-1, 69),
+            'betas': (-1, 10),
+            'global_orient': (-1, 3),
+            'transl': (-1, 3),} 
         self.anno_key_map = {
             'shape': 'betas',
             'trans': 'transl',
@@ -91,16 +96,18 @@ class Pw3dNeuralConverter(BaseModeConverter):
         human_data = HumanData()
 
         # initialize output for human_data
-        smplx_, smplx_extra_ = {}, {}
+        smplx_, smplx_extra_,smpl_ = {}, {}, {}
         for key in self.smplx_shape.keys():
             smplx_[key] = []
-        keypoints2d_smplx_, keypoints3d_smplx_, = [], []
+        for key in self.smpl_shape.keys():
+            smpl_[key] = []
+        keypoints2d_smplx_, keypoints3d_smplx_, keypoints3d_smpl_ = [], [], []
         keypoints2d_orig_ = []
         bboxs_ = {}
         for bbox_name in ['bbox_xywh']:
             bboxs_[bbox_name] = []
         meta_ = {}
-        for key in ['focal_length', 'principal_point', 'height', 'width']:
+        for key in ['focal_length', 'principal_point', 'height', 'width', 'gender']:
             meta_[key] = []
         image_path_ = []
 
@@ -141,6 +148,19 @@ class Pw3dNeuralConverter(BaseModeConverter):
                 flat_hand_mean=False,
                 use_pca=False,
                 batch_size=1)).to(self.device)
+        # init smpl model
+        smpl_gendered = {}
+        for gender in ['male', 'female', 'neutral']:
+            smpl_gendered[gender] = build_body_model(
+                dict(
+                    type='SMPL',
+                    keypoint_src='smpl_45',
+                    keypoint_dst='smpl_45',
+                    model_path='data/body_models/smpl',
+                    gender=gender,
+                    num_betas=10,
+                    use_pca=False,
+                    batch_size=1)).to(self.device)
 
         print('Converting...')
         for sid in tqdm(targeted_frame_ids):
@@ -148,6 +168,8 @@ class Pw3dNeuralConverter(BaseModeConverter):
             smplx_anno = smplx_annos[sid]
             camera_param = info_annos[sid]['cam_param']
             info_anno = info_annos[sid]
+            
+            # pdb.set_trace()
 
             # get bbox
             width, height = info_anno['width'], info_anno['height']
@@ -183,7 +205,15 @@ class Pw3dNeuralConverter(BaseModeConverter):
                 smplx_key = self.anno_key_map[key]
                 smplx_shape = self.smplx_shape[smplx_key]
                 smplx_param[smplx_key] = np.array(smplx_anno[key]).reshape(smplx_shape)
+            smpl_param = {}
+            data = info_annos[sid]['smpl_param']
+            gender = data['gender']
+            smpl_param['global_orient'] = np.array(data['pose'])[:3].reshape(1, -1)
+            smpl_param['body_pose'] = np.array(data['pose'])[3:].reshape(1, -1)
+            smpl_param['transl'] = np.array(data['trans']).reshape(1, -1)
+            smpl_param['betas'] = np.array(data['shape']).reshape(1, -1)[:10]
             
+            # pdb.set_trace()
             # build smplx model and get output
             intersect_keys = list(
                 set(smplx_param.keys()) & set(self.smplx_shape.keys()))
@@ -193,12 +223,21 @@ class Pw3dNeuralConverter(BaseModeConverter):
                     device=self.device, dtype=torch.float32)
                 for key in intersect_keys}
             output = smplx_model(**body_model_param_tensor, return_joints=True)
+            
+            output_smpl = smpl_gendered[gender](
+                    global_orient=torch.Tensor(smpl_param['global_orient']).to(self.device),
+                    body_pose=torch.Tensor(smpl_param['body_pose']).to(self.device),
+                    betas=torch.Tensor(smpl_param['betas']).to(self.device),
+                    transl=torch.Tensor(smpl_param['transl']).to(self.device),
+                    return_verts=False, )
 
             # get kps2d and 3d
             keypoints_3d = output['joints']
             keypoints_2d_xyd = camera.transform_points_screen(keypoints_3d)
             keypoints_2d = keypoints_2d_xyd[..., :2].detach().cpu().numpy()
             keypoints_3d = keypoints_3d.detach().cpu().numpy()
+            
+            kps3d_smpl = output_smpl['joints'].detach().cpu().numpy()
 
             # get kps2d original
             j2d_body = np.array(info_anno['openpose_result'])
@@ -226,6 +265,7 @@ class Pw3dNeuralConverter(BaseModeConverter):
             # append keypoints2d and 3d
             keypoints2d_smplx_.append(keypoints_2d)
             keypoints3d_smplx_.append(keypoints_3d)
+            keypoints3d_smpl_.append(kps3d_smpl)
             keypoints2d_orig_.append(j2d)
 
             # append bbox
@@ -234,12 +274,25 @@ class Pw3dNeuralConverter(BaseModeConverter):
             # append smpl
             for key in smplx_param.keys():
                 smplx_[key].append(smplx_param[key])
+            for key in smpl_param.keys():
+                smpl_[key].append(smpl_param[key])
 
             # append meta
             meta_['principal_point'].append(principal_point)
             meta_['focal_length'].append(focal_length)
             meta_['height'].append(height)
             meta_['width'].append(width)
+            meta_['gender'].append(gender)
+
+
+            # # write kps2d on image
+            # if 'courtyard_arguing_00' in image_path:
+            #     image = cv2.imread(imgp)
+            #     for kp in j2d:
+            #             if  0 < kp[0] < width and 0 < kp[1] < height: 
+            #                 cv2.circle(image, (int(kp[0]), int(kp[1])), 3, (0,0,255), 2)
+            #     cv2.imwrite(f'{out_path}/{os.path.basename(imgp)}', image)
+            #     pdb.set_trace()
 
         # meta
         human_data['meta'] = meta_
@@ -259,7 +312,11 @@ class Pw3dNeuralConverter(BaseModeConverter):
                 smplx_[key], axis=0).reshape(self.smplx_shape[key])
         for key in smplx_extra_.keys():
             smplx_[key] = np.array(smplx_extra_[key])
+        for key in smpl_.keys():
+            smpl_[key] = np.concatenate(
+                smpl_[key], axis=0).reshape(self.smpl_shape[key])
         human_data['smplx'] = smplx_
+        human_data['smpl'] = smpl_
 
         # keypoints2d_smplx
         keypoints2d_smplx = np.concatenate(
@@ -282,6 +339,17 @@ class Pw3dNeuralConverter(BaseModeConverter):
                 convert_kps(keypoints3d_smplx, src='smplx', dst='human_data')
         human_data['keypoints3d_smplx'] = keypoints3d_smplx
         human_data['keypoints3d_smplx_mask'] = keypoints3d_smplx_mask
+        
+        # keypoints3d_smpl
+        keypoints3d_smpl = np.concatenate(
+            keypoints3d_smpl_, axis=0).reshape(-1, 45, 3)
+        keypoints3d_smpl_conf = np.ones([keypoints3d_smpl.shape[0], 45, 1])
+        keypoints3d_smpl = np.concatenate(
+            [keypoints3d_smpl, keypoints3d_smpl_conf], axis=-1)
+        keypoints3d_smpl, keypoints3d_smpl_mask = \
+                convert_kps(keypoints3d_smpl, src='smpl_45', dst='human_data')
+        human_data['keypoints3d_smpl'] = keypoints3d_smpl
+        human_data['keypoints3d_smpl_mask'] = keypoints3d_smpl_mask
 
         # keypoints2d_orig
         keypoints2d_orig = np.concatenate(
