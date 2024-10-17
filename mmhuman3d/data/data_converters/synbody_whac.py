@@ -243,6 +243,69 @@ class SynbodyWhacConverter(BaseModeConverter):
 
         slice_seq_dict = {}
 
+        # ------------------------temp------------------------
+        test_seqs = ['Synbody_whac/DuetDance-20240218/Downtown_West/LS_0219_234348/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0219_234348/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0219_234348/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_002731/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_002731/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_002731/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_004806/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_004806/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_004806/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_011124/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_011124/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_011124/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_014153/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_014153/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_014153/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_045245/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_045245/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_045245/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_061636/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_061636/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_061636/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_111646/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_111646/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_111646/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_122011/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_122011/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_122011/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_135526/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_135526/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_135526/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_145218/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_145218/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_145218/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_164101/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_164101/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_164101/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_182730/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_182730/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_182730/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_201459/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_201459/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_201459/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_220348/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_220348/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0220_220348/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_012732/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_012732/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_012732/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_025306/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_025306/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_025306/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_073954/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_073954/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_073954/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_082030/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_082030/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_082030/img/camera-002',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_094603/img/camera-000',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_094603/img/camera-001',
+         'Synbody_whac/DuetDance-20240218/Downtown_West/LS_0221_094603/img/camera-002']
+
+
         if 'AMASS_tracking' in mode:
             slice_seq_dict[0] = seqs_targeted
         elif 'DuetDance' in mode:
@@ -250,15 +313,23 @@ class SynbodyWhacConverter(BaseModeConverter):
             seq_ns = [os.path.basename(seq_n) for seq_n in seq_ns]
             random.shuffle(seq_ns)
 
-            slice_seq_dict['train_0'] = []
-            for seq_n in seq_ns[:int(len(seq_ns) * 0.4)]:
-                slice_seq_dict['train_0'] += [seq for seq in seqs_targeted if seq_n in seq]
-            slice_seq_dict['train_1'] = []
-            for seq_n in seq_ns[int(len(seq_ns) * 0.4):int(len(seq_ns) * 0.8)]:
-                slice_seq_dict['train_1'] += [seq for seq in seqs_targeted if seq_n in seq]
+            # slice_seq_dict['train_0'] = []
+            # for seq_n in seq_ns[:int(len(seq_ns) * 0.4)]:
+            #     slice_seq_dict['train_0'] += [seq for seq in seqs_targeted if seq_n in seq]
+            # slice_seq_dict['train_1'] = []
+            # for seq_n in seq_ns[int(len(seq_ns) * 0.4):int(len(seq_ns) * 0.8)]:
+            #     slice_seq_dict['train_1'] += [seq for seq in seqs_targeted if seq_n in seq]
+            # slice_seq_dict['test'] = []
+            # for seq_n in seq_ns[int(len(seq_ns) * 0.8):]:
+            #     slice_seq_dict['test'] += [seq for seq in seqs_targeted if seq_n in seq]
+            # import pdb; pdb.set_trace()
             slice_seq_dict['test'] = []
-            for seq_n in seq_ns[int(len(seq_ns) * 0.8):]:
-                slice_seq_dict['test'] += [seq for seq in seqs_targeted if seq_n in seq]       
+            for seq_p in test_seqs:
+                seq_bp = '/'.join(seq_p.split('/')[:-2])
+                slice_seq_dict['test'] += glob.glob('/mnt/AFS_datasets/datasets/synbody/' + seq_bp + '/smplx_adjusted/*.npz')
+            slice_seq_dict['test'] = list(set(slice_seq_dict['test']))
+
+
         elif 'DLP' in mode:
             slice_seq_dict[0] = seqs_targeted
         elif 'demo' in mode:
@@ -370,7 +441,7 @@ class SynbodyWhacConverter(BaseModeConverter):
                     vertices_co = output_co['vertices'].detach().cpu().numpy()
 
                     # calculate contact
-                    contact_pair = self._calculate_contact(vertices, vertices_co, threshold=vert_threshold)
+                    # contact_pair = self._calculate_contact(vertices, vertices_co, threshold=vert_threshold)
 
                 # height is -y, get lowest from frame 0
                 left_foot_y_lowest = np.sort(vertices[1, left_foot_idxs, 1])[-1]
@@ -388,7 +459,12 @@ class SynbodyWhacConverter(BaseModeConverter):
                 cids = sorted(os.listdir(os.path.join(seq_base, 'img')))
                 cids = [cid for cid in cids if 'overview' not in cid]
 
+                target_cid = 'camera-002'
+
                 for cid in cids:
+
+                    if cid != target_cid:
+                        continue
 
                     # prepare sequence name
                     sequence_name = f'{os.path.basename(seq_base)}_{cid}'
@@ -490,9 +566,9 @@ class SynbodyWhacConverter(BaseModeConverter):
                             bboxs_[bbox_name].append(bbox_xywh)
 
                         # append contact
-                        contact_['part_segmentation'].append([left_foot_contact[vid], 
-                                                            right_foot_contact[vid]])
-                        contact_['contact_region'].append(contact_pair[vid])
+                        # contact_['part_segmentation'].append([left_foot_contact[vid],
+                        #                                     right_foot_contact[vid]])
+                        # contact_['contact_region'].append(contact_pair[vid])
                         # if 0 in [left_foot_contact[vid], right_foot_contact[vid]]:
                         #     # test overlay
                         #     img = cv2.imread(img_p)
@@ -565,7 +641,7 @@ class SynbodyWhacConverter(BaseModeConverter):
             human_data['image_path'] = image_path_
 
             # save contact
-            human_data['contact'] = contact_
+            # human_data['contact'] = contact_
 
             # save meta and misc
             human_data['config'] = 'synbody_whac'
@@ -575,7 +651,7 @@ class SynbodyWhacConverter(BaseModeConverter):
             os.makedirs(out_path, exist_ok=True)
             out_file = os.path.join(
                 # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
-                out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}_{batch}.npz')
+                out_path, f'synbody_whac_{mode}_{seed}_{"{:03d}".format(size_i)}_{batch}_{target_cid}.npz')
             if 'DuetDance' in mode:
                 out_file = out_file.replace('.npz', f'_{vert_threshold:.2f}.npz')
 

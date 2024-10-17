@@ -10,13 +10,13 @@ from multiprocessing import Pool
 from typing import List
 
 import cv2
-import ezc3d
 import numpy as np
 import pandas as pd
 import smplx
 import torch
 from tqdm import tqdm
 
+import ezc3d
 from mmhuman3d.core.cameras import build_cameras
 # from mmhuman3d.core.conventions.keypoints_mapping import smplx
 from mmhuman3d.core.conventions.keypoints_mapping import (
@@ -35,7 +35,6 @@ from .builder import DATA_CONVERTERS
 
 @DATA_CONVERTERS.register_module()
 class MoyoConverter(BaseModeConverter):
-
     ACCEPTED_MODES = ['train', 'val']
 
     def __init__(self, modes: List = []) -> None:
@@ -98,8 +97,10 @@ class MoyoConverter(BaseModeConverter):
                 scale = body_scale
             else:
                 scale = fh_scale
-            bp = get_keypoint_idxs_by_part[body_part]
-            kp_id = list(range(bp[0], bp[1]))
+
+            bp = get_keypoint_idxs_by_part(body_part)
+            # pdb.set_trace()
+            kp_id = np.array(bp)
             kps = keypoints[kp_id]
 
             if occ is not None:
@@ -151,12 +152,12 @@ class MoyoConverter(BaseModeConverter):
 
         # cam extrinsics
         R = torch.tensor(cam_params['rotation'])
-        t = -torch.mm(R,
-                      torch.tensor(
-                          cam_params['position'])[:, None]).squeeze()  # t= -RC
+        t = -torch.mm(R, torch.tensor(cam_params['position'])[:, None]).squeeze()  # t= -RC
 
         # cam matrix
-        K = np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
+        K = np.array([[f, 0, cx],
+                      [0, f, cy],
+                      [0, 0, 1]])
 
         Rt = np.zeros((3, 4))
         Rt[:, :3] = R
@@ -244,10 +245,11 @@ class MoyoConverter(BaseModeConverter):
         else:
             split = 1
 
-        for spid in [1]:  # range(split):
+        for spid in [1]:
+        # for spid in range(split):
 
             slice_num = len(seqs) // split
-            seqs_spilt = seqs[spid * slice_num:(spid + 1) * slice_num]
+            seqs_spilt = seqs[spid * slice_num: (spid + 1) * slice_num]
 
             # initialize output for human_data
             smplx_ = {}
@@ -256,27 +258,21 @@ class MoyoConverter(BaseModeConverter):
             keypoints2d_, keypoints3d_, kps2d_orig_ = [], [], []
             bboxs_ = {}
             for bbox_name in [
-                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                    'rhand_bbox_xywh'
+                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                'rhand_bbox_xywh'
             ]:
                 bboxs_[bbox_name] = []
             meta_ = {}
-            for meta_name in [
-                    'principal_point', 'focal_length', 'height', 'width', 'R'
-            ]:
+            for meta_name in ['principal_point', 'focal_length', 'height', 'width', 'R']:
                 meta_[meta_name] = []
             image_path_ = []
 
             frame_offset = 1
 
-            # seqs_spilt = seqs_spilt[-10:]
+            # seqs_spilt = seqs_spilt[:2]
 
             for sid, seq in enumerate(
-                    tqdm(
-                        seqs_spilt,
-                        desc=f'MOYO {mode}, Slice {spid+1}/{split}',
-                        position=0,
-                        leave=False)):
+                    tqdm(seqs_spilt, desc=f'MOYO {mode}, Slice {spid + 1}/{split}', position=0, leave=False)):
                 # for sid, seq in enumerate(seqs):
 
                 date = seq[:6]
@@ -284,16 +280,13 @@ class MoyoConverter(BaseModeConverter):
 
                 # try:
                 # load all camera params
-                cam_param_bp = os.path.join(dataset_path, 'cameras',
-                                            f'20{date}')
-                cam_param_p = glob.glob(
-                    os.path.join(cam_param_bp, '*', 'cameras_param.json'))[0]
+                cam_param_bp = os.path.join(dataset_path, 'cameras', f'20{date}')
+                cam_param_p = glob.glob(os.path.join(cam_param_bp, '*', 'cameras_param.json'))[0]
                 with open(cam_param_p, 'r') as f:
                     cam_dict = json.load(f)
 
                 # load c3d
-                c3d_p1 = os.path.join(dataset_path, 'vicon', mode, 'c3d',
-                                      f'{seq}*.c3d')
+                c3d_p1 = os.path.join(dataset_path, 'vicon', mode, 'c3d', f'{seq}*.c3d')
                 c3d_p2 = os.path.join(dataset_path, 'com', mode, f'{seq}*.c3d')
                 if len(glob.glob(c3d_p1)) > 0:
                     c3d = ezc3d.c3d(glob.glob(c3d_p1)[0])
@@ -308,8 +301,7 @@ class MoyoConverter(BaseModeConverter):
                 anno_len = markers3d.shape[0]
 
                 # load seq mosh data
-                mosh_p = os.path.join(dataset_path, 'mosh', mode,
-                                      f'{seq}_stageii.pkl')
+                mosh_p = os.path.join(dataset_path, 'mosh', mode, f'{seq}_stageii.pkl')
                 if not os.path.exists(mosh_p):
                     print(f'No mosh data found for {seq}')
                     continue
@@ -324,8 +316,7 @@ class MoyoConverter(BaseModeConverter):
                 params = self._fullpose_to_params(anno['fullpose'])
                 params['transl'] = anno['trans']
                 params['betas'] = anno['betas'][:10]
-                params['betas'] = params['betas'].repeat(anno_len,
-                                                         0).reshape(-1, 10)
+                params['betas'] = params['betas'].repeat(anno_len, 0).reshape(-1, 10)
                 params['expression'] = np.zeros((anno_len, 10))
 
                 # prepare smplx
@@ -336,14 +327,12 @@ class MoyoConverter(BaseModeConverter):
                     set(smplx_param.keys()) & set(self.smplx_shape.keys()))
                 body_model_param_tensor = {
                     key: torch.tensor(
-                        np.array(smplx_param[key]).reshape(
-                            self.smplx_shape[key]),
+                        np.array(smplx_param[key]).reshape(self.smplx_shape[key]),
                         device=self.device,
                         dtype=torch.float32)
                     for key in intersect_keys
                 }
-                output = smplx_model(
-                    **body_model_param_tensor, return_joints=True)
+                output = smplx_model(**body_model_param_tensor, return_joints=True)
 
                 kps3d = output['joints'].detach().cpu().numpy()
 
@@ -360,8 +349,8 @@ class MoyoConverter(BaseModeConverter):
 
                     # reformat camera params
                     downsample_factor = 0.5
-                    f, cx, cy, K, Rt_marker = self._load_camera_param(
-                        cam_param, downsample_factor)
+                    f, cx, cy, K, Rt_marker = self._load_camera_param(cam_param,
+                                                                      downsample_factor)
 
                     Rt = Rt_marker.copy()
                     Rt[:, 3] = Rt[:, 3] / 1000  # convert to meter
@@ -417,8 +406,7 @@ class MoyoConverter(BaseModeConverter):
                                 self.smplx_shape[update_key]),
                             device=self.device,
                             dtype=torch.float32)
-                    output = smplx_model(
-                        **body_model_param_tensor, return_joints=True)
+                    output = smplx_model(**body_model_param_tensor, return_joints=True)
                     kps3d_c = output['joints']
 
                     # get kps2d
@@ -428,17 +416,12 @@ class MoyoConverter(BaseModeConverter):
 
                     # pdb.set_trace()
 
-                    for imgp in tqdm(
-                            img_ps,
-                            desc=
-                            f'Seq ID: {sid+1}/{len(seqs)}, Sub ID: {cid}/{len(sub_folders)}',
-                            position=1,
-                            leave=False):
+                    for imgp in tqdm(img_ps, desc=f'Seq ID: {sid + 1}/{len(seqs)}, Sub ID: {cid}/{len(sub_folders)}',
+                                     position=1, leave=False):
                         # for imgp in img_ps:
 
                         # prepare image path
-                        image_path = imgp.replace(
-                            f'{dataset_path}{os.path.sep}', '')
+                        image_path = imgp.replace(f'{dataset_path}{os.path.sep}', '')
                         fid = os.path.splitext(imgp)[0].split('_')[-1]
                         aid = (int(fid) - frame_offset) * 2 - 1
 
@@ -475,13 +458,14 @@ class MoyoConverter(BaseModeConverter):
 
                         bbo_ = []
                         # get bbox from 2d keypoints
+                        # pdb.set_trace()
                         bboxs = self._keypoints_to_scaled_bbox_bfh(
                             kp2d_f,  # kps2d[aid],
                             body_scale=self.misc_config['bbox_body_scale'],
                             fh_scale=self.misc_config['bbox_facehand_scale'])
                         for i, bbox_name in enumerate([
-                                'bbox_xywh', 'face_bbox_xywh',
-                                'lhand_bbox_xywh', 'rhand_bbox_xywh'
+                            'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                            'rhand_bbox_xywh'
                         ]):
                             xmin, ymin, xmax, ymax, conf = bboxs[i]
                             bbox = np.array([
@@ -497,8 +481,23 @@ class MoyoConverter(BaseModeConverter):
 
                         # save smplx params
                         for key in smplx_.keys():
-                            smplx_[key].append(smplx_param_copy[key][aid:aid +
-                                                                     1])
+                            smplx_[key].append(smplx_param_copy[key][aid:aid + 1])
+
+                        if len(image_path_) != len(keypoints2d_):
+                            pdb.set_trace()
+
+                        # pdb.set_trace()
+
+                        # img = cv2.imread(imgp)
+                        # for jid, j in enumerate(kp2d_f[0]):
+                        #     cv2.circle(img, (int(j[0]), int(j[1])), 5, (0, 0, 255), -1)
+                        #     # cv2.putText(img, str(jid), (int(j[0]), int(j[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+                        # for bbox in bbo_:
+                        #     cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[0]+bbox[2]), int(bbox[1]+bbox[3])), (0, 255, 0), 2)
+                        #
+                        # # os.makedirs(f'{out_path}', exist_ok=True)
+                        # cv2.imwrite(f'/mnt/AFS_weichen/{os.path.basename(seq)}_{cid}.jpg', img)
+                        #
                         # pdb.set_trace()
 
                         # kps3d_s = kps3d[aid]
@@ -552,8 +551,7 @@ class MoyoConverter(BaseModeConverter):
             # save keypoints 2d smplx
             keypoints2d = np.concatenate(keypoints2d_, axis=0)
             keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
-            keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf],
-                                         axis=-1)
+            keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
             keypoints2d, keypoints2d_mask = convert_kps(
                 keypoints2d, src='smplx', dst='human_data')
             human_data['keypoints2d_smplx'] = keypoints2d
@@ -562,8 +560,7 @@ class MoyoConverter(BaseModeConverter):
             # save keypoints 3d smplx
             keypoints3d = np.concatenate(keypoints3d_, axis=0)
             keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
-            keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf],
-                                         axis=-1)
+            keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
             keypoints3d, keypoints3d_mask = convert_kps(
                 keypoints3d, src='smplx', dst='human_data')
             human_data['keypoints3d_smplx'] = keypoints3d
@@ -572,8 +569,8 @@ class MoyoConverter(BaseModeConverter):
             # pdb.set_trace()
             # save bbox
             for bbox_name in [
-                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                    'rhand_bbox_xywh'
+                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                'rhand_bbox_xywh'
             ]:
                 bbox_xywh_ = np.array(bboxs_[bbox_name]).reshape((-1, 5))
                 human_data[bbox_name] = bbox_xywh_
@@ -595,6 +592,7 @@ class MoyoConverter(BaseModeConverter):
             os.makedirs(out_path, exist_ok=True)
             out_file = os.path.join(
                 # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
-                out_path,
-                f'moyo_{mode}_{seed}_{"{:03d}".format(size_i)}_{spid}.npz')
+                out_path, f'moyo_{mode}_{seed}_{"{:03d}".format(size_i)}_{spid}.npz')
             human_data.dump(out_file)
+
+
