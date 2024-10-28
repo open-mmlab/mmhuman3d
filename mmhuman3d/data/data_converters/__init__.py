@@ -62,6 +62,7 @@ from .stirling import StirlingConverter
 from .surreal import SurrealConverter
 from .synbody import SynbodyConverter
 from .synbody_whac import SynbodyWhacConverter
+from .synhand import SynHandConverter
 from .talkshow import TalkshowConverter
 from .ubody import UbodyConverter
 from .up3d import Up3dConverter
@@ -89,5 +90,5 @@ __all__ = [
     'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter',
     'Crowd3dConverter', 'BedlamConverter','Pw3dConverter', 'DecoConverter',
     'Hi4dConverter', 'Idea400Converter', 'Pw3dBedlamConverter',
-    'RichConverter', 'SynbodyWhacConverter', 'ArcticConverter'
+    'RichConverter', 'SynbodyWhacConverter', 'ArcticConverter', 'SynHandConverter',
 ]
