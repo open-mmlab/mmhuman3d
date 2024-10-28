@@ -34,7 +34,7 @@ from tools.utils.convert_contact_label import smplx_vert2region
 @DATA_CONVERTERS.register_module()
 class SynHandConverter(BaseModeConverter):
     """Synbody dataset."""
-    ACCEPTED_MODES = ['20240927']
+    ACCEPTED_MODES = ['20240927', '20241018_test']
 
     def __init__(self, modes: List = []) -> None:
 
@@ -156,7 +156,7 @@ class SynHandConverter(BaseModeConverter):
                     batch_size=1)).to(self.device)
 
         # init seed and size
-        seed, size = '241004', '9999'
+        seed, size = '241023', '9999'
         size_i = min(int(size), len(seqs_targeted))
         random.seed(int(seed))
         np.set_printoptions(suppress=True)
