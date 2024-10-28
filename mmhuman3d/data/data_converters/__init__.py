@@ -1,5 +1,6 @@
 from .agora import AgoraConverter
 from .amass import AmassConverter
+from .arctic import ArcticConverter
 from .bedlam import BedlamConverter
 from .behave import BehaveConverter
 from .blurhand import BlurhandConverter
@@ -88,5 +89,5 @@ __all__ = [
     'TalkshowConverter', 'EmdbConverter', 'Flag3dConverter',
     'Crowd3dConverter', 'BedlamConverter','Pw3dConverter', 'DecoConverter',
     'Hi4dConverter', 'Idea400Converter', 'Pw3dBedlamConverter',
-    'RichConverter', 'SynbodyWhacConverter',
+    'RichConverter', 'SynbodyWhacConverter', 'ArcticConverter'
 ]
