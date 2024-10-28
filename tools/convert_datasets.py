@@ -120,13 +120,17 @@ DATASET_CONFIGS = dict(
         prefix='synbody',
         modes=['AMASS_tracking-20240221', 'AMASS_tracking-20240229',  
                'AMASS_tracking-20240301', 'DuetDance-20240218',
-               'DLP-20240228']),
+               'DLP-20240228', 'demo']),
     ubody=dict(
         type='UbodyConverter',  # real, has some single
         prefix='ubody',
         modes=['inter', 'intra']),
 
     # -------------- single-human dataset --------------
+    arctic=dict(
+        type='ArcticConverter',  # real
+        prefix='arctic',
+        modes=['p1_test', 'p1_train', 'p1_val', 'p2_test', 'p2_train', 'p2_val']),
     behave=dict(
         type='BehaveConverter',  # real
         prefix='behave',
