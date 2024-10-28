@@ -12,6 +12,7 @@ from mmhuman3d.core.conventions.keypoints_mapping import (
     crowdpose,
     face3d,
     flame,
+    freihand,
     gta,
     h36m,
     human_data,
@@ -82,6 +83,7 @@ KEYPOINTS_FACTORY = {
     'mediapipe_whole_body': mediapipe.MP_WHOLE_BODY_KEYPOINTS,
     'mediapipe_body': mediapipe.MP_BODY_KEYPOINTS,
     'interhand': interhand.INTERHAND_KEYPOINTS,
+    'freihand': freihand.FREIHAND_KEYPOINTS,
 }
 
 __KEYPOINTS_MAPPING_CACHE__ = defaultdict(dict)

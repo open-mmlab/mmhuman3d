@@ -81,7 +81,7 @@ class FreihandConverter(BaseModeConverter):
                 stored in HumanData() format
         """
 
-        seed = '230828'
+        seed = '241024'
 
 
         # use HumanData to store all data
@@ -160,13 +160,37 @@ class FreihandConverter(BaseModeConverter):
             kps3d = xyz[index % num_green_bg]
             kps3d = np.hstack([kps3d, np.ones([kps3d.shape[0], 1])])
             keypoints3d.append(kps3d)
+            
+            
+            # # test overlay j2d
+            # import cv2
+            # img = cv2.imread(f'{dataset_path}/{img_path}')
+            # # resize to 3x resolution
+            # scale = 5
+            # img = cv2.resize(img, (224*scale, 224*scale))
+            
+            # j2d_orig = kps2d.reshape(-1, 3)
+            # for i in range(len(j2d_orig)):
+            #     if j2d_orig[i, 2] == 0:
+            #         continue
+            #     # draw kps
+            #     cv2.circle(img, (int(j2d_orig[i,0])*scale, int(j2d_orig[i,1])*scale), 3, (0,0,255), -1)
+            #     # draw index i
+            #     cv2.putText(img, str(i), (int(j2d_orig[i,0])*scale, int(j2d_orig[i,1])*scale), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1, cv2.LINE_AA) 
+
+            #     pass
+            # # write image
+            # os.makedirs(f'/mnt/AFS_weichen/mmhuman3d/test_area', exist_ok=True)
+            # # cv2.imwrite(f'/mnt/AFS_weichen/mmhuman3d/test_area/{seq_name}_{frame_idx}_{hand_type}.jpg', img)
+            # cv2.imwrite(f'/mnt/AFS_weichen/mmhuman3d/test_area/smplx_hands.jpg', img)
+            # return
 
         keypoints2d = np.array(keypoints2d)
         keypoints2d, keypoints2d_mask = convert_kps(
-            keypoints2d, src='mano', dst='human_data')
+            keypoints2d, src='freihand', dst='human_data')
         keypoints3d = np.array(keypoints3d)
         keypoints3d, keypoints3d_mask = convert_kps(
-            keypoints3d, src='mano', dst='human_data')
+            keypoints3d, src='freihand', dst='human_data')
 
         # smplx['global_orient'] = np.array(smplx['global_orient']).reshape(-1, 3)
         # smplx['betas'] = np.array(smplx['betas'])

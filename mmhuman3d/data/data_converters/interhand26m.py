@@ -183,7 +183,7 @@ class Interhand26MConverter(BaseModeConverter):
         # use HumanData to store the data
         human_data = HumanData()
 
-        seed = '230828'
+        seed = '141017'
         size = 999999
 
         # initialize
@@ -197,12 +197,14 @@ class Interhand26MConverter(BaseModeConverter):
         image_path_, keypoints2d_smplx_ = [], []
         keypoints3d_smplx_ = []
         meta_ = {}
-        for meta_key in ['principal_point', 'focal_length']:
+        for meta_key in ['principal_point', 'focal_length', 'right_hand_valid', 'left_hand_valid']:
             meta_[meta_key] = []
         # save mano params for vis purpose
         mano_ = []
 
         # pdb.set_trace()
+        
+        instance_num = 0
 
         # sort by image path
         for seq in tqdm(
@@ -294,6 +296,9 @@ class Interhand26MConverter(BaseModeConverter):
                         image_size=(height, width),
                     )).to(self.device)
 
+                # mm2m
+                j3d_c = j3d_c / 1000
+
                 j2d = camera.transform_points_screen(
                     torch.tensor(j3d_c.reshape(1, -1, 3), device=self.device))
                 j2d_orig = j2d[0, :, :2].detach().cpu().numpy()
@@ -321,7 +326,6 @@ class Interhand26MConverter(BaseModeConverter):
                             hand_param[hand_type]['pose'][3:])
                         bboxs_[f'{hand_type[0]}hand_bbox_xywh'].append(
                             bbox_xywh + [1])
-
                     else:
                         smplx_[f'{hand_type}_hand_pose'].append(
                             np.zeros((45)).tolist())
@@ -329,21 +333,44 @@ class Interhand26MConverter(BaseModeConverter):
                             bbox_xywh + [0])
                 bboxs_['bbox_xywh'].append([0, 0, 334, 512, 1])        
                 
-
+                right_hand_valid = True if 'right' in available_hand_types else False
+                left_hand_valid = True if 'left' in available_hand_types else False
+                
                 meta_['focal_length'].append(focal)
                 meta_['principal_point'].append(princpt)
-
+                
+                meta_['right_hand_valid'].append(right_hand_valid)
+                meta_['left_hand_valid'].append(left_hand_valid)
+        
                 # append mano params
                 mano_.append(hand_param)
+                
+                instance_num += 1
+            if instance_num > 20000:
+                break
 
-                # test overlay j2d
+                # j2d_mano, _ = convert_kps(j2d_orig.reshape(1, -1, 3), src='interhand', dst='smplx')
+                # j2d_mano = j2d_orig.reshape(-1, 3)
+
+                # # test overlay j2d
                 # img = cv2.imread(f'{dataset_path}/{image_path}')
+                # j2d_orig = j2d_mano.reshape(-1, 3)
                 # for i in range(len(j2d_orig)):
+                #     if j2d_orig[i, 2] == 0:
+                #         continue
+                #     # draw kps
                 #     cv2.circle(img, (int(j2d_orig[i,0]), int(j2d_orig[i,1])), 3, (0,0,255), -1)
+                #     # draw index i
+                #     cv2.putText(img, str(i), (int(j2d_orig[i,0]), int(j2d_orig[i,1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1, cv2.LINE_AA) 
+
                 #     pass
                 # # write image
-                # os.makedirs(f'{out_path}/{mode}', exist_ok=True)
-                # cv2.imwrite(f'{out_path}/{mode}/{seq_name}_{frame_idx}_{hand_type}.jpg', img)
+                # os.makedirs(f'/mnt/AFS_weichen/mmhuman3d/test_area', exist_ok=True)
+                # # cv2.imwrite(f'/mnt/AFS_weichen/mmhuman3d/test_area/{seq_name}_{frame_idx}_{hand_type}.jpg', img)
+                # cv2.imwrite(f'/mnt/AFS_weichen/mmhuman3d/test_area/smplx_hands.jpg', img)
+                
+                # pdb.set_trace()
+
 
         size_i = min(size, len(image_path_))
 
@@ -372,7 +399,7 @@ class Interhand26MConverter(BaseModeConverter):
         keypoints2d_smplx = np.concatenate(
             keypoints2d_smplx_, axis=0).reshape(-1, 42, 3)
         keypoints2d_smplx, keypoints2d_smplx_mask = \
-                convert_kps(keypoints2d_smplx, src='mano_hands', dst='human_data')
+                convert_kps(keypoints2d_smplx, src='interhand', dst='smplx')
         human_data['keypoints2d_smplx'] = keypoints2d_smplx
         human_data['keypoints2d_smplx_mask'] = keypoints2d_smplx_mask
 
@@ -380,7 +407,7 @@ class Interhand26MConverter(BaseModeConverter):
         keypoints3d_smplx = np.concatenate(
             keypoints3d_smplx_, axis=0).reshape(-1, 42, 4)
         keypoints3d_smplx, keypoints3d_smplx_mask = \
-                convert_kps(keypoints3d_smplx, src='mano_hands', dst='human_data')
+                convert_kps(keypoints3d_smplx, src='interhand', dst='smplx')
         human_data['keypoints3d_smplx'] = keypoints3d_smplx
         human_data['keypoints3d_smplx_mask'] = keypoints3d_smplx_mask
 
@@ -394,6 +421,6 @@ class Interhand26MConverter(BaseModeConverter):
         size_i = min(len(seqs), int(size))
         out_file = os.path.join(
             out_path,
-            f'interhand26m_{mode}_{fps_mode}_{seed}_{"{:06d}".format(size_i)}.npz'
+            f'interhand26m_{mode}_{fps_mode}_{seed}_{"{:06d}".format(size_i)}_sample.npz'
         )
         human_data.dump(out_file)
