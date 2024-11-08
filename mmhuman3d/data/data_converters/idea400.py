@@ -125,7 +125,7 @@ class Idea400Converter(BaseModeConverter):
                 gender='neutral',
                 num_betas=10,
                 use_face_contour=True,
-                flat_hand_mean=True,
+                flat_hand_mean=self.misc_config['flat_hand_mean'],
                 use_pca=False,
                 batch_size=1)).to(self.device)
 
