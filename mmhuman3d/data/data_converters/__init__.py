@@ -54,6 +54,7 @@ from .renbody import RenbodyConverter
 from .rich import RichConverter
 from .sgnify import SgnifyConverter
 from .shapy import ShapyConverter
+from .signavatar import SignAvatarConverter
 from .sloper4d import Sloper4dConverter
 from .sminchisescu import ImarDatasetsConverter
 from .spin import SpinConverter
@@ -91,4 +92,5 @@ __all__ = [
     'Crowd3dConverter', 'BedlamConverter','Pw3dConverter', 'DecoConverter',
     'Hi4dConverter', 'Idea400Converter', 'Pw3dBedlamConverter',
     'RichConverter', 'SynbodyWhacConverter', 'ArcticConverter', 'SynHandConverter',
+    'SignAvatarConverter',
 ]

@@ -142,8 +142,11 @@ class Idea400Converter(BaseModeConverter):
         slice_len = len(anno_ps) // slices
 
         for sl_id in range(slices):
+        # for sl_id in [4]:
             # use HumanData to store all data
             human_data = HumanData()
+            
+            recorded_tpose = 0
 
             # initialize output for human_data
             smplx_ = {}
@@ -183,7 +186,7 @@ class Idea400Converter(BaseModeConverter):
                 #         continue
                 #     image_folder = image_folder_ps[i]
                 if not os.path.exists(image_folder):
-                    print(f'Image folder {image_folder} does not exist!')
+                    # print(f'Image folder {image_folder} does not exist!')
                     continue
 
                 # get height and width
@@ -253,6 +256,11 @@ class Idea400Converter(BaseModeConverter):
                         #     continue
                         # iid = fid / 2 + 1
 
+                        # pdb.set_trace()
+                        # if np.sum(smplx_param['body_pose'][fid]) < 1e-5:
+                        #     recorded_tpose += 1
+                        #     continue
+
                         # get image path
                         imgp = os.path.join(image_folder, f'{fid+1:06d}.png')
                         image_path = imgp.replace(f'{dataset_path}/', '')
@@ -262,8 +270,9 @@ class Idea400Converter(BaseModeConverter):
                         
                         # filter out T pose
                         # pdb.set_trace()
-                        if np.sum(np.abs(smplx_param_tensor['body_pose'][fid].detach().cpu().numpy())) < 1:
-                            print(f'Image {imgp} is T pose!')
+                        if np.sum(np.abs(smplx_param_tensor['body_pose'][fid].detach().cpu().numpy())) < 1e-2:
+                            # print(f'Image {imgp} is T pose!')
+                            recorded_tpose += 1
                             continue
 
                         # project kps3d
@@ -378,5 +387,7 @@ class Idea400Converter(BaseModeConverter):
             out_file = os.path.join(
                 out_path, f'idea400_{mode}_{seed}_{"{:05d}".format(size_i)}_{sl_id}.npz')
             human_data.dump(out_file)
+            
+            print(f'Find {recorded_tpose} T poses in slice {sl_id}')
 
 

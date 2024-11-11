@@ -189,256 +189,263 @@ class SignAvatarConverter(BaseModeConverter):
         
         print('Total sequences:', len(annot_files))
         
-        # use HumanData to store all data
-        human_data = HumanData()
-    
-        # initialize output for human_data
-        smplx_ = {}
-        for key in self.smplx_shape.keys():
-            smplx_[key] = []
-        keypoints2d_, keypoints3d_ = [], []
-        bboxs_ = {}
-        for bbox_name in [
-                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                'rhand_bbox_xywh'
-        ]:
-            bboxs_[bbox_name] = []
-        meta_ = {}
-        for meta_name in ['principal_point', 'focal_length', 'height', 'width', 'gender',
-                        'sequence_name', 'left_hand_valid', 'right_hand_valid']:
-            meta_[meta_name] = []
-        image_path_ = []
-            
-        annot_files = annot_files[:size_i]
+        slice_num = 8
+        slice_len = len(annot_files) // slice_num
         
-        # for annot_path in tqdm(annot_files, desc=f'Splitting {mode}', 
-        #                        leave=False, position=0):
-        #     vid_path = annot_path.replace('annotations', 'videos').replace('.pkl', '.mp4')
-        #     self.split_video(vid_path)
-            
-        # from concurrent.futures import ThreadPoolExecutor, as_completed
-        # from tqdm import tqdm
-
-        # # 使用线程池并行处理视频分割
-        # with ThreadPoolExecutor(max_workers=16) as executor:
-        #     futures = [
-        #         executor.submit(self.split_video, annot_path.replace('annotations', 'videos').replace('.pkl', '.mp4'))
-        #         for annot_path in annot_files
-        #     ]
-
-        #     # 使用 tqdm 追踪任务进度
-        #     for future in tqdm(as_completed(futures), desc=f'Splitting {mode}', leave=False, position=0, total=len(annot_files)):
-        #         # try:
-        #         future.result()  # 捕获异常并确保进度条准确
-        #         # except Exception as e:
-        #         #     print(f"Error processing file: {e}")
+        for sid in range(slice_num):
+            print(f'Slice {sid+1}/{slice_num}')
+            # use HumanData to store all data
+            human_data = HumanData()
         
-        # test_seqs = ['_20g7MG8K1U_3-8-rgb_front', '_Dh512GX6d8_14-8-rgb_front', 
-        #              '00kppw3aqus_11-3-rgb_front']
-        # annot_files = [f'{annot_base_folder}/{seq}.pkl' for seq in test_seqs]
-            
-        for annot_path in tqdm(annot_files, desc=f'Converting {mode}', 
-                               leave=False, position=0):
-            
-            # load annot pickle
-            annot_seq = np.load(annot_path, allow_pickle=True)
-            # for key in annot_seq.keys():
-            #     print(key, annot_seq[key].shape)
-            vid_path = annot_path.replace('annotations', 'videos').replace('.pkl', '.mp4')
-            frame_folder = vid_path.replace('.mp4', '').replace('videos', 'images')
-
-            annot_len = annot_seq['smplx'].shape[0]
-            split_success = self.split_video(vid_path, annot_len)
-            if not split_success:
-                pdb.set_trace()
-                continue
-            
-            smplx_seq = annot_seq['smplx'].copy()
-            gender = 'neutral'
-            smplx_param = {
-                'global_orient': smplx_seq[:, :3],
-                'body_pose': smplx_seq[:, 3:66],
-                'left_hand_pose': smplx_seq[:, 66:111],
-                'right_hand_pose': smplx_seq[:, 111:156],
-                'jaw_pose': smplx_seq[:, 156:159],
-                'betas': smplx_seq[:, 159:169],
-                'expression': smplx_seq[:, 169:179],
-                'transl': smplx_seq[:, 179:182]
-            }
+            # initialize output for human_data
+            smplx_ = {}
             for key in self.smplx_shape.keys():
-                if key in smplx_param.keys():
-                    smplx_param[key] = smplx_param[key].reshape(self.smplx_shape[key])
-                else:
-                    pad_shape = np.array(self.smplx_shape[key])
-                    pad_shape[0] = annot_len
-                    pad_shape = tuple(pad_shape)
-                    smplx_param[key] = np.zeros(pad_shape)
-
-            # prepare smplx tensor
-            smplx_param_tensor = {}
-            for key in self.smplx_shape.keys():
-                    smplx_param_tensor[key] = torch.tensor(smplx_param[key].reshape(self.smplx_shape[key]),
-                                                           dtype=torch.float).to(self.device)
-            
-            # ue2opencv = np.array([[-1.0, 0, 0, 0],
-            #         [0, -1, 0, 0],
-            #         [0, 0, 1, 0],
-            #         [0, 0, 0, 1]])
-            
-            # get output
-            output = gendered_smplx[gender](**smplx_param_tensor)
-            kps3d_c = output['joints']
-            # kps3d_c = output['joints'].detach().cpu().numpy()
-            # pelvis_world = kps3d_c[:, get_keypoint_idx('pelvis', 'smplx'), :]
-            
-            # # transform to cam space
-            # global_orient, transl = batch_transform_to_camera_frame(
-            #     global_orient=smplx_param['global_orient'].reshape(-1, 3),
-            #     transl=smplx_param['transl'].reshape(-1, 3),
-            #     pelvis=pelvis_world.reshape(-1, 3),
-            #     extrinsic=ue2opencv)
-            
-            # smplx_param['global_orient'] = global_orient
-            # smplx_param['transl'] = transl
-
-            # # prepare smplx tensor
-            # smplx_param_tensor = {}
-            # for key in self.smplx_shape.keys():
-            #         smplx_param_tensor[key] = torch.tensor(smplx_param[key].reshape(self.smplx_shape[key]),
-            #                                                dtype=torch.float).to(self.device)
-
-            # get image size
-            img_path = os.path.join(frame_folder, '000001.jpg')
-            img = cv2.imread(img_path)
-            height, width, _ = img.shape 
-            
-            for fid in tqdm(annot_seq['total_valid_index'], position=1, leave=False):
-                # get image path
-                img_p = os.path.join(frame_folder, f'{fid+1:06d}.jpg')
-                image_path = img_p.replace(dataset_path + '/', '')
-                if not os.path.exists(img_path):
-                    pdb.set_trace()
-
-                left_valid = annot_seq['left_valid'][fid].cpu().item()
-                right_valid = annot_seq['right_valid'][fid].cpu().item()
-                # smplx_valid = True if str(fid) in annot_seq['total_valid_index'] else False
+                smplx_[key] = []
+            keypoints2d_, keypoints3d_ = [], []
+            bboxs_ = {}
+            for bbox_name in [
+                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                    'rhand_bbox_xywh'
+            ]:
+                bboxs_[bbox_name] = []
+            meta_ = {}
+            for meta_name in ['principal_point', 'focal_length', 'height', 'width', 'gender',
+                            'sequence_name', 'left_hand_valid', 'right_hand_valid']:
+                meta_[meta_name] = []
+            image_path_ = []
                 
-                focal_length = list(annot_seq['focal'][fid])
-                principal_point = list(annot_seq['princpt'][fid])
-                
-                camera = build_cameras(
-                    dict(
-                        type='PerspectiveCameras',
-                        convention='opencv',
-                        in_ndc=False,
-                        focal_length=focal_length,
-                        image_size=(width, height),
-                        principal_point=principal_point)).to(self.device)
-                
-                # 3d -> 2d
-                kps2d = camera.transform_points_screen(kps3d_c[fid]).detach().cpu().numpy().squeeze()[:, :2]
-                kps3d = kps3d_c[fid].detach().cpu().numpy().squeeze()
+            # annot_files = annot_files[:size_i]
+            annot_files2process = annot_files[sid*slice_len:(sid+1)*slice_len]
 
-                # test overlay
-                # img = cv2.imread(img_p)
-                # for kp in kps2d:
-                #     cv2.circle(img, (int(kp[0]), int(kp[1])), 5, (0, 255, 0), -1)
-                # cv2.imwrite(f'{out_path}/{os.path.basename(frame_folder)}_{fid}.jpg', img)
+            
+            # for annot_path in tqdm(annot_files, desc=f'Splitting {mode}', 
+            #                        leave=False, position=0):
+            #     vid_path = annot_path.replace('annotations', 'videos').replace('.pkl', '.mp4')
+            #     self.split_video(vid_path)
                 
-                # get bbox from 2d keypoints
-                bboxs = self._keypoints_to_scaled_bbox_bfh(
-                    kps2d,
-                    body_scale=self.misc_config['bbox_body_scale'],
-                    fh_scale=self.misc_config['bbox_facehand_scale'])
-                for i, bbox_name in enumerate([
-                        'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                        'rhand_bbox_xywh'
-                ]):
-                    xmin, ymin, xmax, ymax, conf = bboxs[i]
-                    bbox = np.array([
-                        max(0, xmin),
-                        max(0, ymin),
-                        min(width, xmax),
-                        min(height, ymax)
-                    ])
-                    bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
-                    bbox_xywh.append(conf)  # (5,)
-                    bboxs_[bbox_name].append(bbox_xywh)
-                    
-                # append image path
-                image_path_.append(image_path)
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            from tqdm import tqdm
 
-                # append keypoints
-                keypoints2d_.append(kps2d)
-                keypoints3d_.append(kps3d)
+            # 使用线程池并行处理视频分割
+            # with ThreadPoolExecutor(max_workers=16) as executor:
+            #     futures = [
+            #         executor.submit(self.split_video, annot_path.replace('annotations', 'videos').replace('.pkl', '.mp4'))
+            #         for annot_path in annot_files
+            #     ]
 
-                # append smplx
+            #     # 使用 tqdm 追踪任务进度
+            #     for future in tqdm(as_completed(futures), desc=f'Splitting {mode}', leave=False, position=0, total=len(annot_files)):
+            #         # try:
+            #         future.result()  # 捕获异常并确保进度条准确
+                    # except Exception as e:
+                    #     print(f"Error processing file: {e}")
+            
+            # test_seqs = ['_20g7MG8K1U_3-8-rgb_front', '_Dh512GX6d8_14-8-rgb_front', 
+            #              '00kppw3aqus_11-3-rgb_front']
+            # annot_files = [f'{annot_base_folder}/{seq}.pkl' for seq in test_seqs]
+                
+            for annot_path in tqdm(annot_files2process, desc=f'Converting {mode}', 
+                                leave=False, position=0):
+                
+                # load annot pickle
+                annot_seq = np.load(annot_path, allow_pickle=True)
+                # for key in annot_seq.keys():
+                #     print(key, annot_seq[key].shape)
+                vid_path = annot_path.replace('annotations', 'videos').replace('.pkl', '.mp4')
+                frame_folder = vid_path.replace('.mp4', '').replace('videos', 'images')
+
+                annot_len = annot_seq['smplx'].shape[0]
+                split_success = self.split_video(vid_path, annot_len)
+                if not split_success:
+                    # pdb.set_trace()
+                    continue
+                
+                smplx_seq = annot_seq['smplx'].copy()
+                gender = 'neutral'
+                smplx_param = {
+                    'global_orient': smplx_seq[:, :3],
+                    'body_pose': smplx_seq[:, 3:66],
+                    'left_hand_pose': smplx_seq[:, 66:111],
+                    'right_hand_pose': smplx_seq[:, 111:156],
+                    'jaw_pose': smplx_seq[:, 156:159],
+                    'betas': smplx_seq[:, 159:169],
+                    'expression': smplx_seq[:, 169:179],
+                    'transl': smplx_seq[:, 179:182]
+                }
                 for key in self.smplx_shape.keys():
-                    # try:
-                    smplx_[key].append(smplx_param[key][fid])
-                    # except:
-                    #     pdb.set_trace()
+                    if key in smplx_param.keys():
+                        smplx_param[key] = smplx_param[key].reshape(self.smplx_shape[key])
+                    else:
+                        pad_shape = np.array(self.smplx_shape[key])
+                        pad_shape[0] = annot_len
+                        pad_shape = tuple(pad_shape)
+                        smplx_param[key] = np.zeros(pad_shape)
 
-                # append meta
-                meta_['principal_point'].append(principal_point)
-                meta_['focal_length'].append(focal_length)
-                meta_['height'].append(height)
-                meta_['width'].append(width)
-                meta_['gender'].append(gender)
-                meta_['sequence_name'].append(os.path.basename(frame_folder))
-                meta_['left_hand_valid'].append(left_valid)
-                meta_['right_hand_valid'].append(right_valid)
+                # prepare smplx tensor
+                smplx_param_tensor = {}
+                for key in self.smplx_shape.keys():
+                        smplx_param_tensor[key] = torch.tensor(smplx_param[key].reshape(self.smplx_shape[key]),
+                                                            dtype=torch.float).to(self.device)
                 
-        # get size
-        size_i = len(annot_files)
-        
-               # save keypoints 2d smplx
-        keypoints2d = np.concatenate(keypoints2d_, axis=0).reshape(-1, 144, 2)
-        keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
-        keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
-        keypoints2d, keypoints2d_mask = convert_kps(
-            keypoints2d, src='smplx', dst='human_data')
-        human_data['keypoints2d_smplx'] = keypoints2d
-        human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
+                # ue2opencv = np.array([[-1.0, 0, 0, 0],
+                #         [0, -1, 0, 0],
+                #         [0, 0, 1, 0],
+                #         [0, 0, 0, 1]])
+                
+                # get output
+                output = gendered_smplx[gender](**smplx_param_tensor)
+                kps3d_c = output['joints']
+                # kps3d_c = output['joints'].detach().cpu().numpy()
+                # pelvis_world = kps3d_c[:, get_keypoint_idx('pelvis', 'smplx'), :]
+                
+                # # transform to cam space
+                # global_orient, transl = batch_transform_to_camera_frame(
+                #     global_orient=smplx_param['global_orient'].reshape(-1, 3),
+                #     transl=smplx_param['transl'].reshape(-1, 3),
+                #     pelvis=pelvis_world.reshape(-1, 3),
+                #     extrinsic=ue2opencv)
+                
+                # smplx_param['global_orient'] = global_orient
+                # smplx_param['transl'] = transl
 
-        # save keypoints 3d smplx
-        keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
-        keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
-        keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
-        keypoints3d, keypoints3d_mask = convert_kps(
-            keypoints3d, src='smplx', dst='human_data')
-        human_data['keypoints3d_smplx'] = keypoints3d
-        human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
+                # # prepare smplx tensor
+                # smplx_param_tensor = {}
+                # for key in self.smplx_shape.keys():
+                #         smplx_param_tensor[key] = torch.tensor(smplx_param[key].reshape(self.smplx_shape[key]),
+                #                                                dtype=torch.float).to(self.device)
 
-        # pdb.set_trace()
-        # save bbox
-        for bbox_name in [
-                'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
-                'rhand_bbox_xywh'
-        ]:
-            bbox_xywh_ = np.array(bboxs_[bbox_name]).reshape((-1, 5))
-            human_data[bbox_name] = bbox_xywh_
+                # get image size
+                img_path = os.path.join(frame_folder, '000001.jpg')
+                img = cv2.imread(img_path)
+                height, width, _ = img.shape 
+                
+                for fid in tqdm(annot_seq['total_valid_index'], position=1, leave=False):
+                    # get image path
+                    img_p = os.path.join(frame_folder, f'{fid+1:06d}.jpg')
+                    image_path = img_p.replace(dataset_path + '/', '')
+                    if not os.path.exists(img_path):
+                        pdb.set_trace()
 
-        # save smplx
-        for key in smplx_.keys():
-            smplx_[key] = np.concatenate(
-                smplx_[key], axis=0).reshape(self.smplx_shape[key])
+                    left_valid = annot_seq['left_valid'][fid].cpu().item()
+                    right_valid = annot_seq['right_valid'][fid].cpu().item()
+                    # smplx_valid = True if str(fid) in annot_seq['total_valid_index'] else False
+                    
+                    focal_length = list(annot_seq['focal'][fid])
+                    principal_point = list(annot_seq['princpt'][fid])
+                    
+                    camera = build_cameras(
+                        dict(
+                            type='PerspectiveCameras',
+                            convention='opencv',
+                            in_ndc=False,
+                            focal_length=focal_length,
+                            image_size=(width, height),
+                            principal_point=principal_point)).to(self.device)
+                    
+                    # 3d -> 2d
+                    kps2d = camera.transform_points_screen(kps3d_c[fid]).detach().cpu().numpy().squeeze()[:, :2]
+                    kps3d = kps3d_c[fid].detach().cpu().numpy().squeeze()
 
-        human_data['smplx'] = smplx_
+                    # test overlay
+                    # img = cv2.imread(img_p)
+                    # for kp in kps2d:
+                    #     cv2.circle(img, (int(kp[0]), int(kp[1])), 5, (0, 255, 0), -1)
+                    # cv2.imwrite(f'{out_path}/{os.path.basename(frame_folder)}_{fid}.jpg', img)
+                    
+                    # get bbox from 2d keypoints
+                    bboxs = self._keypoints_to_scaled_bbox_bfh(
+                        kps2d,
+                        body_scale=self.misc_config['bbox_body_scale'],
+                        fh_scale=self.misc_config['bbox_facehand_scale'])
+                    for i, bbox_name in enumerate([
+                            'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                            'rhand_bbox_xywh'
+                    ]):
+                        xmin, ymin, xmax, ymax, conf = bboxs[i]
+                        bbox = np.array([
+                            max(0, xmin),
+                            max(0, ymin),
+                            min(width, xmax),
+                            min(height, ymax)
+                        ])
+                        bbox_xywh = self._xyxy2xywh(bbox)  # list of len 4
+                        bbox_xywh.append(conf)  # (5,)
+                        bboxs_[bbox_name].append(bbox_xywh)
+                        
+                    # append image path
+                    image_path_.append(image_path)
 
-        # save image path
-        human_data['image_path'] = image_path_
+                    # append keypoints
+                    keypoints2d_.append(kps2d)
+                    keypoints3d_.append(kps3d)
 
-        # save contact
-        # human_data['contact'] = contact_
+                    # append smplx
+                    for key in self.smplx_shape.keys():
+                        # try:
+                        smplx_[key].append(smplx_param[key][fid])
+                        # except:
+                        #     pdb.set_trace()
 
-        # save meta and misc
-        human_data['config'] = f'signavatar_{mode}'
-        human_data['misc'] = self.misc_config
-        human_data['meta'] = meta_
+                    # append meta
+                    meta_['principal_point'].append(principal_point)
+                    meta_['focal_length'].append(focal_length)
+                    meta_['height'].append(height)
+                    meta_['width'].append(width)
+                    meta_['gender'].append(gender)
+                    meta_['sequence_name'].append(os.path.basename(frame_folder))
+                    meta_['left_hand_valid'].append(left_valid)
+                    meta_['right_hand_valid'].append(right_valid)
+                    
+            # get size
+            size_i = len(annot_files)
+            
+                # save keypoints 2d smplx
+            keypoints2d = np.concatenate(keypoints2d_, axis=0).reshape(-1, 144, 2)
+            keypoints2d_conf = np.ones([keypoints2d.shape[0], 144, 1])
+            keypoints2d = np.concatenate([keypoints2d, keypoints2d_conf], axis=-1)
+            keypoints2d, keypoints2d_mask = convert_kps(
+                keypoints2d, src='smplx', dst='human_data')
+            human_data['keypoints2d_smplx'] = keypoints2d
+            human_data['keypoints2d_smplx_mask'] = keypoints2d_mask
 
-        os.makedirs(out_path, exist_ok=True)
-        out_file = os.path.join(
-            # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
-            out_path, f'signavatar_{mode}_{seed}_{"{:05d}".format(size_i)}.npz')
-        human_data.dump(out_file) 
+            # save keypoints 3d smplx
+            keypoints3d = np.concatenate(keypoints3d_, axis=0).reshape(-1, 144, 3)
+            keypoints3d_conf = np.ones([keypoints3d.shape[0], 144, 1])
+            keypoints3d = np.concatenate([keypoints3d, keypoints3d_conf], axis=-1)
+            keypoints3d, keypoints3d_mask = convert_kps(
+                keypoints3d, src='smplx', dst='human_data')
+            human_data['keypoints3d_smplx'] = keypoints3d
+            human_data['keypoints3d_smplx_mask'] = keypoints3d_mask
+
+            # pdb.set_trace()
+            # save bbox
+            for bbox_name in [
+                    'bbox_xywh', 'face_bbox_xywh', 'lhand_bbox_xywh',
+                    'rhand_bbox_xywh'
+            ]:
+                bbox_xywh_ = np.array(bboxs_[bbox_name]).reshape((-1, 5))
+                human_data[bbox_name] = bbox_xywh_
+
+            # save smplx
+            for key in smplx_.keys():
+                smplx_[key] = np.concatenate(
+                    smplx_[key], axis=0).reshape(self.smplx_shape[key])
+
+            human_data['smplx'] = smplx_
+
+            # save image path
+            human_data['image_path'] = image_path_
+
+            # save contact
+            # human_data['contact'] = contact_
+
+            # save meta and misc
+            human_data['config'] = f'signavatar_{mode}'
+            human_data['misc'] = self.misc_config
+            human_data['meta'] = meta_
+
+            os.makedirs(out_path, exist_ok=True)
+            out_file = os.path.join(
+                # out_path, f'moyo_{self.misc_config["flat_hand_mean"]}.npz')
+                out_path, f'signavatar_{mode}_{seed}_{"{:05d}".format(size_i)}_{sid}.npz')
+            human_data.dump(out_file) 

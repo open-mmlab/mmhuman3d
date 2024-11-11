@@ -186,6 +186,10 @@ class Interhand26MConverter(BaseModeConverter):
         seed = '141017'
         size = 999999
 
+        checked_inst = 0
+        failed_inst = 0
+
+
         # initialize
         smplx_ = {}
         for hand_type in ['left', 'right']:
@@ -197,7 +201,7 @@ class Interhand26MConverter(BaseModeConverter):
         image_path_, keypoints2d_smplx_ = [], []
         keypoints3d_smplx_ = []
         meta_ = {}
-        for meta_key in ['principal_point', 'focal_length', 'right_hand_valid', 'left_hand_valid']:
+        for meta_key in ['principal_point', 'focal_length', 'right_hand_valid', 'left_hand_valid', 'R', 'T']:
             meta_[meta_key] = []
         # save mano params for vis purpose
         mano_ = []
@@ -312,6 +316,17 @@ class Interhand26MConverter(BaseModeConverter):
 
                 keypoints2d_smplx_.append(j2d_orig)
                 keypoints3d_smplx_.append(j3d_orig)
+                
+                for kps2d in j2d_orig:
+                    if kps2d[0] < 0 or kps2d[0] > 334:
+                        if kps2d[2] != 0:
+                            failed_inst += 1
+                            break
+                    if kps2d[1] < 0 or kps2d[1] > 512:
+                         if kps2d[2] != 0:
+                            failed_inst += 1
+                            break
+                checked_inst += 1
 
                 # append
                 image_path_.append(image_path)
@@ -341,13 +356,16 @@ class Interhand26MConverter(BaseModeConverter):
                 
                 meta_['right_hand_valid'].append(right_hand_valid)
                 meta_['left_hand_valid'].append(left_hand_valid)
+                
+                meta_['R'].append(R)
+                meta_['T'].append(T)
         
                 # append mano params
                 mano_.append(hand_param)
                 
-                instance_num += 1
-            if instance_num > 20000:
-                break
+            #     instance_num += 1
+            # if instance_num > 200:
+            #     break
 
                 # j2d_mano, _ = convert_kps(j2d_orig.reshape(1, -1, 3), src='interhand', dst='smplx')
                 # j2d_mano = j2d_orig.reshape(-1, 3)
@@ -421,6 +439,7 @@ class Interhand26MConverter(BaseModeConverter):
         size_i = min(len(seqs), int(size))
         out_file = os.path.join(
             out_path,
-            f'interhand26m_{mode}_{fps_mode}_{seed}_{"{:06d}".format(size_i)}_sample.npz'
+            f'interhand26m_{mode}_{fps_mode}_{seed}_{"{:06d}".format(size_i)}.npz'
         )
-        human_data.dump(out_file)
+        # human_data.dump(out_file)
+        print(f'Checked {checked_inst} instances, failed {failed_inst} instances')
