@@ -44,6 +44,7 @@ from .mpi_inf_3dhp import MpiInf3dhpConverter
 from .mpi_inf_3dhp_hybrik import MpiInf3dhpHybrIKConverter
 from .mpii_neural_annot import MpiiNeuralConverter
 from .mscoco_neural_annot import MscocoNeuralConverter
+from .mtp import MtpConverter
 from .penn_action import PennActionConverter
 from .posetrack import PosetrackConverter
 from .pw3d import Pw3dConverter
@@ -92,5 +93,5 @@ __all__ = [
     'Crowd3dConverter', 'BedlamConverter','Pw3dConverter', 'DecoConverter',
     'Hi4dConverter', 'Idea400Converter', 'Pw3dBedlamConverter',
     'RichConverter', 'SynbodyWhacConverter', 'ArcticConverter', 'SynHandConverter',
-    'SignAvatarConverter',
+    'SignAvatarConverter', 'MtpConverter', 
 ]
